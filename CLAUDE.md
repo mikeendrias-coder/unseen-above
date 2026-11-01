@@ -38,8 +38,12 @@
 - Side rooms (Room.js): keeper's shed (ep1), staff room (ep2), wardrobe (ep4). Brother's belongings: crowbar (ep1), bedroll (ep2 staff room), bag (ep4).
 - Satellite: per-screen win effects (sat/wins.js), batch 2 is a sorting shift (sat/sorting.js), batch 3 ends on a map of her death spots.
 - Jump links: #opening, #grounds, #batch1, #gallery, #batch2, #fall, #eastwing, #batch3, #bedroom, #batch4, #kids, #moon.
+- Systems added Nov 1 (later): core/bubbles.js (E steps through a talker's lines then closes; walking away closes; bubbles stay on screen), core/glasses.js (G toggles; static, blinking, heat, overheat cutout; cracked from ep3), core/panels.js (instruction panels, once each, pause the scene; window.__noPanels skips them in tests), core/review.js (I = immunity, saved; N = skip ahead per scene via skipAhead() or skipPoints; satellite N solves), core/music.js (original synth pieces per part; Music.play/stop/level), art/strike.js (six path styles, never the same twice in a row; small: true for decoys).
+- Ep3 pebbles: the pile is drawn live and vanishes when taken; thrown pebbles stay (E picks up); a pebble a sensor, the camera or the eyes can see draws the strike (strikeAt). The fall is a long tumble down a shaft, through a rotten floor, landing heard in the black.
+- Ending: the blast cuts a ragged bite out of the Moon on the old TV (moonWork canvas, destination-out), rim cooling, pieces drifting.
 - Dialogue: src/data/dialogue.js. RIDGE (drafts, in use), BEDROOM (DRAFT, in use in ep4), MOON_OVERHEARD, MOON_ROBOT, PLAYROOM (DRAFTS, in use in ep5).
 - Clues planted: the laser charge sound is the satellite success sound; the broken camera looks at the Moon (lit window); CH 07 everywhere; glasses back in the drawer every take; SEASON 41 crew coat; six feeds, one is this room; spare glasses; CONTINUITY photos; the cameras' two clicks come back at the end.
+- Tests also: review.js (immunity, skip ahead), shoot-strikes.js, shoot-fall.js, shoot-last.js, shoot-glasses.js, shoot-audit.js.
 - Tests (serve game/dist on port 8766 first: python3 -m http.server 8766): flow.js (opening to ep3), flow-ep3.js, flow-ep4.js (flash death, noise, clock, bag, collapse death, a played run, bedroom, batch 4), handoff-34.js, flow-ep5.js (batch 4 to kids to Moon to the end), cover-ep4.js (what each flash camera sees), smoke.js (every # link), kids-flow.js, ep2-extras.js, shoot-*.js (screenshots), fps.js, plan-ep1/ep2.mjs.
 
 ## Working rules
