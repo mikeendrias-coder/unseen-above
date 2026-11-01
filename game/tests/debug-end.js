@@ -1,9 +1,10 @@
 const { chromium } = require('playwright');
+const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 1280, height: 860 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message + '\n' + e.stack)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-  await p.goto('http://localhost:8766/local.html');
+  await p.goto(BASE + '/local.html');
   await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.T);
   await p.evaluate(() => { const s = window.__game.scene; s.t = s.T.end - 0.05; });

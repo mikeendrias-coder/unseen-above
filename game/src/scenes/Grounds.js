@@ -9,6 +9,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode } from '../core/side.js';
+import { goNext } from '../core/flow.js';
 
 // Drone show figures, as point lists in a 64 x 30 box.
 function outline(pts, n) {
@@ -131,7 +132,7 @@ export class Grounds extends SideEpisode {
       overlay.card('END OF EPISODE 1', 'Take ' + this.ep.take, 3400); overlay.bug('CH 07', 1400);
       overlay.hint('');
     });
-    this.time.delayedCall(5600, () => this.scene.start('satellite', { batch: 1 }));
+    this.time.delayedCall(5600, () => goNext(this, 'ep1'));
   }
 
   // ------------------------------------------------------------------ ambience: the spectacle

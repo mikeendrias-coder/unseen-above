@@ -1,5 +1,6 @@
 // Screenshots of episode 1 at several points along the walk, plus any console errors.
 const { chromium } = require('playwright');
+const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
   const look = process.argv[2] || 'A';
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -8,7 +9,7 @@ const { chromium } = require('playwright');
   p.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errs.push(m.type() + ': ' + m.text()); });
   p.on('pageerror', e => errs.push('pageerror: ' + e.message));
   await p.addInitScript(l => { try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: l, episodes: {}, seenIntro: false })); } catch (e) {} }, look);
-  await p.goto('http://localhost:8766/local.html?scene=grounds');
+  await p.goto(BASE + '/local.html?scene=grounds');
   await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.kid, null, { timeout: 30000 });
   await p.waitForTimeout(1500);

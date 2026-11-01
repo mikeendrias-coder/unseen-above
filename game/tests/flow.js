@@ -3,6 +3,7 @@
 // death, the door), then batch 2 on the ground station screen. Also loads every look once.
 // Every step waits on game state, not on wall-clock time, so slow headless frames do not matter.
 const { chromium } = require('playwright');
+const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 1280, height: 860 } });
@@ -14,7 +15,7 @@ const { chromium } = require('playwright');
   const fresh = () => until(() => { const s = window.__game.scene; return s.kid && !s.dead && s.clock > 0.3; });
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   await p.addInitScript(() => { try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
-  await p.goto('http://localhost:8766/local.html');
+  await p.goto(BASE + '/local.html');
   await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.T);
   // skip ahead to the end of the opening
@@ -68,7 +69,7 @@ const { chromium } = require('playwright');
   await solveBatch();
   await cardOn('END OF BATCH 2'); ok('end of batch 2: ' + await card() + ', final ' + await p.evaluate(() => window.__game.scene.final), await p.evaluate(() => window.__game.scene.final));
   // every look loads
-  await p.goto('http://localhost:8766/local.html?scene=grounds'); await p.click('#start');
+  await p.goto(BASE + '/local.html?scene=grounds'); await p.click('#start');
   await scene('grounds'); await fresh();
   const looks = [];
   for (let i = 0; i < 5; i++) { const before = await p.evaluate(() => window.__game.scene.P.name); await p.keyboard.press('KeyL'); await until(b => window.__game.scene.P && window.__game.scene.P.name !== b && window.__game.scene.kid, before); looks.push(await p.evaluate(() => window.__game.scene.P.name)); }

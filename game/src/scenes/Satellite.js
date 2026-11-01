@@ -7,6 +7,7 @@ import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { overlay } from '../core/overlay.js';
 import { pixelZoom } from '../core/display.js';
+import { nextStep, goNext } from '../core/flow.js';
 
 const BATCHES = { 1: ['basic', 'walls', 'orbit'], 2: ['b2a', 'b2b', 'b2c'] };
 const H = h => parseInt(h.slice(1), 16);
@@ -131,12 +132,12 @@ export class Satellite extends Phaser.Scene {
   }
   endBatch() {
     this.ended = true;
-    const next = this.batch + 1;
+    const next = this.batch + 1, step = 'batch' + this.batch;
     overlay.card('END OF BATCH ' + this.batch, 'Episode ' + next + ' is next', 3400);
-    if (next === 2 && !this.preview) {
+    if (!this.preview && nextStep(this, step)) {
       // on to the next episode
       this.time.delayedCall(2600, () => this.cameras.main.fadeOut(700, 0, 0, 0));
-      this.time.delayedCall(3500, () => this.scene.start('gallery', { fromCut: true }));
+      this.time.delayedCall(3500, () => goNext(this, step));
       return;
     }
     this.final = true;

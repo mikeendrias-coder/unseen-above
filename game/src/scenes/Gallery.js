@@ -9,6 +9,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode } from '../core/side.js';
+import { goNext } from '../core/flow.js';
 
 const rgb = c => { const n = hexNum(c); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 
@@ -143,7 +144,7 @@ export class Gallery extends SideEpisode {
       overlay.card('END OF EPISODE 2', 'Take ' + this.ep.take, 3400); overlay.bug('CH 07', 1400);
       overlay.hint('');
     });
-    this.time.delayedCall(5600, () => this.scene.start('satellite', { batch: 2 }));
+    this.time.delayedCall(5600, () => goNext(this, 'ep2'));
   }
 
   // ------------------------------------------------------------------ ambience

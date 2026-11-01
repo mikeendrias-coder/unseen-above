@@ -1,6 +1,7 @@
 // The kids' room preview: plays to the end, Enter replays it (the embedded screen comes back),
 // Esc leaves for the opening (the embedded screen stops). Also checks the #links.
 const { chromium } = require('playwright');
+const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 1280, height: 860 } });
@@ -8,7 +9,7 @@ const { chromium } = require('playwright');
   const until = (fn, arg, ms) => p.waitForFunction(fn, arg, { timeout: ms || 60000, polling: 100 });
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   const active = () => p.evaluate(() => window.__unseen.game.scene.getScenes(true).map(s => s.sys.settings.key).join(','));
-  await p.goto('http://localhost:8766/local.html#kids'); await p.click('#start');
+  await p.goto(BASE + '/local.html#kids'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'kids');
   await until(() => window.__unseen.game.scene.isActive('satellite'));
   ok('kids starts with the embedded screen: ' + await active(), true);
@@ -24,7 +25,7 @@ const { chromium } = require('playwright');
   await p.waitForTimeout(500);
   ok('Esc goes to the opening: ' + await active(), !(await p.evaluate(() => window.__unseen.game.scene.isActive('satellite'))));
   for (const [h, key] of [['gallery', 'gallery'], ['batch2', 'satellite'], ['grounds', 'grounds']]) {
-    await p.goto('about:blank'); await p.goto('http://localhost:8766/local.html#' + h); await p.click('#start');
+    await p.goto('about:blank'); await p.goto(BASE + '/local.html#' + h); await p.click('#start');
     await until(k => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === k, key);
     ok('#' + h + ' opens ' + key + (key === 'satellite' ? ' batch ' + await p.evaluate(() => window.__game.scene.batch) : ''), true);
   }

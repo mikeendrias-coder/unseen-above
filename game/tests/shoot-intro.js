@@ -1,5 +1,6 @@
 // Screenshots of the opening at chosen times (seconds), plus console errors.
 const { chromium } = require('playwright');
+const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
   const look = process.argv[2] || 'A';
   const times = (process.argv[3] || '3,12,18,24,40').split(',').map(Number);
@@ -9,7 +10,7 @@ const { chromium } = require('playwright');
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   p.on('pageerror', e => errs.push('pageerror: ' + e.message));
   await p.addInitScript(l => { try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: l, episodes: {}, seenIntro: false })); } catch (e) {} }, look);
-  await p.goto('http://localhost:8766/local.html');
+  await p.goto(BASE + '/local.html');
   await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.T, null, { timeout: 30000 });
   const T = await p.evaluate(() => window.__game.scene.T);
