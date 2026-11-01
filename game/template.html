@@ -51,11 +51,15 @@
   #h-hint { font-size: 12px; min-height: 1.5em; margin: 0 0 6px; color: var(--ink); }
   .keys { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 11px; color: var(--ink-quiet); }
   .keys b { color: var(--ink); font-weight: 600; }
+  .jump { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 11px; color: var(--ink-quiet); }
+  .jump b { color: var(--ink); font-weight: 600; }
+  .jump a { color: var(--ink-quiet); text-decoration: underline; text-decoration-color: var(--ink-quiet); text-underline-offset: 3px; }
+  .jump a:hover, .jump a:focus-visible { color: var(--accent); text-decoration-color: var(--accent); }
   @media (prefers-reduced-motion: reduce) { #cc, #card, #bug, #note, #blackout { transition: none; } }
 </style>
 <header id="chrome-top">
   <h1>Unseen Above</h1>
-  <div class="tag">Working build · the opening, episodes 1 and 2 · keyboard needed</div>
+  <div class="tag">Working build · the opening, episodes 1 and 2, a preview from the end · keyboard needed</div>
 </header>
 <div id="stage">
   <div id="overlay" aria-live="polite">
@@ -98,6 +102,15 @@
     <li><b>Skip the opening</b> Esc</li>
     <li><b>Satellite</b> drag with the mouse · K previews later screens</li>
   </ul>
+  <nav class="jump" aria-label="Jump to a part">
+    <b>Jump to</b>
+    <a href="#opening">the opening</a>
+    <a href="#grounds">episode 1</a>
+    <a href="#batch1">satellite batch 1</a>
+    <a href="#gallery">episode 2</a>
+    <a href="#batch2">satellite batch 2</a>
+    <a href="#kids">the kids&rsquo; room (a preview from near the end)</a>
+  </nav>
 </footer>
 <script src="__PHASER_SRC__"></script>
 <script>

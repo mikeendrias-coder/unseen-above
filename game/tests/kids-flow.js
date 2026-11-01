@@ -28,6 +28,12 @@ const { chromium } = require('playwright');
     await until(k => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === k, key);
     ok('#' + h + ' opens ' + key + (key === 'satellite' ? ' batch ' + await p.evaluate(() => window.__game.scene.batch) : ''), true);
   }
+  // jumping while playing: the links in the page change the hash
+  for (const [h, key] of [['kids', 'kids'], ['gallery', 'gallery'], ['opening', 'intro'], ['batch2', 'satellite']]) {
+    await p.evaluate(h => { location.hash = h; }, h);
+    await until(k => window.__unseen.game.scene.getScenes(true).map(s => s.sys.settings.key).join(',') === k && window.__game.scene.sys.settings.key === k, key);
+    ok('jump to #' + h + ' while playing: ' + await active(), true);
+  }
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 10).join('\n') : 'no errors');
   await b.close();
 })().catch(e => { console.log('FAIL ' + e.message.split('\n')[0]); process.exit(1); });
