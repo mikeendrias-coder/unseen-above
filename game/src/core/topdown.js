@@ -198,6 +198,20 @@ export class TopDownEpisode extends Phaser.Scene {
     this.nearThing = near[0] || null;
     if (this.nearThing && !this.nearThing.hold && this.ctl.interact()) this.nearThing.use();
   }
+  // A side room behind an optional door, as in the side-view episodes: this scene sleeps and
+  // wakes where she left it.
+  enterRoom(id) {
+    if (this.leaving || this.dead) return;
+    this.leaving = true;
+    Sound.tone(300, 0.08, 'triangle', 0.02); this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.time.delayedCall(260, () => {
+      this.leaving = false;
+      Object.values(this.beds || {}).forEach(b => b.set(0.0001, 0.3));
+      this.events.once('wake', () => { this.ctl.endFrame(); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
+      this.scene.launch('room', { id, from: this.scene.key, take: this.ep.take });
+      this.scene.sleep();
+    });
+  }
   follow() {
     const c = this.kidPx(), W = this.level.W * T, H = this.level.H * T;
     this.camX += (c.x - this.camX) * 0.2; this.camY += (c.y - this.camY) * 0.2;

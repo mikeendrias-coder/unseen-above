@@ -11,6 +11,7 @@ export const STEPS = [
   { id: 'batch3', scene: 'satellite', data: { batch: 3 } },
   { id: 'ep4', scene: 'bedroom', data: { fromCut: true } },
   { id: 'batch4', scene: 'satellite', data: { batch: 4 } },
+  { id: 'kids', scene: 'kids', data: { inFlow: true } },     // the kids finish the same round, on the Moon
   { id: 'ep5', scene: 'moon', data: { fromCut: true } }
 ];
 

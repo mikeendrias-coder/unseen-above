@@ -1,0 +1,289 @@
+// Episode 5: the Moon. She comes out of a door that matches the one in the bedroom, into the
+// watchers' home: bright, soft, clean. Nothing here hunts her; the people up here only look at
+// their screens. Behind glass, adults watch walls of Earth channels. At the end of the corridor,
+// the playroom: two kids, a giant screen, round two. The third dialogue scene (a DRAFT), two
+// clicks, and the last shot: an old TV in a dark room on Earth, showing the Moon. No end card.
+// Michael set the ending; the staging here is a first pass for him.
+import { hexNum } from '../art/painter.js';
+import { makeSprites } from '../art/sprites.js';
+import { pixText, textWidth } from '../art/pixfont.js';
+import { LOOKS } from '../art/palettes.js';
+import { TILE, GROUND, KX, M, LEVEL, buildMap, paintLevel, paintKid, paintRobot, paintLastRoom, paintTvMoon, TVSCREEN } from '../art/moon.js';
+import { Sound } from '../core/sound.js';
+import { state } from '../core/state.js';
+import { overlay } from '../core/overlay.js';
+import { display } from '../core/display.js';
+import { SideEpisode, K } from '../core/side.js';
+import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, LOOK_SAID, lineSeconds } from '../data/dialogue.js';
+
+const n = c => hexNum(c);
+const ROOM_TEXT = [
+  ['Eight channels from Earth: a house, a street, a field.', 'One of them is the hall you came through.'],
+  ['Channel seven: the bedroom. The door is open. He is still there.', 'Another channel: a ridge, two small figures, watching lights.'],
+  ['Channel seven again: the grounds. A girl is walking up to the house.', 'Two of them are asleep.']
+];
+
+export class Moon extends SideEpisode {
+  constructor() { super('moon'); }
+
+  create(data) {
+    this.initSide('ep5', LEVEL, buildMap());
+    const P = this.P, look = LOOKS[state.look];
+    makeSprites(this, P);
+    const lvl = paintLevel(P, look.name); lvl.toTexture(this, 'mn_level'); this.marks = lvl.marks;
+    [true, false].forEach(bun => ['back', 'cheer', 'turned'].forEach(pose => paintKid(bun, pose).toTexture(this, 'mk_' + (bun ? 'a' : 'b') + '_' + pose)));
+    paintRobot(M.robotLed, 0).toTexture(this, 'mr_a'); paintRobot(M.robotLed, 1).toTexture(this, 'mr_b'); paintRobot(M.pink, 0).toTexture(this, 'mr_c');
+    paintLastRoom().toTexture(this, 'mn_last');
+    this.tvBase = paintTvMoon().canvas; this.tvCanvas = document.createElement('canvas'); this.tvCanvas.width = TVSCREEN.w; this.tvCanvas.height = TVSCREEN.h; this.tvCtx = this.tvCanvas.getContext('2d');
+    if (this.textures.exists('mn_tvlive')) this.textures.remove('mn_tvlive');
+    this.tvTex = this.textures.addCanvas('mn_tvlive', this.tvCanvas);
+    this.pixelCamera(LEVEL.w * TILE, M.wall);
+    this.add.image(0, 0, 'mn_level').setOrigin(0).setDepth(0);
+    this.liveG = this.add.graphics().setDepth(1);
+    this.robotImg = this.add.image(0, GROUND, 'mr_a').setOrigin(0.5, 1).setDepth(3);
+    this.kidImgs = LEVEL.kids.map((k, i) => this.add.image(k.x, LEVEL.couch.y + 4, 'mk_' + (i ? 'b' : 'a') + '_back').setOrigin(0.5, 1).setDepth(2.5));
+    this.commonLayers();
+    this.eyeG = this.add.graphics().setDepth(4.5);
+    // the end, drawn over everything in screen space
+    this.flashRect = this.addParallax(this.add.rectangle(160, 90, 330, 190, 0xffffff).setDepth(40).setAlpha(0), 0, 160, 90);
+    this.lastImg = this.addParallax(this.add.image(0, 0, 'mn_last').setOrigin(0).setDepth(30).setVisible(false), 0);
+    this.lastG = this.addParallax(this.add.graphics().setDepth(30.5).setBlendMode(Phaser.BlendModes.ADD), 0);
+    this.tvImg = this.addParallax(this.add.image(TVSCREEN.x, TVSCREEN.y, 'mn_tvlive').setOrigin(0).setDepth(31).setVisible(false), 0, TVSCREEN.x, TVSCREEN.y);
+    this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
+
+    this.mode = 'walk'; this.view = { x: 0 }; this.heard = new Set(); this.vest = 0;
+    this.robot = { x: LEVEL.robot.x0 + 30, dir: 1, line: 0 };
+    this.robotProp = { id: 'robot', x: 0, y: GROUND - 6, w: 10, h: 6 }; this.props.push(this.robotProp);
+    this.robotThing = { x0: 0, x1: 0, y0: GROUND - 8, y1: GROUND, label: 'E', use: () => this.robotTalk() };
+    this.things.push(this.robotThing);
+    LEVEL.rooms.forEach((R, i) => { const it = { n: 0 }; this.things.push({ x0: R.x0 + 10, x1: R.x1 - 10, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(ROOM_TEXT[i], it, (R.x0 + R.x1) / 2, 118) }); });
+    const V = LEVEL.vote, A = LEVEL.arrive;
+    const lookLine = { n: 0 }, doorLine = { n: 0 }, holeLine = { n: 0 };
+    this.things.push({ x0: V.x, x1: V.x + V.w, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(["Tonight's look: " + look.name + '.', 'Thank you for voting.'], lookLine, V.x + V.w / 2, V.y + V.h + 4) });
+    this.things.push({ x0: A.x - 4, x1: A.x + A.w + 4, y0: A.y, y1: GROUND, label: 'E', use: () => this.describe(['The door she came out of.', 'On this side it has a number: 07.'], doorLine, A.x + A.w / 2, A.y - 12) });
+    LEVEL.portholes.forEach(h => this.things.push({ x0: h.x - 12, x1: h.x + 12, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(['Earth, on its dark side.', 'Small fires everywhere.'], holeLine, h.x, h.y + h.r + 6) }));
+
+    this.spawn(); this.kid.face = 1;
+    this.updateView(1);
+    const fromCut = !!(data && data.fromCut);
+    // she steps out of the door into the light
+    this.cameras.main.fadeIn(fromCut ? 2200 : 600, 255, 255, 255);
+    this.beds = { lounge: Sound.lounge(0.04), hum: Sound.hum(0.008) };
+    this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
+    this.takeNote({ fromCut }, 5, 'The Moon');
+    window.__game = { scene: this, state };
+  }
+
+  update(time, delta) {
+    const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
+    this.clock += dt;
+    c.restart(); // no takes up here: nothing hunts her
+    if (this.mode !== 'walk') c.look(); else if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
+    if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
+    if (this.mode === 'walk' || this.mode === 'room') { if (!this.leaving) { this.moveKid(dt); this.updateThings(); } }
+    if (this.mode === 'walk') { this.overhear(); this.updateRobot(dt); }
+    if (this.mode === 'room' && this.kid.x + this.kid.w / 2 >= LEVEL.stand) this.startTalk();
+    if (this.mode === 'talk') { this.talkT -= dt; if (c.advance() || this.talkT <= 0) this.nextLine(); }
+    if (this.mode === 'vest') this.updateVest(dt);
+    if (this.mode === 'last') this.updateLast(dt);
+    this.updateView(dt);
+    this.draw(dt);
+    this.hint();
+    c.endFrame();
+  }
+
+  updateView(dt) {
+    const S = display.S, cam = this.cameras.main;
+    if (this.mode === 'walk') { const k = this.kid, want = Math.max(0, Math.min(83 * TILE + TILE - 320, k.x + k.w / 2 + 18 - 160)); this.view.x += (want - this.view.x) * Math.min(1, dt * 9); }
+    else this.view.x = KX;
+    cam.scrollX = Math.round(this.view.x) - 160 * (S - 1); cam.scrollY = -90 * (S - 1);
+  }
+  onRescale() { super.onRescale(); this.updateView(0); }
+
+  // ------------------------------------------------------------------ the corridor
+  overhear() {
+    const cx = this.kid.x + this.kid.w / 2;
+    LEVEL.rooms.forEach((R, i) => {
+      if (this.heard.has(i) || cx < (R.x0 + R.x1) / 2 - 30) return;
+      this.heard.add(i);
+      const lines = MOON_OVERHEARD[i], seat = (j) => ({ x: R.x0 + 34 + j * 40, y: 88 });
+      lines.forEach((text, j) => this.time.delayedCall(j * 2600, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: n(M.wallHi), edge: n(M.adultHi), pitch: 300 + j * 80 })));
+    });
+  }
+  describe(lines, it, x, y) { const text = lines[it.n % lines.length]; it.n++; this.bubbles.say('item', text, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { edge: 0xffffff, ink: 0xffffff, pitch: 520 }); }
+  updateRobot(dt) {
+    const R = this.robot, B = LEVEL.robot, k = this.kid, talking = this.bubbles.busy('robot'), near = Math.abs(R.x - (k.x + k.w / 2)) < 22;
+    if (!near && !talking) { R.x += R.dir * B.speed * dt; if (R.x > B.x1) { R.x = B.x1; R.dir = -1; } if (R.x < B.x0) { R.x = B.x0; R.dir = 1; } }
+    this.robotProp.x = Math.round(R.x) - 5; this.robotThing.x0 = R.x - 8; this.robotThing.x1 = R.x + 8;
+    this.robotImg.setTexture(near || talking ? 'mr_c' : Math.floor(this.clock * 4) % 2 ? 'mr_a' : 'mr_b').setPosition(Math.round(R.x), GROUND).setFlipX(R.dir < 0);
+  }
+  robotTalk() { const R = this.robot; this.bubbles.say('robot', MOON_ROBOT[R.line % MOON_ROBOT.length], () => ({ x: R.x, y: GROUND - 8 }), { ink: n(M.mint), edge: n(M.robotLo), pitch: 1180 }); R.line++; }
+
+  // ------------------------------------------------------------------ the playroom
+  enterDoor() {
+    if (this.leaving || this.mode !== 'walk') return;
+    this.leaving = true; Sound.tone(660, 0.12, 'triangle', 0.03); Sound.tone(880, 0.16, 'triangle', 0.025);
+    this.cameras.main.fadeOut(450, 255, 255, 255);
+    this.time.delayedCall(470, () => {
+      this.mode = 'room'; this.leaving = false; this.things = [];
+      const k = this.kid; k.x = KX + 40; k.y = GROUND - K.hStand; k.vx = 0; k.face = 1;
+      this.beds.lounge.set(0.0001, 0.6); this.beds.show = Sound.show(0.04);
+      this.roomT = 0; this.updateView(0);
+      this.cameras.main.fadeIn(700, 255, 255, 255);
+      overlay.hint('');
+    });
+  }
+  startTalk() {
+    this.mode = 'talk'; this.kid.vx = 0; this.kid.face = 1; this.talkI = -1;
+    this.beds.show.stop(0.3); Sound.tone(392, 0.5, 'sine', 0.02, 196);
+    this.lines = PLAYROOM.map(l => Object.assign({}, l, { text: l.text.replace(/\{look\}/g, LOOK_SAID[state.look] || 'the gold one') }));
+    this.nextLine();
+  }
+  nextLine() {
+    this.talkI++;
+    if (this.talkI >= this.lines.length) return this.startVest();
+    const l = this.lines[this.talkI];
+    this.talkT = lineSeconds(l.text) + (l.who ? 0.5 : 0.9);
+    overlay.caption(l.who, l.text);
+    if (/CLICK/.test(l.text)) { this.vest = 0.01; Sound.click(0.03); this.time.delayedCall(260, () => Sound.click(0.03)); this.talkT = 1.1; }
+  }
+  startVest() {
+    this.mode = 'vest'; this.vestT = 0; overlay.clearCaption();
+    // the flash: white, a sound too low to hear properly, then nothing
+    this.flashRect.setAlpha(1); this.cameras.main.shake(300, 0.01);
+    Sound.tone(42, 2.6, 'sine', 0.12, 30); Sound.noise(2.2, 0.16, 300);
+    Object.values(this.beds).forEach(b => b.stop(0.05));
+  }
+  updateVest(dt) {
+    this.vestT += dt;
+    if (this.vestT > 1.6) this.flashRect.setFillStyle(0x000000).setAlpha(Math.min(1, (this.vestT - 1.6) * 2));
+    if (this.vestT > 3.2) { this.mode = 'last'; this.lastT = 0; this.lastImg.setVisible(true); this.tvImg.setVisible(true); this.flashRect.setAlpha(1); this.hiss = Sound.wind(0.02); state.finish(this.epId); }
+  }
+  updateLast(dt) {
+    this.lastT += dt;
+    this.flashRect.setAlpha(Math.max(0, 1 - this.lastT / 2.5));
+    if (this.lastT > 4.2 && !this.boomed) { this.boomed = true; Sound.noise(0.9, 0.05, 2500); }
+    if (this.lastT > 30 && this.hiss && !this.quiet) { this.quiet = true; this.hiss.set(0.0001, 8); }
+  }
+
+  // ------------------------------------------------------------------ drawing
+  draw(dt) {
+    const t = this.clock;
+    this.drawGirl();
+    const g = this.liveG; g.clear();
+    // the channels flicker; now and then one cuts to another picture
+    this.marks.forEach((mk, i) => { if (mk.kind !== 'tile') return; const f = Math.sin(t * 7 + i * 1.7) > 0.85 ? 0.12 : 0; if (f) { g.fillStyle(0xffffff, f); g.fillRect(mk.x, mk.y, mk.w, mk.h); } if (Math.floor(t * 2 + i) % 9 === 0) { g.fillStyle(n(M.screenGlow), 0.1); g.fillRect(mk.x, mk.y + ((t * 30 + i * 5) % mk.h), mk.w, 1); } });
+    // the screens' light moves on the backs of their heads; now and then someone lifts a glass
+    LEVEL.rooms.forEach((R, ri) => {
+      const sx = R.x0 + 22, sw = R.x1 - R.x0 - 44;
+      for (let si = 0; si < R.seats; si++) {
+        const hx = Math.round(sx + 10 + si * (sw - 20) / Math.max(1, R.seats - 1)), c = [M.screenGlow, M.pink, M.yellow, M.mint][(Math.floor(t * 0.7) + si + ri) % 4];
+        g.fillStyle(n(c), 0.18 + 0.08 * Math.sin(t * 5 + si)); g.fillRect(hx - 3, 96, 7, 2);
+        const lift = Math.sin(t * 0.9 + si * 2.1 + ri) > 0.93;
+        if (si === (ri + 1) % R.seats && lift) { g.fillStyle(n(M.adult), 1); g.fillRect(hx + 5, 99, 2, 6); g.fillStyle(0xffffff, 1); g.fillRect(hx + 5, 96, 2, 3); g.fillStyle(n(M.pink), 1); g.fillRect(hx + 5, 98, 2, 1); }
+      }
+    });
+    // the vote bar keeps moving
+    const V = LEVEL.vote; g.fillStyle(n(M.pink), 1); g.fillRect(V.x + 8, V.y + 28, Math.round((V.w - 16) * (0.6 + 0.05 * Math.sin(t * 0.7))), 4);
+    this.drawPlayroomScreen(g, t);
+    // the door she came out of stands open on the void for a moment, then swings shut
+    const A = LEVEL.arrive, shut = Math.min(1, Math.max(0, (t - 1.6) / 0.5));
+    if (shut < 1) {
+      const hw = Math.round(A.w / 2 * shut);
+      g.fillStyle(0x000000, 1); g.fillRect(A.x, A.y, A.w, A.h);
+      for (let i = 0; i < 6; i++) { g.fillStyle(n(this.P.voidEdge), 0.7); g.fillRect(A.x + 2 + ((i * 7 + Math.floor(t * 20)) % (A.w - 4)), A.y + 4 + ((i * 11) % (A.h - 8)), 1, 1); }
+      if (hw > 0) { g.fillStyle(n('#5a3d2a'), 1); g.fillRect(A.x, A.y, hw, A.h); g.fillStyle(n(M.wallHi), 1); g.fillRect(A.x + A.w - hw, A.y, hw, A.h); }
+      if (t > 1.6 && !this.shutSound) { this.shutSound = true; this.time.delayedCall(450, () => Sound.tone(110, 0.25, 'triangle', 0.04, 70)); }
+    }
+    // the kids
+    const poseOf = i => this.mode === 'walk' ? 'back' : this.mode === 'room' ? (this.roomT < 2.2 ? 'cheer' : 'back') : 'turned';
+    if (this.mode === 'room') this.roomT += dt;
+    this.kidImgs.forEach((img, i) => { const pose = this.mode === 'talk' && this.talkI < 1 ? 'back' : poseOf(i); img.setTexture('mk_' + (i ? 'b' : 'a') + '_' + pose).setFlipX(false).setY(LEVEL.couch.y + 4 + (pose === 'cheer' ? Math.round(Math.abs(Math.sin(t * 9 + i)) * -2) : 0)); });
+    // a red light on her chest, at the end
+    const e = this.eyeG; e.clear();
+    if (this.vest > 0 && this.mode !== 'last') { const k = this.kid, cx = Math.round(k.x + k.w / 2), top = Math.round(k.y); if (Math.floor(t * 8) % 2 === 0) { e.fillStyle(n(M.red), 1); e.fillRect(cx - 1, top + 7, 1, 1); e.fillStyle(n(M.red), 0.3); e.fillRect(cx - 2, top + 6, 3, 3); } }
+    this.drawThings();
+    this.drawLocks([], 1);
+    this.drawHud();
+    if (this.mode === 'last') this.drawLast(this.lastT);
+  }
+
+  drawPlayroomScreen(g, t) {
+    const S = LEVEL.screen, x = S.x, y = S.y;
+    g.fillStyle(n(M.purple), 1); g.fillRect(x, y, S.w, S.h);
+    if (this.mode === 'vest' || this.mode === 'last') return;
+    const round2 = this.mode === 'talk' || (this.mode === 'room' && this.roomT > 2.2);
+    g.fillStyle(n('#ff3b5c'), 1); g.fillRect(x + 6, y + 6, 22, 9); pixText(g, 'LIVE', x + 8, y + 8, 0xffffff);
+    pixText(g, 'CH 07', x + S.w - 26, y + 8, n(M.yellow));
+    // the board the kids play: a path that draws itself to each target
+    const bx = x + 100, by = y + 22, cs = 9, cols = 7, rows = 7;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { g.fillStyle(n('#3a2878'), 1); g.fillRect(bx + i * cs + 1, by + j * cs + 1, cs - 2, cs - 2); }
+    const path = [[0, 6], [1, 6], [2, 6], [2, 5], [2, 4], [3, 4], [4, 4], [4, 3], [4, 2], [5, 2], [6, 2], [6, 1], [6, 0]], u = this.mode === 'walk' ? (t * 1.6) % path.length : path.length;
+    for (let i = 0; i < Math.floor(u); i++) { const [px, py] = path[i]; g.fillStyle(n(M.pink), 1); g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); }
+    [[0, 6], [4, 4], [6, 0]].forEach(([px, py], i) => { g.fillStyle(n(i < 2 || u >= path.length ? M.yellow : M.blue), 1); g.fillCircle(bx + px * cs + cs / 2, by + py * cs + cs / 2, 3); });
+    // the feed from Earth in the corner: the grounds at night
+    const fx = x + 8, fy = y + 22, fw = 80, fh = 48;
+    g.fillStyle(n('#0d1226'), 1); g.fillRect(fx, fy, fw, fh); g.fillStyle(n('#1a2045'), 1); g.fillRect(fx, fy + fh - 8, fw, 8); g.fillStyle(n('#e2b146'), 1); g.fillRect(fx + 30, fy + 12, 40, 3);
+    for (let i = 0; i < 5; i++) { g.fillStyle(n('#cfc8b6'), 1); g.fillRect(fx + 32 + i * 8, fy + 15, 2, fh - 23); }
+    const gx = fx + 6 + ((t * 6) % 24); g.fillStyle(n('#f1e9d8'), 1); g.fillRect(Math.round(gx), fy + fh - 13, 2, 5); g.fillStyle(n('#2a1d16'), 1); g.fillRect(Math.round(gx), fy + fh - 14, 2, 1);
+    pixText(g, 'SCORE ' + (round2 ? 2800 : 2400), x + 8, y + S.h - 22, n(M.mint));
+    if (round2 && Math.floor(t * 2.5) % 2 === 0) { const s = 'ROUND 2 READY?', w = textWidth(s); g.fillStyle(0x000000, 0.4); g.fillRect(x + S.w / 2 - w / 2 - 4, y + S.h - 13, w + 8, 9); pixText(g, s, x + S.w / 2 - w / 2, y + S.h - 11, n(M.yellow)); }
+    if (this.mode === 'room' && this.roomT < 2.2 && Math.floor(t * 8) % 2 === 0) pixText(g, '+400', bx + 70, by + 2, n(M.yellow));
+  }
+
+  // the cracked glasses, quiet up here: nothing to show
+  drawHud() {
+    const g = this.hudG; g.clear();
+    if (this.mode === 'vest' || this.mode === 'last') return;
+    g.lineStyle(1, 0xffffff, 0.3);
+    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineBetween(px, py, x, y); } });
+    if (this.clock < 3 && Math.floor(this.clock * 3) % 2 === 0) pixText(g, 'NO SIGNAL', 44, 8, n(this.P.overlay), 1, 0.6);
+  }
+
+  // The last shot: the old TV on Earth. The Moon, then a white point on its edge that grows.
+  // Drawn into the TV's own small canvas, so nothing spills past the glass.
+  drawLast(t) {
+    const x = this.tvCtx, S = TVSCREEN, d = { x: S.dome.x - S.x, y: S.dome.y - S.y }, m = { x: S.moon.x - S.x, y: S.moon.y - S.y };
+    x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+    x.drawImage(this.tvBase, 0, 0);
+    const blast = Math.max(0, t - 2.4), grow = Math.min(1, blast / 2.2), fade = blast > 3.4 ? Math.max(0.22, 1 - (blast - 3.4) / 4) : 1;
+    const disc = (r, rgba) => { x.fillStyle = rgba; x.beginPath(); x.arc(d.x, d.y, r, 0, Math.PI * 2); x.fill(); };
+    if (blast > 0) {
+      const r = 4 + grow * 70;
+      const gr = x.createRadialGradient(d.x, d.y, 0, d.x, d.y, Math.min(r * 1.5, 110));
+      gr.addColorStop(0, `rgba(255,255,255,${0.95 * fade})`); gr.addColorStop(0.25, `rgba(255,244,214,${0.7 * fade})`); gr.addColorStop(1, 'rgba(255,244,214,0)');
+      x.fillStyle = gr; x.fillRect(0, 0, S.w, S.h);
+      disc(Math.max(2, Math.min(r * 0.3, 22)), `rgba(255,255,255,${fade})`);
+      if (blast < 1.6) { x.strokeStyle = `rgba(255,255,255,${0.8 * (1 - blast / 1.6)})`; x.lineWidth = 1; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.3, L = 10 + grow * 44; x.beginPath(); x.moveTo(d.x + Math.cos(a) * 6, d.y + Math.sin(a) * 6); x.lineTo(d.x + Math.cos(a) * L, d.y + Math.sin(a) * L); x.stroke(); } }
+      // afterwards: cracks running across the Moon from where the dome was, pieces drifting off
+      if (blast > 2.6) {
+        const u = Math.min(1, (blast - 2.6) / 3);
+        x.strokeStyle = 'rgba(255,154,74,' + (0.85 * u) + ')'; x.lineWidth = 1;
+        [[[d.x, d.y + 4], [d.x - 10, d.y + 18], [d.x - 14, d.y + 30], [d.x - 26, d.y + 44]], [[d.x - 4, d.y + 2], [d.x - 22, d.y + 8], [d.x - 40, d.y + 20]], [[d.x + 2, d.y + 6], [d.x + 4, d.y + 22], [m.x + 10, m.y + 30]]].forEach(line => {
+          x.beginPath(); x.moveTo(line[0][0], line[0][1]);
+          for (let i = 1; i < line.length; i++) { const v = Math.max(0, Math.min(1, u * line.length - i + 1)); if (v <= 0) break; const [ax, ay] = line[i - 1], [bx, by] = line[i]; x.lineTo(ax + (bx - ax) * v, ay + (by - ay) * v); }
+          x.stroke();
+        });
+        for (let i = 0; i < 16; i++) { const a = i * 0.9, dist = 8 + (blast - 2.6) * (3 + (i % 4) * 2); x.fillStyle = i % 3 ? M.lunarHi : M.fire; x.globalAlpha = Math.max(0, 1 - (blast - 2.6) / 40); x.fillRect(Math.round(d.x + Math.cos(a) * dist), Math.round(d.y + Math.sin(a) * dist * 0.8), 1, 1); }
+        x.globalAlpha = 1;
+      }
+    }
+    // scanlines and the picture's own flicker
+    x.fillStyle = 'rgba(0,0,0,0.2)'; for (let y = 0; y < S.h; y += 2) x.fillRect(0, y, S.w, 1);
+    x.fillStyle = `rgba(255,244,214,${0.03 + 0.02 * Math.sin(t * 13)})`; x.fillRect(0, 0, S.w, S.h);
+    this.tvTex.refresh();
+    // the TV lights the dark room a little, brighter for a moment when the Moon goes white
+    const g = this.lastG; g.clear();
+    const glow = 0.05 + (blast > 0 && blast < 3.5 ? 0.22 * Math.sin(Math.min(1, blast / 3.5) * Math.PI) : 0);
+    g.fillStyle(n(M.warm), glow); g.fillPoints([{ x: 70, y: 150 }, { x: 250, y: 150 }, { x: 314, y: 180 }, { x: 6, y: 180 }], true);
+    g.fillStyle(n(M.warm), glow * 0.5); g.fillRect(S.x - 12, S.y - 12, S.w + 24, S.h + 24);
+  }
+
+  hint() {
+    if (this.mode !== 'walk' || this.leaving) return overlay.hint('');
+    const x = (this.kid.x + this.kid.w / 2) / TILE;
+    if (x < 6) return overlay.hint('E looks at things and talks to things.');
+    if (x > 76) return overlay.hint('The playroom. Up or E.');
+    return overlay.hint('');
+  }
+}

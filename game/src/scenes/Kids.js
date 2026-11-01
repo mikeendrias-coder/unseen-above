@@ -15,6 +15,7 @@ import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
+import { goNext } from '../core/flow.js';
 
 const TV = { x: 500, y: 110, w: 640, h: 360 };
 const X0 = 440; // the feed shows the garden from this x
@@ -78,7 +79,7 @@ function paintRoom(scene) {
 export class Kids extends Phaser.Scene {
   constructor() { super('kids'); }
 
-  create() {
+  create(data) {
     const P = this.P = LOOKS[state.look];
     this.C = cinemaPalette(P);
     makeCinemaTextures(this, this.C);
@@ -123,7 +124,9 @@ export class Kids extends Phaser.Scene {
       this.sat.events.off('solved', this.onSolved);
       if (this.scene.isActive('satellite')) this.scene.stop('satellite');
     });
-    overlay.hint('A preview of the kids’ room on the Moon, a scene near the end. Esc goes back to the opening.');
+    // in the game's own order it plays after batch 4 and hands on to the Moon; on its own it is a preview
+    this.inFlow = !!(data && data.inFlow);
+    overlay.hint(this.inFlow ? '' : 'A preview of the kids’ room on the Moon, a scene near the end. Esc goes back to the opening.');
     cam.fadeIn(1200);
     window.__game = { scene: this, T };
   }
@@ -135,7 +138,7 @@ export class Kids extends Phaser.Scene {
     this.t += dt;
     const t = this.t;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
-    if (c.skip()) { this.scene.start('intro', {}); return; }
+    if (c.skip()) { if (this.inFlow) { if (!goNext(this, 'kids')) this.scene.start('intro', {}); } else this.scene.start('intro', {}); return; }
     if (this.over && c.advance()) { this.scene.restart(); return; }
     this.script(t);
     this.direct(t);
@@ -165,7 +168,10 @@ export class Kids extends Phaser.Scene {
     this.cue('round2', T.round2, () => { overlay.caption(null, '[GAME SHOW JINGLE]'); [523, 659, 784, 1047].forEach((f, i) => this.time.delayedCall(i * 140, () => Sound.tone(f, 0.16, 'square', 0.025, null, 0.3))); });
     this.cue('round2x', T.round2 + 2.4, () => overlay.clearCaption());
     this.cue('black', T.black, () => { this.blackout.setVisible(true); Object.values(this.beds).forEach(b => b.stop(0.02)); overlay.clearCaption(); });
-    this.cue('end', T.end, () => { this.over = true; overlay.hint('End of the preview. Enter plays it again. Esc goes back to the opening.'); });
+    this.cue('end', T.end, () => {
+      if (this.inFlow && goNext(this, 'kids')) return;
+      this.over = true; overlay.hint('End of the preview. Enter plays it again. Esc goes back to the opening.');
+    });
   }
 
   // ------------------------------------------------------------------ camera, film layers, the screen

@@ -5,7 +5,7 @@ import { Painter, rng } from './painter.js';
 
 export const T = 16, W = 45, H = 30;
 // '#' wall  '.' floor  ',' debris (noisy)  'o' hole  'P' pillar  'K' bookshelf  'T' desk
-// 'R' rubble  'm' marble  'r' rug  'D' the exit door  'b' an old body  'p' loose pebbles
+// 'R' rubble  'm' marble  'r' rug  'D' the exit door  'W' a side door (optional)  'b' an old body  'p' loose pebbles
 export function buildMap() {
   const m = Array.from({ length: H }, () => new Array(W).fill('#'));
   const fill = (x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) m[y][x] = c; };
@@ -35,6 +35,7 @@ export function buildMap() {
   put([[35, 11], [39, 3], [32, 7], [42, 8]], ',');
   put([[38, 11]], 'b');
   m[1][37] = 'D';
+  m[18][4] = 'W'; // a workshop off the landing, optional
   return m;
 }
 
@@ -52,7 +53,7 @@ export const LEVEL = {
   chandelier: { x: 37.5, y: 7.5, range: 6.5, half: 13, speeds: [36, 48, 62, 76], eyes: [2, 3, 4, 5], chains: [[33, 4], [41, 4], [41, 10]] }
 };
 
-const SOLID = new Set(['#', 'o', 'P', 'K', 'T', 'R', 'D']), OPAQUE = new Set(['#', 'P', 'K', 'D']);
+const SOLID = new Set(['#', 'o', 'P', 'K', 'T', 'R', 'D', 'W']), OPAQUE = new Set(['#', 'P', 'K', 'D', 'W']);
 export const isSolid = c => SOLID.has(c);
 export const isOpaque = c => OPAQUE.has(c);
 
@@ -79,9 +80,9 @@ export function paintMap(P, m) {
   const p = new Painter(W * T, H * T), r = rng(31);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const c = m[y][x], px = x * T, py = y * T, below = y + 1 < H ? m[y + 1][x] : '#';
-    if (c === '#' || c === 'D') {
+    if (c === '#' || c === 'D' || c === 'W') {
       p.rect(px, py, T, T, P.void); p.rect(px, py, T, T, P.wallLo);
-      if (below !== '#' && below !== 'D') { p.rect(px, py + 8, T, 8, P.wall); p.rect(px, py + 8, T, 1, P.goldLo); for (let i = 2; i < 16; i += 5) p.rect(px + i, py + 10, 1, 5, P.wallLine); }
+      if (below !== '#' && below !== 'D' && below !== 'W') { p.rect(px, py + 8, T, 8, P.wall); p.rect(px, py + 8, T, 1, P.goldLo); for (let i = 2; i < 16; i += 5) p.rect(px + i, py + 10, 1, 5, P.wallLine); }
       else if (r() < 0.3) p.px(px + r() * 16, py + r() * 16, P.wallLine);
       continue;
     }
@@ -96,6 +97,8 @@ export function paintMap(P, m) {
     if (c === 'T') { p.rect(px, py + 3, T, 10, P.wood); p.rect(px, py + 3, T, 1, P.woodHi); p.rect(px + 3, py + 5, 6, 4, P.colHi); p.rect(px + 4, py + 6, 4, 1, P.device); }
     if (c === 'P') { p.circle(px + 8, py + 9, 7, P.colLo); p.circle(px + 8, py + 8, 6, P.col); p.circle(px + 7, py + 7, 3, P.colHi); p.ellipse(px + 8, py + 15, 6, 1, P.void); }
   }
+  // the workshop door off the landing: plain, a strip of light under it
+  p.rect(4 * T + 3, 18 * T + 6, 10, 10, P.wood); p.rect(4 * T + 3, 18 * T + 6, 10, 1, P.woodHi); p.px(4 * T + 11, 18 * T + 11, P.gold); p.glowRect(4 * T + 3, 18 * T + 15, 10, 1, P.lamp, 0.5);
   // the door out of the ballroom
   const [ex, ey] = LEVEL.exit; p.rect(ex * T + 2, ey * T + 4, 12, 12, P.wood); p.rect(ex * T + 2, ey * T + 4, 12, 1, P.woodHi); p.rect(ex * T + 7, ey * T + 4, 1, 12, P.goldLo); p.px(ex * T + 10, ey * T + 11, P.gold);
   return p;

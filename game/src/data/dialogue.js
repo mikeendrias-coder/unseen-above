@@ -37,3 +37,27 @@ export const BEDROOM = [
   { who: null, text: '[COUGHING]' },
   { who: 'BROTHER', text: "Don't open that door." }
 ];
+
+// DRAFT, for Michael: the Moon. Lines overheard through the glass, two per room.
+export const MOON_OVERHEARD = [
+  ['She went through the door.', 'They never go through the door.'],
+  ['Turn it up. The next one is starting.', 'I liked the old house better.'],
+  ['Is this one new?', 'It is a repeat.']
+];
+// DRAFT: the cleaning robot up here, the same model as the one in the gallery.
+export const MOON_ROBOT = ['Welcome home. Please wipe your feet.', 'You are early. Round two has not started.', 'The playroom is at the end. They are expecting a winner.'];
+// DRAFT, for Michael: the third dialogue scene, in the kids' playroom. {look} is the look the
+// player picked on the start screen, the way a kid would say it.
+export const PLAYROOM = [
+  { who: null, text: '[THE MUSIC STOPS]' },
+  { who: 'KID', text: "You're the girl from channel seven." },
+  { who: 'LITTLE KID', text: "She's smaller in real life." },
+  { who: 'KID', text: 'Are you here for round two?' },
+  { who: 'SISTER', text: 'Who picks the lights?' },
+  { who: 'LITTLE KID', text: 'We do. I like {look}.' },
+  { who: 'SISTER', text: 'My brother died in {look}.' },
+  { who: 'KID', text: 'He comes back. They always come back.' },
+  { who: 'SISTER', text: 'I know.' },
+  { who: null, text: '[CLICK. CLICK.]' }
+];
+export const LOOK_SAID = { A: 'the gold one', B: 'the white one', C: 'the dark one', D: 'the green one', E: 'the black and white one' };

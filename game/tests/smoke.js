@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
-  const parts = (process.argv[2] || 'grounds,gallery,batch1,batch2,kids').split(',');
+  const parts = (process.argv[2] || 'grounds,gallery,batch1,batch2,fall,eastwing,batch3,bedroom,batch4,kids,moon').split(',');
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   for (const part of parts) {
     const p = await b.newPage({ viewport: { width: 1280, height: 860 } });

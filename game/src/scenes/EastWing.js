@@ -55,6 +55,7 @@ export class EastWing extends TopDownEpisode {
     this.ch = { cut: 0, angle: 0, focus: null, focusT: 0, phase: 'up', t: 0, shake: 0, hold: 0, holdAt: null };
     this.things.push({ tx: 9, ty: 21, use: () => { this.pebbles = 5; Sound.tone(500, 0.06, 'triangle', 0.02); this.bubbles.say('item', 'Pebbles. Five in a pocket.', () => ({ x: 9 * T + 8, y: 21 * T + 4 }), { edge: 0xffffff, pitch: 520 }); } });
     C.chains.forEach(([px, py], i) => this.things.push({ tx: px, ty: py, reach: 2, hold: true, chain: i, label: 'E' }));
+    this.things.push({ tx: 4, ty: 18, label: 'E', use: () => this.enterRoom('workshop') }); // optional
     this.cutChains = new Set();
     this.lights = [];
     this.input.on('pointerdown', ptr => { if (this.dead || this.done) return; const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y); this.throwTo(Math.floor(wp.x / T), Math.floor(wp.y / T)); });

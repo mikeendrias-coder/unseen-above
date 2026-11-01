@@ -83,6 +83,34 @@ function paintKeeper(P) {
   return p;
 }
 
+// The workshop off the east wing's landing: where the house is fixed between takes.
+function paintWorkshop(P) {
+  const p = new Painter(320, 180), r = rng(14);
+  p.rect(0, 0, 320, 180, P.wallLo);
+  p.rect(0, 0, 320, 18, P.void); for (let x = 10; x < 320; x += 30) p.rect(x, 12, 20, 6, P.wood);
+  for (let y = 26; y < G; y += 14) p.rect(0, y, 320, 1, P.wallLine);
+  p.rect(0, G, 320, 20, P.wood); p.rect(0, G, 320, 1, P.woodHi); for (let i = 0; i < 70; i++) p.px(r() * 320, G + 2 + r() * 16, P.dust);
+  // the door back
+  p.rect(18, G - 30, 16, 30, P.wall); p.rect(19, G - 29, 14, 29, P.wallHi); p.px(30, G - 15, P.gold); p.glowRect(14, G - 2, 24, 2, P.lamp, 0.15);
+  // a bench with a tray of cracked glasses and a lamp on an arm
+  p.rect(48, 118, 92, 4, P.wood); p.rect(48, 118, 92, 1, P.woodHi); p.rect(52, 122, 3, 38, P.wood); p.rect(133, 122, 3, 38, P.wood);
+  p.rect(58, 112, 40, 6, P.device); p.rect(59, 113, 38, 4, P.wallLine);
+  for (let i = 0; i < 8; i++) { const x = 61 + (i % 4) * 9, y = 113 + Math.floor(i / 4) * 2; p.rect(x, y, 3, 1, P.overlay); p.rect(x + 4, y, 3, 1, P.overlay); if (i % 3 === 0) p.px(x + 1, y, '#ffffff'); }
+  p.rect(108, 96, 2, 22, P.device); p.rect(108, 96, 14, 2, P.device); p.rect(118, 98, 8, 4, P.colLo); p.glowPoly([[116, 102], [128, 102], [136, 118], [104, 118]], P.lamp, 0.12);
+  // a beam on two sawhorses, sawn halfway through
+  p.rect(160, 128, 92, 8, P.wood); p.rect(160, 128, 92, 1, P.woodHi); p.rect(204, 128, 2, 4, P.void); p.px(205, 132, P.dust); p.px(203, 133, P.dust);
+  [[166, 136], [238, 136]].forEach(([x, y]) => { p.line(x, y, x - 6, G, P.wood); p.line(x + 2, y, x + 8, G, P.wood); p.rect(x - 4, y, 10, 2, P.wood); });
+  p.rect(212, 120, 18, 2, P.colLo); for (let i = 0; i < 6; i++) p.px(213 + i * 3, 122, P.colLo); // the saw, left on top
+  for (let i = 0; i < 14; i++) p.px(196 + r() * 18, G - 1 - r() * 2, P.woodHi); // sawdust
+  // a small monitor on a shelf, a clipboard on a nail
+  p.rect(262, 70, 44, 3, P.wood); p.rect(266, 52, 30, 18, P.device); p.rect(268, 54, 26, 14, P.glass); p.mark('rec', 291, 55);
+  p.rect(275, 60, 6, 1, P.wood); p.px(277, 58, P.kid); p.px(278, 59, P.kid); // her, falling, small
+  p.rect(268, 92, 18, 24, P.colHi); p.rect(274, 90, 6, 3, P.device); for (let i = 0; i < 5; i++) p.rect(270, 96 + i * 4, 12 - (i % 2) * 4, 1, P.device);
+  // one bare bulb
+  p.rect(150, 20, 1, 12, P.device); p.circle(150, 34, 3, P.lamp); p.glowPoly([[146, 36], [154, 36], [220, G], [80, G]], P.lamp, 0.07);
+  return p;
+}
+
 // Room data. Texts are short and literal; a function gets the episode's take number.
 const ROOMS = {
   keeper: {
@@ -92,6 +120,15 @@ const ROOMS = {
       { x0: 128, x1: 192, y: 50, text: ['Six drones on chargers. Each one has a camera.'] },
       { x0: 200, x1: 270, y: 110, text: ['Spare searchlight bulbs. Hundreds.', 'A small TV. CH 07. Stand by.'] },
       { x0: 278, x1: 304, y: 42, text: ['A crew coat. The pass says SEASON 41.'] }
+    ]
+  },
+  workshop: {
+    paint: paintWorkshop, bg: 'wallLo',
+    items: [
+      { x0: 52, x1: 104, y: 106, text: ['A tray of cracked glasses. Dozens of pairs.', 'A label on the tray: FIX BEFORE NEXT TAKE.'] },
+      { x0: 160, x1: 252, y: 118, text: ['A beam on two sawhorses, sawn halfway through.', 'The same size as the one that broke under her.'] },
+      { x0: 262, x1: 306, y: 48, text: ['A small screen. CH 07. Her fall, over and over.', 'Tape under the screen: KEEP THE FALL.'] },
+      { x0: 266, x1: 288, y: 88, text: [take => 'A clipboard. Episode 3, take ' + take + '. The fall: done.'] }
     ]
   },
   wardrobe: {
