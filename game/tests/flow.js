@@ -28,6 +28,10 @@ const { chromium } = require('playwright');
   const end = await p.evaluate(() => ({ done: window.__game.scene.done, card: document.querySelector('.card-top').textContent }));
   console.log('at the door:', JSON.stringify(end));
   await p.screenshot({ path: 'tests/out/flow-end.png' });
+  await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'satellite', null, { timeout: 60000 });
+  console.log('after the door: satellite batch', await p.evaluate(() => window.__game.scene.batch + ', screen ' + window.__game.scene.skinN));
+  await p.goto('http://localhost:8766/local.html?scene=grounds'); await p.click('#start');
+  await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.kid, null, { timeout: 30000 });
   // every look loads
   for (let i = 0; i < 5; i++) { await p.keyboard.press('KeyR'); await p.waitForTimeout(300); }
   const looks = [];

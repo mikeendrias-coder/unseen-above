@@ -147,7 +147,7 @@ export class Grounds extends Phaser.Scene {
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
     if (c.restart() && !this.leaving && !this.done) { this.restartTake(); c.endFrame(); return; }
-    if (this.done) { if (c.advance()) this.scene.start('intro', {}); c.endFrame(); return; }
+    if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) this.moveKid(dt);
     this.updateLights(dt);
     this.updateDrones(dt);
@@ -200,7 +200,7 @@ export class Grounds extends Phaser.Scene {
     if (this.dead || this.leaving) { src.lock = Math.max(0, src.lock - dt * 3); return; }
     const seen = this.probes().some(p => inPoly(src.cone, p.x, p.y));
     if (seen && !window.__noDeath) {
-      if (src.lock === 0) Sound.tone(1250, 0.06, 'square', 0.025);
+      if (src.lock === 0) Sound.charge();
       src.lock += dt;
       if (Math.floor(src.lock * 12) !== Math.floor((src.lock - dt) * 12)) Sound.tone(900 + src.lock * 1400, 0.04, 'square', 0.015);
       if (src.lock >= LOCK) this.die(src);
@@ -250,9 +250,10 @@ export class Grounds extends Phaser.Scene {
     this.time.delayedCall(900, () => cam.fadeOut(900, 0, 0, 0));
     this.time.delayedCall(1900, () => {
       this.done = true;
-      overlay.card('END OF EPISODE 1', 'Take ' + this.ep.take, 5200); overlay.bug('CH 07', 1400);
-      overlay.hint('Episode 2 is next to build. Press Enter to watch the opening again, or R to replay this episode.');
+      overlay.card('END OF EPISODE 1', 'Take ' + this.ep.take, 3400); overlay.bug('CH 07', 1400);
+      overlay.hint('');
     });
+    this.time.delayedCall(5600, () => this.scene.start('satellite', { batch: 1 }));
   }
 
   // ------------------------------------------------------------------ ambience: the spectacle

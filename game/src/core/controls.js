@@ -25,6 +25,7 @@ export function makeControls(scene) {
     skip: () => take(KC.ESC),
     restart: () => take(KC.R),
     look: () => take(KC.L),
+    nextScreen: () => take(KC.K),
     mute: () => take(KC.M),
     enterHeld: () => K.enter.isDown,
     endFrame: () => pressed.clear()

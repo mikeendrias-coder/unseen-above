@@ -95,6 +95,8 @@ export const Sound = (() => {
 
   return {
     ensure, tone, noise, wind, lounge, swell,
+    // The laser's charge. The satellite plays the same sound when a route is accepted (a clue).
+    charge: () => tone(300, 0.55, 'sawtooth', 0.02, 900, 0.2),
     chime: () => { tone(1568, 0.5, 'sine', 0.03, null, 0.5); setTimeout(() => tone(2093, 0.6, 'sine', 0.025, null, 0.5), 90); },
     toggle() { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.9; return muted; },
     get muted() { return muted; }
