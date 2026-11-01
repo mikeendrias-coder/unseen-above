@@ -104,8 +104,28 @@ export const Sound = (() => {
     return { stop: secs => fadeStop(g, oscs, secs), set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
   };
 
+  // Show: a bright game show loop, major and fast, for the kids' screen.
+  const show = (vol) => {
+    const c = ensure(); if (!c) return { stop() {}, set() {} };
+    const g = c.createGain(); g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(vol || 0.05, c.currentTime + 0.4);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200; lp.connect(g); out(g, 0.25);
+    const hz = m => 440 * Math.pow(2, (m - 69) / 12), chords = [[60, 64, 67, 72], [65, 69, 72, 77], [67, 71, 74, 79], [60, 64, 67, 72]];
+    let step = 0, alive = true; const timers = [];
+    const tick = () => {
+      if (!alive || !ctx) return;
+      const ch = chords[Math.floor(step / 8) % chords.length], note = ch[[0, 1, 2, 3, 2, 1, 2, 3][step % 8]];
+      const t = c.currentTime, o = c.createOscillator(), e = c.createGain();
+      o.type = step % 2 ? 'triangle' : 'square'; o.frequency.value = hz(note); e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(step % 2 ? 0.5 : 0.22, t + 0.01); e.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(e); e.connect(lp); o.start(t); o.stop(t + 0.2);
+      if (step % 4 === 0) { const b = c.createOscillator(), be = c.createGain(); b.type = 'triangle'; b.frequency.value = hz(ch[0] - 24); be.gain.setValueAtTime(0.0001, t); be.gain.exponentialRampToValueAtTime(0.6, t + 0.02); be.gain.exponentialRampToValueAtTime(0.0001, t + 0.45); b.connect(be); be.connect(lp); b.start(t); b.stop(t + 0.5); }
+      step++; timers.push(setTimeout(tick, 165));
+    };
+    tick();
+    return { stop: secs => { alive = false; timers.forEach(clearTimeout); fadeStop(g, [lp], secs); }, set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
+  };
+
   return {
-    ensure, tone, noise, wind, lounge, swell, hum,
+    ensure, tone, noise, wind, lounge, swell, hum, show,
     // The laser's charge. The satellite plays the same sound when a route is accepted (a clue).
     charge: () => tone(300, 0.55, 'sawtooth', 0.02, 900, 0.2),
     chime: () => { tone(1568, 0.5, 'sine', 0.03, null, 0.5); setTimeout(() => tone(2093, 0.6, 'sine', 0.025, null, 0.5), 90); },

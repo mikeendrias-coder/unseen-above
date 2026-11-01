@@ -25,10 +25,13 @@ export class Satellite extends Phaser.Scene {
 
   create(data) {
     data = data || {};
+    // embedded: shown on a screen inside another scene, which sets this camera's viewport and
+    // zoom every frame; it plays itself along the stored solution and reports when it is solved
+    this.embedded = !!data.embed;
     this.batch = data.batch || 1;
     this.skinN = data.skin || this.batch;
     this.K = SKINS[this.skinN];
-    this.ids = BATCHES[this.batch] || BATCHES[1];
+    this.ids = data.ids || BATCHES[this.batch] || BATCHES[1];
     this.levelIdx = 0; this.score = data.score || 0; this.clock = 0; this.ended = false; this.final = false;
     this.preview = !!data.preview; // screen previews (K) stay on the satellite
     const cam = this.cameras.main;
@@ -38,17 +41,24 @@ export class Satellite extends Phaser.Scene {
     this.pathG = this.add.graphics(); this.dotsG = this.add.graphics(); this.fxG = this.add.graphics();
     this.confetti = [];
     this.ctl = makeControls(this);
-    this.input.on('pointerdown', p => this.onDown(p));
-    this.input.on('pointermove', p => this.onMove(p));
-    this.input.on('pointerup', () => { this.drawing = false; this.lastPt = null; });
+    if (!this.embedded) {
+      this.input.on('pointerdown', p => this.onDown(p));
+      this.input.on('pointermove', p => this.onMove(p));
+      this.input.on('pointerup', () => { this.drawing = false; this.lastPt = null; });
+    } else { cam.setViewport(0, 0, 1, 1); this.auto = { i: 0, t: -(data.autoDelay || 0), every: data.autoEvery || 0.2 }; this.roundN = data.round || 1; }
     this.scale.on('rescale', this.onRescale, this);
     this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
     this.loadLevel(0);
-    cam.fadeIn(500);
-    if (!data.quiet) { overlay.card('SATELLITE', 'Batch ' + this.batch, 2600); }
-    window.__game = { scene: this };
+    if (!this.embedded) cam.fadeIn(500);
+    if (!data.quiet && !this.embedded) { overlay.card('SATELLITE', 'Batch ' + this.batch, 2600); }
+    if (!this.embedded) window.__game = { scene: this };
   }
-  onRescale() { this.cameras.main.setZoom(pixelZoom()); }
+  onRescale() { if (!this.embedded) this.cameras.main.setZoom(pixelZoom()); }
+  autoStep(dt) {
+    const a = this.auto, sol = this.level.solution; if (!a || this.solved || !sol) return;
+    a.t += dt;
+    while (a.t >= a.every && a.i < sol.length && !this.solved) { a.t -= a.every; if (a.i === 0) this.path = [sol[0]]; else this.tryStep(sol[a.i]); a.i++; }
+  }
 
   loadLevel(i) {
     this.levelIdx = i;
@@ -61,7 +71,7 @@ export class Satellite extends Phaser.Scene {
     const size = this.cs * L.w;
     this.bx = Math.round(236 - size / 2); this.by = Math.round(90 - size / 2);
     this.drawStatic();
-    overlay.hint(L.wrapX ? 'The left and right edges connect: drag off one side and the line comes back on the other. Drag back to undo.' : 'Draw one line from 1 through every square, passing the numbers in order. Drag back to undo.');
+    if (!this.embedded) overlay.hint(L.wrapX ? 'The left and right edges connect: drag off one side and the line comes back on the other. Drag back to undo.' : 'Draw one line from 1 through every square, passing the numbers in order. Drag back to undo.');
   }
 
   // ------------------------------------------------------------------ input (pointer in world space)
@@ -113,6 +123,7 @@ export class Satellite extends Phaser.Scene {
     Sound.charge(); // the same sound as the laser charging, on purpose
     this.score += 400;
     if (this.skinN === 4) { for (let i = 0; i < 70; i++) this.confetti.push({ x: 236 + (Math.random() - 0.5) * 120, y: 10, vx: (Math.random() - 0.5) * 60, vy: Math.random() * 30, c: ['#ff5fa2', '#ffd23f', '#3ee6c1', '#5b8cff'][i % 4], t: 0 }); }
+    if (this.embedded) { this.events.emit('solved'); return; }
     this.time.delayedCall(1700, () => {
       if (this.levelIdx + 1 < this.ids.length) this.loadLevel(this.levelIdx + 1);
       else this.endBatch();
@@ -135,6 +146,7 @@ export class Satellite extends Phaser.Scene {
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 20), c = this.ctl;
     this.clock += dt;
+    if (this.embedded) { this.autoStep(dt); this.drawLive(); this.drawBoard(); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     if (c.nextScreen()) {
       const next = this.skinN % 4 + 1; overlay.note('Screen ' + next + ' · ' + SKINS[next].name, 1600);
@@ -188,7 +200,7 @@ export class Satellite extends Phaser.Scene {
       g.fillStyle(0x0d0820, 1); g.fillRect(270, 14, 36, 12); tx('CH 07', 273, 18, K.accent);
       tx('SCORE', 16, 36, '#3ee6c1', 2); this.shown = (this.shown || 0) + Math.min(40, Math.max(0, this.score - (this.shown || 0))); tx(String(Math.round(this.shown)), 16, 50, K.accent, 3);
       for (let i = 0; i < 3; i++) { const on = i < this.levelIdx + (this.solved ? 1 : 0); g.fillStyle(on ? 0xffd23f : 0x4b3a86, 1); g.fillRect(18 + i * 10, 74, 3, 7); g.fillRect(16 + i * 10, 76, 7, 3); }
-      tx('ROUND ' + (this.levelIdx + 1), 16, 90, '#ff5fa2', 2);
+      tx('ROUND ' + (this.roundN || this.levelIdx + 1), 16, 90, '#ff5fa2', 2);
       g.fillStyle(0x0d0820, 1); g.fillRect(16, 108, 112, 8); g.fillStyle(0x3ee6c1, 1); g.fillRect(16, 108, Math.round(112 * this.path.length / this.board.n), 8);
       tx(this.solved ? 'NICE ONE!' : 'KEEP GOING', 16, 126, '#ffffff');
       // confetti

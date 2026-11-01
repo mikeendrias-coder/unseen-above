@@ -17,3 +17,23 @@ export const RIDGE = [
 export const RIDGE_ALONE = { who: 'SISTER', text: 'You always come back.' };
 export const SOUNDS = { wind: '[WIND]', later: '[HOURS LATER]', hum: '[A LOW HUM FROM THE HOUSE]' };
 export const lineSeconds = text => 1.5 + text.length * 0.052;
+
+// DRAFT, not used yet: the brother's last scene, in the bedroom at the center of the house.
+// He is dying (a lost leg, a trail of blood). He does not want to die, and the game never says
+// why. "You always come back" calls back to the ridge. The last line points at the void door.
+export const BEDROOM = [
+  { who: null, text: '[SLOW BREATHING]' },
+  { who: 'SISTER', text: 'I followed the blood.' },
+  { who: 'BROTHER', text: 'You were supposed to watch the lights.' },
+  { who: 'SISTER', text: 'I did. They watched me back.' },
+  { who: null, text: '[COUGHING]' },
+  { who: 'SISTER', text: 'Your leg.' },
+  { who: 'BROTHER', text: "Don't look at it. Look at me." },
+  { who: 'SISTER', text: 'We have the bag. We can stop the bleeding.' },
+  { who: 'BROTHER', text: "I don't want to die." },
+  { who: 'SISTER', text: "You won't. You always come back." },
+  { who: 'BROTHER', text: "That's what I'm afraid of." },
+  { who: 'SISTER', text: 'What does that mean?' },
+  { who: null, text: '[COUGHING]' },
+  { who: 'BROTHER', text: "Don't open that door." }
+];
