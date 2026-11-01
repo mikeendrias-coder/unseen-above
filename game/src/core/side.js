@@ -222,7 +222,11 @@ export class SideEpisode extends Phaser.Scene {
   drawGirl() {
     const k = this.kid;
     const tex = k.crouch ? 'girl_crouch' : !k.onGround ? 'girl_jump' : (k.walkT > 0 && Math.floor(k.walkT * 9) % 2) ? 'girl_pass' : 'girl_stand';
-    this.girl.setTexture(tex).setPosition(Math.round(k.x + k.w / 2), Math.round(k.y + k.h)).setFlipX(k.face < 0);
+    // standing still a while, she looks back over her shoulder now and then
+    const still = k.onGround && !k.crouch && Math.abs(k.vx) < 1 && !this.dead;
+    this.idleT = still ? (this.idleT || 0) + this.game.loop.delta / 1000 : 0;
+    const glance = this.idleT > 4 && (this.idleT % 3.4) > 2.8;
+    this.girl.setTexture(tex).setPosition(Math.round(k.x + k.w / 2), Math.round(k.y + k.h)).setFlipX(glance ? k.face > 0 : k.face < 0);
     // her shadow on whatever is under her, smaller the higher she is
     const sg = this.shadowG; if (!sg) return; sg.clear();
     if (!this.girl.visible || this.dead) return;

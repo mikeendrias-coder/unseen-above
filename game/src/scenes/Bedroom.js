@@ -29,7 +29,7 @@ export class Bedroom extends SideEpisode {
     const P = this.P, LW = LEVEL.w * TILE;
     makeSprites(this, P);
     const lvl = paintLevel(P); lvl.toTexture(this, 'bd_level'); this.marks = lvl.marks;
-    paintBrother(P, false).toTexture(this, 'bro_sit'); paintBrother(P, true).toTexture(this, 'bro_dead');
+    paintBrother(P, false).toTexture(this, 'bro_sit'); paintBrother(P, false, true).toTexture(this, 'bro_in'); paintBrother(P, true).toTexture(this, 'bro_dead');
     this.bloodCol = hexNum(bloodOf(P)); this.trail = trail();
     this.pixelCamera(LW, P.void);
     this.add.image(0, 0, 'bd_level').setOrigin(0).setDepth(0);
@@ -305,7 +305,7 @@ export class Bedroom extends SideEpisode {
     if (this.mode === 'talk') { this.talkT -= dt; if (c.advance() || this.talkT <= 0) this.nextLine(); }
     if (this.mode === 'dying') {
       this.dyingT += dt;
-      if (this.dyingT > 3.4 && this.bro.texture.key !== 'bro_dead') { this.bro.setTexture('bro_dead'); Sound.tone(98, 1.8, 'sine', 0.02); }
+      if (this.dyingT > 3.4 && !this.broDead) { this.broDead = true; this.bro.setTexture('bro_dead'); Sound.tone(98, 1.8, 'sine', 0.02); }
       if (this.dyingT > 5.6) {
         this.mode = 'after';
         const V = LEVEL.voidDoor; this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'E', use: () => this.openVoid() };
@@ -554,10 +554,12 @@ export class Bedroom extends SideEpisode {
       // a warning over her head while the slab creaks
       if (this.run.slab.state === 'warn' && !this.dead) this.bubbles.showPrompt(LEVEL.run.slab.x + LEVEL.run.slab.w / 2, 30, '!');
     } else {
+      if (this.mode === 'bedroom' && !this.broDead) this.bro.setTexture((this.clock % 2.3) < 0.97 ? 'bro_in' : 'bro_sit');
       const R = LEVEL.rec, blink = this.mode === 'void' ? Math.floor(t * 10) % 2 === 0 : true;
       if (blink) { g.fillStyle(red, 1); g.fillRect(R.x + 2, R.y, 1, 1); }
       if (this.mode === 'talk' || this.mode === 'dying') {
-        if (this.coughT > 0) { this.coughT -= dt; this.bro.setX(LEVEL.brother.x + (Math.floor(t * 30) % 2)); } else this.bro.setX(LEVEL.brother.x);
+        if (!this.broDead) { const pace = this.mode === 'dying' ? 3.6 : 2.3, inhale = (this.clock % pace) < pace * 0.42 && !(this.mode === 'dying' && this.dyingT > 2.6); this.bro.setTexture(inhale ? 'bro_in' : 'bro_sit'); }
+      if (this.coughT > 0) { this.coughT -= dt; this.bro.setX(LEVEL.brother.x + (Math.floor(t * 30) % 2)); } else this.bro.setX(LEVEL.brother.x);
       }
       if (this.mode === 'after' || this.mode === 'void') { const V = LEVEL.voidDoor; if (Math.random() < 0.08) this.motes.emitParticleAt(V.x + Math.random() * V.w, V.y + Math.random() * V.h, 1); }
     }

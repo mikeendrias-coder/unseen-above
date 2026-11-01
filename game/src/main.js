@@ -3,6 +3,7 @@ import { measure, applyCss, display } from './core/display.js';
 import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
 import { initPicker } from './ui/vibe.js';
+import { syncImmunity } from './core/review.js';
 import { Grounds } from './scenes/Grounds.js';
 import { Gallery } from './scenes/Gallery.js';
 import { Intro } from './scenes/Intro.js';
@@ -53,7 +54,7 @@ function start() {
   game.scene.add('room', Room, false);
   game.scene.add('kids', Kids, false); // after satellite, so it draws over the screen it embeds
   game.events.once('ready', () => {
-    applyCss(game);
+    applyCss(game); syncImmunity();
     game.scene.start(first, firstData);
   });
   let t = null;

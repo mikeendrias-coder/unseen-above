@@ -94,20 +94,20 @@ export function trail() {
 
 // He sits on the floor against the foot of the bed, facing left. One leg ends at the knee in a
 // dark wrap. Nothing gory: the wrap and a stain under it say it.
-export function paintBrother(P, dead) {
-  const p = new Painter(26, 22), x = 1, y = 22, sk = P.kid, sh = P.kidLo;
+export function paintBrother(P, dead, inhale) {
+  const p = new Painter(26, 22), x = 1, y = 22, sk = P.kid, sh = P.kidLo, b = inhale ? 1 : 0; // b: his chest up a pixel
   // the long leg, out along the floor, and its boot
   p.rect(x + 2, y - 3, 13, 3, P.sibLo); p.rect(x, y - 6, 2, 6, P.device); p.px(x + 1, y - 7, P.device);
   // the other thigh, raised, ending in the wrap
   p.rect(x + 8, y - 7, 8, 3, P.sibLo); p.rect(x + 6, y - 7, 2, 3, P.colLo); p.px(x + 6, y - 5, P.fabricLo); p.px(x + 7, y - 4, P.fabricLo);
   // the jacket, his back against the bed
-  p.rect(x + 15, y - 14, 7, 11, P.sib); p.rect(x + 20, y - 13, 1, 9, P.sibHi); p.rect(x + 15, y - 4, 7, 1, P.sibLo);
+  p.rect(x + 15, y - 14 - b, 7, 11 + b, P.sib); p.rect(x + 20, y - 13 - b, 1, 9, P.sibHi); p.rect(x + 15, y - 4, 7, 1, P.sibLo);
   // an arm across his stomach, a hand pressed to it
-  p.rect(x + 13, y - 10, 4, 2, P.sib); p.rect(x + 11, y - 10, 2, 2, sk);
+  p.rect(x + 13, y - 10 - b, 4, 2, P.sib); p.rect(x + 11, y - 10 - b, 2, 2, sk);
   if (!dead) {
     // head back against the mattress, eyes on the door she came in by
-    p.rect(x + 16, y - 20, 5, 6, sk); p.rect(x + 16, y - 21, 6, 2, P.hair); p.rect(x + 20, y - 20, 2, 5, P.hair);
-    p.px(x + 17, y - 18, P.hair); p.px(x + 16, y - 16, sh);
+    p.rect(x + 16, y - 20 - b, 5, 6, sk); p.rect(x + 16, y - 21 - b, 6, 2, P.hair); p.rect(x + 20, y - 20 - b, 2, 5, P.hair);
+    p.px(x + 17, y - 18 - b, P.hair); p.px(x + 16, y - 16 - b, sh);
   } else {
     // dropped forward
     p.rect(x + 13, y - 17, 5, 5, sk); p.rect(x + 13, y - 18, 6, 2, P.hair); p.rect(x + 17, y - 17, 2, 4, P.hair); p.px(x + 13, y - 14, sh);
