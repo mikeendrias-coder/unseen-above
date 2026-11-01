@@ -76,7 +76,7 @@ export function ccBox(t, x, y, w, h, color, alpha) {
 export const CAPTION = { padX: 4, row: 11, top: 2, ink: 0xffffff, box: 0x000000, alpha: 0.9 };
 export function ccCaptionBlock(t, lines, cx, bottom, opts) {
   opts = opts || {};
-  const R = CAPTION.row, padX = opts.padX == null ? CAPTION.padX : opts.padX, a = opts.alpha == null ? 1 : opts.alpha;
+  const R = opts.row || CAPTION.row, TOP = opts.top == null ? CAPTION.top : opts.top, padX = opts.padX == null ? CAPTION.padX : opts.padX, a = opts.alpha == null ? 1 : opts.alpha;
   const top = Math.round(bottom - lines.length * R), boxes = [];
   lines.forEach((l, i) => {
     const w = ccWidth(plain(l)), x = Math.round(cx - w / 2), y = top + i * R;
@@ -87,8 +87,8 @@ export function ccCaptionBlock(t, lines, cx, bottom, opts) {
     const b = boxes[i], shown = opts.shown == null ? Infinity : opts.shown - lines.slice(0, i).reduce((n, q) => n + plain(q).length, 0);
     if (shown <= 0) return;
     const str = shown === Infinity ? l : plain(l).slice(0, shown);
-    if (opts.accent && shown === Infinity) ccRich(t, str, b.x + padX, b.y + CAPTION.top, opts.ink || CAPTION.ink, opts.accent, { alpha: a, italic: opts.italic });
-    else ccText(t, plain(str), b.x + padX, b.y + CAPTION.top, opts.ink || CAPTION.ink, { alpha: a, italic: opts.italic });
+    if (opts.accent && shown === Infinity) ccRich(t, str, b.x + padX, b.y + TOP, opts.ink || CAPTION.ink, opts.accent, { alpha: a, italic: opts.italic });
+    else ccText(t, plain(str), b.x + padX, b.y + TOP, opts.ink || CAPTION.ink, { alpha: a, italic: opts.italic });
   });
   return { top, boxes };
 }

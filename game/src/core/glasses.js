@@ -6,6 +6,7 @@
 import { Sound } from './sound.js';
 import { pixText } from '../art/pixfont.js';
 import { hexNum } from '../art/painter.js';
+import { overlay } from './overlay.js';
 
 export class Glasses {
   constructor(opts) {
@@ -49,7 +50,7 @@ export class Glasses {
   }
   // a small readout in the corner: the key, on or off, and how hot they are
   drawMeter(g, x, y, col) {
-    if (!this.has) return;
+    if (!this.has || !overlay.free(x - 3, y - 3, 56, 12)) return; // a caption over it: it steps aside
     const hot = hexNum('#ff5a4a'), label = this.over > 0 ? 'HOT' : this.on ? 'ON' : 'OFF';
     g.fillStyle(0x000000, 0.45); g.fillRect(x - 2, y - 2, 52, 9);
     pixText(g, 'G', x, y, 0xffffff, 1, 0.9);

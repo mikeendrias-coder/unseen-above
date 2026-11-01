@@ -14,11 +14,20 @@ export const ITEMS = {
 export function itemPanel(scene, kind, force) {
   const it = ITEMS[kind];
   if (!it || window.__noPanels || (!force && state.seenPanel(kind))) return false;
-  state.markPanel(kind);
-  scene.scene.pause();
-  overlay.panel(it, () => {
-    if (scene.scene.isPaused()) scene.scene.resume();
-    if (scene.ctl) scene.ctl.endFrame();
-  });
+  const show = () => {
+    state.markPanel(kind);
+    scene.scene.pause();
+    overlay.panel(it, () => {
+      if (scene.scene.isPaused()) scene.scene.resume();
+      if (scene.ctl) scene.ctl.endFrame();
+    });
+  };
+  // in the air she lands first: the page waits for her feet, so she never hangs behind it
+  const k = scene.kid;
+  if (k && k.onGround === false) {
+    const ev = scene.time.addEvent({ delay: 16, loop: true, callback: () => {
+      if (scene.dead) ev.remove(); else if (k.onGround) { ev.remove(); show(); }
+    } });
+  } else show();
   return true;
 }

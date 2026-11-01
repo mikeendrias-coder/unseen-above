@@ -22,10 +22,11 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => { const g = window.__unseen.game; return g.scene.isActive('moon'); }, null, 60000);
   await until(() => /EPISODE 5/.test(document.querySelector('#card').textContent), null, 10000);
   ok('then the Moon: ' + await p.evaluate(() => document.querySelector('#card').textContent.replace(/\s+/g, ' ').trim()), true);
-  // walk the city, hopping the robot if it is in the way
+  // walk the city, jumping whatever is in the way
   await until(() => window.__game.scene.sys.settings.key === 'moon' && window.__game.scene.clock > 1);
   await p.keyboard.down('ArrowRight');
-  for (let i = 0; i < 120 && await p.evaluate(() => window.__game.scene.kid.x < 99 * 16); i++) { await p.waitForTimeout(400); if (await p.evaluate(() => Math.abs(window.__game.scene.kid.vx) < 5)) await p.keyboard.press('Space'); }
+  // (people and street furniture are solid: when she stops, a held jump, as a player would)
+  for (let i = 0; i < 160 && await p.evaluate(() => window.__game.scene.kid.x < 99 * 16); i++) { await p.waitForTimeout(400); if (await p.evaluate(() => Math.abs(window.__game.scene.kid.vx) < 5 && window.__game.scene.kid.onGround)) { await p.keyboard.down('Space'); await p.waitForTimeout(500); await p.keyboard.up('Space'); } }
   await p.keyboard.up('ArrowRight');
   ok('she walks the length of the city (overheard ' + await p.evaluate(() => window.__game.scene.heard.size) + ' lounges)', await p.evaluate(() => window.__game.scene.heard.size === 3));
   ok('people out tonight lifted a screen to film her', await p.evaluate(() => !!window.__game.scene.filmed));

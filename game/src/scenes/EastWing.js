@@ -14,6 +14,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { goNext } from '../core/flow.js';
+import { NOTICE } from '../data/dialogue.js';
 
 const ROOMS = [
   { x0: 0, y0: 18, x1: 12, y1: 29, hint: 'The glasses are cracked: they show what watches you only now and then. E picks up pebbles, F or a click throws one. Shift runs, but running is loud.' },
@@ -62,6 +63,11 @@ export class EastWing extends TopDownEpisode {
     this.things.push(this.pileThing);
     C.chains.forEach(([px, py], i) => this.things.push({ tx: px, ty: py, reach: 2, hold: true, chain: i, label: 'E' }));
     this.things.push({ tx: 4, ty: 18, label: 'E', use: () => this.enterRoom('workshop') }); // optional
+    // things to look at: old bodies that were here before her, the study's shelves and desk
+    const N = NOTICE.eastwing;
+    m.forEach((row, ty) => row.forEach((ch, tx) => { if (ch === 'b') this.addLook({ tx, ty, lines: N.body }); }));
+    [[19, 4], [19, 8], [23, 6]].forEach(([tx, ty]) => this.addLook({ tx, ty, lines: N.books }));
+    this.addLook({ tx: 25, ty: 3, lines: N.desk });
     this.cutChains = new Set();
     this.lights = [];
     this.input.on('pointerdown', ptr => { if (this.dead || this.done) return; const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y); this.throwTo(Math.floor(wp.x / T), Math.floor(wp.y / T)); });
@@ -323,7 +329,7 @@ export class EastWing extends TopDownEpisode {
     if (this.fxBurst && this.fxBurst.t < 0.6) { const b = this.fxBurst; b.t += dt; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; fx.fillStyle(i % 2 ? 0xffffff : red, 1 - b.t / 0.6); fx.fillRect(Math.round(b.x + Math.cos(a) * b.t * 50), Math.round(b.y + Math.sin(a) * b.t * 40), 2, 2); } }
     // a hold ring while she cuts a chain
     if (this.ch.hold > 0 && this.ch.holdAt != null) { const k = this.kidPx(); fx.lineStyle(2, 0xffffff, 0.9); fx.beginPath(); fx.arc(k.x, k.y - 14, 5, -Math.PI / 2, -Math.PI / 2 + this.ch.hold * Math.PI * 2); fx.strokePath(); }
-    if (this.nearThing && !this.bubbles.list.size) this.bubbles.showPrompt(this.nearThing.tx * T + 8, this.nearThing.ty * T + 2, this.nearThing.hold ? 'E' : 'E');
+    if (this.nearThing && !this.bubbles.near(this.nearThing.tx * T + 8, 40)) this.bubbles.showPrompt(this.nearThing.tx * T + 8, this.nearThing.ty * T + 2, 'E');
     this.bubbles.update(dt, t);
     this.drawHud(dt);
   }
@@ -334,7 +340,7 @@ export class EastWing extends TopDownEpisode {
     if (this.done) return;
     this.glitchT += dt;
     this.gl.drawMeter(g, 18, 166, col);
-    pixText(g, 'PEBBLES ' + this.pebbles, 76, 167, 0xffffff, 1, 0.75);
+    if (overlay.free(74, 165, 44, 9)) pixText(g, 'PEBBLES ' + this.pebbles, 76, 167, 0xffffff, 1, 0.75);
     if (!this.gl.on) return;
     this.gl.drawStatic(g, col);
     const a = this.glitchT < 2 ? (Math.random() < 0.5 ? 0.9 : 0.1) : 0.5, m = 5, s = 8;
@@ -346,7 +352,7 @@ export class EastWing extends TopDownEpisode {
     g.lineStyle(1, 0xffffff, 0.35); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19); g.lineBetween(31, 18, 37, 13);
     g.fillStyle(col, a); g.fillRect(m, m + 6, 1, 3);
     const label = this.glitchT < 3 && Math.random() < 0.3 ? 'V1EW' : 'VIEW'; if (Math.floor(this.clock * 3) % 5) pixText(g, label, 44, m + 3, col, 1, a);
-    pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
+    if (overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
   }
 
   hint() {

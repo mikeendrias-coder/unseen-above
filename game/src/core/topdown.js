@@ -13,6 +13,7 @@ import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity } from './review.js';
 import { itemPanel } from './panels.js';
+import { bodyLines } from '../data/dialogue.js';
 
 export const T = 16;
 export const LOCK_TD = 0.5;
@@ -71,6 +72,7 @@ export class TopDownEpisode extends Phaser.Scene {
     this.strikeFx = new SatelliteStrike(this, { depth: 8 });
     this.bubbles = new Bubbles(this, 9);
     this.bubbles.player = () => this.kid ? this.kidPx() : null;
+    this.bubbles.bodies = () => { if (!this.kid) return []; const c = this.kidPx(); return [{ x0: c.x - 5, x1: c.x + 5, y0: c.y - 11, y1: c.y + 4 }]; };
   }
 
   // ------------------------------------------------------------------ the girl
@@ -213,9 +215,21 @@ export class TopDownEpisode extends Phaser.Scene {
     this.time.delayedCall((after + 0.12) * 1000, () => this.cameras.main.fadeOut(260, 0, 0, 0));
     this.time.delayedCall((after + 0.42) * 1000, () => this.scene.restart({}));
   }
+  // her bodies from earlier takes; each one can be looked at with E
   drawBodies() {
     this.bodyLayer.removeAll(true);
-    this.ep.bodies.forEach(b => { const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take)); this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1)); });
+    this.things = this.things.filter(t => !t.body);
+    this.ep.bodies.forEach(b => {
+      const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take));
+      this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1));
+      this.addLook({ tx: Math.floor(b.x / T), ty: Math.floor((b.y - 13) / T), lines: bodyLines(b, age), body: true });
+    });
+  }
+  // Things she looks at with E: narration at the foot of the screen. spec: { tx, ty, lines, reach }
+  addLook(spec) {
+    const src = { lines: spec.lines }, th = { tx: spec.tx, ty: spec.ty, reach: spec.reach || 1, label: 'E', look: true, body: !!spec.body, src };
+    th.use = () => this.bubbles.look('item', src, () => ({ x: th.tx * T + 8, y: th.ty * T }));
+    this.things.push(th); return th;
   }
   takeNote(data, num, title) {
     if (data && data.fromCut) this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600, 'lower'); overlay.bug('CH 07', 3600); });
@@ -227,7 +241,8 @@ export class TopDownEpisode extends Phaser.Scene {
     this.nearThing = null;
     if (this.dead || this.leaving || this.done || this.kid.moving) return;
     const k = this.kid, near = this.things.filter(t => !t.off && (t.reach === 2 ? Math.max(Math.abs(t.tx - k.tx), Math.abs(t.ty - k.ty)) <= 1 || Math.abs(t.tx - k.tx) + Math.abs(t.ty - k.ty) <= 2 : Math.abs(t.tx - k.tx) + Math.abs(t.ty - k.ty) <= (t.reach || 1)));
-    this.nearThing = near[0] || null;
+    // things to use come before things to look at
+    this.nearThing = near.sort((a, b) => (a.look ? 1 : 0) - (b.look ? 1 : 0))[0] || null;
     if (this.nearThing && !this.nearThing.hold && this.ctl.interact()) this.nearThing.use();
   }
   // A side room behind an optional door, as in the side-view episodes: this scene sleeps and

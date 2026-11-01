@@ -68,7 +68,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.waitForTimeout(1000); await shot(p, '12-moon-start');
   await ev(p, () => { const s = window.__game.scene; s.kid.x = 40 * 16; });
   await p.waitForTimeout(2600); await shot(p, '13-moon-lounge');
-  await ev(p, () => { const s = window.__game.scene; s.kid.x = 84 * 16; });
+  await ev(p, () => { const s = window.__game.scene; s.kid.x = 85 * 16 + 4; });
   await p.waitForTimeout(1200); await shot(p, '14-moon-boulevard');
   await p.close();
   p = await open('hallway', { panels: true });

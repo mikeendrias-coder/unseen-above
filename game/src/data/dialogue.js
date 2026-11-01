@@ -126,3 +126,93 @@ export const HALL_THINGS = {
   monitors: ['Six feeds from Earth.', 'One is this hallway.'],
   console: ['A console with a satellite on the screen.', 'A sticker on it: ROUND TWO.']
 };
+
+// DRAFT, for Michael: what she notices when she looks at things with E, in every part. Shown
+// as narration at the foot of the screen (italic), one line per press. Short and plain on
+// purpose. Most of them are small clues that the house is a set; cut any that say too much.
+export const NOTICE = {
+  grounds: {
+    tree: ['A dead tree, grey to the roots.', 'Past the gate, the hedges are green.'],
+    car: ['A burnt car. The seats are ash.', 'Nobody drives anywhere now.'],
+    gate: ['The gate stands open. Not a speck of ash on it.', 'Out here, everything is grey. In there, nothing is.'],
+    hedge: ['The hedges are cut square.', 'Somebody still cuts them. She has never seen who.'],
+    fountain: ['The fountain runs. Clean water.', 'She has not seen clean water in a long time.'],
+    statue: ['A gold figure holding up a star.', 'The plaque under it says 07. They all do.'],
+    pergola: ['Fairy lights all along the pergola.', 'Every bulb works.'],
+    pool: ['A long pool. The house is upside down in it.', 'In the water, none of the windows are lit.']
+  },
+  gallery: {
+    man: ['A man in gold, twice life size.', 'His eyes are painted to follow her.'],
+    family: ['A family portrait.', 'Through the window behind them, the Earth.'],
+    boy: ['A boy in a paper crown, holding a remote control.'],
+    cake: ['A girl with a cake shaped like the Moon.', 'Seven candles.'],
+    desk: ['A writing desk. The paper on it is blank.', 'The pen has never been used.'],
+    bust: ['A white bust. No name under it.'],
+    missing: ['A clean square on the wall where a portrait hung.', 'The nail is still there.'],
+    column: ['A column snapped in half.', 'Inside, it is foam.'],
+    fallen: ['A portrait face down on the floor.', 'She leaves it that way.'],
+    chandelier: ['A chandelier that came down long ago.', 'The crystals are plastic.'],
+    robot: ['A cleaning robot like the one in the hall.', 'Its screen still says PLEASE DO NOT.'],
+    camera: ['The broken camera keeps turning up to the hole in the roof.', 'Up there, the Moon.']
+  },
+  eastwing: {
+    body: ['An old body in a jacket like hers.', 'Nobody ever took it away.'],
+    books: ['The books are painted on a board.'],
+    desk: ['A desk. On it, a map of this wing.', 'Her way through is drawn on it in red.']
+  },
+  bedroom: {
+    piano: ['A grand piano with the lid down.', 'Nobody here has ever played it.'],
+    table: ['A table laid for twelve.', 'The food is wax.'],
+    clock: ['A grandfather clock. It strikes every six seconds.', 'While it strikes, nobody can hear her.'],
+    silver: ['Silver on a long table, polished today.'],
+    billiards: ['A billiard table. The balls are glued down.']
+  },
+  moon: {
+    fountain: ['A gold fountain, the twin of the one on the grounds.', 'Up here, the water is the expensive part.'],
+    bench: ['A bench. Nobody up here sits outside.'],
+    planter: ['Real plants in real soil.', 'Somebody brought dirt to the Moon.'],
+    blocks: ['Blocks in a heap.', 'Someone built a little house and knocked it down.'],
+    porthole: ['The Earth, through a round window.', 'From here it looks like a toy.']
+  },
+  hallway: {
+    gallery: ['The back of the gallery. Plywood, braces, sandbags.'],
+    gate: ['GROUNDS GATE, stencilled on the back of a wall.', 'From this side, the gold is yellow paint.'],
+    door: ['BEDROOM DOOR. The frame, from behind.', 'Tape on the floor marks where his bed goes.'],
+    crate: ['A crate stencilled PROPS.', 'Inside, a dozen crowbars like his.']
+  }
+};
+
+// DRAFT: her own bodies from earlier takes, with E. {take} is the take that body was. The
+// first line goes by how old it looks now, the second by what killed her.
+export const BODY_SEEN = {
+  age: ['Take {take}. She looks asleep.', 'Take {take}. A little older than she is.', 'Take {take}. Older. Ash in her hair.', 'Take {take}. Grey all through.'],
+  cause: [
+    [/drone/, 'A drone saw her.'],
+    [/lamp|light|scan/, 'A light found her.'],
+    [/laser/, 'The laser.'],
+    [/camera/, 'A camera saw her.'],
+    [/chandelier/, 'The chandelier.'],
+    [/fall/, 'She fell.'],
+    [/ceiling/, 'The ceiling came down.'],
+    [/creator/, 'One cut.'],
+    [/sensor/, 'A sensor caught her moving.'],
+    [/robot/, 'The robot heard her.']
+  ],
+  fallback: 'Something up there saw her.',
+  last: 'Same jacket. Same hands.'
+};
+export function bodyLines(b, age) {
+  const c = BODY_SEEN.cause.find(([re]) => re.test(b.cause || ''));
+  return [BODY_SEEN.age[age].replace('{take}', b.take), c ? c[1] : BODY_SEEN.fallback, BODY_SEEN.last];
+}
+
+// DRAFT, for Michael: people out in the city. E talks to them (speech over their heads); bump
+// is what they say when she walks into them, head when she lands on one. {look} as above.
+export const MOON_PEOPLE = [
+  { lines: ['Smile, sweetheart. No, toward the light.', 'Is this the one where she cries?'], bump: 'Careful, dear. This is silk.' },
+  { lines: ['Do not touch her. It might be part of it.', 'We voted for {look}.'], bump: 'She touched me!' },
+  { lines: ['Not now. I am working.', 'Keep walking. They like it when you keep walking.'], bump: 'Excuse me.' },
+  { lines: ['Look at her. Just like on the screen.', 'My son aims on Tuesdays.'], bump: 'Mind the phone!' },
+  { lines: ['You are early. Round two is not set.', 'The staff door. Mind the cables.'], bump: 'Watch it.' }
+];
+export const MOON_HEAD = ['Get down!', 'Off! Off!', 'Someone get her down!'];

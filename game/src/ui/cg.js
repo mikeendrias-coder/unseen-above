@@ -12,7 +12,7 @@ const W = 320, H = 180;
 // a broadcast palette that never changes with her world's look
 export const TV = { black: '#000000', white: '#ffffff', yellow: '#ffe94a', cyan: '#4ae8ff', red: '#ff4d5e', green: '#62ff8c', magenta: '#ff70e4', grey: '#a5a3b2', salmon: '#ff8a7a' };
 
-const S = { caption: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null };
+const S = { caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null };
 let cv = null, ctx = null, running = false;
 const now = () => performance.now() / 1000;
 const ease = u => 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3);
@@ -24,7 +24,7 @@ function ensure() {
   return true;
 }
 function kick() { if (!ensure() || running) return; running = true; requestAnimationFrame(frame); }
-const busy = () => !!(S.caption || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page);
+const busy = () => !!(S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page);
 
 function frame() {
   const t = now();
@@ -40,10 +40,22 @@ function frame() {
 }
 
 // ------------------------------------------------------------------ captions
-const CAP_BOTTOM = 162, CAP_COLS = 30; // above the glasses' readout along the bottom
-function drawCaption() {
-  const c = S.caption; if (!c || S.page) return; // a text page replaces the captions while it is up
-  ccCaptionBlock(ctx, c.lines, 160, CAP_BOTTOM, { italic: c.italic });
+// Captions live in the strip under everyone's feet (the floor is y 160 to 180 in every side
+// view), so they never cover a character: one line in the middle of the strip, two filling it,
+// a third only for a long line. What she looks at (narration) takes the strip over while it is
+// up, and the scene holds its own lines until it is gone.
+const CAP_COLS = 46, CAP_ROW = 10;
+function drawCaption(t) {
+  S.capRect = null;
+  if (S.page) return; // a text page replaces the captions while it is up
+  const d = S.desc, c = S.caption;
+  const lines = d ? d.lines : c ? c.lines : null; if (!lines) return;
+  const n = lines.length, bottom = n === 1 ? 175 : 180;
+  const r = ccCaptionBlock(ctx, lines, 160, bottom, { italic: d ? true : c.italic, row: CAP_ROW, top: 1, shown: d ? d.shown : undefined, alpha: d ? d.alpha : 1, ink: d ? d.ink : undefined });
+  const x0 = Math.min(...r.boxes.map(b => b.x)), x1 = Math.max(...r.boxes.map(b => b.x + b.w));
+  S.capRect = { x0, y0: r.top, x1, y1: bottom };
+  // more to say: a small arrow after the last line once it is out
+  if (d && d.more && Math.floor(t * 3) % 2 === 0) { const b = r.boxes[n - 1]; ctx.fillStyle = '#ffffff'; ctx.fillRect(b.x + b.w + 2, bottom - 6, 3, 1); ctx.fillRect(b.x + b.w + 3, bottom - 5, 1, 1); }
 }
 
 // ------------------------------------------------------------------ lower thirds and title cards
@@ -130,6 +142,11 @@ export const cg = {
     kick();
   },
   clearCaption() { S.caption = null; },
+  // narration from a look with E, set every frame while it is up (null clears it)
+  describe(d) { S.desc = d && d.lines && d.lines.length ? d : null; if (S.desc) kick(); },
+  get describing() { return !!S.desc; },
+  // where the caption strip is in use right now (pixel grid), or null
+  get captionRect() { return S.capRect; },
   card(tag, title, ms, place) {
     const t = now();
     S.cards.forEach(c => { if (!c.outAt || c.outAt > t) c.outAt = t; });

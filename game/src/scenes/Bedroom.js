@@ -15,7 +15,7 @@ import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, inPoly, K } from '../core/side.js';
 import { goNext } from '../core/flow.js';
-import { BEDROOM, lineSeconds } from '../data/dialogue.js';
+import { BEDROOM, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
 import { reviewKeys } from '../core/review.js';
 
@@ -70,6 +70,9 @@ export class Bedroom extends SideEpisode {
     const SD = LEVEL.sideDoor, bx = LEVEL.bag.x;
     this.bagThing = { x0: bx - 12, x1: bx + 14, y0: 140, y1: GROUND, label: 'E', use: () => {} };
     this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', use: () => this.enterRoom('wardrobe') }, this.bagThing);
+    // things to look at in the dark (not once the floor starts to go)
+    const N = NOTICE.bedroom, look = (x0, x1, py, lines, y0) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 112, py, lines });
+    look(94, 148, 126, N.piano); look(238, 298, 130, N.table); look(556, 580, 50, N.clock, 100); look(626, 694, 130, N.silver); look(754, 822, 132, N.billiards);
     this.drawBodies();
     this.spawn(); this.kid.face = 1;
     this.view = { x: 0 }; this.updateView(1);
@@ -97,7 +100,7 @@ export class Bedroom extends SideEpisode {
         this.footsteps(dt); this.updateBag(dt);
         if (c.glasses()) this.gl.toggle();
         if (k.y + k.h > 176) { if (state.immune) this.rescue(); else this.die({ id: 'the fall', direct: true, footY: GROUND }); }
-      }
+      } else if (this.dead && this.girl.visible) this.settle(dt);
       this.gl.update(dt);
       this.updateClock(dt); this.updateCams(dt); this.updateCollapse(dt); this.updateRun(dt);
     } else this.updateBedroom(dt);
@@ -108,6 +111,7 @@ export class Bedroom extends SideEpisode {
     c.endFrame();
   }
 
+  lookable() { return this.mode === 'house' && !this.bag.have; }
   // review: N moves her section by section; at the stairs it pulls the bag; after the bag, the
   // doors; in the bedroom it moves the scene on
   skipAhead() {
@@ -302,7 +306,9 @@ export class Bedroom extends SideEpisode {
   updateBedroom(dt) {
     const k = this.kid, c = this.ctl;
     if (this.mode === 'bedroom' || this.mode === 'after') { this.moveKid(dt); this.updateThings(); }
-    if (this.mode === 'bedroom' && k.x + k.w / 2 >= LEVEL.brother.kneel) this.startTalk();
+    // reaching him in the air, she lands first, then kneels: nobody freezes mid jump
+    if (this.mode === 'bedroom' && k.x + k.w / 2 >= LEVEL.brother.kneel) this.mode = 'arrive';
+    if (this.mode === 'arrive') { this.settle(dt); if (k.onGround) this.startTalk(); }
     if (this.mode === 'talk') { this.talkT -= dt; if (c.advance() || this.talkT <= 0) this.nextLine(); }
     if (this.mode === 'dying') {
       this.dyingT += dt;
@@ -569,7 +575,7 @@ export class Bedroom extends SideEpisode {
 
   drawThings() {
     const t = this.nearThing;
-    if (t && !t.noPrompt && !this.bubbles.list.size) this.bubbles.showPrompt((t.x0 + t.x1) / 2, t.y0 - 2, t.label);
+    if (t && !t.noPrompt) { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0 - 2, t.label); }
     if (t === this.bagThing && this.bag.hold > 0) {
       const g = this.fxG, x = LEVEL.bag.x + 1, y = GROUND - 26;
       g.lineStyle(2, 0xffffff, 0.9); g.beginPath(); g.arc(x, y, 5, -Math.PI / 2, -Math.PI / 2 + this.bag.hold * Math.PI * 2); g.strokePath();
@@ -596,7 +602,7 @@ export class Bedroom extends SideEpisode {
     [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineStyle(1, 0xffffff, 0.45 * dim); g.lineBetween(px, py, x, y); } });
     g.lineStyle(1, 0xffffff, 0.35 * dim); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19);
     if (Math.floor(this.clock * 3) % 5) pixText(g, this.glitchT < 3 && Math.random() < 0.3 ? 'V1EW' : 'VIEW', 44, m + 3, col, 1, a);
-    pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
+    if (overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
   }
 
   hint() {

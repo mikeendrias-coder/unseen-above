@@ -19,7 +19,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
-import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, LOOK_SAID, lineSeconds } from '../data/dialogue.js';
+import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, LOOK_SAID, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { reviewKeys } from '../core/review.js';
 
 const n = c => hexNum(c);
@@ -86,6 +86,28 @@ export class Moon extends SideEpisode {
     this.things.push({ x0: VW.x - 8, x1: VW.x + 10, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(['Earth, on its dark side.', 'Small fires everywhere.'], holeLine, VW.x, GROUND - 40) });
     this.things.push({ x0: LV.x, x1: LV.x + LV.w, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(['Channel seven, live.', 'A girl on a street on the Moon.'], liveLine, LV.x + LV.w / 2, LV.y + LV.h + 4) });
 
+    // the street furniture is solid: benches, planters, the fountain's rim, basin and tiers
+    // (the stem is behind her), the crates at the service end. She can stand on all of it.
+    const G = GROUND, F = LEVEL.fountain.x, N = NOTICE.moon;
+    LEVEL.benches.forEach(x => { this.props.push({ id: 'bench', x, y: G - 13, w: 30, h: 6 }); this.addLook({ x0: x - 2, x1: x + 32, y0: G - 30, py: G - 14, lines: N.bench }); });
+    // (the third planter stands under the vote board, which is what E shows there)
+    LEVEL.planters.forEach((x, i) => { this.props.push({ id: 'planter', x, y: G - 12, w: 12, h: 12 }); if (i < 2) this.addLook({ x0: x - 4, x1: x + 16, y0: G - 30, py: G - 26, lines: N.planter }); });
+    LEVEL.crates.forEach(x => this.props.push({ id: 'crate', x, y: G - 12, w: 12, h: 12 }));
+    this.props.push({ id: 'rim', x: F - 34, y: G - 12, w: 4, h: 12 }, { id: 'rim', x: F + 30, y: G - 12, w: 4, h: 12 }, { id: 'basin', x: F - 30, y: G - 4, w: 60, h: 4 },
+      { id: 'tier', x: F - 16, y: G - 30, w: 32, h: 4 }, { id: 'bowl', x: F - 9, y: G - 44, w: 18, h: 3 });
+    this.addLook({ x0: F - 30, x1: F + 30, y0: G - 60, py: G - 52, lines: N.fountain });
+    // people out tonight: solid, they stop for her, they talk when she presses E
+    this.npcs.forEach((Nn, i) => {
+      Nn.i = i; Nn.prop = { id: 'person', x: Nn.x - 4, y: G - 23, w: 8, h: 23 }; this.props.push(Nn.prop);
+      Nn.src = { lines: () => MOON_PEOPLE[i].lines.map(l => l.replace('{look}', LOOK_SAID[state.look] || 'the gold one')), i: 0, loop: true };
+      Nn.thing = { x0: 0, x1: 0, y0: G - 24, y1: G, py: G - 25, label: 'E', use: () => this.npcTalk(Nn) };
+      this.things.push(Nn.thing);
+    });
+    this.slide = null;
+    // speech keeps clear of her, of the people and of the robot
+    this.bubbles.bodies = () => { const k = this.kid, out = [{ x0: k.x - 1, x1: k.x + k.w + 1, y0: k.y, y1: k.y + k.h }];
+      if (this.mode === 'walk') { this.npcs.forEach(Nn => out.push({ x0: Nn.x - 5, x1: Nn.x + 5, y0: GROUND - 24, y1: GROUND })); out.push({ x0: this.robot.x - 6, x1: this.robot.x + 6, y0: GROUND - 14, y1: GROUND }); }
+      return out; };
     this.spawn(); this.kid.face = 1;
     this.beds = { hum: Sound.hum(0.008) };
     this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
@@ -107,9 +129,18 @@ export class Moon extends SideEpisode {
     reviewKeys(this);
     if (this.mode !== 'walk') c.look(); else if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
-    if (this.mode === 'walk' || this.mode === 'room') { if (!this.leaving) { this.moveKid(dt); this.updateThings(); } }
+    if (this.mode === 'walk' || this.mode === 'room') {
+      if (!this.leaving) {
+        if (this.slide) { this.slide.t -= dt; this.kid.vx = this.slide.dir * 85; if (this.slide.t <= 0) this.slide = null; }
+        this.moveKid(dt); this.updateThings();
+        if (this.mode === 'walk') this.pushBack();
+      }
+    }
     if (this.mode === 'walk') { this.overhear(); this.updateRobot(dt); }
-    if (this.mode === 'room' && this.kid.x + this.kid.w / 2 >= LEVEL.stand) this.startTalk();
+    // at the kids, control is hers no more; she lands if she was jumping, then they talk
+    if (this.mode === 'room' && this.kid.x + this.kid.w / 2 >= LEVEL.stand) this.mode = 'arrive';
+    if (this.mode === 'arrive') { this.settle(dt); if (this.kid.onGround) this.startTalk(); }
+    if (this.mode === 'talk' || this.mode === 'vest') this.settle(dt);
     if (this.mode === 'talk') { this.talkT -= dt; if (c.advance() || this.talkT <= 0) this.nextLine(); }
     if (this.mode === 'vest') this.updateVest(dt);
     if (this.mode === 'last') this.updateLast(dt);
@@ -119,9 +150,27 @@ export class Moon extends SideEpisode {
     c.endFrame();
   }
 
+  lookable() { return this.mode === 'walk' || this.mode === 'room'; }
+  // E on someone in the street: their next line, over their head
+  npcTalk(Nn) { this.bubbles.press('npc' + Nn.i, Nn.src, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xffffff, pitch: 560 + Nn.i * 90, leave: 64 }); }
+  npcSay(Nn, text) { this.bubbles.say('npc' + Nn.i, text, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xffffff, pitch: 700 + Nn.i * 90, leave: 64, hold: 900 }); }
+  // People push back: walking into someone gets a word from them; landing on a head gets her
+  // put down, with a little hop to the side she came from.
+  pushBack() {
+    const k = this.kid, c = this.ctl, dir = (c.right() ? 1 : 0) - (c.left() ? 1 : 0);
+    const against = Nn => { const r = Nn.prop; return k.y + k.h > r.y + 1 && k.y < r.y + r.h && (dir > 0 ? Math.abs(k.x + k.w - r.x) < 1.01 : Math.abs(r.x + r.w - k.x) < 1.01); };
+    if (dir) { const Nn = this.npcs.find(against); if (Nn && this.clock - (Nn.bumpT || -9) > 4 && !this.bubbles.busy('npc' + Nn.i)) { Nn.bumpT = this.clock; this.npcSay(Nn, MOON_PEOPLE[Nn.i].bump); Sound.tone(260, 0.06, 'triangle', 0.015); } }
+    if (k.onGround && !this.slide) {
+      const Nn = this.npcs.find(q => { const r = q.prop; return k.x < r.x + r.w && k.x + k.w > r.x && Math.abs(k.y + k.h - r.y) < 1.5; });
+      if (Nn) {
+        this.slide = { t: 0.3, dir: k.x + k.w / 2 < Nn.x ? -1 : 1 }; k.vy = -150; k.onGround = false;
+        this.npcSay(Nn, MOON_HEAD[(this.headN = (this.headN || 0) + 1) % MOON_HEAD.length]); Sound.tone(330, 0.08, 'square', 0.015, 220);
+      }
+    }
+  }
   // review: N walks her down the corridor, into the playroom, through the talk
   skipAhead() {
-    if (this.mode === 'walk' && !this.leaving) { const x = [10, 30, 50, 66, 82, 99].map(v => v * TILE).find(p => p > this.kid.x + 12); if (x != null) { this.kid.x = x; return; } return this.enterDoor(); }
+    if (this.mode === 'walk' && !this.leaving) { const x = [10, 29, 50, 66, 82, 99].map(v => v * TILE).find(p => p > this.kid.x + 12); if (x != null) { const k = this.kid; k.y = GROUND - k.h; k.vy = 0; k.x = this.clearX(x); return; } return this.enterDoor(); }
     if (this.mode === 'room') { this.kid.x = LEVEL.stand; return; }
     if (this.mode === 'talk' && this.talkI < this.lines.length - 1) { this.talkI = this.lines.length - 2; this.nextLine(); }
   }
@@ -143,7 +192,7 @@ export class Moon extends SideEpisode {
       lines.forEach((text, j) => this.time.delayedCall(j * 2300, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: 0xffffff, italic: true, pitch: 300 + j * 80, leave: 170, hold: 1300 })));
     });
   }
-  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.press('item', it, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { ink: 0xffffff, italic: true, pitch: 520, leave: 80 }); }
+  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.look('item', it, () => ({ x, y })); }
   updateRobot(dt) {
     const R = this.robot, B = LEVEL.robot, k = this.kid, talking = this.bubbles.busy('robot'), near = Math.abs(R.x - (k.x + k.w / 2)) < 22;
     if (!near && !talking) { R.x += R.dir * B.speed * dt; if (R.x > B.x1) { R.x = B.x1; R.dir = -1; } if (R.x < B.x0) { R.x = B.x0; R.dir = 1; } }
@@ -162,6 +211,10 @@ export class Moon extends SideEpisode {
   }
   startRoom() {
     this.mode = 'room'; this.leaving = false; this.things = [];
+    this.props = this.props.filter(r => r.id !== 'person');
+    const X = KX, N = NOTICE.moon;
+    this.addLook({ x0: X + 56, x1: X + 80, y0: GROUND - 30, py: GROUND - 14, lines: N.blocks });
+    this.addLook({ x0: X + 38, x1: X + 60, y0: GROUND - 40, py: 86, lines: N.porthole });
     const k = this.kid; k.x = KX + 40; k.y = GROUND - K.hStand; k.vx = 0; k.face = 1;
     Music.stop(0.6); this.beds.show = Sound.show(0.04);
     this.roomT = 0; this.updateView(0);
@@ -247,10 +300,20 @@ export class Moon extends SideEpisode {
   drawCity(g, t, dt) {
     const k = this.kid, kc = k.x + k.w / 2;
     this.npcs.forEach(N => {
-      const near = Math.abs(N.x - kc) < 58, rich = N.d.kind === 'a' || N.d.kind === 'b';
-      if (near && (rich || !N.d.speed)) { N.film = rich ? Math.min(1, N.film + dt * 3) : 0; N.face = kc > N.x ? 1 : -1; }
-      else { N.film = Math.max(0, N.film - dt * 3); if (N.d.speed) { N.x += N.dir * N.d.speed * dt; if (N.x > N.d.x1) { N.x = N.d.x1; N.dir = -1; } if (N.x < N.d.x0) { N.x = N.d.x0; N.dir = 1; } N.face = N.dir; } }
-      const walking = N.d.speed && !(near && rich);
+      const near = Math.abs(N.x - kc) < 58, rich = N.d.kind === 'a' || N.d.kind === 'b', talking = this.bubbles.busy('npc' + N.i);
+      let walking = false;
+      if (talking || (near && (rich || !N.d.speed))) { N.film = rich ? Math.min(1, N.film + dt * 3) : 0; N.face = kc > N.x ? 1 : -1; }
+      else {
+        N.film = Math.max(0, N.film - dt * 3);
+        if (N.d.speed) {
+          // never into her: a worker turns around with a word, anyone else waits
+          const nx = N.x + N.dir * N.d.speed * dt;
+          if (nx - 4 < k.x + k.w && nx + 4 > k.x && k.y + k.h > GROUND - 23) { if (N.d.kind === 'w') { N.dir = -N.dir; if (this.clock - (N.bumpT || -9) > 4) { N.bumpT = this.clock; this.npcSay(N, MOON_PEOPLE[N.i].bump); } } }
+          else { N.x = nx; walking = true; }
+          if (N.x > N.d.x1) { N.x = N.d.x1; N.dir = -1; } if (N.x < N.d.x0) { N.x = N.d.x0; N.dir = 1; } N.face = N.dir;
+        }
+      }
+      if (N.prop) { N.prop.x = Math.round(N.x) - 4; N.thing.x0 = N.x - 8; N.thing.x1 = N.x + 8; N.thing.off = this.mode !== 'walk'; }
       N.img.setTexture('npc_' + N.d.kind + '_' + (walking && Math.floor(t * 4 + N.d.x0) % 2 ? 1 : 0)).setPosition(Math.round(N.x), GROUND).setFlipX(N.face < 0);
       // a phone held up at her: a small lit screen, a red dot while it records
       if (N.film > 0.5) this.filmed = true;
@@ -278,7 +341,7 @@ export class Moon extends SideEpisode {
     const S = LEVEL.screen, x = S.x, y = S.y;
     g.fillStyle(n(M.purple), 1); g.fillRect(x, y, S.w, S.h);
     if (this.mode === 'vest' || this.mode === 'last') return;
-    const round2 = this.mode === 'talk' || (this.mode === 'room' && this.roomT > 2.2);
+    const round2 = this.mode === 'talk' || this.mode === 'arrive' || (this.mode === 'room' && this.roomT > 2.2);
     g.fillStyle(n('#ff3b5c'), 1); g.fillRect(x + 6, y + 6, 22, 9); pixText(g, 'LIVE', x + 8, y + 8, 0xffffff);
     pixText(g, 'CH 07', x + S.w - 26, y + 8, n(M.yellow));
     // the board the kids play: a path that draws itself to each target

@@ -20,7 +20,7 @@ import { display } from '../core/display.js';
 import { SideEpisode, K, inPoly } from '../core/side.js';
 import { goNext } from '../core/flow.js';
 import { Glasses } from '../core/glasses.js';
-import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, lineSeconds } from '../data/dialogue.js';
+import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, NOTICE, lineSeconds } from '../data/dialogue.js';
 
 const T = TILE, G = GROUND, n = c => hexNum(c);
 const HP = 9, ROUND_AT = [9, 6, 3];                     // hits left when each round starts
@@ -70,6 +70,13 @@ export class Hallway extends SideEpisode {
 
     // things to look at on the way in
     LEVEL.things.forEach(th => { const it = {}; this.things.push({ x0: th.x0, x1: th.x1, y0: 60, y1: G, label: 'E', use: () => this.describe(HALL_THINGS[th.id], it, (th.x0 + th.x1) / 2, 60) }); });
+    // the stage, to look at once the fight is over
+    const N = NOTICE.hallway, D = LEVEL.desk, it = {};
+    this.addLook({ x0: 20 * T + 6, x1: 23 * T + 2, y0: 100, py: 70, lines: N.gallery });
+    this.addLook({ x0: 27 * T + 8, x1: 29 * T, y0: 100, py: 70, lines: N.gate });
+    this.addLook({ x0: 37 * T + 8, x1: 39 * T + 12, y0: 100, py: 70, lines: N.door });
+    LEVEL.crates.forEach(c => this.addLook({ x0: c.x - 2, x1: c.x + c.w + 2, y0: c.y - 6, py: c.y, lines: N.crate }));
+    this.things.push({ x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'E', look: true, use: () => this.describe(HALL_THINGS.console, it, D.x + D.w / 2, D.y - 17) });
     this.swordThing = { x0: 0, x1: 0, y0: G - 6, y1: G, label: 'E', off: true, use: () => this.pickUp() };
     this.things.push(this.swordThing);
 
@@ -87,6 +94,9 @@ export class Hallway extends SideEpisode {
     window.__game = { scene: this, state };
   }
 
+  // things to look at: on the way in, and on the stage once the fight is over
+  lookable() { return this.mode === 'walk' || this.mode === 'after'; }
+
   // ------------------------------------------------------------------ the loop
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
@@ -97,7 +107,7 @@ export class Hallway extends SideEpisode {
       this.moveKid(dt); this.updateThings();
       if (c.glasses()) this.gl.toggle();
       if (c.throwP() && this.mode === 'fight') this.swing();
-    }
+    } else if (this.dead && this.girl.visible) this.settle(dt);
     this.gl.update(dt);
     // Enter moves the captions on when nothing is at stake
     if (c.skipLine() && this.lineT > 0 && this.mode !== 'fight') { this.lineT = 0; this.nextLine(); }
@@ -143,8 +153,9 @@ export class Hallway extends SideEpisode {
     this.lineT = lineSeconds(text) + (l.who ? 0.3 : 0.6);
     if (l.on) l.on();
   }
-  updateLines(dt) { if (this.lineT > 0) { this.lineT -= dt; if (this.lineT <= 0) this.nextLine(); } }
-  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.press('item', it, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { ink: 0xffffff, italic: true, pitch: 520, leave: 80 }); }
+  // while she looks at something, the creator waits for her
+  updateLines(dt) { if (this.lineT > 0 && !overlay.describing()) { this.lineT -= dt; if (this.lineT <= 0) this.nextLine(); } }
+  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.look('item', it, () => ({ x, y })); }
 
   // ------------------------------------------------------------------ the walk in and the toss
   walkIn() {

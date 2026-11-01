@@ -11,6 +11,7 @@ import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity } from './review.js';
 import { itemPanel } from './panels.js';
+import { bodyLines } from '../data/dialogue.js';
 
 export const TILE = 16;
 export const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2 };
@@ -46,6 +47,8 @@ export class SideEpisode extends Phaser.Scene {
     for (let ty = 1; ty < this.map.H; ty++) if (this.solidTile(tx, ty) && !this.solidTile(tx, ty - 1)) { y = ty * TILE; break; }
     k.x = x; k.h = K.hStand; k.crouch = false; k.y = y - k.h; k.vx = 0; k.vy = 0;
   }
+  // the nearest x to this one where she fits standing where she is (clear of props and people)
+  clearX(x) { const k = this.kid; for (let d = 0; d < 80; d++) for (const s of [1, -1]) if (!this.boxHits(x + s * d, k.y, k.w, k.h)) return x + s * d; return x; }
   // immune and falling out of the world: back onto the nearest floor
   rescue() {
     const k = this.kid;
@@ -79,10 +82,26 @@ export class SideEpisode extends Phaser.Scene {
     this.bubbles.player = () => this.kid ? { x: this.kid.x + this.kid.w / 2, y: this.kid.y } : null;
     this.burst = this.add.particles(0, 0, 'dot2', { speed: { min: 25, max: 95 }, lifespan: { min: 260, max: 560 }, scale: { start: 1, end: 0 }, tint: [0xffffff, hexNum(P.lamp), hexNum(P.hazard)], emitting: false }).setDepth(8);
   }
+  // her bodies from earlier takes; each one can be looked at with E
   drawBodies() {
     this.bodyLayer.removeAll(true);
-    this.ep.bodies.forEach(b => { const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take)); this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1)); });
+    this.things = this.things.filter(t => !t.body);
+    this.ep.bodies.forEach(b => {
+      const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take));
+      this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1));
+      const src = { lines: bodyLines(b, age) };
+      this.things.push({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 8, y1: b.y + 2, label: 'E', look: true, body: true, src, use: () => this.bubbles.look('item', src, () => ({ x: b.x, y: b.y - 6 })) });
+    });
   }
+  // Things she looks at with E: what she notices, as narration at the foot of the screen.
+  // spec: { x0, x1, y0, y1 (the reach, in world px), lines, px, py (where the E key shows) }
+  addLook(spec) {
+    const src = { lines: spec.lines }, th = Object.assign({ y1: 180, label: 'E', look: true }, spec);
+    th.use = () => this.bubbles.look('item', src, () => ({ x: th.px != null ? th.px : (th.x0 + th.x1) / 2, y: th.py != null ? th.py : th.y0 }));
+    delete th.lines; th.src = src; this.things.push(th); return th;
+  }
+  // whether looks are on offer right now (a scene turns them off while it needs her attention)
+  lookable() { return true; }
   spawn(x) {
     const s = this.level.start;
     this.kid = { x: x != null ? x : s.x, y: s.y, w: K.w, h: K.hStand, vx: 0, vy: 0, onGround: true, crouch: false, coyote: 0, buffer: 0, holdT: 0, face: 1, walkT: 0 };
@@ -103,8 +122,10 @@ export class SideEpisode extends Phaser.Scene {
   updateThings() {
     const k = this.kid; this.nearThing = null;
     if (this.dead || this.leaving || this.done) return;
-    const cx = k.x + k.w / 2, near = this.things.filter(t => !t.off && k.x + k.w > t.x0 - 6 && k.x < t.x1 + 6 && k.y < t.y1 && k.y + k.h > t.y0 - 10);
-    this.nearThing = near.sort((a, b) => Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
+    const cx = k.x + k.w / 2, looks = this.lookable();
+    const near = this.things.filter(t => !t.off && (looks || !t.look) && k.x + k.w > t.x0 - 6 && k.x < t.x1 + 6 && k.y < t.y1 && k.y + k.h > t.y0 - 10);
+    // things to use come before things to look at; then the nearest
+    this.nearThing = near.sort((a, b) => (a.look ? 1 : 0) - (b.look ? 1 : 0) || Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
     if (this.nearThing && this.ctl.interact()) this.nearThing.use();
   }
   // A side room behind an optional door: this episode sleeps (its clock and lights freeze) and
@@ -123,7 +144,7 @@ export class SideEpisode extends Phaser.Scene {
   }
   drawThings() {
     const t = this.nearThing;
-    if (t && !t.noPrompt && !this.bubbles.list.size) this.bubbles.showPrompt((t.x0 + t.x1) / 2, t.y0, t.label);
+    if (t && !t.noPrompt) { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0, t.label); }
     this.bubbles.update(this.game.loop.delta / 1000, this.clock);
   }
 
@@ -148,7 +169,8 @@ export class SideEpisode extends Phaser.Scene {
     while (dy !== 0) {
       const st = Math.abs(dy) >= 1 ? Math.sign(dy) : dy;
       if (this.boxHits(k.x, k.y + st, k.w, k.h)) {
-        if (st > 0) { k.onGround = true; k.vy = 0; break; }
+        // landing: down onto the surface itself, never resting a fraction of a pixel above it
+        if (st > 0) { const snap = Math.ceil(k.y + k.h - 1e-6) - (k.y + k.h); if (snap > 0 && !this.boxHits(k.x, k.y + snap, k.w, k.h)) k.y += snap; k.onGround = true; k.vy = 0; break; }
         // a head bump at a corner slides her past it, as before
         let nudged = false; for (const s of [1, -1, 2, -2, 3, -3, 4, -4]) if (!this.boxHits(k.x + s, k.y + st, k.w, k.h)) { k.x += s; nudged = true; break; }
         if (!nudged) { k.vy = 0; break; }
@@ -161,6 +183,16 @@ export class SideEpisode extends Phaser.Scene {
     k.walkT = k.onGround && Math.abs(k.vx) > 8 ? k.walkT + dt : 0;
     if (this.atDoor() && (c.interact() || c.up())) this.enterDoor();
   }
+  // With control taken away (a scene beginning, a light that has her), she still falls and slows
+  // to a stop: nobody hangs in the air.
+  settle(dt) {
+    const real = this.ctl, none = () => false;
+    this.ctl = { left: none, right: none, up: none, down: none, jumpPressed: none, jumpHeld: none, interact: none };
+    this.kid.buffer = 0; // a jump pressed just before control went does not fire when she lands
+    try { this.moveKid(dt); } finally { this.ctl = real; }
+  }
+  // where she will land from here: the first solid thing under her, props included
+  landingY() { const k = this.kid, x = k.x + k.w / 2; for (let d = 0; d < 200; d++) if (this.solidPx(x, k.y + k.h + d)) return k.y + k.h + d; return 160; }
   atDoor() { const k = this.kid, d = this.level.door; return k.x + k.w > d.x + 2 && k.x < d.x + d.w - 2 && Math.abs(k.y + k.h - (d.y + d.h)) < 4; }
   probes() { const k = this.kid, cx = k.x + k.w / 2; return [{ x: cx, y: k.y + 2 }, { x: cx, y: k.y + k.h / 2 }, { x: cx, y: k.y + k.h - 2 }, { x: k.x + 1, y: k.y + k.h / 2 }, { x: k.x + k.w - 1, y: k.y + k.h / 2 }]; }
 
@@ -192,7 +224,8 @@ export class SideEpisode extends Phaser.Scene {
   die(src) {
     if (this.dead) return;
     this.dead = true;
-    const k = this.kid, x = k.x + k.w / 2, y = k.y + k.h / 2, footY = src && src.footY != null ? src.footY : k.onGround ? k.y + k.h : this.groundBelow(x);
+    // caught in the air, she drops (see settle) and the strike meets her where she lands
+    const k = this.kid, x = k.x + k.w / 2, footY = src && src.footY != null ? src.footY : k.onGround ? k.y + k.h : this.landingY(), y = k.onGround ? k.y + k.h / 2 : footY - k.h / 2;
     const impact = () => {
       this.girl.setVisible(false);
       this.burst.explode(16, x, y);

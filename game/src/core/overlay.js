@@ -7,18 +7,33 @@ const el = id => document.getElementById(id);
 const timers = new Map();
 const later = (key, ms, fn) => { clearTimeout(timers.get(key)); timers.set(key, setTimeout(fn, ms)); };
 const say = (id, text, on) => { const e = el(id); if (!e) return; if (text != null) e.textContent = text; e.classList.toggle('on', !!on); };
+let capText = ''; // the scene's own caption, for when narration hands the strip back
+let descText = ''; // the narration up now
 
 export const overlay = {
   // A caption. speaker: 'SISTER' | 'BROTHER' | ... | null (sounds use [BRACKETS] in the text).
   // opts.italic for a voice from off screen; opts.ms clears it after that long.
   caption(speaker, text, opts) {
     cg.caption(speaker, text, opts);
-    say('cc', (speaker ? speaker + ': ' : '') + text, true);
-    if (opts && opts.ms) later('cc', opts.ms, () => say('cc', '', false));
+    capText = (speaker ? speaker + ': ' : '') + text;
+    if (!cg.describing) say('cc', capText, true);
+    if (opts && opts.ms) later('cc', opts.ms, () => { capText = ''; if (!cg.describing) say('cc', '', false); });
   },
-  clearCaption() { cg.clearCaption(); say('cc', '', false); },
-  // a sound, captioned for a moment: overlay.sfx('[GLASS CRACKS]')
-  sfx(text, ms) { overlay.caption(null, text, { ms: ms || 2200 }); },
+  clearCaption() { cg.clearCaption(); capText = ''; if (!cg.describing) say('cc', '', false); },
+  // Narration from a look with E: { lines, shown, alpha, more, ink } every frame, or null. It
+  // takes the caption strip while it is up; scenes hold their own lines (describing).
+  describe(d) {
+    const was = cg.describing; cg.describe(d);
+    if (d) { const text = d.lines.join(' '); if (!was || text !== descText) { descText = text; say('cc', text, true); } }
+    else if (was) { descText = ''; say('cc', capText, !!capText); }
+  },
+  describing() { return cg.describing; },
+  // is this part of the screen (pixel grid) clear of captions right now
+  free(x, y, w, h) { const r = cg.captionRect; return !r || x >= r.x1 || x + w <= r.x0 || y >= r.y1 || y + h <= r.y0; },
+  // a sound, captioned for a moment: overlay.sfx('[GLASS CRACKS]'). It cuts any narration short
+  // (bubbles.js watches cuts), so the sound is never hidden behind a look.
+  sfx(text, ms) { overlay.cuts++; overlay.caption(null, text, { ms: ms || 2200 }); },
+  cuts: 0,
 
   // The show's title: a red tag over a black title. place 'lower' for the start of something
   // (over the picture), 'center' for an end (over black).

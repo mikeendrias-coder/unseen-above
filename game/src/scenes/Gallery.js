@@ -12,6 +12,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode } from '../core/side.js';
 import { goNext } from '../core/flow.js';
+import { NOTICE } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
 
 const rgb = c => { const n = hexNum(c); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -55,6 +56,12 @@ export class Gallery extends SideEpisode {
     this.cabinetThing = { x0: CB.x0, x1: CB.x1, y0: CB.top, y1: GROUND, use: () => this.openDrawer() };
     this.robotThing = { x0: 0, x1: 0, y0: GROUND - 8, y1: GROUND, use: () => this.robotTalk() };
     this.things.push(this.cabinetThing, this.robotThing, { x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', use: () => this.enterRoom('staff') });
+    // things to look at: the hall's portraits, then the worn middle
+    const N = NOTICE.gallery, T = TILE, look = (x0, x1, py, lines, y0) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 110, py, lines });
+    look(50, 80, 106, N.man); look(164, 200, 108, N.family); look(290, 322, 106, N.boy); look(398, 428, 106, N.cake);
+    look(482, 524, 128, N.desk); look(604, 628, 134, N.bust);
+    look(732, 760, 104, N.missing); look(766, 790, 124, N.column); look(804, 834, GROUND - 36, N.fallen);
+    look(866, 894, 151, N.chandelier, 140); look(936, 954, 150, N.robot, 140); look(990, 1012, 50, N.camera, 100);
     this.cams = LEVEL.cameras.map(c => Object.assign({}, c, { lock: 0, cone: null, angle: 0 }));
     this.laser = { awake: false, t: 0, phase: '', n: -2, st: null };
     // the laser's order is new every take, and its rhythm a little different: no learning it by heart
@@ -88,6 +95,7 @@ export class Gallery extends SideEpisode {
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) { this.moveKid(dt); this.updateThings(); if (c.glasses()) this.gl.toggle(); }
+    else if (this.dead && this.girl.visible) this.settle(dt);
     this.gl.update(dt);
     this.updateDrawer(dt);
     this.updateDropper(dt);
@@ -355,7 +363,7 @@ export class Gallery extends SideEpisode {
     const a = Math.min(0.55, this.hudT * 1.5) * (this.dead ? 0.3 : 1), s = 8, m = 5;
     g.fillStyle(col, a);
     [[m, m, 1, 1], [320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
-    if (this.hudT > 0.4) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
+    if (this.hudT > 0.4 && overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
     if (this.hudT < 1.2 && Math.floor(this.hudT * 8) % 2 === 0) pixText(g, 'VIEW', m + 3, m + 3, col, 1, a);
   }
 

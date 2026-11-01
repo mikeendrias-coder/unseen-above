@@ -50,13 +50,18 @@ export const LEVEL = {
   live: { x: 86 * T + 4, y: 26, w: 70, h: 42 },                 // a screen showing her, live
   robot: { x0: 88 * T, x1: 97 * T, speed: 14 },
   // people out tonight: the rich stroll and film her; the staff work
+  // (each walks a stretch clear of the benches, planters and the fountain, which are solid)
   npcs: [
-    { kind: 'a', x0: 13 * T, x1: 27 * T, speed: 9 },
-    { kind: 'b', x0: 22 * T, x1: 31 * T, speed: 7 },
+    { kind: 'a', x0: 21 * T + 8, x1: 26 * T + 4, speed: 9 },
+    { kind: 'b', x0: 31 * T + 6, x1: 33 * T + 12, speed: 7 },
     { kind: 'w', x0: 47 * T, x1: 66 * T, speed: 16 },
-    { kind: 'a', x0: 78 * T, x1: 86 * T, speed: 8 },
+    { kind: 'a', x0: 78 * T, x1: 83 * T + 6, speed: 8 },
     { kind: 'c', x0: 102 * T, x1: 104 * T, speed: 0 }
   ],
+  // street furniture she bumps into and can stand on
+  benches: [6 * T, 27 * T, 92 * T],
+  planters: [14 * T, 30 * T, 84 * T],
+  crates: [96 * T + 88, 96 * T + 102],
   // the playroom
   screen: { x: KX + 96, y: 22, w: 176, h: 96 },
   couch: { x: KX + 132, y: 128, w: 112, h: 32 },

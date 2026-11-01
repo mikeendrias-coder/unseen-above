@@ -214,7 +214,7 @@ export class Fall extends SideEpisode {
     const a = this.cracked ? (Math.random() < 0.5 ? 0.9 : 0.15) : 0.5;
     g.fillStyle(col, a);
     [[m, m, 1, 1], [320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy], i) => { if (this.cracked && i === 0) return; g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
-    pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
+    if (overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
     if (this.cracked) {
       const u = Math.min(1, this.crackT / 0.25);
       const pts = [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23], [60, 30], [70, 44]];
