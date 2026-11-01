@@ -5,16 +5,10 @@ import { LOOKS } from '../art/palettes.js';
 import { hexNum, flat, rng } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { TILE, VIEW_W, VIEW_H, GROUND, LEVEL, buildMap, paintSky, paintMoon, paintCity, paintLevel } from '../art/estate.js';
-import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
-import { display, pixelZoom } from '../core/display.js';
-
-const EP = 'ep1';
-const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2 };
-const LOCK = 0.42; // seconds inside a light before the strike
-const inPoly = (pts, x, y) => { let inside = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside; } return inside; };
+import { SideEpisode } from '../core/side.js';
 
 // Drone show figures, as point lists in a 64 x 30 box.
 function outline(pts, n) {
@@ -32,13 +26,12 @@ const FIGURES = {
 };
 const SHOW = [['diamond', 7], ['crown', 7], ['ring', 4], ['diamond', 6], ['tv', 1.1], ['crown', 6]];
 
-export class Grounds extends Phaser.Scene {
+export class Grounds extends SideEpisode {
   constructor() { super('grounds'); }
 
   create(data) {
-    this.P = LOOKS[state.look];
+    this.initSide('ep1', LEVEL, buildMap());
     const P = this.P;
-    this.ep = state.episode(EP);
     makeSprites(this, P);
     // painted layers
     const LW = LEVEL.w * TILE;
@@ -47,66 +40,41 @@ export class Grounds extends Phaser.Scene {
     const city = paintCity(P, Math.ceil(LW * 0.15) + VIEW_W); city.toTexture(this, 'g_city');
     const lvl = paintLevel(P); lvl.toTexture(this, 'g_level');
     this.marks = lvl.marks; this.cityMarks = city.marks;
-    this.map = buildMap();
-
-    const cam = this.cameras.main;
-    cam.setZoom(pixelZoom()); cam.setBounds(0, 0, LW, VIEW_H); cam.setRoundPixels(true); cam.setBackgroundColor(hexNum(P.skyTop));
-    // Parallax layers: with a zoomed camera, scroll factors below 1 need an offset (see place()).
-    this.par = [];
-    this.par.push({ o: this.add.image(0, 0, 'g_sky').setOrigin(0).setDepth(-10), f: 0, x: 0, y: 0 });
-    this.par.push({ o: this.add.image(250, 22, 'g_moon').setDepth(-9), f: 0.02, x: 250, y: 22 });
-    this.skyFx = this.add.graphics().setDepth(-8).setBlendMode(Phaser.BlendModes.ADD); this.par.push({ o: this.skyFx, f: 0.3, x: 0, y: 0 });
-    this.showG = this.add.graphics().setDepth(-7); this.par.push({ o: this.showG, f: 0.25, x: 0, y: 0 });
-    this.fireworksG = this.add.graphics().setDepth(-7); this.par.push({ o: this.fireworksG, f: 0.2, x: 0, y: 0 });
-    this.par.push({ o: this.add.image(0, 0, 'g_city').setOrigin(0).setDepth(-6), f: 0.15, x: 0, y: 0 });
-    this.cityFx = this.add.graphics().setDepth(-6).setBlendMode(Phaser.BlendModes.ADD); this.par.push({ o: this.cityFx, f: 0.15, x: 0, y: 0 });
-    this.place();
+    this.pixelCamera(LW, P.skyTop);
+    // parallax layers
+    this.addParallax(this.add.image(0, 0, 'g_sky').setOrigin(0).setDepth(-10), 0);
+    this.addParallax(this.add.image(250, 22, 'g_moon').setDepth(-9), 0.02, 250, 22);
+    this.skyFx = this.addParallax(this.add.graphics().setDepth(-8).setBlendMode(Phaser.BlendModes.ADD), 0.3);
+    this.showG = this.addParallax(this.add.graphics().setDepth(-7), 0.25);
+    this.fireworksG = this.addParallax(this.add.graphics().setDepth(-7), 0.2);
+    this.addParallax(this.add.image(0, 0, 'g_city').setOrigin(0).setDepth(-6), 0.15);
+    this.cityFx = this.addParallax(this.add.graphics().setDepth(-6).setBlendMode(Phaser.BlendModes.ADD), 0.15);
     this.add.image(0, 0, 'g_level').setOrigin(0).setDepth(0);
     this.twinkleG = this.add.graphics().setDepth(1);
-    this.bodyLayer = this.add.layer().setDepth(2);
     this.droneSprites = LEVEL.drones.map(() => this.add.sprite(0, 0, 'drone_a').setDepth(3));
-    this.girl = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1).setDepth(4);
-    this.beamG = this.add.graphics().setDepth(5).setBlendMode(Phaser.BlendModes.ADD);
-    this.fxG = this.add.graphics().setDepth(7);
-    this.strikeG = this.add.graphics().setDepth(8).setBlendMode(Phaser.BlendModes.ADD);
+    this.commonLayers();
 
-    // particles: fountain spray, ash outside the wall, sparkles on gold, the death burst
+    // particles: fountain spray, ash outside the wall, sparkles on gold
     const fountain = this.marks.find(m => m.kind === 'fountain');
     this.add.particles(fountain.x, fountain.y, 'dot', { speedY: { min: -46, max: -26 }, speedX: { min: -14, max: 14 }, gravityY: 90, lifespan: 900, frequency: 45, alpha: { start: 0.9, end: 0 }, tint: [hexNum(P.glassLit), 0xffffff] }).setDepth(1);
     this.add.particles(0, -6, 'dot', { x: { min: 0, max: LEVEL.gateX + 20 }, speedY: { min: 7, max: 16 }, speedX: { min: 2, max: 9 }, lifespan: 15000, frequency: 70, alpha: { start: 0.8, end: 0.2 }, tint: [hexNum(flat(P.dust)), hexNum(flat(P.rubbleHi))], deathZone: { type: 'onLeave', source: new Phaser.Geom.Rectangle(-20, -20, LEVEL.gateX + 60, VIEW_H + 40) } }).setDepth(6);
     this.sparkle = this.add.particles(0, 0, 'sparkle', { lifespan: 520, scale: { start: 0.2, end: 1, ease: 'Sine.easeOut' }, alpha: { start: 1, end: 0 }, emitting: false, blendMode: 'ADD' }).setDepth(6);
-    this.burst = this.add.particles(0, 0, 'dot2', { speed: { min: 25, max: 95 }, lifespan: { min: 260, max: 560 }, scale: { start: 1, end: 0 }, tint: [0xffffff, hexNum(P.lamp), hexNum(P.hazard)], emitting: false }).setDepth(8);
 
     // drone show and fireworks state
     this.show = { idx: 0, t: 0, drones: Array.from({ length: N_DRONES }, (_, i) => ({ x: 335 + (i % 12) * 3, y: 60, tx: 0, ty: 0, hue: i % 5 })) };
     this.setFigure(SHOW[0][0]);
     this.fireworks = []; this.nextFirework = 3;
-
-    this.ctl = makeControls(this);
-    this.clock = 0; this.strike = null; this.culprit = null; this.wasInside = undefined; this.sparkT = 0;
+    this.wasInside = undefined; this.sparkT = 0;
     this.lights = LEVEL.lights.map(l => Object.assign({}, l, { lock: 0, cone: null }));
     this.drones = LEVEL.drones.map(d => Object.assign({}, d, { x: d.x0 + (d.x1 - d.x0) * 0.3, dir: 1, lock: 0, cone: null }));
     this.drawBodies();
-    this.spawn(data && data.fromIntro);
-
-    cam.startFollow(this.girl, true, 0.15, 0.15, -18, 0);
-    cam.fadeIn(data && data.fromIntro ? 900 : 350);
+    this.spawn(data && data.fromIntro ? 1 * TILE : null);
+    this.followGirl();
+    this.cameras.main.fadeIn(data && data.fromIntro ? 900 : 350);
     this.beds = { wind: Sound.wind(0.14), lounge: Sound.lounge(0.0001) };
     this.events.once('shutdown', () => { this.beds.wind.stop(0.4); this.beds.lounge.stop(0.4); });
-    this.scale.on('rescale', this.onRescale, this);
-    this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
-
-    if (data && data.fromIntro) { this.time.delayedCall(700, () => { overlay.card('EPISODE 1', 'The Grounds', 3600); overlay.bug('CH 07', 900); }); }
-    else if (this.ep.take > 1) overlay.note('TAKE ' + this.ep.take, 1600);
+    this.takeNote({ fromCut: data && data.fromIntro }, 1, 'The Grounds');
     window.__game = { scene: this, state };
-  }
-
-  onRescale() { this.cameras.main.setZoom(pixelZoom()); this.place(); }
-  // A camera zoomed by S around its center shifts layers whose scroll factor f is below 1.
-  // Offsetting each by 160(S-1)(1-f), 90(S-1)(1-f) puts them back where they belong.
-  place() {
-    const S = display.S;
-    this.par.forEach(e => e.o.setScrollFactor(e.f).setPosition(e.x + 160 * (S - 1) * (1 - e.f), e.y + 90 * (S - 1) * (1 - e.f)));
   }
 
   setFigure(name) {
@@ -116,37 +84,10 @@ export class Grounds extends Phaser.Scene {
     this.show.name = name;
   }
 
-  drawBodies() {
-    this.bodyLayer.removeAll(true);
-    this.ep.bodies.forEach(b => {
-      const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take));
-      this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1));
-    });
-  }
-
-  spawn(fromIntro) {
-    this.kid = { x: LEVEL.start.x, y: LEVEL.start.y, w: K.w, h: K.hStand, vx: 0, vy: 0, onGround: true, crouch: false, coyote: 0, buffer: 0, holdT: 0, face: 1, walkT: 0 };
-    if (fromIntro) this.kid.x = 1 * TILE;
-    this.dead = false; this.leaving = false; this.done = false;
-    this.lights.forEach(l => { l.lock = 0; }); this.drones.forEach(d => { d.lock = 0; });
-    this.girl.setVisible(true);
-  }
-
-  // ------------------------------------------------------------------ collision
-  solidTile(tx, ty) { if (tx < 0 || tx >= this.map.W || ty >= this.map.H) return true; if (ty < 0) return false; return this.map.m[ty][tx] === 1; }
-  solidPx(px, py) { return this.solidTile(Math.floor(px / TILE), Math.floor(py / TILE)); }
-  boxHits(x, y, w, h) {
-    const x0 = Math.floor(x / TILE), x1 = Math.floor((x + w - 0.001) / TILE), y0 = Math.floor(y / TILE), y1 = Math.floor((y + h - 0.001) / TILE);
-    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (this.solidTile(tx, ty)) return true;
-    return false;
-  }
-
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
     this.clock += dt;
-    if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
-    if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
-    if (c.restart() && !this.leaving && !this.done) { this.restartTake(); c.endFrame(); return; }
+    if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) this.moveKid(dt);
     this.updateLights(dt);
@@ -157,55 +98,7 @@ export class Grounds extends Phaser.Scene {
     c.endFrame();
   }
 
-  moveKid(dt) {
-    const k = this.kid, c = this.ctl;
-    const dir = (c.right() ? 1 : 0) - (c.left() ? 1 : 0);
-    if (c.down() && k.onGround && !k.crouch) { k.y += K.hStand - K.hCrouch; k.h = K.hCrouch; k.crouch = true; }
-    else if (!c.down() && k.crouch && !this.boxHits(k.x, k.y - (K.hStand - K.hCrouch), k.w, K.hStand)) { k.y -= K.hStand - K.hCrouch; k.h = K.hStand; k.crouch = false; }
-    const top = k.crouch ? K.crouchRun : K.run, target = dir * top, acc = k.onGround ? K.accG : K.accA;
-    if (k.vx < target) k.vx = Math.min(target, k.vx + acc * dt); else if (k.vx > target) k.vx = Math.max(target, k.vx - acc * dt);
-    if (dir) k.face = dir;
-    if (c.jumpPressed() && !this.atDoor()) k.buffer = K.buffer; else k.buffer = Math.max(0, k.buffer - dt);
-    k.coyote = k.onGround ? K.coyote : Math.max(0, k.coyote - dt);
-    if (k.buffer > 0 && k.coyote > 0 && !k.crouch) { k.vy = -K.jumpV; k.buffer = 0; k.coyote = 0; k.holdT = K.hold; k.onGround = false; Sound.tone(480, 0.07, 'square', 0.02, 720); }
-    if (k.holdT > 0) { k.holdT -= dt; if (!c.jumpHeld()) { if (k.vy < 0) k.vy *= 0.5; k.holdT = 0; } }
-    const apex = Math.abs(k.vy) < 40 && c.jumpHeld();
-    k.vy = Math.min(K.maxFall, k.vy + K.g * (apex ? 0.5 : 1) * dt);
-    let nx = k.x + k.vx * dt;
-    if (this.boxHits(nx, k.y, k.w, k.h)) { nx = k.vx > 0 ? Math.floor((nx + k.w) / TILE) * TILE - k.w : (Math.floor(nx / TILE) + 1) * TILE; k.vx = 0; }
-    k.x = nx;
-    let ny = k.y + k.vy * dt; k.onGround = false;
-    if (this.boxHits(k.x, ny, k.w, k.h)) {
-      if (k.vy > 0) { ny = Math.floor((ny + k.h) / TILE) * TILE - k.h; k.onGround = true; k.vy = 0; }
-      else { let nudged = false; for (const s of [1, -1, 2, -2, 3, -3, 4, -4]) if (!this.boxHits(k.x + s, ny, k.w, k.h)) { k.x += s; nudged = true; break; } if (!nudged) { ny = (Math.floor(ny / TILE) + 1) * TILE; k.vy = 0; } }
-    }
-    k.y = ny;
-    k.walkT = k.onGround && Math.abs(k.vx) > 8 ? k.walkT + dt : 0;
-    if ((c.interact() || c.up()) && this.atDoor()) this.enterDoor();
-  }
-  atDoor() { const k = this.kid, d = LEVEL.door; return k.x + k.w > d.x + 2 && k.x < d.x + d.w - 2 && Math.abs(k.y + k.h - (d.y + d.h)) < 4; }
-  probes() { const k = this.kid, cx = k.x + k.w / 2; return [{ x: cx, y: k.y + 2 }, { x: cx, y: k.y + k.h / 2 }, { x: cx, y: k.y + k.h - 2 }, { x: k.x + 1, y: k.y + k.h / 2 }, { x: k.x + k.w - 1, y: k.y + k.h / 2 }]; }
-
   // ------------------------------------------------------------------ lights and drones
-  cone(x, y, angle, half, range) {
-    const pts = [{ x, y }];
-    for (let a = angle - half; a <= angle + half + 0.001; a += 1) {
-      const r = a * Math.PI / 180, dx = Math.cos(r), dy = Math.sin(r);
-      let d = 0; while (d < range) { d += 2; if (this.solidPx(x + dx * d, y + dy * d)) { d -= 1; break; } }
-      pts.push({ x: x + dx * Math.min(d, range), y: y + dy * Math.min(d, range) });
-    }
-    return pts;
-  }
-  watch(src, dt) {
-    if (this.dead || this.leaving) { src.lock = Math.max(0, src.lock - dt * 3); return; }
-    const seen = this.probes().some(p => inPoly(src.cone, p.x, p.y));
-    if (seen && !window.__noDeath) {
-      if (src.lock === 0) Sound.charge();
-      src.lock += dt;
-      if (Math.floor(src.lock * 12) !== Math.floor((src.lock - dt) * 12)) Sound.tone(900 + src.lock * 1400, 0.04, 'square', 0.015);
-      if (src.lock >= LOCK) this.die(src);
-    } else src.lock = Math.max(0, src.lock - dt * 2);
-  }
   updateLights(dt) {
     this.lights.forEach(l => {
       const s = (Math.sin((this.clock / l.period + l.phase) * Math.PI * 2) + 1) / 2;
@@ -226,24 +119,9 @@ export class Grounds extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ death and the door
-  die(src) {
-    if (this.dead) return;
-    this.dead = true;
-    const k = this.kid, x = k.x + k.w / 2, y = k.y + k.h / 2;
-    this.culprit = { x: src.x, y: src.cy || src.y, tx: x, ty: y, until: this.clock + 0.5 };
-    this.strike = { x, y, until: this.clock + 0.18 };
-    this.girl.setVisible(false);
-    this.burst.explode(16, x, y);
-    this.cameras.main.shake(200, 0.012); this.cameras.main.flash(110, 70, 18, 18);
-    Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
-    state.addBody(EP, x, k.onGround ? k.y + k.h : GROUND, src.id);
-    this.time.delayedCall(650, () => this.cameras.main.fadeOut(260, 0, 0, 0));
-    this.time.delayedCall(940, () => this.scene.restart({}));
-  }
-  restartTake() { this.dead = true; state.episode(EP).take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); }
   enterDoor() {
     if (this.leaving) return;
-    this.leaving = true; state.finish(EP);
+    this.leaving = true; state.finish(this.epId);
     const cam = this.cameras.main, D = LEVEL.door;
     cam.stopFollow(); cam.pan(D.x + D.w / 2, D.y + D.h / 2, 900, 'Sine.easeInOut');
     Sound.chime(); this.beds.lounge.set(0.0001, 1.2);
@@ -288,11 +166,8 @@ export class Grounds extends Phaser.Scene {
   }
 
   draw() {
-    const P = this.P, k = this.kid, t = this.clock;
-    // the girl
-    const tex = k.crouch ? 'girl_crouch' : !k.onGround ? 'girl_jump' : (k.walkT > 0 && Math.floor(k.walkT * 9) % 2) ? 'girl_pass' : 'girl_stand';
-    this.girl.setTexture(tex).setPosition(Math.round(k.x + k.w / 2), Math.round(k.y + k.h)).setFlipX(k.face < 0);
-
+    const P = this.P, t = this.clock;
+    this.drawGirl();
     // sky searchlights behind the roof (parallax space)
     const sf = this.skyFx; sf.clear();
     [[120, 0.21, 0], [250, 0.17, 1.7], [390, 0.23, 3.1], [520, 0.19, 4.4], [650, 0.2, 2.2], [780, 0.16, 5.3]].forEach(([x, sp, ph], i) => {
@@ -327,29 +202,9 @@ export class Grounds extends Phaser.Scene {
 
     // hazard beams: soft layered cones, red when they lock on
     const bg = this.beamG; bg.clear();
-    const drawCone = (src, base) => {
-      const lockMix = Math.min(1, src.lock / LOCK), col = lockMix > 0 ? hexNum(P.hazard) : hexNum(P.shaft);
-      bg.fillStyle(col, base + lockMix * 0.12); bg.fillPoints(src.cone, true);
-      const inner = [src.cone[0]].concat(src.cone.slice(1).filter((_, j, arr) => j > arr.length * 0.25 && j < arr.length * 0.75));
-      if (inner.length > 2) { bg.fillStyle(col, base * 0.8); bg.fillPoints(inner, true); }
-    };
-    this.lights.forEach(l => drawCone(l, 0.11));
-    this.drones.forEach(d => drawCone(d, 0.13));
-
-    // culprit line and the strike
-    const fx = this.fxG; fx.clear();
-    [...this.lights, ...this.drones].forEach(s => {
-      if (s.lock > 0 && !this.dead) {
-        const b = this.probes()[1], r = 9 - (s.lock / LOCK) * 7;
-        fx.lineStyle(1, hexNum(P.hazard), 1); fx.strokeRect(Math.round(b.x - 4 - r), Math.round(b.y - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r));
-      }
-    });
-    if (this.culprit && this.clock < this.culprit.until) { const c = this.culprit; fx.lineStyle(1, hexNum(P.hazard), Math.floor(t * 12) % 2 ? 1 : 0.4); fx.lineBetween(c.x, c.y, c.tx, c.ty); fx.strokeRect(c.x - 5, c.y - 5, 10, 10); }
-    const sg2 = this.strikeG; sg2.clear();
-    if (this.strike && this.clock < this.strike.until) {
-      const v = this.cameras.main.worldView, s = this.strike, fromLeft = (s.x - v.x) > v.width / 2, x0 = fromLeft ? v.x - 2 : v.x + v.width + 2;
-      sg2.lineStyle(6, hexNum(P.hazard), 0.35); sg2.lineBetween(x0, s.y, s.x, s.y); sg2.lineStyle(2, hexNum(P.hazardCore), 1); sg2.lineBetween(x0, s.y, s.x, s.y);
-    }
+    this.lights.forEach(l => this.drawCone(bg, l, 0.11, P.shaft));
+    this.drones.forEach(d => this.drawCone(bg, d, 0.13, P.shaft));
+    this.drawLocks([...this.lights, ...this.drones]);
   }
 
   hint() {
