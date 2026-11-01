@@ -10,6 +10,7 @@ import { pixText, textWidth } from '../art/pixfont.js';
 import { makeCinemaTextures, cinemaPalette, mix, num } from '../art/cinema.js';
 import { LEVEL as EST, buildMap as estateMap, paintSky, paintMoon, paintLevel as paintEstate } from '../art/estate.js';
 import { designZoom, display } from '../core/display.js';
+import { SatelliteStrike, STRIKE } from '../art/strike.js';
 import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -17,7 +18,7 @@ import { overlay } from '../core/overlay.js';
 
 const TV = { x: 500, y: 110, w: 640, h: 360 };
 const X0 = 440; // the feed shows the garden from this x
-const T = { solve: 8.7, cut: 11.6, feed: 11.9, lockAt: 14.4, strike: 14.82, back: 18.5, turn: 22, next: 22.5, round2: 26, reach: 27, black: 31.5, end: 33.5 };
+const T = { solve: 8.7, cut: 11.6, feed: 11.9, lockAt: 14.0, fire: 14.42, strike: 14.8, back: 18.5, turn: 22, next: 22.5, round2: 26, reach: 27, black: 31.5, end: 33.5 };
 const smooth = u => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
 const lerp = (a, b, u) => a + (b - a) * u;
 
@@ -98,6 +99,7 @@ export class Kids extends Phaser.Scene {
     this.girl1 = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1); this.feed.add(this.girl1);
     this.girl2 = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1).setVisible(false); this.feed.add(this.girl2);
     this.feedG = this.add.graphics(); this.feed.add(this.feedG);
+    this.feedStrike = new SatelliteStrike(this, { parent: this.feed }); this.hitAt = null; this.satX = null; this.g1x = 570;
     this.staticG = this.add.graphics().setDepth(3);
     // light from the screen
     this.glows = [[TV.x + TV.w / 2, TV.y - 30, 9, 1.6], [TV.x + TV.w / 2, TV.y + TV.h + 40, 10, 2.2], [TV.x - 40, TV.y + TV.h / 2, 2, 6], [TV.x + TV.w + 40, TV.y + TV.h / 2, 2, 6]]
@@ -156,7 +158,10 @@ export class Kids extends Phaser.Scene {
     this.cue('feed', T.feed, () => { this.feed.setVisible(true); });
     this.cue('ccx', T.feed + 0.9, () => overlay.clearCaption());
     this.cue('lock', T.lockAt, () => Sound.charge());
-    this.cue('strike', T.strike, () => { Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16); this.cameras.main.shake(140, 0.003); });
+    // the satellite fires; the beam ricochets down the feed and hits her
+    this.cue('fire', T.fire, () => this.feedStrike.fire({ view: { x: 0, y: 0, width: 320, height: 180 }, tx: (this.g1x || 570) - X0, ty: 153, P: this.P, from: this.satX, onImpact: () => {
+      this.hitAt = this.t; Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16); this.cameras.main.shake(140, 0.003);
+    } }));
     this.cue('round2', T.round2, () => { overlay.caption(null, '[GAME SHOW JINGLE]'); [523, 659, 784, 1047].forEach((f, i) => this.time.delayedCall(i * 140, () => Sound.tone(f, 0.16, 'square', 0.025, null, 0.3))); });
     this.cue('round2x', T.round2 + 2.4, () => overlay.clearCaption());
     this.cue('black', T.black, () => { this.blackout.setVisible(true); Object.values(this.beds).forEach(b => b.stop(0.02)); overlay.clearCaption(); });
@@ -168,8 +173,11 @@ export class Kids extends Phaser.Scene {
     let k, cx, cy;
     if (t < 7) { k = lerp(1, 1.06, t / 7); cx = 640; cy = 360; }
     else if (t < T.feed + 0.6) { const u = smooth((t - 7) / 2.5); k = lerp(1.06, 1.55, u); cx = lerp(640, 835, u); cy = lerp(360, 318, u); }
-    else if (t < T.back) { const u = smooth((t - T.feed - 0.6) / 3.2); k = lerp(1.55, 2.15, u); cx = lerp(835, 770, u); cy = lerp(318, 400, u); }
-    else if (t < T.back + 3) { const u = smooth((t - T.back) / 3); k = lerp(2.15, 1.05, u); cx = lerp(770, 660, u); cy = lerp(400, 360, u); }
+    else if (t < T.lockAt) { const u = smooth((t - T.feed - 0.6) / (T.lockAt - T.feed - 0.6)); k = lerp(1.55, 1.95, u); cx = lerp(835, 780, u); cy = lerp(318, 380, u); }
+    // the lamp holds her: the camera pulls back so the whole screen shows, satellite and all
+    else if (t < T.strike + 0.5) { const u = smooth((t - T.lockAt) / 0.35); k = lerp(1.95, 1.5, u); cx = lerp(780, 830, u); cy = lerp(380, 300, u); }
+    else if (t < T.back) { const u = smooth((t - T.strike - 0.5) / 3); k = lerp(1.5, 2.1, u); cx = lerp(830, 770, u); cy = lerp(300, 400, u); }
+    else if (t < T.back + 3) { const u = smooth((t - T.back) / 3); k = lerp(2.1, 1.05, u); cx = lerp(770, 660, u); cy = lerp(400, 360, u); }
     else { const u = smooth((t - T.back - 3) / 10); k = lerp(1.05, 1.12, u); cx = lerp(660, 700, u); cy = lerp(360, 380, u); }
     const cam = this.cameras.main, z = designZoom() * k;
     cam.setZoom(z); cam.centerOn(cx, cy);
@@ -190,7 +198,7 @@ export class Kids extends Phaser.Scene {
     if (t < T.cut) { const i = Math.floor(t * 3) % 3; col = ['#ff5fa2', '#7d6bff', '#ffd23f'][i]; if (this.solvedAt != null && t - this.solvedAt < 2.5) col = Math.floor(t * 10) % 2 ? '#ffd23f' : '#ff5fa2'; }
     else if (t < T.feed) col = '#ffffff';
     else col = t > T.round2 && Math.floor(t * 4) % 2 ? '#ff5fa2' : '#8fb6ff';
-    if (t > T.strike && t < T.strike + 0.12) col = '#ff6060';
+    if (this.hitAt != null && t - this.hitAt < 0.12) col = '#ff6060';
     this.tvCol = col;
     const flick = 0.85 + 0.15 * Math.sin(t * 13) * Math.sin(t * 7.7);
     this.glows.forEach(g => g.setTint(num(col)).setAlpha((t < T.cut ? 0.32 : 0.22) * flick));
@@ -215,18 +223,23 @@ export class Kids extends Phaser.Scene {
     const g = this.feedG, P = this.P, L = EST.lights[0]; g.clear();
     // girl one: past the hedge, creeping toward the fountain; the lamp turns to her
     const g1 = t < T.feed + 2 ? lerp(550, 570, Math.max(0, (t - T.feed) / 2)) : 570, walking1 = t < T.feed + 2 && t > T.feed;
-    this.girl1.setVisible(t < T.strike).setPosition(Math.round(g1 - X0), 160).setTexture(walking1 && Math.floor(t * 6) % 2 ? 'girl_pass' : 'girl_stand');
-    this.body1.setVisible(t >= T.strike).setPosition(Math.round(g1 - X0), 160);
+    const hit = this.hitAt != null; this.g1x = g1;
+    this.girl1.setVisible(!hit).setPosition(Math.round(g1 - X0), 160).setTexture(walking1 && Math.floor(t * 6) % 2 ? 'girl_pass' : 'girl_stand');
+    this.body1.setVisible(hit).setPosition(Math.round(g1 - X0), 160);
     const sweep = L.a0 + (L.a1 - L.a0) * (Math.sin((t / L.period + L.phase) * Math.PI * 2) + 1) / 2, aim = Math.atan2(150 - L.y, g1 - L.x) * 180 / Math.PI;
     const toward = smooth((t - (T.lockAt - 0.35)) / 0.35) * (1 - smooth((t - T.strike - 0.6) / 0.8));
     const angle = lerp(sweep, aim, toward), pts = this.cone(L.x, L.y, angle, L.half, L.range);
-    const lock = t >= T.lockAt && t < T.strike ? (t - T.lockAt) / (T.strike - T.lockAt) : 0;
+    const lock = t >= T.lockAt && t < T.fire ? (t - T.lockAt) / (T.fire - T.lockAt) : t >= T.fire && !hit ? 1 : 0;
     const coneCol = hexNum(lock > 0 ? P.hazard : P.shaft), inner = [pts[0]].concat(pts.slice(1).filter((_, j, a) => j > a.length * 0.25 && j < a.length * 0.75));
     g.fillStyle(coneCol, 0.2 + lock * 0.12); g.fillPoints(pts, true); if (inner.length > 2) { g.fillStyle(coneCol, 0.16); g.fillPoints(inner, true); }
     const hx = g1 - X0, hy = 153;
-    if (lock > 0) { const r = 9 - lock * 7; g.lineStyle(1, hexNum(P.hazard), 1); g.strokeRect(Math.round(hx - 4 - r), Math.round(hy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); }
-    if (t >= T.strike && t < T.strike + 0.18) { g.fillStyle(hexNum(P.hazard), 0.4); g.fillRect(0, hy - 3, hx, 6); g.fillStyle(hexNum(P.hazardCore), 1); g.fillRect(0, hy - 1, hx, 2); }
-    if (t >= T.strike && t < T.strike + 0.6) { const u = (t - T.strike) / 0.6; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; g.fillStyle(i % 2 ? 0xffffff : hexNum(P.lamp), 1 - u); g.fillRect(Math.round(hx + Math.cos(a) * u * 22), Math.round(hy + Math.sin(a) * u * 16), 2, 2); } }
+    if (lock > 0 && t < T.fire) {
+      const r = 9 - lock * 7; g.lineStyle(1, hexNum(P.hazard), 1); g.strokeRect(Math.round(hx - 4 - r), Math.round(hy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r));
+      // the satellite slides into place at the top of the feed while the lamp holds her
+      const want = hx < 160 ? 230 : 90; this.satX = this.satX == null ? (hx < 160 ? 330 : -10) : this.satX + (want - this.satX) * 0.2;
+      SatelliteStrike.drawSat(g, P, this.satX, 3, null, 0);
+    }
+    this.feedStrike.update(this.game.loop.delta / 1000);
     // the next take walks in and hides behind the hedge, the body on its other side
     if (t >= T.next) {
       const u = Math.min(1, (t - T.next) / 3), x2 = lerp(X0 - 6, 500, u), crouch = t > T.next + 3.4;
@@ -236,7 +249,7 @@ export class Kids extends Phaser.Scene {
     const red = hexNum(P.hazard);
     if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(red, 1); g.fillCircle(9, 9, 2); }
     pixText(g, 'LIVE', 14, 7, 0xffffff, 1, 0.9); pixText(g, 'CH 07', 320 - 6 - textWidth('CH 07'), 7, 0xffffff, 1, 0.8);
-    pixText(g, 'TAKE ' + (t < T.strike + 1.2 ? 31 : 32), 6, 168, 0xffffff, 1, 0.7);
+    pixText(g, 'TAKE ' + (this.hitAt == null || t < this.hitAt + 1.2 ? 31 : 32), 6, 168, 0xffffff, 1, 0.7);
     // round two: the game show comes back over the feed
     if (t >= T.round2) {
       const on = Math.floor(t * 6) % 2;
@@ -252,7 +265,7 @@ export class Kids extends Phaser.Scene {
   drawKids(t) {
     const g = this.kidsG, rim = num(this.tvCol), ink = 0x050309; g.clear();
     const cheer = this.solvedAt == null ? 0 : smooth((t - this.solvedAt) / 0.25) * (1 - smooth((t - T.cut + 0.4) / 1.2));
-    const still = t > T.strike;
+    const still = this.hitAt != null;
     const bob = still ? 0 : Math.sin(t * 9) * cheer * 6 + Math.sin(t * 1.7) * 1.2;
     const turn = smooth((t - T.turn) / 0.8);
     const reach = smooth((t - T.reach) / 3.5);

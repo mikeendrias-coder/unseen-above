@@ -119,7 +119,7 @@ export class Gallery extends SideEpisode {
     }
     if (st.phase === 'fire' && !this.dead && !this.leaving && !window.__noDeath && k.x + k.w > L.x0 && k.x < L.x1) {
       const y = L.shots[st.shot].find(yy => beamHits(k.y, k.y + k.h, yy));
-      if (y != null) this.die({ x: L.x1 - 2, y, id: L.id });
+      if (y != null) this.die({ x: L.x1 - 2, y, id: L.id, direct: true }); // the house's own laser, not the satellite
     }
   }
 

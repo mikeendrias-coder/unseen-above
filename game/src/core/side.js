@@ -7,6 +7,7 @@ import { overlay } from './overlay.js';
 import { display, pixelZoom } from './display.js';
 import { LOOKS } from '../art/palettes.js';
 import { hexNum } from '../art/painter.js';
+import { SatelliteStrike } from '../art/strike.js';
 
 export const TILE = 16;
 export const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2 };
@@ -20,7 +21,7 @@ export class SideEpisode extends Phaser.Scene {
     this.epId = id; this.ep = state.episode(id);
     this.level = level; this.map = map;
     this.ctl = makeControls(this);
-    this.clock = 0; this.strike = null; this.culprit = null; this.dead = false; this.leaving = false; this.done = false;
+    this.clock = 0; this.culprit = null; this.dead = false; this.leaving = false; this.done = false;
     this.par = [];
     this.scale.on('rescale', this.onRescale, this);
     this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
@@ -43,7 +44,7 @@ export class SideEpisode extends Phaser.Scene {
     this.girl = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1).setDepth(4);
     this.beamG = this.add.graphics().setDepth(5).setBlendMode(Phaser.BlendModes.ADD);
     this.fxG = this.add.graphics().setDepth(7);
-    this.strikeG = this.add.graphics().setDepth(8).setBlendMode(Phaser.BlendModes.ADD);
+    this.strikeFx = new SatelliteStrike(this, { depth: 8 });
     this.burst = this.add.particles(0, 0, 'dot2', { speed: { min: 25, max: 95 }, lifespan: { min: 260, max: 560 }, scale: { start: 1, end: 0 }, tint: [0xffffff, hexNum(P.lamp), hexNum(P.hazard)], emitting: false }).setDepth(8);
   }
   drawBodies() {
@@ -118,19 +119,25 @@ export class SideEpisode extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ death, takes, the door
+  // A lock-on ends in the satellite strike (see art/strike.js): the beam leaves the satellite,
+  // ricochets down the view and hits her; the body is left where she stood. A source marked
+  // direct (the house's own laser) kills on contact with no strike from orbit.
   die(src) {
     if (this.dead) return;
     this.dead = true;
-    const k = this.kid, x = k.x + k.w / 2, y = k.y + k.h / 2;
-    if (src && src.x != null) this.culprit = { x: src.x, y: src.cy || src.y, tx: x, ty: y, until: this.clock + 0.5 };
-    this.strike = { x, y, until: this.clock + 0.18 };
-    this.girl.setVisible(false);
-    this.burst.explode(16, x, y);
-    this.cameras.main.shake(200, 0.012); this.cameras.main.flash(110, 70, 18, 18);
-    Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
-    state.addBody(this.epId, x, k.onGround ? k.y + k.h : this.groundBelow(x), src && src.id);
-    this.time.delayedCall(650, () => this.cameras.main.fadeOut(260, 0, 0, 0));
-    this.time.delayedCall(940, () => this.scene.restart({}));
+    const k = this.kid, x = k.x + k.w / 2, y = k.y + k.h / 2, footY = k.onGround ? k.y + k.h : this.groundBelow(x);
+    const impact = () => {
+      this.girl.setVisible(false);
+      this.burst.explode(16, x, y);
+      this.cameras.main.shake(200, 0.012); this.cameras.main.flash(110, 70, 18, 18);
+      Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
+      state.addBody(this.epId, x, footY, src && src.id);
+    };
+    let after = 0.4;
+    if (src && src.direct) impact();
+    else { this.cameras.main.stopFollow(); after = this.strikeFx.fire({ view: this.cameras.main.worldView, tx: x, ty: y, P: this.P, onImpact: impact, from: this.satX }); }
+    this.time.delayedCall((after + 0.12) * 1000, () => this.cameras.main.fadeOut(260, 0, 0, 0));
+    this.time.delayedCall((after + 0.42) * 1000, () => this.scene.restart({}));
   }
   groundBelow(x) { for (let ty = 0; ty < this.map.H; ty++) if (this.solidTile(Math.floor(x / TILE), ty) && !this.solidTile(Math.floor(x / TILE), ty - 1)) { if (ty * TILE > this.kid.y) return ty * TILE; } return 160; }
   restartTake() { this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); }
@@ -158,13 +165,16 @@ export class SideEpisode extends Phaser.Scene {
   }
   drawLocks(sources, limit) {
     const fx = this.fxG, P = this.P, t = this.clock; fx.clear();
-    sources.forEach(s => { if (s.lock > 0 && !this.dead) { const b = this.probes()[1], r = 9 - (s.lock / (limit || LOCK)) * 7; fx.lineStyle(1, hexNum(P.hazard), 1); fx.strokeRect(Math.round(b.x - 4 - r), Math.round(b.y - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); } });
-    if (this.culprit && this.clock < this.culprit.until) { const c = this.culprit; fx.lineStyle(1, hexNum(P.hazard), Math.floor(t * 12) % 2 ? 1 : 0.4); fx.lineBetween(c.x, c.y, c.tx, c.ty); fx.strokeRect(c.x - 5, c.y - 5, 10, 10); }
-    const sg = this.strikeG; sg.clear();
-    if (this.strike && this.clock < this.strike.until) {
-      const v = this.cameras.main.worldView, s = this.strike, fromLeft = (s.x - v.x) > v.width / 2, x0 = fromLeft ? v.x - 2 : v.x + v.width + 2;
-      sg.lineStyle(6, hexNum(P.hazard), 0.35); sg.lineBetween(x0, s.y, s.x, s.y); sg.lineStyle(2, hexNum(P.hazardCore), 1); sg.lineBetween(x0, s.y, s.x, s.y);
-    }
+    this.strikeFx.update(this.game.loop.delta / 1000);
+    let locking = 0;
+    sources.forEach(s => { if (s.lock > 0 && !this.dead) { locking = Math.max(locking, s.lock / (limit || LOCK)); const b = this.probes()[1], r = 9 - (s.lock / (limit || LOCK)) * 7; fx.lineStyle(1, hexNum(P.hazard), 1); fx.strokeRect(Math.round(b.x - 4 - r), Math.round(b.y - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); } });
+    // while a light locks on, the satellite slides into place at the top of the view
+    const v = this.cameras.main.worldView;
+    if (locking > 0 && !this.dead) {
+      const kx = this.kid.x + this.kid.w / 2, want = kx < v.x + v.width / 2 ? v.x + v.width * 0.72 : v.x + v.width * 0.28;
+      this.satX = this.satX == null ? (kx < v.x + v.width / 2 ? v.x + v.width + 8 : v.x - 8) : this.satX + (want - this.satX) * 0.25;
+      SatelliteStrike.drawSat(fx, P, this.satX, v.y + 3, this.strikeFx.glow, Math.floor(t * 14) % 2 ? locking : 0.2);
+    } else if (!this.dead) this.satX = null;
   }
   takeNote(data, num, title) {
     if (data && data.fromCut) { this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600); overlay.bug('CH 07', 900); }); }
