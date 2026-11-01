@@ -1,13 +1,17 @@
-// Episode 5, the Moon: the watchers' home. Bright, soft and clean, in its own colors (the five
-// looks are her world's; the Moon looks the same whichever one was picked). A corridor of glass
-// rooms where adults watch walls of Earth channels, a robot, a vote screen, and at the end the
-// kids' playroom. Then the last shot: an old TV in a dark room on Earth, showing the Moon.
+// Episode 5, the Moon: the watchers' home, a small city under a dome. Bright, soft and clean, in
+// its own colors (the five looks are her world's; the Moon looks the same whichever one was
+// picked). Earth hangs in the black over the dome. A plaza with a gold fountain, the door she
+// came out of on a plinth behind ropes, lounges behind glass where adults watch walls of Earth
+// channels, a tram, a vote board, a screen showing her live, and at the far end, where the
+// city stops being pretty, a staff door. The kids' playroom is reached from backstage.
+// Then the last shot: an old TV in a dark room on Earth, showing the Moon.
 import { Painter, rng } from './painter.js';
 import { pixText, textWidth } from './pixfont.js';
 
 export const TILE = 16, GROUND = 160;
 const T = TILE, G = GROUND;
-export const KX = 84 * T; // the playroom's left wall
+export const CW = 112;          // the city, in tiles
+export const KX = (CW + 1) * T; // the playroom's left wall
 
 // the Moon's own palette, from the look board's Moon frames
 export const M = {
@@ -21,23 +25,38 @@ export const M = {
   rich: '#ffd3e6', richLo: '#c497b0', richHair: '#e6c068', richHair2: '#8a5a3b',
   pink: '#ff5fa2', yellow: '#ffd23f', mint: '#3ee6c1', blue: '#5b8cff', purple: '#2b1a5c',
   rug: '#f2c6d8', rugLo: '#d8a1b9', white: '#ffffff', warm: '#fff4d6', robot: '#f4f2fb', robotLo: '#c8c3d9', robotLed: '#3ee6c1',
-  wood: '#3d3a52', red: '#ff3b3b'
+  wood: '#3d3a52', red: '#ff3b3b',
+  // the city: towers in the haze, the dome's ribs, the service end
+  haze: '#1a1c33', hazeHi: '#2a2d4d', far: '#232646', farHi: '#34385f', mid: '#b7b1cf', midHi: '#d4cfe6', midLo: '#958eb2',
+  rib: '#8f9cc8', service: '#9a95ad', serviceLo: '#77728a', coat: '#3a3d55', coatHi: '#555a7c'
 };
 
 export const LEVEL = {
-  w: 104, h: 12,
-  start: { x: 44, y: G - 14 },
-  arrive: { x: 24, y: G - 36, w: 22, h: 36 },                   // the door she comes out of
-  door: { x: 80 * T + 4, y: G - 36, w: 24, h: 36 },              // the playroom door
-  // rooms behind glass, people on sofas watching walls of Earth channels
+  w: CW + 21, h: 12,
+  start: { x: 50, y: G - 14 },
+  arrive: { x: 24, y: G - 36, w: 22, h: 36 },                   // the door she comes out of, on a plinth
+  door: { x: 100 * T, y: G - 36, w: 22, h: 36 },                 // STAFF ONLY: backstage
+  fountain: { x: 19 * T },
+  viewer: { x: 10 * T + 8 },                                     // a coin viewer pointed at Earth
+  // lounges behind glass, people on sofas watching walls of Earth channels
   rooms: [
-    { x0: 6 * T, x1: 18 * T, seats: 4, tiles: ['estate', 'street', 'field', 'hall', 'sat', 'beach', 'crowd', 'static'] },
-    { x0: 27 * T, x1: 39 * T, seats: 5, tiles: ['bedroom', 'ridge', 'estate', 'crowd', 'field', 'static', 'street', 'beach'] },
-    { x0: 48 * T, x1: 58 * T, seats: 2, tiles: ['grounds', 'static', 'hall', 'ridge', 'sat', 'field'] }
+    { x0: 34 * T, x1: 46 * T, seats: 4, tiles: ['estate', 'street', 'field', 'hall', 'sat', 'beach', 'crowd', 'static'] },
+    { x0: 51 * T, x1: 63 * T, seats: 5, tiles: ['bedroom', 'ridge', 'estate', 'crowd', 'field', 'static', 'street', 'beach'] },
+    { x0: 67 * T, x1: 77 * T, seats: 2, tiles: ['grounds', 'static', 'hall', 'ridge', 'sat', 'field'] }
   ],
-  portholes: [{ x: 22 * T + 8, y: 62, r: 16 }, { x: 44 * T, y: 62, r: 16 }, { x: 70 * T, y: 62, r: 16 }],
-  vote: { x: 60 * T + 4, y: 52, w: 92, h: 46 },
-  robot: { x0: 40 * T, x1: 47 * T, speed: 14 },
+  buildings: [{ x0: 32 * T, x1: 48 * T, top: 6 }, { x0: 49 * T + 8, x1: 64 * T + 8, top: 14 }, { x0: 65 * T + 8, x1: 79 * T, top: 9 }],
+  portholes: [],
+  vote: { x: 80 * T + 4, y: 52, w: 92, h: 46 },
+  live: { x: 86 * T + 4, y: 26, w: 70, h: 42 },                 // a screen showing her, live
+  robot: { x0: 88 * T, x1: 97 * T, speed: 14 },
+  // people out tonight: the rich stroll and film her; the staff work
+  npcs: [
+    { kind: 'a', x0: 13 * T, x1: 27 * T, speed: 9 },
+    { kind: 'b', x0: 22 * T, x1: 31 * T, speed: 7 },
+    { kind: 'w', x0: 47 * T, x1: 66 * T, speed: 16 },
+    { kind: 'a', x0: 78 * T, x1: 86 * T, speed: 8 },
+    { kind: 'c', x0: 102 * T, x1: 104 * T, speed: 0 }
+  ],
   // the playroom
   screen: { x: KX + 96, y: 22, w: 176, h: 96 },
   couch: { x: KX + 132, y: 128, w: 112, h: 32 },
@@ -50,7 +69,7 @@ export function buildMap() {
   for (let y = 0; y < H; y++) m.push(new Array(W).fill(0));
   const solid = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y] && x >= 0 && x < W) m[y][x] = 1; };
   solid(0, 10, W - 1, 11); solid(0, 0, W - 1, 0);
-  solid(0, 0, 0, 9); solid(83, 0, 83, 9); solid(W - 1, 0, W - 1, 9);
+  solid(0, 0, 0, 9); solid(CW, 0, CW, 9); solid(W - 1, 0, W - 1, 9);
   return { W, H, m };
 }
 
@@ -130,24 +149,118 @@ function oddDoor(p, D, clean) {
   if (clean) { p.rect(D.x + D.w / 2 - 5, D.y - 10, 10, 6, M.trimLo); ptext(p, '07', D.x + D.w / 2 - 3, D.y - 9, M.trimHi); }
 }
 
+// ------------------------------------------------------------------ the sky and the skyline
+// Behind everything, fixed: black, stars, Earth over the dome, the dome's ribs catching light.
+export function paintSky() {
+  const p = new Painter(320, 180), r = rng(9);
+  p.rect(0, 0, 320, 180, M.space);
+  for (let y = 0; y < 180; y += 2) p.glowRect(0, y, 320, 2, '#1b2148', y / 180 * 0.5);
+  for (let i = 0; i < 120; i++) p.px(r() * 320, r() * 140, i % 11 ? M.star : M.white);
+  // Earth, mostly in shadow, small fires on the dark side
+  const ex = 76, ey = 44, er = 26;
+  p.circle(ex, ey, er + 2, '#0c1428');
+  earthDisc(p, ex, ey, er, true);
+  for (let dy = -er; dy <= er; dy++) { const hw = Math.floor(Math.sqrt(er * er - dy * dy) + 0.35), sw = Math.round(hw * 1.2); p.rect(ex + hw - Math.min(2 * hw + 1, sw), ey + dy, Math.min(2 * hw + 1, sw), 1, M.earthShade); }
+  const rf = rng(4); for (let i = 0; i < 14; i++) { const a = rf() * Math.PI * 2, d = rf() * er * 0.9; const x = ex + Math.cos(a) * d, y = ey + Math.sin(a) * d; if (x > ex - er * 0.2) p.px(x, y, i % 3 ? M.fire : '#ffd08a'); }
+  p.softGlow(ex, ey, er + 10, '#3a5ea8', 0.1);
+  // the dome: ribs that arc over the city, a long highlight
+  for (let i = 0; i < 7; i++) { const x0 = -40 + i * 66; for (let x = 0; x < 120; x++) p.glowRect(x0 + x, 6 + Math.round(Math.pow(x / 120 - 0.5, 2) * 40 + i * 2), 1, 1, M.rib, 0.55); }
+  p.glowPoly([[200, 0], [214, 0], [150, 180], [136, 180]], '#ffffff', 0.03);
+  return p;
+}
+// far towers in the haze, slow: thin, lit windows, the CH 07 mast with its red light
+export function paintFar(width) {
+  const p = new Painter(width, 180), r = rng(31);
+  for (let x = 0; x < width;) {
+    const w = 12 + Math.floor(r() * 18), top = 40 + Math.floor(r() * 60);
+    p.rect(x, top, w, 180 - top, r() < 0.5 ? M.far : M.haze); p.rect(x, top, w, 1, M.farHi);
+    for (let y = top + 4; y < 150; y += 5) for (let xx = x + 2; xx < x + w - 2; xx += 3) if (r() < 0.32) p.px(xx, y, [M.warm, M.screenGlow, M.pink][Math.floor(r() * 3)]);
+    if (r() < 0.25) { p.rect(x + Math.floor(w / 2), top - 10, 1, 10, M.farHi); p.mark('beacon', x + Math.floor(w / 2), top - 11); }
+    x += w + Math.floor(r() * 10);
+  }
+  const mx = Math.round(width * 0.62); p.rect(mx - 3, 20, 7, 160, M.far); p.rect(mx - 1, 6, 3, 14, M.farHi); p.rect(mx - 8, 30, 17, 9, M.farHi); ptext(p, '07', mx - 3, 32, M.pink); p.mark('beacon', mx, 5);
+  p.glowRect(0, 140, width, 40, M.hazeHi, 0.6);
+  return p;
+}
+// the middle distance: lighter buildings with balconies, the tram's rail, billboards
+export function paintMid(width) {
+  const p = new Painter(width, 180), r = rng(57);
+  for (let x = 0; x < width;) {
+    const w = 30 + Math.floor(r() * 40), top = 62 + Math.floor(r() * 46);
+    p.rect(x, top, w, 180 - top, M.midLo); p.rect(x, top, w, 2, M.mid); p.rect(x + w - 2, top, 2, 180 - top, M.floorLo);
+    for (let y = top + 6; y < 160; y += 9) { p.rect(x + 3, y, w - 6, 1, M.mid); for (let xx = x + 5; xx < x + w - 5; xx += 6) p.rect(xx, y + 2, 3, 4, r() < 0.3 ? '#e9dcc4' : M.roomLo); }
+    if (r() < 0.4) { const bw = Math.min(w - 8, 30); p.rect(x + 4, top - 18, bw, 14, M.bezel); p.rect(x + 5, top - 17, bw - 2, 12, [M.pink, M.purple, M.blue][Math.floor(r() * 3)]); ptext(p, ['CH 07', 'VOTE', 'LIVE', 'ROUND 2'][Math.floor(r() * 4)], x + 7, top - 13, M.white); }
+    x += w + 4 + Math.floor(r() * 14);
+  }
+  // the tram's rail on pylons
+  p.rect(0, 70, width, 3, M.wallLo); p.rect(0, 70, width, 1, M.wallHi);
+  for (let x = 20; x < width; x += 90) { p.rect(x, 73, 4, 107, M.midLo); p.rect(x - 2, 73, 8, 2, M.wallLo); }
+  // haze: the middle distance sits back behind the street
+  p.glowRect(0, 0, width, 180, '#262a4d', 0.28); p.glowRect(0, 120, width, 60, '#e8e5f1', 0.14);
+  return p;
+}
+
+// ------------------------------------------------------------------ the street
+function lamp(p, x) {
+  p.rect(x, G - 46, 2, 46, M.trimLo); p.rect(x - 1, G - 4, 4, 4, M.trimLo); p.rect(x - 3, G - 50, 8, 4, M.trim); p.circle(x + 1, G - 53, 3, M.warm);
+  p.softGlow(x + 1, G - 53, 14, M.warm, 0.35); p.mark('lamp', x + 1, G - 53);
+}
+function bench(p, x) { p.rect(x, G - 10, 30, 3, M.trim); p.rect(x + 2, G - 7, 2, 7, M.trimLo); p.rect(x + 26, G - 7, 2, 7, M.trimLo); p.rect(x, G - 13, 30, 3, M.sofa); }
+function planter(p, x, r) { p.rect(x, G - 12, 12, 12, M.trim); p.rect(x + 1, G - 12, 10, 2, M.trimHi); for (let i = 0; i < 8; i++) p.ellipse(x + 6 + Math.round((r() - 0.5) * 12), G - 18 - Math.round(r() * 14), 3, 2, i % 2 ? '#5aa67a' : '#3f8a5f'); }
+// the fountain, the twin of the one on the grounds: gold tiers, water that never stops
+function fountain(p, x) {
+  p.rect(x - 34, G - 12, 68, 12, M.trim); p.rect(x - 34, G - 12, 68, 2, M.trimHi); p.rect(x - 30, G - 10, 60, 6, '#8fd0f0');
+  p.rect(x - 3, G - 44, 6, 34, M.trimLo); p.rect(x - 16, G - 30, 32, 4, M.trim); p.rect(x - 16, G - 30, 32, 1, M.trimHi);
+  p.rect(x - 9, G - 44, 18, 3, M.trim); p.circle(x, G - 48, 3, M.trimHi);
+  p.mark('fountain', x, G - 48);
+}
+// a coin viewer on a post, aimed up at Earth
+function viewer(p, x) { p.rect(x, G - 26, 3, 26, M.trimLo); p.rect(x - 4, G - 34, 11, 7, M.trim); p.rect(x + 7, G - 33, 3, 3, M.bezel); p.rect(x - 6, G - 32, 3, 3, M.bezel); p.rect(x - 2, G - 2, 7, 2, M.trimLo); }
+// a building: two floors of windows over a lounge behind glass
+function building(p, B, r) {
+  const w = B.x1 - B.x0;
+  p.rect(B.x0, B.top, w, G - B.top, M.wallHi); p.rect(B.x0, B.top, w, 3, M.trim); p.rect(B.x0, B.top + 3, w, 1, M.trimLo); p.rect(B.x1 - 3, B.top, 3, G - B.top, M.wallLo);
+  for (let y = B.top + 6; y < 22; y += 8) for (let x = B.x0 + 6; x < B.x1 - 8; x += 10) { p.rect(x, y, 6, 6, M.trimLo); p.rect(x + 1, y + 1, 4, 4, r() < 0.5 ? M.warm : M.screenGlow); }
+}
+// the door she came out of, on a plinth behind ropes, a plaque in front
+function exhibitDoor(p, A) {
+  p.rect(A.x - 10, G - 4, A.w + 20, 4, M.trim); p.rect(A.x - 10, G - 4, A.w + 20, 1, M.trimHi);
+  oddDoor(p, Object.assign({}, A, { y: A.y - 4 }), true);
+  [A.x - 16, A.x + A.w + 14].forEach(x => { p.rect(x, G - 14, 2, 14, M.trimLo); p.circle(x + 1, G - 15, 1, M.trim); });
+  for (let i = 0; i <= 10; i++) p.px(A.x - 15 + i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#c23f78');
+  for (let i = 0; i <= 10; i++) p.px(A.x + A.w + 15 - i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#c23f78');
+}
+// where the city stops being pretty: plain walls, a loading bay, pipes, the staff door
+function serviceEnd(p, x0, x1, D, r) {
+  p.rect(x0, 40, x1 - x0, G - 40, M.service); p.rect(x0, 40, x1 - x0, 2, M.serviceLo);
+  for (let x = x0; x < x1; x += 24) p.rect(x, 42, 1, G - 42, M.serviceLo);
+  p.rect(x0, 56, x1 - x0, 3, M.serviceLo); p.rect(x0, 62, x1 - x0, 2, M.serviceLo);
+  p.rect(x0 + 18, G - 44, 44, 44, M.serviceLo); for (let y = G - 42; y < G; y += 4) p.rect(x0 + 19, y, 42, 1, M.service);
+  ptext(p, 'LOADING', x0 + 26, G - 52, M.serviceLo);
+  for (let i = 0; i < 3; i++) { const cx = x0 + 74 + i * 14; p.rect(cx, G - 12, 12, 12, '#6b5236'); p.rect(cx, G - 12, 12, 1, '#8d6d48'); }
+  p.rect(D.x - 3, D.y - 3, D.w + 6, D.h + 3, M.serviceLo); p.rect(D.x, D.y, D.w, D.h, '#6f6a83'); p.rect(D.x + 5, D.y + 6, 12, 8, M.wallHi); p.rect(D.x + D.w - 5, D.y + 18, 3, 2, '#9a95ad');
+  p.rect(D.x - 4, D.y - 14, D.w + 8, 9, M.red); ptext(p, 'STAFF', D.x + 1, D.y - 12, M.white);
+  p.rect(x1 - 24, 46, 6, 70, M.serviceLo); p.mark('steam', x1 - 21, 46);
+}
+
 export function paintLevel(P, look) {
   const W = LEVEL.w * T, p = new Painter(W, 180), r = rng(77);
-  // the corridor: ceiling lights, a gold rail, soft panels, a rug that runs its length
-  p.rect(0, 0, W, G, M.wall);
-  p.rect(0, 0, W, 14, M.wallHi); for (let x = 24; x < W; x += 64) { p.rect(x, 12, 22, 2, M.warm); p.glowPoly([[x, 14], [x + 22, 14], [x + 34, 40], [x - 12, 40]], M.warm, 0.12); p.mark('light', x + 11, 13); }
-  p.rect(0, 14, W, 2, M.trim); p.rect(0, 16, W, 1, M.trimLo);
-  for (let x = 0; x < W; x += 48) { p.rect(x + 6, 22, 36, 112, M.wallHi); p.rect(x + 7, 23, 34, 110, M.wall); p.rect(x + 41, 23, 1, 110, M.wallLo); }
-  p.rect(0, 140, W, 20, M.wallHi); p.rect(0, 140, W, 1, M.trim); p.rect(0, 159, W, 1, M.trimLo);
-  p.rect(0, G, W, 20, M.floor); p.rect(0, G, W, 1, M.floorHi); for (let x = 0; x < W; x += 40) p.rect(x, G + 1, 1, 19, M.floorLo);
-  p.rect(16, G + 5, 82 * T - 32, 8, M.rug); p.rect(16, G + 5, 82 * T - 32, 1, M.rugLo); p.rect(16, G + 12, 82 * T - 32, 1, M.rugLo);
-  for (let x = 24; x < 82 * T - 24; x += 12) p.rect(x, G + 8, 6, 2, M.rugLo);
-  // where she comes out
-  oddDoor(p, LEVEL.arrive, true);
-  // the rooms behind glass
+  // the promenade: pale paving, a gold inlay, the edge of the walk
+  p.rect(0, G, CW * T, 20, M.floor); p.rect(0, G, CW * T, 1, M.floorHi); for (let x = 0; x < CW * T; x += 24) p.rect(x, G + 1, 1, 19, M.floorLo);
+  p.rect(0, G + 9, CW * T, 1, M.trim);
+  // the plaza: the door she came out of, the viewer, the fountain, benches
+  exhibitDoor(p, LEVEL.arrive);
+  viewer(p, LEVEL.viewer.x);
+  fountain(p, LEVEL.fountain.x);
+  bench(p, 6 * T); bench(p, 27 * T); planter(p, 14 * T, r); planter(p, 30 * T, r);
+  [4, 16, 31].forEach(tx => lamp(p, tx * T + 6));
+  // three buildings, each with a lounge behind glass
+  LEVEL.buildings.forEach(B => building(p, B, r));
   LEVEL.rooms.forEach((R, i) => paintRoomBehindGlass(p, R, i));
-  LEVEL.portholes.forEach(h => porthole(p, h.x, h.y, h.r));
-  // the vote screen: tonight's look, picked from home
+  [48, 64, 79].forEach(tx => lamp(p, tx * T + 4));
+  // the boulevard: the vote board on two posts, the live screen on a frame
   const V = LEVEL.vote;
+  p.rect(V.x + 10, V.y + V.h, 3, G - V.y - V.h, M.trimLo); p.rect(V.x + V.w - 13, V.y + V.h, 3, G - V.y - V.h, M.trimLo);
   p.rect(V.x - 2, V.y - 2, V.w + 4, V.h + 4, M.bezel); p.rect(V.x, V.y, V.w, V.h, M.purple);
   const mid = s => V.x + Math.round((V.w - textWidth(s)) / 2);
   ptext(p, "TONIGHT'S LOOK", mid("TONIGHT'S LOOK"), V.y + 5, M.yellow);
@@ -155,21 +268,12 @@ export function paintLevel(P, look) {
   p.rect(V.x + 8, V.y + 28, V.w - 16, 4, M.bezel); p.rect(V.x + 8, V.y + 28, Math.round((V.w - 16) * 0.62), 4, M.pink);
   ptext(p, 'THANKS FOR VOTING', mid('THANKS FOR VOTING'), V.y + 37, M.mint);
   p.mark('vote', V.x, V.y);
-  // a plant, a bench nobody sits on
-  [[20 * T, 'plant'], [43 * T, 'bench'], [60 * T, 'plant'], [67 * T + 8, 'bench']].forEach(([x, k]) => {
-    if (k === 'plant') { p.rect(x, G - 12, 10, 12, M.trim); p.rect(x + 1, G - 12, 8, 2, M.trimHi); for (let i = 0; i < 7; i++) p.ellipse(x + 5 + Math.round((r() - 0.5) * 10), G - 18 - Math.round(r() * 14), 3, 2, i % 2 ? '#5aa67a' : '#3f8a5f'); }
-    else { p.rect(x, G - 10, 30, 3, M.trim); p.rect(x + 2, G - 7, 2, 7, M.trimLo); p.rect(x + 26, G - 7, 2, 7, M.trimLo); p.rect(x, G - 13, 30, 3, M.sofa); }
-  });
-  // the playroom door: round-topped, a gold star
-  const D = LEVEL.door;
-  p.circle(D.x + D.w / 2, D.y + 8, D.w / 2 + 3, M.trim); p.rect(D.x - 3, D.y + 8, D.w + 6, D.h - 8, M.trim);
-  p.circle(D.x + D.w / 2, D.y + 8, D.w / 2, M.pink); p.rect(D.x, D.y + 8, D.w, D.h - 8, M.pink);
-  p.rect(D.x + D.w / 2, D.y - 3, 1, D.h + 3, '#d94a88');
-  p.poly([[D.x + D.w / 2, D.y + 3], [D.x + D.w / 2 + 3, D.y + 9], [D.x + D.w / 2 + 9, D.y + 9], [D.x + D.w / 2 + 4, D.y + 13], [D.x + D.w / 2 + 6, D.y + 19], [D.x + D.w / 2, D.y + 15], [D.x + D.w / 2 - 6, D.y + 19], [D.x + D.w / 2 - 4, D.y + 13], [D.x + D.w / 2 - 9, D.y + 9], [D.x + D.w / 2 - 3, D.y + 9]], M.yellow);
-  ptext(p, 'PLAYROOM', D.x + D.w / 2 - 15, D.y - 16, M.trimLo);
-  p.px(D.x + D.w - 5, D.y + 22, M.trimHi);
-  // the wall between, and the playroom
-  p.rect(83 * T, 0, T, G, M.wallLo); p.rect(83 * T, 0, 1, G, M.trim);
+  const LV = LEVEL.live; p.rect(LV.x + LV.w / 2 - 2, LV.y + LV.h, 4, G - LV.y - LV.h, M.trimLo); p.rect(LV.x - 3, LV.y - 3, LV.w + 6, LV.h + 6, M.bezel); p.rect(LV.x, LV.y, LV.w, LV.h, '#0d1226');
+  planter(p, 84 * T, r); bench(p, 92 * T);
+  // the service end and the staff door
+  serviceEnd(p, 96 * T, CW * T, LEVEL.door, r);
+  // the wall at the end of the city, and the playroom beyond it
+  p.rect(CW * T, 0, T, G, M.wallLo); p.rect(CW * T, 0, 1, G, M.trim);
   paintPlayroom(p);
   p.rect((LEVEL.w - 1) * T, 0, T, G, M.wallLo);
   return p;
@@ -179,7 +283,7 @@ function paintPlayroom(p) {
   const X = KX, r = rng(23);
   p.rect(X, 0, 20 * T, G, M.wall); p.rect(X, 0, 20 * T, 10, M.wallHi); p.rect(X, 10, 20 * T, 2, M.trim);
   for (let i = 0; i < 22; i++) { const sx = X + 10 + r() * 290, sy = 16 + r() * 104, c = [M.yellow, M.pink, M.mint, M.blue][i % 4]; if (sx > LEVEL.screen.x - 6 && sx < LEVEL.screen.x + LEVEL.screen.w + 6 && sy < LEVEL.screen.y + LEVEL.screen.h + 6) continue; p.rect(sx, sy + 1, 3, 1, c); p.rect(sx + 1, sy, 1, 3, c); }
-  p.rect(X, G, 20 * T, 20, M.floor); p.rect(X, G, 20 * T, 1, M.floorLo);
+  p.rect(X, G, 20 * T, 20, M.floor); p.rect(X, G, 20 * T, 1, M.floorLo); p.rect(X, 0, 20 * T, 1, M.wallHi);
   p.ellipse(X + 190, G + 6, 110, 10, M.rug); for (let x = X + 96; x < X + 286; x += 12) p.rect(x, G + 5, 6, 2, M.rugLo);
   // the big screen's frame; what it shows is live
   const S = LEVEL.screen; p.rect(S.x - 4, S.y - 4, S.w + 8, S.h + 8, M.bezel); p.rect(S.x, S.y, S.w, S.h, M.purple);
@@ -251,4 +355,34 @@ export function paintTvMoon() {
   [[124, 76, 6], [150, 100, 8], [128, 104, 4], [156, 74, 3], [114, 92, 3], [146, 82, 2], [120, 100, 2]].forEach(([cx, cy, r]) => { moon.circle(cx + ox, cy + oy, r, M.lunarLo); moon.circle(cx + ox - 1, cy + oy - 1, Math.max(1, r - 2), M.lunar); });
   const d = S.dome; moon.rect(d.x + ox - 4, d.y + oy, 8, 4, M.trim); moon.rect(d.x + ox - 2, d.y + oy - 2, 4, 2, M.trimHi); moon.px(d.x + ox, d.y + oy + 1, M.warm);
   return { sky, moon };
+}
+
+// People out tonight, 12 x 24, facing right, two steps. a: a woman in a long pink coat with a
+// glass; b: a man in a white suit; w: a waiter with a tray; c: a crew member on a break, in the
+// same coat as the creator, a cup in hand.
+const NPC = {
+  a: { hair: M.richHair, skin: M.rich, top: '#f2a7c8', topLo: '#d9789f', leg: '#d9789f', shoe: M.adult, long: true },
+  b: { hair: M.richHair2, skin: M.rich, top: M.wallHi, topLo: M.wallLo, leg: M.wallLo, shoe: M.adult, tie: M.trim },
+  w: { hair: M.adult, skin: '#e0bf9f', top: M.wallHi, topLo: M.adult, leg: M.adult, shoe: '#121016', vest: M.adult },
+  c: { hair: '#5a4d4a', skin: '#e0bf9f', top: M.coat, topLo: '#262838', leg: '#262838', shoe: '#121016', long: true }
+};
+export function paintNpc(kind, step) {
+  const c = NPC[kind], p = new Painter(12, 24);
+  // head
+  p.rect(4, 1, 5, 2, c.hair); p.rect(3, 2, 6, 3, c.hair); p.rect(5, 3, 4, 4, c.skin); p.px(8, 4, M.adult);
+  if (kind === 'a') { p.circle(5, 1, 2, c.hair); }
+  p.rect(5, 7, 3, 1, c.skin);
+  // body
+  p.rect(3, 8, 7, c.long ? 11 : 8, c.top); p.rect(9, 8, 1, c.long ? 11 : 8, c.topLo);
+  if (c.vest) { p.rect(4, 9, 5, 6, c.vest); p.rect(6, 9, 1, 6, M.wallHi); }
+  if (c.tie) p.rect(6, 9, 1, 4, c.tie);
+  // legs, two steps
+  const ly = c.long ? 19 : 16, lh = 24 - ly - 1;
+  if (step) { p.rect(3, ly, 2, lh, c.leg); p.rect(7, ly, 2, lh, c.leg); p.rect(2, 23, 3, 1, c.shoe); p.rect(7, 23, 3, 1, c.shoe); }
+  else { p.rect(5, ly, 2, lh, c.leg); p.rect(5, 23, 4, 1, c.shoe); }
+  // what they carry
+  if (kind === 'a') { p.rect(10, 9, 1, 4, c.top); p.rect(10, 6, 2, 3, M.white); p.px(10, 7, M.pink); }
+  if (kind === 'w') { p.rect(9, 10, 3, 1, M.trim); p.rect(10, 7, 1, 3, M.white); p.rect(8, 11, 2, 2, c.top); }
+  if (kind === 'c') { p.rect(9, 11, 2, 3, M.white); p.px(10, 10, '#c8c3d9'); }
+  return p;
 }

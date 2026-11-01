@@ -12,7 +12,9 @@ export const STEPS = [
   { id: 'ep4', scene: 'bedroom', data: { fromCut: true } },
   { id: 'batch4', scene: 'satellite', data: { batch: 4 } },
   { id: 'kids', scene: 'kids', data: { inFlow: true } },     // the kids finish the same round, on the Moon
-  { id: 'ep5', scene: 'moon', data: { fromCut: true } }
+  { id: 'ep5', scene: 'moon', data: { fromCut: true } },        // the Moon city, to a staff door
+  { id: 'ep5b', scene: 'hallway', data: {} },                  // backstage: the creator, the fight
+  { id: 'ep5c', scene: 'moon', data: { at: 'playroom' } }      // the playroom and the end
 ];
 
 const built = (scene, key) => !!(scene.scene.manager.keys && scene.scene.manager.keys[key]);

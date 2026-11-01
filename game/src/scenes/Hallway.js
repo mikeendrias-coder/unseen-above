@@ -1,0 +1,565 @@
+// Episode 5, backstage: the hallway behind the Moon city, and the creator of the show. They
+// built every set and trap she has been through, they reset the props between takes, and they
+// are owned like everyone else up here. The kids voted for a fight, so the creator tosses her a
+// sword. Three rounds, each with a trap from an episode (the grounds' searchlight, the gallery's
+// laser, the bedroom's flash cameras), and the creator talks the whole time. A hit only lands
+// when the creator is open. One hit from their sword ends her take; a retry restarts the fight,
+// and her bodies stay on the stage. When it is over the creator yields and she goes on to the
+// playroom. The dialogue is a DRAFT for Michael (data/dialogue.js); so is the staging.
+import { Music } from '../core/music.js';
+import { hexNum } from '../art/painter.js';
+import { makeSprites } from '../art/sprites.js';
+import { pixText } from '../art/pixfont.js';
+import { ccText, ccWidth, ccBox } from '../art/ccfont.js';
+import { TILE, GROUND, H, ARENA, LEVEL, buildMap, paintLevel, paintCreator, POSES } from '../art/hallway.js';
+import { M } from '../art/moon.js';
+import { Sound } from '../core/sound.js';
+import { state } from '../core/state.js';
+import { overlay } from '../core/overlay.js';
+import { display } from '../core/display.js';
+import { SideEpisode, K, inPoly } from '../core/side.js';
+import { goNext } from '../core/flow.js';
+import { Glasses } from '../core/glasses.js';
+import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, lineSeconds } from '../data/dialogue.js';
+
+const T = TILE, G = GROUND, n = c => hexNum(c);
+const HP = 9, ROUND_AT = [9, 6, 3];                     // hits left when each round starts
+const TELL = [0.68, 0.6, 0.52];                         // how long the creator winds up, per round
+const BLADE = 15, ARM = 6;
+
+export class Hallway extends SideEpisode {
+  constructor() { super('hallway'); }
+
+  create(data) {
+    data = data || {};
+    this.initSide('ep5b', LEVEL, buildMap());
+    const P = this.P;
+    makeSprites(this, P);
+    paintLevel().toTexture(this, 'hw_level');
+    Object.keys(POSES).forEach(k => paintCreator(k).toTexture(this, 'cr_' + k));
+    this.pixelCamera(LEVEL.w * T, H.wall);
+    this.add.image(0, 0, 'hw_level').setOrigin(0).setDepth(0);
+    this.setG = this.add.graphics().setDepth(1.5);        // gate, shutter, the sword on the floor, the console's glow
+    this.crImg = this.add.image(0, G, 'cr_stand').setOrigin(0.5, 1).setDepth(3.6);
+    this.commonLayers();
+    this.armG = this.add.graphics().setDepth(4.6);        // both swords and the creator's arm
+    this.trapG = this.add.graphics().setDepth(5.2).setBlendMode(Phaser.BlendModes.ADD);
+    this.tellG = this.add.graphics().setDepth(5.3);
+    // the dark for the last round: a small canvas with holes cut where there is light
+    this.darkCanvas = document.createElement('canvas'); this.darkCanvas.width = 322; this.darkCanvas.height = 182;
+    if (this.textures.exists('hw_dark')) this.textures.remove('hw_dark');
+    this.darkTex = this.textures.addCanvas('hw_dark', this.darkCanvas);
+    this.darkImg = this.add.image(0, 0, 'hw_dark').setOrigin(0).setDepth(5.6).setVisible(false);
+    this.flashG = this.add.graphics().setDepth(5.7).setBlendMode(Phaser.BlendModes.ADD);
+    this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
+    this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 30, max: 90 }, angle: { min: 200, max: 340 }, gravityY: 300, lifespan: { min: 200, max: 450 }, tint: [0xffffff, n(H.work)], emitting: false, blendMode: 'ADD' }).setDepth(7);
+
+    this.gl = new Glasses({ has: true, on: false, cracked: true });
+    this.view = { x: 0 };
+    this.props = LEVEL.crates.map(c => Object.assign({ id: 'crate' }, c)).concat([Object.assign({ id: 'desk' }, LEVEL.desk)]);
+    this.shutterProp = { id: 'shutter', x: LEVEL.shutter.x, y: 0, w: LEVEL.shutter.w, h: G }; this.props.push(this.shutterProp);
+    this.gateProp = { id: 'gate', x: LEVEL.gate.x, y: 0, w: LEVEL.gate.w, h: G, solid: false }; this.props.push(this.gateProp);
+    this.cr = { x: 25 * T, face: -1, st: 'wait', t: 0, hp: HP, round: 0, open: false, pose: 'stand', flash: 0, tally: true, lastLunge: [], attacks: 0, kx: 0 };
+    this.sword = { have: false, swing: -1, cool: 0, hitThis: false, floor: null, fly: null };
+    this.lamp = { on: false, t: 0, lock: 0, cone: null, id: 'searchlight' };
+    this.laser = { shots: [], t: 0, phase: '', shot: null };
+    this.cams = LEVEL.flashCams.map((c, i) => Object.assign({}, c, { id: 'flash camera', next: 2.2 + i * 1.7, clicks: 0, aim: null, cone: null, flash: 0, warn: false }));
+    this.dark = false; this.darkT = 0;
+    this.queue = []; this.lineT = 0; this.lineCb = null;
+    this.skipPoints = [8 * T, 15 * T, 21 * T];
+
+    // things to look at on the way in
+    LEVEL.things.forEach(th => { const it = {}; this.things.push({ x0: th.x0, x1: th.x1, y0: 60, y1: G, label: 'E', use: () => this.describe(HALL_THINGS[th.id], it, (th.x0 + th.x1) / 2, 60) }); });
+    this.swordThing = { x0: 0, x1: 0, y0: G - 6, y1: G, label: 'E', off: true, use: () => this.pickUp() };
+    this.things.push(this.swordThing);
+
+    this.drawBodies();
+    const retry = this.ep.take > 1 && !data.fresh;
+    this.spawn(retry ? 21 * T + 6 : null); this.kid.face = 1;
+    this.mode = 'walk'; this.heardIn = 0;
+    this.input.on('pointerdown', () => { if (this.mode === 'fight') this.swing(); });
+    this.cameras.main.fadeIn(retry ? 300 : 900);
+    this.beds = { hum: Sound.hum(0.02), wind: Sound.wind(0.0001) };
+    Music.play('backstage', { fadeIn: 2 });
+    this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
+    if (retry) this.startToss(true);
+    this.updateView(1);
+    window.__game = { scene: this, state };
+  }
+
+  // ------------------------------------------------------------------ the loop
+  update(time, delta) {
+    const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
+    this.clock += dt;
+    if (this.commonKeys()) { c.endFrame(); return; }
+    if (this.done) { c.endFrame(); return; }
+    if (!this.dead && !this.leaving) {
+      this.moveKid(dt); this.updateThings();
+      if (c.glasses()) this.gl.toggle();
+      if (c.throwP() && this.mode === 'fight') this.swing();
+    }
+    this.gl.update(dt);
+    // Enter moves the captions on when nothing is at stake
+    if (c.skipLine() && this.lineT > 0 && this.mode !== 'fight') { this.lineT = 0; this.nextLine(); }
+    this.updateLines(dt);
+    if (this.mode === 'walk') this.walkIn();
+    this.updateSword(dt);
+    this.updateCreator(dt);
+    this.updateTraps(dt);
+    this.updateView(dt);
+    this.draw(dt);
+    this.hint();
+    c.endFrame();
+  }
+  updateView(dt) {
+    const S = display.S, cam = this.cameras.main, k = this.kid, W = LEVEL.w * T;
+    let want;
+    if (this.mode === 'walk') want = Math.min(ARENA.x0, Math.max(0, k.x + k.w / 2 + 18 - 160));
+    else if (this.mode === 'after') want = Math.min(W - 320, Math.max(ARENA.x0, k.x + k.w / 2 + 18 - 160));
+    else want = ARENA.x0;
+    this.view.x += (want - this.view.x) * Math.min(1, dt * 8);
+    cam.scrollX = Math.round(this.view.x) - 160 * (S - 1); cam.scrollY = -90 * (S - 1);
+  }
+  onRescale() { super.onRescale(); this.updateView(1); }
+
+  // ------------------------------------------------------------------ lines
+  // Captions in a queue: each line holds for as long as it takes to read, then the next.
+  say(lines, cb, keep) {
+    if (!keep) this.queue = [];
+    lines.forEach(l => this.queue.push(typeof l === 'string' ? { who: 'CREATOR', text: l } : l));
+    if (cb) this.queue.push({ cb });
+    if (this.lineT <= 0) this.nextLine();
+  }
+  nextLine() {
+    const l = this.queue.shift();
+    if (!l) { this.lineT = 0; overlay.clearCaption(); return; }
+    if (l.cb) { l.cb(); return this.nextLine(); }
+    const text = l.text.replace('{take}', this.ep.take);
+    // a voice from off screen is captioned in italics
+    const off = l.who === 'CREATOR' && (this.cr.x < this.view.x - 4 || this.cr.x > this.view.x + 324);
+    overlay.caption(l.who, text, { italic: off });
+    this.lineT = lineSeconds(text) + (l.who ? 0.3 : 0.6);
+    if (l.on) l.on();
+  }
+  updateLines(dt) { if (this.lineT > 0) { this.lineT -= dt; if (this.lineT <= 0) this.nextLine(); } }
+  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.press('item', it, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { ink: 0xffffff, italic: true, pitch: 520, leave: 80 }); }
+
+  // ------------------------------------------------------------------ the walk in and the toss
+  walkIn() {
+    const x = this.kid.x / T, marks = [2, 6, 10, 14];
+    if (this.heardIn < marks.length && x > marks[this.heardIn]) { this.say([HALL_IN[this.heardIn]], null, true); this.heardIn++; }
+    if (this.kid.x > ARENA.x0 + 10 && !this.dead) this.startToss(false);
+  }
+  startToss(retry) {
+    this.mode = 'toss'; this.gateProp.solid = true;
+    Sound.tone(90, 0.35, 'sawtooth', 0.04, 60); Sound.noise(0.3, 0.06, 900);
+    Music.play('boss', { fadeIn: 1.5 });
+    const toss = { who: null, text: '[A SWORD CLATTERS]', on: () => this.throwSword() };
+    if (retry) this.say([HALL_AGAIN[(this.ep.take - 2) % HALL_AGAIN.length], toss]);
+    else this.say(HALL_TOSS.slice(0, 3).concat([toss]));
+    this.cr.st = 'talk'; this.cr.walkTo = 30 * T; if (retry) this.cr.x = 30 * T;
+  }
+  throwSword() {
+    const c = this.cr, k = this.kid, to = Math.max(ARENA.x0 + 20, Math.min(ARENA.x1 - 20, k.x + k.w / 2 + 26));
+    this.sword.fly = { sx: c.x - 6, sy: G - 18, ex: to, t: 0 };
+    this.cr.pose = 'lean'; this.time.delayedCall(500, () => { if (this.cr.st === 'talk') this.cr.pose = 'stand'; });
+    Sound.noise(0.2, 0.03, 4000);
+  }
+  pickUp() {
+    if (this.sword.have || !this.sword.floor) return;
+    this.sword.have = true; this.sword.floor = null; this.swordThing.off = true;
+    Sound.tone(660, 0.08, 'triangle', 0.03); this.time.delayedCall(70, () => Sound.tone(990, 0.12, 'triangle', 0.025));
+    const shown = this.itemPanel('sword');
+    const go = () => this.say([HALL_TOSS[4]], () => this.startRound(0));
+    if (shown) this.time.delayedCall(50, go); else go();
+  }
+  startRound(i) {
+    const c = this.cr;
+    c.round = i; c.st = 'idle'; c.t = 0.5; c.open = false; c.attacks = 0;
+    this.mode = 'fight';
+    if (i === 2) this.lightsOff();
+  }
+
+  // ------------------------------------------------------------------ her sword
+  swing() {
+    const s = this.sword;
+    if (!s.have || s.cool > 0 || this.dead || this.mode !== 'fight') return;
+    s.swing = 0; s.cool = 0.36; s.hitThis = false;
+    Sound.noise(0.09, 0.035, 2600); Sound.tone(520, 0.05, 'triangle', 0.012, 300);
+  }
+  updateSword(dt) {
+    const s = this.sword;
+    s.cool = Math.max(0, s.cool - dt);
+    if (s.swing >= 0) { s.swing += dt; if (s.swing > 0.24) s.swing = -1; }
+    // the toss: a spinning arc that lands near her
+    if (s.fly) {
+      s.fly.t += dt; const u = Math.min(1, s.fly.t / 0.7);
+      if (u >= 1) { s.floor = { x: s.fly.ex }; s.fly = null; this.swordThing.x0 = s.floor.x - 8; this.swordThing.x1 = s.floor.x + 8; this.swordThing.off = false; Sound.tone(1500, 0.06, 'square', 0.03); Sound.noise(0.12, 0.06, 5000); this.sparks.explode(5, s.floor.x, G - 1); }
+    }
+    // a hit lands in the middle of the swing, once
+    if (s.swing > 0.04 && s.swing < 0.16 && !s.hitThis) {
+      const k = this.kid, cx = k.x + k.w / 2, x0 = k.face > 0 ? cx : cx - 21, x1 = k.face > 0 ? cx + 21 : cx, y0 = k.y - 6, y1 = k.y + k.h;
+      const c = this.cr, b = this.crBox();
+      if (x1 > b.x0 && x0 < b.x1 && y1 > b.y0 && y0 < b.y1 && c.st !== 'talk' && c.st !== 'yield') {
+        s.hitThis = true;
+        if (c.open && c.st !== 'hurt') this.hitCreator(); else this.parry();
+      }
+    }
+  }
+  crBox() { const c = this.cr, h = c.pose === 'kneel' ? 16 : c.pose === 'crouch' ? 20 : 24; return { x0: c.x - 5, x1: c.x + 5, y0: G - h, y1: G }; }
+  parry() {
+    const k = this.kid, c = this.cr;
+    Sound.tone(1900, 0.07, 'square', 0.03, 1500); Sound.noise(0.06, 0.06, 7000);
+    this.sparks.explode(6, c.x - c.face * -4, G - 14);
+    k.vx = (k.x + k.w / 2 < c.x ? -1 : 1) * 120; this.sword.cool = 0.5;
+  }
+  hitCreator() {
+    const c = this.cr, k = this.kid;
+    c.hp--; c.st = 'hurt'; c.t = 0.55; c.open = false; c.flash = 0.12;
+    c.kx = (c.x < k.x + k.w / 2 ? -1 : 1) * 90;
+    Sound.tone(220, 0.16, 'sawtooth', 0.04, 110); Sound.noise(0.12, 0.07, 2200); this.cameras.main.shake(120, 0.006);
+    this.sparks.explode(10, c.x, G - 14);
+    const line = HALL_HIT[HP - c.hp - 1];
+    if (c.hp <= 0) { this.say([line], () => this.yieldFight()); return; }
+    const next = ROUND_AT.indexOf(c.hp);
+    if (next > 0) { c.st = 'between'; c.t = 99; this.mode = 'between'; this.say([line].concat(HALL_ROUND[next]), () => this.startRound(next)); this.endTraps(); }
+    else this.say([line]);
+  }
+
+  // ------------------------------------------------------------------ the creator
+  updateCreator(dt) {
+    const c = this.cr, k = this.kid, kc = k.x + k.w / 2, R = c.round;
+    c.flash = Math.max(0, c.flash - dt);
+    if (c.st === 'wait' || c.st === 'talk' || c.st === 'yield') {
+      if (c.st === 'talk' && c.walkTo != null && Math.abs(c.walkTo - c.x) > 1) { c.x += Math.sign(c.walkTo - c.x) * 40 * dt; c.face = Math.sign(c.walkTo - c.x) || -1; c.pose = Math.floor(this.clock * 6) % 2 ? 'a' : 'b'; c.walking = true; }
+      else { if (c.walking) { c.walking = false; c.pose = 'stand'; } if (c.st !== 'yield') c.face = kc < c.x ? -1 : 1; }
+      this.pushOut(); return this.placeCreator();
+    }
+    c.t -= dt;
+    const dx = kc - c.x, dist = Math.abs(dx), clampX = x => Math.max(ARENA.x0 + 12, Math.min(ARENA.x1 - 12, x));
+    switch (c.st) {
+      case 'idle': {
+        c.open = false; c.face = dx < 0 ? -1 : 1; c.pose = 'stand';
+        // keep a fighting distance: close in when far, step back when she is right on top
+        const want = dist > 70 ? 1 : dist < 26 ? -1 : 0;
+        if (want) { c.x = clampX(c.x + Math.sign(dx) * want * 38 * dt); c.pose = Math.floor(this.clock * 6) % 2 ? 'a' : 'b'; }
+        if (c.t <= 0 && !this.dead) {
+          c.attacks++;
+          if (R === 1 && c.attacks % 3 === 0) { c.st = 'console'; c.t = 4; break; }
+          if (dist < 34) { c.st = 'raise'; c.t = TELL[R] * 0.85; Sound.tone(300, 0.4, 'sine', 0.02, 1200); }
+          else {
+            const hist = c.lastLunge, hi = hist.length >= 2 && hist[0] === hist[1] ? !hist[0] : Math.random() < 0.5;
+            hist.unshift(hi); hist.length = Math.min(hist.length, 3);
+            c.st = hi ? 'windHi' : 'windLo'; c.t = TELL[R]; Sound.noise(0.25, 0.025, 6000); Sound.tone(hi ? 2200 : 1300, 0.06, 'sine', 0.015);
+          }
+        }
+        break;
+      }
+      case 'windHi': case 'windLo':
+        c.pose = c.st === 'windHi' ? 'back' : 'crouch'; c.face = dx < 0 ? -1 : 1;
+        if (c.t <= 0) { c.hi = c.st === 'windHi'; c.st = 'lunge'; c.target = clampX(kc - c.face * 12); c.t = 0.6; Sound.tone(900, 0.18, 'sawtooth', 0.025, 300); }
+        break;
+      case 'lunge': {
+        c.pose = 'lean';
+        const step = 330 * dt * c.face; c.x = clampX(c.x + step);
+        if ((c.face > 0 && c.x >= c.target) || (c.face < 0 && c.x <= c.target) || c.t <= 0) { c.st = 'recover'; c.t = 1.05; c.open = true; }
+        this.bladeHits();
+        break;
+      }
+      case 'raise':
+        c.pose = 'stand'; c.face = dx < 0 ? -1 : 1;
+        if (c.t <= 0) { c.st = 'chop'; c.t = 0.08; this.chopHits(); Sound.tone(140, 0.2, 'sawtooth', 0.04, 70); Sound.noise(0.15, 0.08, 2600); this.cameras.main.shake(90, 0.005); this.sparks.explode(8, c.x + c.face * 16, G - 1); }
+        break;
+      case 'chop':
+        c.pose = 'lean'; if (c.t <= 0) { c.st = 'stuck'; c.t = 1.15; c.open = true; }
+        break;
+      case 'recover': case 'stuck':
+        c.pose = c.st === 'stuck' ? 'lean' : 'stand';
+        if (c.t <= 0) { c.st = 'idle'; c.open = false; c.t = 0.45 + Math.random() * 0.5; }
+        break;
+      case 'flinch':
+        c.pose = 'back'; c.open = true;
+        if (c.t <= 0) { c.st = 'idle'; c.open = false; c.t = 0.4; }
+        break;
+      case 'hurt':
+        c.pose = 'back'; c.x = clampX(c.x + c.kx * dt); c.kx *= 0.9;
+        if (c.t <= 0) { c.st = 'idle'; c.t = 0.6; }
+        break;
+      case 'console': {
+        // back to the desk, a button, three shots of the laser while they duck behind it
+        const D = LEVEL.desk, home = D.x + D.w / 2;
+        c.open = false;
+        if (Math.abs(c.x - home) > 2 && !this.laser.shots.length) { c.face = home > c.x ? 1 : -1; c.x += c.face * 60 * dt; c.pose = Math.floor(this.clock * 6) % 2 ? 'a' : 'b'; }
+        else if (!this.laser.shots.length && !this.laser.done) { c.pose = 'crouch'; this.fireLaser(); }
+        else c.pose = 'crouch';
+        if (this.laser.done) { this.laser.done = false; c.st = 'idle'; c.t = 0.6; }
+        break;
+      }
+      case 'between':
+        c.open = false; c.pose = 'stand';
+        break;
+    }
+    this.pushOut();
+    this.placeCreator();
+  }
+  // she cannot stand inside the creator: a soft push out to the side she is on
+  pushOut() {
+    const c = this.cr, k = this.kid; if (this.dead || c.st === 'lunge') return;
+    const dx = k.x + k.w / 2 - c.x, need = 9 - Math.abs(dx);
+    if (need > 0 && k.y + k.h > G - (c.pose === 'kneel' ? 14 : 22)) { const st = (dx >= 0 ? 1 : -1) * need; if (!this.boxHits(k.x + st, k.y, k.w, k.h)) k.x += st; }
+  }
+  placeCreator() {
+    const c = this.cr;
+    this.crImg.setTexture('cr_' + c.pose).setPosition(Math.round(c.x), G).setFlipX(c.face < 0);
+    // a white flash on the frame a hit lands
+    if (c.flash > 0) this.crImg.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL); else this.crImg.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();
+  }
+  // where the creator's blade is this frame: [x0, y0, x1, y1]
+  blade() {
+    const c = this.cr, sh = POSES[c.pose].sh, ox = c.x - 7, top = G - 26;
+    const sx = c.face > 0 ? ox + sh[0] : ox + 14 - sh[0], sy = top + sh[1];
+    let a;
+    switch (c.st) {
+      case 'windHi': a = -150; break;
+      case 'windLo': a = 160; break;
+      case 'lunge': case 'recover': a = c.hi ? -4 : 30; if (c.st === 'recover') a = c.hi ? 10 : 50; break;
+      case 'raise': a = -95; break;
+      case 'chop': case 'stuck': a = 62; break;
+      case 'hurt': a = -140; break;
+      case 'flinch': a = -120; break;
+      case 'console': a = 70; break;
+      default: a = 55;
+    }
+    if (c.face < 0) a = 180 - a;
+    const r = a * Math.PI / 180, hx = sx + Math.cos(r) * ARM, hy = sy + Math.sin(r) * ARM;
+    let br = r;
+    if (c.st === 'lunge') { br = c.face > 0 ? 0 : Math.PI; }
+    const bladeY = c.st === 'lunge' ? (c.hi ? G - 12 : G - 3) : null;
+    const tx = hx + Math.cos(br) * BLADE, ty = bladeY != null ? bladeY : hy + Math.sin(br) * BLADE;
+    return { sx, sy, hx, hy: bladeY != null ? bladeY : hy, tx, ty };
+  }
+  bladeHits() {
+    if (this.dead || window.__noDeath) return;
+    const k = this.kid, b = this.blade(), y = b.ty, x0 = Math.min(b.hx, b.tx), x1 = Math.max(b.hx, b.tx);
+    if (k.x + k.w > x0 && k.x < x1 && y >= k.y && y <= k.y + k.h) this.die({ id: 'creator', direct: true });
+  }
+  chopHits() {
+    if (this.dead || window.__noDeath) return;
+    const k = this.kid, c = this.cr, x0 = c.face > 0 ? c.x + 2 : c.x - 24, x1 = c.face > 0 ? c.x + 24 : c.x - 2;
+    if (k.x + k.w > x0 && k.x < x1 && k.y + k.h > G - 30) this.die({ id: 'creator', direct: true });
+  }
+  yieldFight() {
+    const c = this.cr;
+    this.mode = 'yield'; c.st = 'yield'; c.pose = 'kneel'; c.open = false; this.endTraps(); this.lightsOn();
+    Music.stop(2.5); Sound.tone(70, 1.2, 'sine', 0.05, 50);
+    const lines = HALL_YIELD.map(l => /CLICKS OFF/.test(l.text) ? Object.assign({}, l, { on: () => { c.tally = false; Sound.click(0.03); } }) : l);
+    this.say(lines, () => this.openWay());
+  }
+  openWay() {
+    this.mode = 'after'; this.shutterOpen = 0.01; this.gateProp.solid = false;
+    Sound.noise(1.2, 0.05, 500); Sound.tone(110, 1.0, 'triangle', 0.03, 140);
+    state.finish(this.epId);
+  }
+
+  // ------------------------------------------------------------------ the traps
+  updateTraps(dt) {
+    const R = this.cr.round, live = this.mode === 'fight';
+    // round one: the searchlight from the grounds, sweeping the stage now and then
+    const L = this.lamp, LV = LEVEL.lamp;
+    if (live && R === 0) {
+      // on for one slow pass across the stage, then off; the next pass goes the other way
+      L.t += dt; const cyc = L.t % 6.6, pass = Math.floor(L.t / 6.6) % 2; L.on = cyc > 3.6;
+      const u = Math.max(0, Math.min(1, (cyc - 3.6) / 3)), e = u * u * (3 - 2 * u);
+      L.angle = pass ? LV.to - (LV.to - LV.from) * e : LV.from + (LV.to - LV.from) * e;
+      L.cone = L.on ? this.cone(LV.x, LV.y + 4, L.angle, LV.half, LV.range) : null;
+      if (L.on && !L.was) Sound.tone(520, 0.3, 'sawtooth', 0.02, 1040);
+      L.was = L.on;
+      if (L.cone && !this.dead) {
+        const seen = !window.__noDeath && this.seenFrom(LV.x, LV.y + 4, L.angle, LV.half, LV.range);
+        if (seen) { if (L.lock === 0) Sound.charge(); L.lock += dt; if (L.lock >= 0.42) { this.satX = LV.x; this.die(L); } } else L.lock = Math.max(0, L.lock - dt * 2);
+      } else L.lock = Math.max(0, L.lock - dt * 2);
+    } else { L.on = false; L.cone = null; L.lock = 0; }
+    // round two: the gallery's laser, three shots whenever the creator reaches the desk
+    const Z = this.laser;
+    if (Z.shots.length) {
+      Z.t += dt; const s = Z.shots[0], f = Z.t;
+      const ph = f < 0.75 ? 'tell' : f < 1.2 ? 'charge' : f < 1.5 ? 'fire' : 'gap';
+      if (ph !== Z.phase) { Z.phase = ph; if (ph === 'tell') { Sound.tone(1320, 0.05, 'square', 0.014); this.time.delayedCall(130, () => Sound.tone(s === 'low' ? 990 : 1760, 0.06, 'square', 0.014)); } if (ph === 'charge') Sound.charge(); if (ph === 'fire') { Sound.tone(1500, 0.35, 'sawtooth', 0.03, 1200); Sound.noise(0.3, 0.05, 7000); } }
+      Z.shot = s;
+      if (ph === 'fire' && !this.dead && !window.__noDeath) { const k = this.kid, y = s === 'low' ? LEVEL.lasers.lo : LEVEL.lasers.hi; if (y >= k.y && y <= k.y + k.h) this.die({ id: 'laser', direct: true }); }
+      if (f > 1.9) { Z.shots.shift(); Z.t = 0; Z.phase = ''; if (!Z.shots.length) Z.done = true; }
+    }
+    // round three: lights off, two flash cameras that click twice, turn to her, and flash
+    if (live && R === 2) this.cams.forEach(cm => {
+      cm.next -= dt; cm.flash = Math.max(0, cm.flash - dt * 2.5);
+      const k = this.kid, aimAt = () => ({ x: k.x + k.w / 2, y: k.y + k.h });
+      if (cm.next <= 0.7 && cm.clicks === 0) { cm.clicks = 1; cm.aim = aimAt(); cm.warn = true; Sound.click(0.03); }
+      if (cm.next <= 0.4 && cm.clicks === 1) { cm.clicks = 2; Sound.click(0.03); }
+      if (cm.aim) { cm.ang = Math.atan2(cm.aim.y - cm.y, cm.aim.x - cm.x) * 180 / Math.PI; cm.cone = this.cone(cm.x, cm.y + 2, cm.ang, 14, 190); }
+      if (cm.next <= 0) {
+        cm.flash = 1; cm.warn = false; cm.clicks = 0; cm.next = 2.6 + Math.random() * 1.2; Sound.shutter(0.1);
+        // the flash catches her if she is in it, and blinds the creator wherever they are
+        const seen = !window.__noDeath && !this.dead && cm.cone && this.seenFrom(cm.x, cm.y + 2, cm.ang, 14, 190);
+        if (seen) { this.satX = cm.x; this.die(cm); }
+        const c = this.cr; if (['idle', 'windHi', 'windLo', 'raise', 'recover'].includes(c.st)) { c.st = 'flinch'; c.t = 1.3; }
+        cm.aim = null;
+      }
+    });
+    if (this.shutterOpen > 0 && this.shutterOpen < 1) { this.shutterOpen = Math.min(1, this.shutterOpen + dt / 1.4); if (this.shutterOpen >= 1) this.shutterProp.solid = false; }
+  }
+  // Exact sight for the rigs: inside the angle and the range, nothing solid on the line to her.
+  seenFrom(ox, oy, angle, half, range) {
+    return this.probes().some(q => {
+      const dx = q.x - ox, dy = q.y - oy, d = Math.hypot(dx, dy); if (d > range) return false;
+      const diff = ((Math.atan2(dy, dx) * 180 / Math.PI - angle) % 360 + 540) % 360 - 180; if (Math.abs(diff) > half) return false;
+      for (let s = 3; s < d - 1; s += 0.5) if (this.solidPx(ox + dx / d * s, oy + dy / d * s)) return false;
+      return true;
+    });
+  }
+  fireLaser() {
+    const order = []; for (let i = 0; i < 3; i++) { let s = Math.random() < 0.5 ? 'low' : 'high'; if (i >= 2 && order[i - 1] === s && order[i - 2] === s) s = s === 'low' ? 'high' : 'low'; order.push(s); }
+    this.laser.shots = order; this.laser.t = 0; this.laser.phase = ''; this.laser.done = false;
+    Sound.tone(300, 0.1, 'square', 0.02);
+  }
+  endTraps() { this.laser.shots = []; this.laser.done = false; this.cams.forEach(cm => { cm.aim = null; cm.clicks = 0; cm.warn = false; cm.cone = null; }); }
+  lightsOff() { this.dark = true; Sound.tone(80, 0.5, 'sawtooth', 0.04, 40); Sound.noise(0.2, 0.05, 1200); this.cams.forEach((cm, i) => { cm.next = 2.4 + i * 1.6; }); }
+  lightsOn() { this.dark = false; this.darkImg.setVisible(false); }
+
+  // ------------------------------------------------------------------ review and the door
+  skipAhead() {
+    if (this.dead || this.leaving) return;
+    const k = this.kid;
+    if (this.mode === 'walk') { const x = this.skipPoints.find(p => p > k.x + 12); if (x != null) this.placeAt(x); return; }
+    if (this.mode === 'toss') { if (this.sword.fly) { this.sword.fly.t = 1; return; } if (this.sword.floor) { k.x = this.sword.floor.x - 4; this.pickUp(); } else this.throwSword(); return; }
+    if (this.mode === 'fight') { const c = this.cr; const to = ROUND_AT.find(v => v < c.hp); const n2 = c.hp - (to != null ? to : 0); for (let i = 0; i < n2 - 1; i++) c.hp--; c.open = true; c.st = 'recover'; this.hitCreator(); return; }
+    if (this.mode === 'yield') { this.queue = this.queue.filter(q => q.cb); this.lineT = 0.01; return; }
+    if (this.mode === 'after') this.placeAt(LEVEL.door.x + 4);
+  }
+  enterDoor() {
+    if (this.leaving || this.mode !== 'after') return;
+    this.leaving = true;
+    Sound.tone(660, 0.12, 'triangle', 0.03); Sound.tone(880, 0.16, 'triangle', 0.025);
+    this.cameras.main.fadeOut(450, 255, 255, 255);
+    this.time.delayedCall(480, () => { if (!goNext(this, 'ep5b')) this.scene.start('moon', { at: 'playroom' }); });
+  }
+
+  // ------------------------------------------------------------------ drawing
+  draw(dt) {
+    const t = this.clock, c = this.cr, k = this.kid;
+    this.drawGirl();
+    const g = this.setG; g.clear();
+    // the stage door behind her, the shutter ahead
+    if (this.gateProp.solid) { g.fillStyle(n(H.steelLo), 1); g.fillRect(LEVEL.gate.x, 34, LEVEL.gate.w, G - 34); g.fillStyle(n(H.tape), 1); for (let y = 40; y < G; y += 12) g.fillRect(LEVEL.gate.x, y, LEVEL.gate.w, 4); }
+    const SH = LEVEL.shutter, up = this.shutterOpen || 0, sh = Math.round((G - 34) * (1 - up));
+    g.fillStyle(n(H.steel), 1); g.fillRect(SH.x, 34, SH.w, sh); for (let y = 36; y < 34 + sh; y += 4) { g.fillStyle(n(H.steelLo), 1); g.fillRect(SH.x, y, SH.w, 1); }
+    // the console's screen glows; the satellite on it moves
+    const D = LEVEL.desk; g.fillStyle(n('#6bff9d'), 0.5 + 0.3 * Math.sin(t * 3)); g.fillRect(D.x + 9 + Math.round((t * 8) % 14), D.y - 6, 2, 1);
+    // ON AIR, lit while the cameras roll
+    const onAir = this.mode === 'toss' || this.mode === 'fight' || this.mode === 'between' || (this.mode === 'yield' && this.cr.tally);
+    if (onAir) { g.fillStyle(n(H.red), 0.95); g.fillRect(30 * T - 13, 37, 34, 9); pixText(g, 'ON AIR', 30 * T - 10, 39, 0xffffff); }
+    else pixText(g, 'ON AIR', 30 * T - 10, 39, n('#5a2a2c'));
+    // the sword on the floor, or in the air
+    const s = this.sword;
+    if (s.floor) { g.fillStyle(n(H.blade), 1); g.fillRect(s.floor.x - 7, G - 2, 13, 1); g.fillStyle(n(H.bladeLo), 1); g.fillRect(s.floor.x - 7, G - 1, 13, 1); g.fillStyle(n(H.gold), 1); g.fillRect(s.floor.x + 6, G - 3, 1, 3); g.fillRect(s.floor.x + 7, G - 2, 3, 1); if (Math.floor(t * 3) % 3 === 0) { g.fillStyle(0xffffff, 1); g.fillRect(s.floor.x - 3, G - 3, 1, 1); } }
+    const a = this.armG; a.clear();
+    if (s.fly) {
+      const f = s.fly, u = Math.min(1, f.t / 0.7), x = f.sx + (f.ex - f.sx) * u, y = f.sy + (G - 2 - f.sy) * u - Math.sin(u * Math.PI) * 34, r = u * Math.PI * 5;
+      a.lineStyle(1, n(H.blade), 1); a.lineBetween(x - Math.cos(r) * 7, y - Math.sin(r) * 7, x + Math.cos(r) * 7, y + Math.sin(r) * 7);
+    }
+    // the creator's sword arm and blade
+    if (c.st !== 'yield' || c.pose !== 'kneel') {
+      const b = this.blade();
+      a.lineStyle(2, n(H.coat), 1); a.lineBetween(b.sx, b.sy, b.hx, b.hy);
+      a.fillStyle(n(H.skin), 1); a.fillRect(Math.round(b.hx) - 1, Math.round(b.hy) - 1, 2, 2);
+      a.lineStyle(1, n(H.blade), 1); a.lineBetween(b.hx, b.hy, b.tx, b.ty);
+      a.fillStyle(n(H.gold), 1); a.fillRect(Math.round(b.hx) - 1, Math.round(b.hy), 3, 1);
+      // a glint at the tip while they wind up: high or low
+      if ((c.st === 'windHi' || c.st === 'windLo' || c.st === 'raise') && Math.floor(t * 12) % 2 === 0) { a.fillStyle(0xffffff, 1); a.fillRect(Math.round(b.tx) - 1, Math.round(b.ty) - 1, 2, 2); }
+    } else { a.fillStyle(n(H.blade), 1); a.fillRect(c.x + 4, G - 1, 14, 1); }
+    // the red light on the creator's headset: on air
+    { const hd = POSES[c.pose].head, lx = Math.round(c.face > 0 ? c.x - 7 + hd[0] : c.x - 7 + 13 - hd[0]), ly = G - 26 + hd[1] + 4;
+      if (c.tally) { a.fillStyle(n(H.red), 0.25); a.fillRect(lx - 1, ly - 1, 3, 3); a.fillStyle(0xffd0d0, 1); a.fillRect(lx, ly, 1, 1); } else { a.fillStyle(n(H.band), 1); a.fillRect(lx, ly, 1, 1); } }
+    // her sword: held up and forward, or mid swing with a trail
+    if (s.have && this.girl.visible && !this.dead) {
+      const cx = k.x + k.w / 2 + k.face * 2, cy = k.y + (k.crouch ? 4 : 7);
+      const ang = s.swing >= 0 ? -120 + Math.min(1, s.swing / 0.14) * 150 : -50;
+      const r = (k.face > 0 ? ang : 180 - ang) * Math.PI / 180, tx = cx + Math.cos(r) * 10, ty = cy + Math.sin(r) * 10;
+      a.lineStyle(1, n(H.blade), 1); a.lineBetween(cx, cy, tx, ty);
+      a.fillStyle(n(H.gold), 1); a.fillRect(Math.round(cx) - 1, Math.round(cy), 2, 1);
+      if (s.swing >= 0 && s.swing < 0.18) for (let i = 1; i <= 3; i++) { const aa = -120 + Math.min(1, Math.max(0, s.swing - i * 0.02) / 0.14) * 150, rr = (k.face > 0 ? aa : 180 - aa) * Math.PI / 180; a.lineStyle(1, 0xffffff, 0.5 / i); a.lineBetween(cx + Math.cos(rr) * 5, cy + Math.sin(rr) * 5, cx + Math.cos(rr) * 12, cy + Math.sin(rr) * 12); }
+    }
+    this.drawTraps(t);
+    this.drawDarkness();
+    this.drawLock();
+    this.drawHud();
+    this.drawThings();
+  }
+
+  drawTraps(t) {
+    const g = this.trapG, tg = this.tellG, c = this.cr; g.clear(); tg.clear();
+    const red = n(this.P.hazard), seeing = this.gl.showing;
+    // the searchlight: a real light, soft and layered, red as it locks
+    if (this.lamp.cone) this.drawCone(g, this.lamp, 0.1, H.work);
+    // the laser: emitters glow, the glasses show which height, then the beam
+    const Z = this.laser, LZ = LEVEL.lasers;
+    if (Z.shots.length) {
+      const y = Z.shot === 'low' ? LZ.lo : LZ.hi, w = LZ.x1 - LZ.x0, f = Z.t;
+      if (f < 0.75 && seeing) { tg.fillStyle(n(this.P.overlay), 0.6); for (let x = LZ.x0 + Math.floor(t * 40) % 6; x < LZ.x1; x += 6) tg.fillRect(x, y, 3, 1); }
+      else if (f >= 0.75 && f < 1.2) { g.fillStyle(red, 0.06 + 0.3 * (f - 0.75) / 0.45); g.fillRect(LZ.x0, y - 1, w, 2); g.fillStyle(red, 0.9); g.fillRect(LZ.x0 - 2, y - 2, 3, 4); g.fillRect(LZ.x1 - 1, y - 2, 3, 4); }
+      else if (f >= 1.2 && f < 1.5) { const fl = 0.8 + 0.2 * Math.sin(t * 90); g.fillStyle(red, 0.28 * fl); g.fillRect(LZ.x0, y - 3, w, 6); g.fillStyle(red, 0.7); g.fillRect(LZ.x0, y - 1, w, 2); g.fillStyle(n(this.P.hazardCore), 1); g.fillRect(LZ.x0, y, w, 1); }
+    }
+    // the creator's lunge, through the glasses: where the blade will pass
+    if (seeing && (c.st === 'windHi' || c.st === 'windLo')) {
+      const y = c.st === 'windHi' ? G - 12 : G - 3, x0 = c.face > 0 ? c.x + 6 : ARENA.x0 + 12, x1 = c.face > 0 ? ARENA.x1 - 12 : c.x - 6;
+      tg.fillStyle(n(this.P.overlay), 0.55); for (let x = x0 + Math.floor(t * 30) % 5; x < x1; x += 5) tg.fillRect(x, y, 2, 1);
+    }
+    // the flash cameras: an LED, the cone the glasses see while they click, the flash itself
+    if (this.cr.round === 2 && (this.mode === 'fight' || this.mode === 'between')) this.cams.forEach(cm => {
+      if (cm.cone && cm.warn && seeing) { const blink = Math.floor(t * 16) % 2 === 0; tg.fillStyle(red, blink ? 0.12 : 0.05); tg.fillPoints(cm.cone, true); }
+      const ledOn = cm.warn ? Math.floor(t * 16) % 2 === 0 : Math.floor(t * 1.5) % 2 === 0;
+      if (ledOn) { tg.fillStyle(red, 1); tg.fillRect(cm.x - 3, cm.y - 2, 1, 1); }
+      if (cm.flash > 0 && cm.cone) { g.fillStyle(0xffffff, 0.5 * cm.flash); g.fillPoints(cm.cone, true); g.fillStyle(0xffffff, cm.flash); g.fillCircle(cm.x, cm.y + 2, 3); }
+    });
+  }
+  drawLock() {
+    const fx = this.fxG; fx.clear();
+    this.strikeFx.update(this.game.loop.delta / 1000);
+    const L = this.lamp; if (L.lock > 0 && !this.dead) { const k = this.kid, r = 9 - Math.min(1, L.lock / 0.42) * 7, cx = k.x + k.w / 2, cy = k.y + k.h / 2; fx.lineStyle(1, n(this.P.hazard), 1); fx.strokeRect(Math.round(cx - 4 - r), Math.round(cy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); }
+  }
+  drawDarkness() {
+    if (!this.dark) { this.darkImg.setVisible(false); return; }
+    const ctx = this.darkCanvas.getContext('2d'), vx = Math.round(this.view.x), k = this.kid, c = this.cr;
+    const flash = Math.max(0, ...this.cams.map(cm => cm.flash));
+    ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, 322, 182);
+    ctx.fillStyle = `rgba(6,5,10,${0.9 - flash * 0.75})`; ctx.fillRect(0, 0, 322, 182);
+    ctx.globalCompositeOperation = 'destination-out';
+    const hole = (x, y, r, a) => { const gr = ctx.createRadialGradient(x - vx + 1, y + 1, r * 0.35, x - vx + 1, y + 1, r); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x - vx + 1, y + 1, r, 0, Math.PI * 2); ctx.fill(); };
+    if (this.girl.visible) hole(k.x + k.w / 2, k.y + 6, 34, 0.75);
+    hole(LEVEL.desk.x + 17, LEVEL.desk.y - 9, 22, 0.55);
+    hole(c.x, G - 20, 14, 0.35);
+    this.darkTex.refresh();
+    this.darkImg.setVisible(true).setPosition(vx - 1, -1);
+  }
+  // the glasses meter, and the creator's bar as a lower third at the top: a red tag, nine marks
+  drawHud() {
+    const g = this.hudG, P = this.P, col = n(P.overlay); g.clear();
+    if (this.mode === 'walk' || this.done) { this.gl.drawMeter(g, 18, 166, col); return; }
+    this.gl.drawMeter(g, 18, 166, col);
+    if (this.gl.on) this.gl.drawStatic(g, col);
+    if (this.mode === 'fight' || this.mode === 'between' || this.mode === 'toss') {
+      const c = this.cr, tag = 'CREATOR', tw = ccWidth(tag) + 8, x = 160 - Math.round((tw + 9 * 6 + 6) / 2), y = 6;
+      ccBox(g, x, y, tw, 11, 0xff4d5e, 1); ccText(g, tag, x + 4, y + 2, 0xffffff);
+      ccBox(g, x + tw, y, 9 * 6 + 6, 11, 0x000000, 0.85);
+      for (let i = 0; i < HP; i++) { g.fillStyle(0xffffff, i < c.hp ? (c.flash > 0 && i === c.hp ? 1 : 0.95) : 0.18); g.fillRect(x + tw + 4 + i * 6, y + 3, 4, 5); }
+    }
+  }
+
+  hint() {
+    if (this.leaving || this.done) return;
+    if (this.mode === 'walk') return overlay.hint(this.kid.x < 4 * T ? 'E looks at things.' : '');
+    if (this.mode === 'toss') return overlay.hint(this.sword.floor ? 'The sword. E picks it up.' : '');
+    if (this.mode === 'fight') return overlay.hint(['F or a click swings. Hit when they are open: right after they attack. A high lunge, crouch. A low one, jump. Hide from the light behind a crate or under the desk.', 'The laser: G shows high or low. Crouch for high, jump for low.', 'Two clicks, then a flash: get under the desk or behind a crate. The flash blinds them too.'][this.cr.round]);
+    if (this.mode === 'after') return overlay.hint('The playroom. Up or E.');
+    overlay.hint('');
+  }
+}

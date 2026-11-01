@@ -15,16 +15,17 @@ import { Fall } from './scenes/Fall.js';
 import { EastWing } from './scenes/EastWing.js';
 import { Bedroom } from './scenes/Bedroom.js';
 import { Moon } from './scenes/Moon.js';
+import { Hallway } from './scenes/Hallway.js';
 
 // Which part to open: ?scene=grounds|gallery|satellite|kids (&batch=2 &skin=N), or a plain #name
 // (a shared link keeps only that): #opening, #grounds, #gallery, #fall, #eastwing, #bedroom,
-// #moon, #batch1 to #batch4, #kids
+// #moon, #hallway, #batch1 to #batch4, #kids
 function route() {
   const params = new URLSearchParams(location.search), hash = location.hash.replace('#', '');
   if (/^batch[1-4]$/.test(hash)) { params.set('scene', 'satellite'); params.set('batch', hash.slice(5)); }
-  else if (['grounds', 'gallery', 'fall', 'eastwing', 'bedroom', 'moon', 'kids'].includes(hash)) params.set('scene', hash);
+  else if (['grounds', 'gallery', 'fall', 'eastwing', 'bedroom', 'moon', 'hallway', 'kids'].includes(hash)) params.set('scene', hash);
   else if (hash === 'opening') params.set('scene', 'intro');
-  const first = ['grounds', 'gallery', 'fall', 'eastwing', 'bedroom', 'moon', 'satellite', 'kids'].includes(params.get('scene')) ? params.get('scene') : 'intro';
+  const first = ['grounds', 'gallery', 'fall', 'eastwing', 'bedroom', 'moon', 'hallway', 'satellite', 'kids'].includes(params.get('scene')) ? params.get('scene') : 'intro';
   const batch = [1, 2, 3, 4].includes(Number(params.get('batch'))) ? Number(params.get('batch')) : 1;
   return { first, firstData: first === 'satellite' ? { batch, skin: Number(params.get('skin')) || batch } : {} };
 }
@@ -52,6 +53,7 @@ function start() {
   game.scene.add('eastwing', EastWing, false);
   game.scene.add('bedroom', Bedroom, false);
   game.scene.add('moon', Moon, false);
+  game.scene.add('hallway', Hallway, false);
   game.scene.add('room', Room, false);
   game.scene.add('kids', Kids, false); // after satellite, so it draws over the screen it embeds
   game.events.once('ready', () => {

@@ -37,6 +37,7 @@ export function makeControls(scene) {
     glasses: () => take(KC.G),
     immune: () => take(KC.I),
     skipAhead: () => take(KC.N),
+    skipLine: () => take(KC.ENTER),
     endFrame: () => pressed.clear()
   };
 }

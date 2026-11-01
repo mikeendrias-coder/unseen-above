@@ -66,20 +66,23 @@ export class Bubbles {
       if (shown > b.n) { if (shown % 3 === 0) Sound.tone(b.pitch + (shown % 7) * 30, 0.03, 'square', 0.008); b.n = shown; }
       if (!b.out && b.t * 1000 > b.total / CPS * 1000 + b.hold) b.out = 0.2;
       const a = b.out ? Math.max(0, b.out / 0.2) : 1;
-      // the block: one box per line, centered over the speaker, kept on screen
-      const padR = b.src ? PAD + 5 : PAD, widths = b.lines.map(l => ccWidth(l) + PAD + padR), wMax = Math.max(...widths), n = b.lines.length;
+      // The block paints on like a caption: a line's box grows with its letters, and each new
+      // line rolls in at the bottom, pushing the earlier ones up. Centered over the speaker on
+      // the full width it will have, and kept on screen.
+      const padR = b.src ? PAD + 5 : PAD, full = b.lines.map(l => ccWidth(l) + PAD + padR), wMax = Math.max(...full);
       let cx = Math.round(p.x);
       if (v && v.width > 0) cx = Math.max(Math.round(v.x) + 2 + Math.ceil(wMax / 2), Math.min(Math.round(v.x + v.width) - 2 - Math.ceil(wMax / 2), cx));
-      const bottom = Math.round(p.y - 4), top = bottom - n * R;
-      let left = shown;
-      b.lines.forEach((l, i) => {
-        const w = widths[i], x = Math.round(cx - w / 2), y = top + i * R;
-        g.fillStyle(BOX, A * a); g.fillRect(x, y, w, R);
-        const part = l.slice(0, Math.max(0, left)); left -= l.length;
-        if (part) ccText(g, part, x + PAD, y + CAPTION.top, b.ink, { alpha: a, italic: b.italic });
+      let left = shown; const vis = [];
+      b.lines.forEach((l, i) => { const part = l.slice(0, Math.max(0, left)); left -= l.length; if (part) vis.push({ part, x: Math.round(cx - full[i] / 2), w: Math.min(full[i], ccWidth(part) + PAD + padR) }); });
+      if (!vis.length) vis.push({ part: '', x: Math.round(cx - PAD), w: PAD * 2 });
+      const bottom = Math.round(p.y - 4), top = bottom - vis.length * R;
+      vis.forEach((s, i) => {
+        const y = top + i * R;
+        g.fillStyle(BOX, A * a); g.fillRect(s.x, y, s.w, R);
+        if (s.part) ccText(g, s.part, s.x + PAD, y + CAPTION.top, b.ink, { alpha: a, italic: b.italic });
       });
       // the notch: points down at the speaker, under the last line
-      const lw = widths[n - 1], lx = Math.round(cx - lw / 2), nx = Math.max(lx + 3, Math.min(lx + lw - 4, Math.round(p.x)));
+      const last = vis[vis.length - 1], lw = last.w, lx = last.x, nx = Math.max(lx + 3, Math.min(lx + lw - 4, Math.round(p.x)));
       g.fillStyle(BOX, A * a); g.fillRect(nx - 2, bottom, 5, 1); g.fillRect(nx - 1, bottom + 1, 3, 1); g.fillRect(nx, bottom + 2, 1, 1);
       // more to say: a small arrow at the end of the last line once it is out
       if (b.src && shown >= b.total && !b.out) {
