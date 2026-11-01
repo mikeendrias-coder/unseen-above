@@ -2,6 +2,7 @@
 import { measure, applyCss, display } from './core/display.js';
 import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
+import { initPicker } from './ui/vibe.js';
 import { Grounds } from './scenes/Grounds.js';
 import { Gallery } from './scenes/Gallery.js';
 import { Intro } from './scenes/Intro.js';
@@ -69,10 +70,11 @@ function start() {
   window.__unseen = { game, display, Sound };
 }
 
-const go = document.getElementById('start');
-let started = false;
-const begin = () => { if (started) return; started = true; if (go) go.hidden = true; Sound.ensure(); start(); };
+const go = document.getElementById('start'), tv = document.getElementById('tv');
+let started = false, stopPicker = () => {};
+const begin = () => { if (started) return; started = true; stopPicker(); if (tv) tv.hidden = true; if (go) go.hidden = true; Sound.ensure(); start(); };
 if (go) {
+  stopPicker = initPicker(begin);
   go.addEventListener('click', begin);
   // a jump link clicked before the game starts also starts it, at that part
   document.querySelectorAll('.jump a').forEach(a => a.addEventListener('click', () => setTimeout(begin, 0)));

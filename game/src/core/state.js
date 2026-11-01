@@ -11,6 +11,7 @@ const save = () => { try { window.localStorage.setItem(KEY, JSON.stringify(mem))
 
 export const state = {
   get look() { return mem.look; },
+  setLook(k) { if (LOOK_KEYS.includes(k)) { mem.look = k; save(); } return mem.look; },
   nextLook() { const i = LOOK_KEYS.indexOf(mem.look); mem.look = LOOK_KEYS[(i + 1) % LOOK_KEYS.length]; save(); return mem.look; },
   episode(id) {
     if (!mem.episodes[id]) mem.episodes[id] = { take: 1, bodies: [], done: false };

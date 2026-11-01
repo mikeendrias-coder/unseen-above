@@ -42,11 +42,30 @@
   #note.on { opacity: 1; }
   #blackout { position: absolute; inset: 0; background: var(--ground); opacity: 0; transition: opacity 600ms; }
   #blackout.on { opacity: 1; }
-  #start { position: relative; width: 100%; max-width: 1280px; aspect-ratio: 16 / 9; display: grid; place-items: end center; padding: 0 0 7%; background: var(--ground); border: 0; color: var(--ink); font: 400 13px var(--mono); cursor: pointer; letter-spacing: 0.2em; text-transform: uppercase; overflow: hidden; }
-  #start svg { position: absolute; inset: 0; width: 100%; height: 100%; shape-rendering: crispEdges; }
-  #start span { position: relative; border: 1px solid var(--ink-quiet); background: var(--cc-bg); padding: 14px 22px; }
-  #start:hover span, #start:focus-visible span { border-color: var(--accent); color: var(--accent); }
-  #start:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  /* The start screen is a channel guide: tonight on CH 07, pick how her world looks. */
+  #tv { position: relative; width: 100%; max-width: 1280px; display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); gap: 18px; align-items: stretch; background: var(--ground); }
+  .tv-screen { position: relative; background: #000; border: 1px solid #23212b; box-shadow: 0 0 0 6px #0b0a10, 0 0 60px var(--glow, rgba(242,193,78,0.18)); aspect-ratio: 16 / 9; max-width: 100%; transition: box-shadow 300ms; }
+  .tv-screen canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+  .tv-guide { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .tv-ch { margin: 0; font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--ink-quiet); }
+  .tv-ch b { color: #ff4d5e; font-weight: 600; letter-spacing: 0.2em; }
+  .tv-title { margin: 0; font-size: 26px; font-weight: 300; letter-spacing: 0.04em; text-wrap: balance; }
+  .tv-sub { margin: 0; font-size: 12px; color: var(--ink); }
+  .tv-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
+  .tv-list button { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) 30px 46px; align-items: center; gap: 10px; padding: 8px 10px; background: #0d0c12; border: 1px solid #23212b; color: var(--ink-quiet); font: 400 12px var(--mono); text-align: left; cursor: pointer; letter-spacing: 0.03em; transition: border-color 120ms, color 120ms, transform 120ms; }
+  .tv-list button .n { color: var(--ink-quiet); font-weight: 600; }
+  .tv-list button .v { font-size: 10px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-quiet); }
+  .tv-list button .sw { display: grid; grid-template-columns: repeat(4, 1fr); height: 10px; }
+  .tv-list button[aria-selected="true"] { border-color: var(--sel, var(--accent)); color: var(--ink); transform: translateX(-4px); }
+  .tv-list button[aria-selected="true"] .n { color: var(--sel, var(--accent)); }
+  .tv-list button:focus-visible { outline: 2px solid var(--sel, var(--accent)); outline-offset: 2px; }
+  #start { margin-top: auto; padding: 14px 18px; background: var(--cc-bg); border: 1px solid var(--sel, var(--accent)); color: var(--ink); font: 600 13px var(--mono); letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer; text-align: left; }
+  #start span { display: block; margin-top: 4px; font-weight: 400; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-quiet); }
+  #start:hover, #start:focus-visible { color: var(--sel, var(--accent)); outline: none; box-shadow: 0 0 0 2px var(--sel, var(--accent)); }
+  .tv-votes { margin: 0; font-size: 10px; letter-spacing: 0.06em; color: var(--ink-quiet); }
+  .tv-votes b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tv-note { margin: 0; font-size: 10px; color: var(--ink-quiet); letter-spacing: 0.06em; }
+  @media (max-width: 760px) { #tv { grid-template-columns: minmax(0, 1fr); } .tv-title { font-size: 20px; } }
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
   #h-hint { font-size: 12px; min-height: 1.5em; margin: 0 0 6px; color: var(--ink); }
   .keys { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 11px; color: var(--ink-quiet); }
@@ -59,7 +78,7 @@
 </style>
 <header id="chrome-top">
   <h1>Unseen Above</h1>
-  <div class="tag">Working build · the opening, episodes 1 and 2, satellite batches 1 to 4, a preview from the end · keyboard needed</div>
+  <div class="tag">Working build · the opening, episodes 1 to 3, satellite batches 1 to 4, a preview from the end · keyboard needed</div>
 </header>
 <div id="stage">
   <div id="overlay" aria-live="polite">
@@ -69,25 +88,18 @@
     <div id="bug"></div>
     <div id="note"></div>
   </div>
-  <button id="start" type="button">
-    <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070b1f"/><stop offset="0.6" stop-color="#121a3a"/><stop offset="1" stop-color="#1c2650"/></linearGradient></defs>
-      <rect width="320" height="180" fill="url(#sky)"/>
-      <g fill="#b8c4f5" opacity="0.07"><polygon points="196,74 150,0 176,0"/><polygon points="214,72 236,0 262,0"/><polygon points="168,80 96,0 120,0"/><polygon points="246,76 300,0 320,0 320,10"/></g>
-      <circle cx="58" cy="30" r="10" fill="#ece8d6"/><rect x="54" y="35" width="2" height="1" fill="#ffb85c"/>
-      <g fill="#e9e2cc" opacity="0.8"><rect x="196" y="22" width="1" height="1"/><rect x="202" y="16" width="1" height="1"/><rect x="210" y="16" width="1" height="1"/><rect x="216" y="22" width="1" height="1"/><rect x="206" y="34" width="1" height="1"/><rect x="200" y="28" width="1" height="1"/><rect x="212" y="28" width="1" height="1"/><rect x="206" y="16" width="1" height="1"/><rect x="204" y="22" width="1" height="1"/><rect x="208" y="22" width="1" height="1"/></g>
-      <g fill="#0b1124"><rect x="0" y="104" width="22" height="46"/><rect x="24" y="92" width="16" height="58"/><rect x="42" y="112" width="26" height="38"/><rect x="70" y="98" width="14" height="52"/><rect x="86" y="118" width="22" height="32"/></g>
-      <rect x="0" y="150" width="320" height="30" fill="#0d1226"/>
-      <rect x="112" y="96" width="44" height="54" fill="#1b3558"/><g fill="#86c9ff"><rect x="116" y="100" width="6" height="6"/><rect x="132" y="108" width="6" height="6"/><rect x="146" y="100" width="6" height="6"/><rect x="124" y="124" width="6" height="6"/></g><g fill="#ffb85c"><rect x="140" y="116" width="6" height="6"/><rect x="116" y="132" width="6" height="6"/></g>
-      <rect x="158" y="102" width="40" height="48" fill="#2b3463"/><path d="M166 102 A12 12 0 0 1 190 102 Z" fill="#e2b146"/><rect x="177" y="84" width="2" height="6" fill="#e2b146"/>
-      <rect x="200" y="94" width="70" height="56" fill="#2b3463"/><polygon points="196,94 235,74 274,94" fill="#e2b146"/><polygon points="202,93 235,78 268,93" fill="#f1ead6"/>
-      <g fill="#cfc8b6"><rect x="206" y="98" width="5" height="48"/><rect x="218" y="98" width="5" height="48"/><rect x="246" y="98" width="5" height="48"/><rect x="258" y="98" width="5" height="48"/></g>
-      <rect x="229" y="118" width="12" height="28" fill="#ffe2a6"/><rect x="196" y="146" width="78" height="4" fill="#cfc8b6"/>
-      <rect x="272" y="80" width="26" height="70" fill="#1c2347"/><g fill="#ffb85c"><rect x="276" y="86" width="5" height="5"/><rect x="288" y="98" width="5" height="5"/><rect x="276" y="110" width="5" height="5"/><rect x="288" y="122" width="5" height="5"/></g>
-      <g fill="#030306"><polygon points="0,180 0,140 40,142 70,138 92,150 92,180"/><rect x="34" y="118" width="4" height="12"/><circle cx="36" cy="116" r="2.4"/><rect x="40" y="122" width="3" height="9"/><circle cx="41.5" cy="120" r="2"/></g>
-    </svg>
-    <span>Click to begin · sound on</span>
-  </button>
+  <div id="tv">
+    <div class="tv-screen"><canvas id="tv-canvas" width="320" height="180" aria-label="A preview of the chosen look"></canvas></div>
+    <div class="tv-guide">
+      <p class="tv-ch"><b>Live</b> · CH 07 · tonight</p>
+      <h2 class="tv-title">Unseen Above</h2>
+      <p class="tv-sub">Pick how her world looks.</p>
+      <ol class="tv-list" id="tv-list" role="listbox" aria-label="Looks"></ol>
+      <p class="tv-votes"><b id="tv-count">0</b> votes from home so far. Yours counts too.</p>
+      <button id="start" type="button">Begin<span>Sound on · arrows pick a look · Enter begins</span></button>
+      <p class="tv-note">Best on a desktop with a keyboard. L switches the look during play.</p>
+    </div>
+  </div>
 </div>
 <footer id="chrome-bottom">
   <p id="h-hint"></p>
