@@ -29,7 +29,7 @@ export const LEVEL = {
   shutter: { x: 40 * T, w: 8 },                     // and the one that rolls up when it is over
   crates: [{ x: 23 * T + 6, y: G - 14, w: 18, h: 14 }, { x: 35 * T + 8, y: G - 14, w: 18, h: 14 }],
   desk: { x: 29 * T + 2, y: G - 19, w: 44, h: 4 },  // the console desk: a table she fits under
-  lamp: { x: 30 * T + 4, y: 20, from: 40, to: 140, half: 9, range: 230 },
+  lamp: { x: 30 * T + 4, y: 20, from: 40, to: 140, half: 7, range: 230, lock: 0.62 },
   lasers: { x0: 20 * T + 3, x1: 40 * T - 3, hi: G - 11, lo: G - 3 },
   flashCams: [{ x: 24 * T + 8, y: 21 }, { x: 36 * T + 2, y: 21 }],
   things: [

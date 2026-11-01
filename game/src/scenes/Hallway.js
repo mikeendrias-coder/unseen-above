@@ -246,7 +246,10 @@ export class Hallway extends SideEpisode {
         if (c.t <= 0 && !this.dead) {
           c.attacks++;
           if (R === 1 && c.attacks % 3 === 0) { c.st = 'console'; c.t = 4; break; }
-          if (dist < 34) { c.st = 'raise'; c.t = TELL[R] * 0.85; Sound.tone(300, 0.4, 'sine', 0.02, 1200); }
+          // never a chop when she has her back to a wall: they step back and lunge instead
+          const room = dx < 0 ? kc - (ARENA.x0 + 2) : (ARENA.x1 - 2) - kc;
+          if (dist < 34 && room > 34) { c.st = 'raise'; c.t = TELL[R] * 0.85; Sound.tone(300, 0.4, 'sine', 0.02, 1200); }
+          else if (dist < 34) { c.x = clampX(c.x - Math.sign(dx) * 26); c.t = 0.3; c.attacks--; }
           else {
             const hist = c.lastLunge, hi = hist.length >= 2 && hist[0] === hist[1] ? !hist[0] : Math.random() < 0.5;
             hist.unshift(hi); hist.length = Math.min(hist.length, 3);
@@ -261,7 +264,7 @@ export class Hallway extends SideEpisode {
         break;
       case 'lunge': {
         c.pose = 'lean';
-        const step = 330 * dt * c.face; c.x = clampX(c.x + step);
+        const step = 270 * dt * c.face; c.x = clampX(c.x + step);
         if ((c.face > 0 && c.x >= c.target) || (c.face < 0 && c.x <= c.target) || c.t <= 0) { c.st = 'recover'; c.t = 1.05; c.open = true; }
         this.bladeHits();
         break;
@@ -345,8 +348,11 @@ export class Hallway extends SideEpisode {
   }
   chopHits() {
     if (this.dead || window.__noDeath) return;
-    const k = this.kid, c = this.cr, x0 = c.face > 0 ? c.x + 2 : c.x - 24, x1 = c.face > 0 ? c.x + 24 : c.x - 2;
-    if (k.x + k.w > x0 && k.x < x1 && k.y + k.h > G - 30) this.die({ id: 'creator', direct: true });
+    const k = this.kid, c = this.cr, x0 = c.face > 0 ? c.x + 2 : c.x - 22, x1 = c.face > 0 ? c.x + 22 : c.x - 2, D = LEVEL.desk;
+    if (!(k.x + k.w > x0 && k.x < x1 && k.y + k.h > G - 30)) return;
+    // under the desk, the blade bites the tabletop instead
+    if (k.x + k.w > D.x + 2 && k.x < D.x + D.w - 2 && k.y > D.y) { this.sparks.explode(8, Math.max(D.x, Math.min(D.x + D.w, k.x + 4)), D.y); Sound.tone(1700, 0.1, 'square', 0.03, 900); return; }
+    this.die({ id: 'creator', direct: true });
   }
   yieldFight() {
     const c = this.cr;
@@ -367,16 +373,20 @@ export class Hallway extends SideEpisode {
     // round one: the searchlight from the grounds, sweeping the stage now and then
     const L = this.lamp, LV = LEVEL.lamp;
     if (live && R === 0) {
-      // on for one slow pass across the stage, then off; the next pass goes the other way
-      L.t += dt; const cyc = L.t % 6.6, pass = Math.floor(L.t / 6.6) % 2; L.on = cyc > 3.6;
-      const u = Math.max(0, Math.min(1, (cyc - 3.6) / 3)), e = u * u * (3 - 2 * u);
-      L.angle = pass ? LV.to - (LV.to - LV.from) * e : LV.from + (LV.to - LV.from) * e;
+      // off for a while, a moment warming up (a glow, a rising tone), then one slow, steady pass
+      // across the stage; the next pass goes the other way. Standing still, the beam crosses her
+      // just too fast to lock; walking with it is what gets her caught.
+      L.t += dt; const cyc = L.t % 9, pass = Math.floor(L.t / 9) % 2; L.warm = cyc > 4.4 && cyc <= 5; L.on = cyc > 5;
+      const u = Math.max(0, Math.min(1, (cyc - 5) / 4));
+      L.angle = pass ? LV.to - (LV.to - LV.from) * u : LV.from + (LV.to - LV.from) * u;
+      if (L.warm && !L.wasWarm) Sound.tone(260, 0.6, 'sawtooth', 0.015, 520);
+      L.wasWarm = L.warm;
       L.cone = L.on ? this.cone(LV.x, LV.y + 4, L.angle, LV.half, LV.range) : null;
       if (L.on && !L.was) Sound.tone(520, 0.3, 'sawtooth', 0.02, 1040);
       L.was = L.on;
       if (L.cone && !this.dead) {
         const seen = !window.__noDeath && this.seenFrom(LV.x, LV.y + 4, L.angle, LV.half, LV.range);
-        if (seen) { if (L.lock === 0) Sound.charge(); L.lock += dt; if (L.lock >= 0.42) { this.satX = LV.x; this.die(L); } } else L.lock = Math.max(0, L.lock - dt * 2);
+        if (seen) { if (L.lock === 0) Sound.charge(); L.lock += dt; if (L.lock >= LV.lock) { this.satX = LV.x; this.die(L); } } else L.lock = Math.max(0, L.lock - dt * 2);
       } else L.lock = Math.max(0, L.lock - dt * 2);
     } else { L.on = false; L.cone = null; L.lock = 0; }
     // round two: the gallery's laser, three shots whenever the creator reaches the desk
@@ -393,13 +403,14 @@ export class Hallway extends SideEpisode {
     if (live && R === 2) this.cams.forEach(cm => {
       cm.next -= dt; cm.flash = Math.max(0, cm.flash - dt * 2.5);
       const k = this.kid, aimAt = () => ({ x: k.x + k.w / 2, y: k.y + k.h });
-      if (cm.next <= 0.7 && cm.clicks === 0) { cm.clicks = 1; cm.aim = aimAt(); cm.warn = true; Sound.click(0.03); }
-      if (cm.next <= 0.4 && cm.clicks === 1) { cm.clicks = 2; Sound.click(0.03); }
-      if (cm.aim) { cm.ang = Math.atan2(cm.aim.y - cm.y, cm.aim.x - cm.x) * 180 / Math.PI; cm.cone = this.cone(cm.x, cm.y + 2, cm.ang, 14, 190); }
+      // these turn to find her, so they give her longer than the bedroom's: two clicks over a second
+      if (cm.next <= 1.1 && cm.clicks === 0) { cm.clicks = 1; cm.aim = aimAt(); cm.warn = true; Sound.click(0.03); }
+      if (cm.next <= 0.55 && cm.clicks === 1) { cm.clicks = 2; Sound.click(0.03); }
+      if (cm.aim) { cm.ang = Math.atan2(cm.aim.y - cm.y, cm.aim.x - cm.x) * 180 / Math.PI; cm.cone = this.cone(cm.x, cm.y + 2, cm.ang, 12, 190); }
       if (cm.next <= 0) {
-        cm.flash = 1; cm.warn = false; cm.clicks = 0; cm.next = 2.6 + Math.random() * 1.2; Sound.shutter(0.1);
+        cm.flash = 1; cm.warn = false; cm.clicks = 0; cm.next = 3 + Math.random() * 1.2; Sound.shutter(0.1);
         // the flash catches her if she is in it, and blinds the creator wherever they are
-        const seen = !window.__noDeath && !this.dead && cm.cone && this.seenFrom(cm.x, cm.y + 2, cm.ang, 14, 190);
+        const seen = !window.__noDeath && !this.dead && cm.cone && this.seenFrom(cm.x, cm.y + 2, cm.ang, 12, 190);
         if (seen) { this.satX = cm.x; this.die(cm); }
         const c = this.cr; if (['idle', 'windHi', 'windLo', 'raise', 'recover'].includes(c.st)) { c.st = 'flinch'; c.t = 1.3; }
         cm.aim = null;
@@ -500,6 +511,7 @@ export class Hallway extends SideEpisode {
     const red = n(this.P.hazard), seeing = this.gl.showing;
     // the searchlight: a real light, soft and layered, red as it locks
     if (this.lamp.cone) this.drawCone(g, this.lamp, 0.1, H.work);
+    if (this.lamp.warm) { const LV = LEVEL.lamp; g.fillStyle(n(H.work), 0.5 + 0.4 * Math.sin(t * 30)); g.fillCircle(LV.x, LV.y + 3, 3); g.fillStyle(n(H.work), 0.15); g.fillCircle(LV.x, LV.y + 3, 8); }
     // the laser: emitters glow, the glasses show which height, then the beam
     const Z = this.laser, LZ = LEVEL.lasers;
     if (Z.shots.length) {
@@ -524,7 +536,7 @@ export class Hallway extends SideEpisode {
   drawLock() {
     const fx = this.fxG; fx.clear();
     this.strikeFx.update(this.game.loop.delta / 1000);
-    const L = this.lamp; if (L.lock > 0 && !this.dead) { const k = this.kid, r = 9 - Math.min(1, L.lock / 0.42) * 7, cx = k.x + k.w / 2, cy = k.y + k.h / 2; fx.lineStyle(1, n(this.P.hazard), 1); fx.strokeRect(Math.round(cx - 4 - r), Math.round(cy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); }
+    const L = this.lamp; if (L.lock > 0 && !this.dead) { const k = this.kid, r = 9 - Math.min(1, L.lock / LEVEL.lamp.lock) * 7, cx = k.x + k.w / 2, cy = k.y + k.h / 2; fx.lineStyle(1, n(this.P.hazard), 1); fx.strokeRect(Math.round(cx - 4 - r), Math.round(cy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); }
   }
   drawDarkness() {
     if (!this.dark) { this.darkImg.setVisible(false); return; }
