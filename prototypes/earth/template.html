@@ -1,0 +1,82 @@
+<title>Earth Stealth Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* One fixed dark look: this page is a game screen. Layout: name strip, pixel stage, status bar, keys. */
+  :root {
+    --ground: #05060a;
+    --panel: #0d0f18;
+    --ink: #d9d3c4;
+    --ink-quiet: #7d7a86;
+    --rule: #1d2030;
+    --safe: #9ef0c2;
+    --danger: #ff5a4a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    color-scheme: dark;
+  }
+  html, body { background: var(--ground); color: var(--ink); }
+  body {
+    font-family: var(--mono);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 14px 24px;
+  }
+  .wrap { max-width: 1940px; margin: 0 auto; display: grid; gap: 10px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.04em; }
+  h1 span { color: var(--danger); }
+  .tag { font-size: 12px; color: var(--ink-quiet); }
+  .stage-wrap { position: relative; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  #stage { display: flex; justify-content: center; min-height: 180px; }
+  #stage canvas { display: block; image-rendering: pixelated; }
+  #stage canvas:focus { outline: none; }
+  .stage-wrap:focus-within { border-color: #3a3f58; }
+  #start { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(5, 6, 10, 0.55); border: 0; color: var(--ink); font: 600 14px var(--mono); cursor: pointer; }
+  #start span { border: 1px solid var(--safe); color: var(--safe); padding: 10px 18px; border-radius: 6px; }
+  #start:focus-visible span { outline: 2px solid var(--safe); outline-offset: 3px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--ink-quiet); }
+  .bar b { color: var(--ink); font-weight: 600; }
+  #h-hint { font-size: 13px; color: var(--ink); min-height: 1.5em; margin: 0; }
+  .keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 24px; font-size: 12px; line-height: 1.6; color: var(--ink-quiet); margin: 0; padding: 0; list-style: none; }
+  .keys b { color: var(--ink); font-weight: 600; }
+</style>
+<div class="wrap">
+  <header>
+    <h1><span>EARTH</span> Stealth slice</h1>
+    <div class="tag">Prototype. Placeholder art, mechanics only. Keyboard required.</div>
+  </header>
+  <div class="stage-wrap">
+    <div id="stage"></div>
+    <button id="start" type="button"><span>Click to play</span></button>
+  </div>
+  <div class="bar" aria-live="polite">
+    <span>View <b id="h-view">Side view</b></span>
+    <span>Glasses <b id="h-glasses">not found</b></span>
+    <span>Pebbles <b id="h-pebbles">none</b></span>
+    <span>Deaths <b id="h-deaths">0</b></span>
+    <span>Hardcore <b id="h-hard">off</b></span>
+    <span>Sound <b id="h-sound">on</b></span>
+  </div>
+  <p id="h-hint"></p>
+  <ul class="keys">
+    <li><b>Move:</b> arrows or WASD. <b>Jump:</b> Space (side view). <b>Crouch:</b> Down.</li>
+    <li><b>Use / door:</b> E. <b>Throw pebble:</b> F or Space (top-down).</li>
+    <li><b>Glasses:</b> G breaks or restores them (demo of level 3).</li>
+    <li><b>Restart:</b> R. <b>Hardcore:</b> H (no mid-level checkpoints). <b>Sound:</b> M.</li>
+    <li><b>Jump to a view:</b> 1 side view, 2 top-down.</li>
+  </ul>
+</div>
+<script src="__PHASER_SRC__"></script>
+<script>
+__EARTH__
+</script>
+<script>
+  (function () {
+    var btn = document.getElementById('start');
+    btn.addEventListener('click', function () {
+      btn.hidden = true;
+      try { window.focus(); } catch (e) {}
+      var c = document.querySelector('#stage canvas'); if (c) { c.setAttribute('tabindex', '0'); c.focus(); }
+      if (window.__earthAudio) window.__earthAudio();
+    });
+  })();
+</script>

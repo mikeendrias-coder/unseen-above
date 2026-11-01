@@ -1,0 +1,55 @@
+<title>Routing Puzzle Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* One fixed dark look: this page is a game screen. Layout: name strip, 16:9 stage, short how-to. */
+  :root {
+    --ground: #070b0f;
+    --stage: #0a0f14;
+    --ink: #c8d4df;
+    --ink-quiet: #6f8496;
+    --rule: #1e2b38;
+    --signal: #7fd8ff;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    color-scheme: dark;
+  }
+  html, body { background: var(--ground); color: var(--ink); }
+  body {
+    font-family: var(--mono);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 16px 24px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.04em; }
+  h1 span { color: var(--signal); }
+  .tag { font-size: 12px; color: var(--ink-quiet); }
+  #game { width: 100%; aspect-ratio: 16 / 9; max-width: 100%; background: var(--stage); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; touch-action: none; }
+  #game canvas { display: block; }
+  .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 24px; font-size: 12px; line-height: 1.6; color: var(--ink-quiet); margin: 0; padding: 0; list-style: none; }
+  .how b { color: var(--ink); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+<div class="wrap">
+  <header>
+    <h1><span>SAT</span> Routing puzzles</h1>
+    <div class="tag">Prototype for batch 1. Placeholder art, mechanics only.</div>
+  </header>
+  <div id="game" role="application" aria-label="Routing puzzle game"></div>
+  <ul class="how">
+    <li><b>Draw:</b> press on 1 and drag through every square, passing the numbers in order.</li>
+    <li><b>Undo:</b> drag back along your line, or press any square on it to cut back to there.</li>
+    <li><b>Cube:</b> arrow keys or the buttons under the cube turn it. Press the end of your line to keep going.</li>
+    <li><b>Stuck:</b> "Show me" finishes the route from where you are. R resets.</li>
+  </ul>
+</div>
+<script src="__PHASER_SRC__"></script>
+<script>
+__ZIP_LOGIC__
+</script>
+<script>
+window.ROUTING_LEVELS = __LEVELS__;
+</script>
+<script>
+__GAME__
+</script>
