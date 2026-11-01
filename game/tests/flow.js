@@ -42,8 +42,10 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await scene('gallery');
   await cardOn('EPISODE 2'); ok('episode 2 opens with ' + await card(), true);
   await fresh();
-  await p.evaluate(() => { window.__noDeath = false; const s = window.__game.scene; s.kid.x = 15 * 16 + 4; s.kid.y = 144 - 14; s.kid.vy = 0; });
-  await until(() => window.__game.scene.glasses); ok('the glasses come off the bench', true);
+  await p.evaluate(() => { window.__noDeath = false; const s = window.__game.scene; s.kid.x = 14 * 16 + 4; s.kid.y = 146; s.kid.vy = 0; });
+  await until(() => window.__game.scene.nearThing === window.__game.scene.cabinetThing);
+  await p.keyboard.down('KeyE'); await p.waitForTimeout(150); await p.keyboard.up('KeyE');
+  await until(() => window.__game.scene.glasses); ok('the drawer gives up the glasses', true);
   // a laser death: stand in the hall during a low shot
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 1150; s.kid.y = 146; s.kid.vy = 0; s.laser.awake = true; window.__laserT = 2.6; });
   await until(() => window.__game.scene.ep.take === 2);

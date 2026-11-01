@@ -8,6 +8,14 @@ export const LEVEL = {
   w: 112, h: 12,
   gateX: 15 * TILE,
   door: { x: 106 * TILE - 2, y: 112 - 32, w: 20, h: 32 },
+  // a service door in the glass wing, to the groundskeeper's room (optional)
+  shedDoor: { x: 19 * TILE + 4, y: GROUND - 26, w: 14, h: 26 },
+  // his crowbar, dropped just inside the gate
+  crowbar: { x: 17 * TILE + 14, y: GROUND },
+  // the burnt car outside the wall is solid; she can climb it
+  props: [{ id: 'car', x: 120, y: GROUND - 9, w: 34, h: 9 }, { id: 'car roof', x: 126, y: GROUND - 15, w: 20, h: 6 }],
+  // at the stairs the grounds are scanned: a wall of light follows her to the door
+  scan: { trigger: 96 * TILE, behind: 150, speed: 58 },
   start: { x: 3 * TILE, y: GROUND - 14 },
   // searchlights: base point, sweep between angles (degrees, y down), period in seconds, phase 0..1
   lights: [
@@ -134,6 +142,10 @@ export function paintLevel(P) {
   p.rect(gx0, roof + 8, gx1 - gx0, 3, P.gold); for (let x = gx0 + 4; x < gx1; x += 8) p.rect(x, roof + 2, 1, 6, P.gold); p.rect(gx0, roof + 2, gx1 - gx0, 1, P.gold);
   // LED strip along the glass wing
   for (let x = gx0; x < gx1; x += 3) p.px(x, roof + 12, P.glassLit);
+  // a service door in the base of the glass wing, with a small plaque
+  const SD = LEVEL.shedDoor;
+  p.rect(SD.x - 2, SD.y - 2, SD.w + 4, SD.h + 2, P.goldLo); p.rect(SD.x, SD.y, SD.w, SD.h, P.wallLo); p.rect(SD.x + 1, SD.y + 1, SD.w - 2, SD.h - 1, P.wall);
+  p.rect(SD.x + 2, SD.y + 4, SD.w - 4, 3, P.colLo); p.rect(SD.x + SD.w - 4, SD.y + 13, 2, 2, P.gold); p.glowRect(SD.x - 3, GROUND - 2, SD.w + 6, 2, P.lamp, 0.12);
 
   // baroque wing, tiles 39 to 77, with a dome over its middle
   const bx0 = 39 * TILE, bx1 = 77 * TILE;

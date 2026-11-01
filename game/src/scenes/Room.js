@@ -51,8 +51,48 @@ function paintStaff(P) {
   return p;
 }
 
+function paintKeeper(P) {
+  const p = new Painter(320, 180), r = rng(9);
+  p.rect(0, 0, 320, 180, P.wallLo);
+  p.rect(0, 0, 320, 20, P.void); for (let x = 6; x < 320; x += 22) p.rect(x, 12, 14, 8, P.wood);
+  for (let y = 24; y < G; y += 12) p.rect(0, y, 320, 1, P.wallLine);
+  p.rect(0, G, 320, 20, P.rubble); p.rect(0, G, 320, 1, P.rubbleHi); for (let i = 0; i < 60; i++) p.px(r() * 320, G + 2 + r() * 16, P.dust);
+  // the door back
+  p.rect(18, G - 30, 16, 30, P.wall); p.rect(19, G - 29, 14, 29, P.wallHi); p.px(30, G - 15, P.gold); p.glowRect(14, G - 2, 24, 2, P.lamp, 0.15);
+  // tools on a pegboard
+  p.rect(44, 40, 70, 46, P.wood); for (let x = 48; x < 112; x += 5) for (let y = 44; y < 84; y += 5) p.px(x, y, P.woodHi);
+  p.rect(52, 46, 2, 30, P.device); p.rect(48, 44, 10, 3, P.colLo); p.rect(64, 48, 2, 26, P.device); p.poly([[62, 74], [68, 74], [65, 82]], P.colLo);
+  p.rect(78, 46, 12, 2, P.colLo); p.rect(83, 48, 2, 24, P.device); p.rect(96, 50, 10, 10, P.colLo); p.rect(99, 60, 3, 18, P.device);
+  // a rack of drones on chargers, green lights
+  p.rect(128, 52, 64, 50, P.device); p.rect(130, 54, 60, 46, P.wallLine);
+  for (let i = 0; i < 6; i++) { const x = 134 + (i % 3) * 19, y = 60 + Math.floor(i / 3) * 20; p.rect(x, y, 13, 4, P.colLo); p.rect(x - 1, y - 1, 4, 1, P.colLo); p.rect(x + 10, y - 1, 4, 1, P.colLo); p.mark('led', x + 6, y + 5); }
+  // a work bench with searchlight bulbs, a small TV on a crate
+  p.rect(200, 120, 70, 4, P.wood); p.rect(200, 120, 70, 1, P.woodHi); p.rect(204, 124, 3, 36, P.wood); p.rect(263, 124, 3, 36, P.wood);
+  for (let i = 0; i < 7; i++) { p.circle(208 + i * 8, 116, 3, P.glassLit); p.rect(207 + i * 8, 118, 3, 2, P.colLo); }
+  p.rect(230, 140, 26, 20, P.wood); p.rect(232, 124, 22, 16, P.device);
+  ['#c8c8c8', '#d6c84a', '#4ac6d6', '#4ad65e', '#d64ad0', '#d64a4a', '#4a5ed6'].forEach((c, i) => p.rect(234 + i * 3, 126, 3, 9, c));
+  p.rect(234, 135, 18, 3, P.void); p.mark('tv', 243, 136);
+  // a crew coat on a hook, a pass on a lanyard
+  p.rect(290, 44, 3, 3, P.device); p.poly([[284, 48], [298, 48], [302, 96], [280, 96]], P.fabricLo); p.rect(288, 50, 1, 40, P.fabric);
+  p.rect(294, 60, 1, 14, P.hazard); p.rect(292, 74, 6, 8, P.colHi); p.rect(293, 76, 4, 1, P.device); p.rect(293, 78, 3, 1, P.device);
+  // a list pinned by the door
+  p.rect(40, 100, 18, 22, P.colHi); for (let i = 0; i < 5; i++) p.rect(42, 103 + i * 4, 12 - (i % 2) * 4, 1, P.device);
+  // one bare bulb
+  p.rect(160, 20, 1, 12, P.device); p.circle(160, 34, 3, P.lamp); p.glowPoly([[156, 36], [164, 36], [230, G], [90, G]], P.lamp, 0.07);
+  return p;
+}
+
 // Room data. Texts are short and literal; a function gets the episode's take number.
 const ROOMS = {
+  keeper: {
+    paint: paintKeeper, bg: 'wallLo',
+    items: [
+      { x0: 40, x1: 60, y: 98, text: ['A list: lights on at dusk. Lights on at dawn.', 'There is no line for lights off.'] },
+      { x0: 128, x1: 192, y: 50, text: ['Six drones on chargers. Each one has a camera.'] },
+      { x0: 200, x1: 270, y: 110, text: ['Spare searchlight bulbs. Hundreds.', 'A small TV. CH 07. Stand by.'] },
+      { x0: 278, x1: 304, y: 42, text: ['A crew coat. The pass says SEASON 41.'] }
+    ]
+  },
   staff: {
     paint: paintStaff, bg: 'wallLo',
     items: [
@@ -113,6 +153,7 @@ export class Room extends SideEpisode {
     this.drawGirl();
     const g = this.roomFx; g.clear();
     if (Math.floor(this.clock * 2) % 2 === 0) (this.marks || []).forEach(mk => { if (mk.kind === 'rec') { g.fillStyle(hexNum(this.P.led), 1); g.fillRect(mk.x, mk.y, 1, 1); } });
+    (this.marks || []).forEach((mk, i) => { if (mk.kind === 'led') { g.fillStyle(hexNum(this.P.robotLed), Math.sin(this.clock * 2 + i) > 0 ? 1 : 0.35); g.fillRect(mk.x, mk.y, 1, 1); } });
     this.drawThings();
     c.endFrame();
   }

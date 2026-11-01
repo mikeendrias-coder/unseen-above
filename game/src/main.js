@@ -10,14 +10,14 @@ import { Kids } from './scenes/Kids.js';
 import { Room } from './scenes/Room.js';
 
 // Which part to open: ?scene=grounds|gallery|satellite|kids (&batch=2 &skin=N), or a plain #name
-// (a shared link keeps only that): #opening, #grounds, #gallery, #batch1, #batch2, #kids
+// (a shared link keeps only that): #opening, #grounds, #gallery, #batch1 to #batch4, #kids
 function route() {
   const params = new URLSearchParams(location.search), hash = location.hash.replace('#', '');
-  if (/^batch[12]$/.test(hash)) { params.set('scene', 'satellite'); params.set('batch', hash.slice(5)); }
+  if (/^batch[1-4]$/.test(hash)) { params.set('scene', 'satellite'); params.set('batch', hash.slice(5)); }
   else if (['grounds', 'gallery', 'kids'].includes(hash)) params.set('scene', hash);
   else if (hash === 'opening') params.set('scene', 'intro');
   const first = ['grounds', 'gallery', 'satellite', 'kids'].includes(params.get('scene')) ? params.get('scene') : 'intro';
-  const batch = Number(params.get('batch')) === 2 ? 2 : 1;
+  const batch = [1, 2, 3, 4].includes(Number(params.get('batch'))) ? Number(params.get('batch')) : 1;
   return { first, firstData: first === 'satellite' ? { batch, skin: Number(params.get('skin')) || batch } : {} };
 }
 

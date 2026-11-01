@@ -79,6 +79,20 @@ export class SideEpisode extends Phaser.Scene {
     this.nearThing = near.sort((a, b) => Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
     if (this.nearThing && this.ctl.interact()) this.nearThing.use();
   }
+  // A side room behind an optional door: this episode sleeps (its clock and lights freeze) and
+  // wakes where she left it.
+  enterRoom(id) {
+    if (this.leaving || this.dead) return;
+    this.leaving = true;
+    Sound.tone(300, 0.08, 'triangle', 0.02); this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.time.delayedCall(260, () => {
+      this.leaving = false; this.kid.vx = 0;
+      Object.values(this.beds || {}).forEach(b => b.set(0.0001, 0.3));
+      this.events.once('wake', () => { this.ctl.endFrame(); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
+      this.scene.launch('room', { id, from: this.scene.key, take: this.ep.take });
+      this.scene.sleep();
+    });
+  }
   drawThings() {
     const t = this.nearThing;
     if (t && !t.noPrompt && !this.bubbles.list.size) this.bubbles.showPrompt((t.x0 + t.x1) / 2, t.y0, t.label);

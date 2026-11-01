@@ -10,6 +10,8 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode } from '../core/side.js';
 import { goNext } from '../core/flow.js';
+import { Painter } from '../art/painter.js';
+import { SatelliteStrike } from '../art/strike.js';
 
 // Drone show figures, as point lists in a 64 x 30 box.
 function outline(pts, n) {
@@ -53,7 +55,16 @@ export class Grounds extends SideEpisode {
     this.add.image(0, 0, 'g_level').setOrigin(0).setDepth(0);
     this.twinkleG = this.add.graphics().setDepth(1);
     this.droneSprites = LEVEL.drones.map(() => this.add.sprite(0, 0, 'drone_a').setDepth(3));
+    // his crowbar, just inside the gate
+    const cb = new Painter(14, 5); cb.rect(1, 3, 11, 1, P.device); cb.rect(2, 2, 9, 1, P.colLo); cb.rect(11, 0, 1, 3, P.colLo); cb.rect(12, 0, 2, 1, P.colLo); cb.rect(0, 3, 3, 2, P.hazard); cb.toTexture(this, 'crowbar');
+    this.add.image(LEVEL.crowbar.x, LEVEL.crowbar.y, 'crowbar').setOrigin(0.5, 1).setDepth(1.5);
+    this.scanG = this.add.graphics().setDepth(6).setBlendMode(Phaser.BlendModes.ADD);
     this.commonLayers();
+    this.props = LEVEL.props.map(r => Object.assign({}, r));
+    const CB = LEVEL.crowbar, SD = LEVEL.shedDoor;
+    this.things.push({ x0: CB.x - 8, x1: CB.x + 8, y0: GROUND - 6, y1: GROUND, use: () => this.bubbles.say('item', 'His crowbar. He came this way.', () => ({ x: CB.x, y: GROUND - 6 }), { edge: 0xffffff, pitch: 520 }) });
+    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, use: () => this.enterRoom('keeper') });
+    this.scan = null;
 
     // particles: fountain spray, ash outside the wall, sparkles on gold
     const fountain = this.marks.find(m => m.kind === 'fountain');
@@ -90,7 +101,8 @@ export class Grounds extends SideEpisode {
     this.clock += dt;
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
-    if (!this.dead && !this.leaving) this.moveKid(dt);
+    if (!this.dead && !this.leaving) { this.moveKid(dt); this.updateThings(); }
+    this.updateScan(dt);
     this.updateLights(dt);
     this.updateDrones(dt);
     this.updateAmbience(dt);
@@ -133,6 +145,38 @@ export class Grounds extends SideEpisode {
       overlay.hint('');
     });
     this.time.delayedCall(5600, () => goNext(this, 'ep1'));
+  }
+
+  // ------------------------------------------------------------------ the scan: a fast run to the door
+  // At the foot of the stairs the satellite scans the grounds: a wall of light sweeps in from
+  // behind her. It is slower than she runs, but not by much. If it reaches her, the strike comes.
+  updateScan(dt) {
+    const S = LEVEL.scan, k = this.kid;
+    if (!this.scan) {
+      if (!this.dead && !this.leaving && k.x > S.trigger) {
+        this.scan = { x: k.x - S.behind, t: 0 };
+        overlay.note('SCAN', 1600); Sound.tone(520, 0.5, 'sawtooth', 0.03, 1040);
+        this.cameras.main.flash(120, 90, 20, 20);
+      }
+      return;
+    }
+    const sc = this.scan; sc.t += dt;
+    if (!this.dead && !this.leaving) sc.x += S.speed * dt;
+    if (Math.floor(sc.t * 2) !== Math.floor((sc.t - dt) * 2) && !this.leaving) Sound.tone(sc.t % 1 < 0.5 ? 880 : 660, 0.12, 'square', 0.012);
+    if (!this.dead && !this.leaving && !window.__noDeath && k.x + k.w / 2 < sc.x + 3) { this.satX = sc.x; this.die({ id: 'scan', x: sc.x, y: 20 }); }
+  }
+  drawScan() {
+    const g = this.scanG; g.clear();
+    if (!this.scan) return;
+    const P = this.P, v = this.cameras.main.worldView, x = this.scan.x, t = this.clock, col = hexNum(P.hazard), soft = hexNum(P.shaft);
+    // the band of light: soft edges, a hard core, scanlines running down it
+    g.fillStyle(soft, 0.06); g.fillRect(x - 40, v.y, 40, v.height);
+    g.fillStyle(col, 0.12); g.fillRect(x - 10, v.y, 12, v.height);
+    g.fillStyle(col, 0.35); g.fillRect(x - 2, v.y, 3, v.height);
+    g.fillStyle(0xffffff, 0.8); g.fillRect(x, v.y, 1, v.height);
+    for (let y = (t * 120) % 12; y < v.height; y += 12) { g.fillStyle(col, 0.4); g.fillRect(x - 8, v.y + y, 9, 1); }
+    // the satellite doing the scanning, at the top of the band
+    if (!this.dead) SatelliteStrike.drawSat(this.fxG, P, x, v.y + 3, g, 0.6 + 0.4 * Math.sin(t * 20));
   }
 
   // ------------------------------------------------------------------ ambience: the spectacle
@@ -206,16 +250,19 @@ export class Grounds extends SideEpisode {
     this.lights.forEach(l => this.drawCone(bg, l, 0.11, P.shaft));
     this.drones.forEach(d => this.drawCone(bg, d, 0.13, P.shaft));
     this.drawLocks([...this.lights, ...this.drones]);
+    this.drawScan();
+    this.drawThings();
   }
 
   hint() {
     const x = this.kid.x / TILE;
     if (this.leaving || this.done) return;
-    if (x < 14) return overlay.hint('Arrows or A/D move. Space jumps. Down crouches. L switches the look. R restarts the episode.');
+    if (x < 14) return overlay.hint('Arrows or A/D move. Space jumps. Down crouches. E uses things. L switches the look. R restarts the episode.');
     if (x < 39) return overlay.hint('A lamp sweeps the garden. Hedges block its light: wait in their shadow, move when it swings away.');
     if (x < 56) return overlay.hint('A drone patrols the fountain. Its light cannot reach under the upper bowl.');
     if (x < 77) return overlay.hint('Two lamps on the wall. The statue plinths cast shadows.');
     if (x < 95) return overlay.hint('A faster drone. The pergolas are cover.');
+    if (this.scan) return overlay.hint('The grounds are being scanned. Keep moving: if the light reaches you, the strike comes. Up or E at the door.');
     return overlay.hint('Two lamps cross over the stairs. Find the gap, then press Up or E at the door.');
   }
 }

@@ -51,7 +51,6 @@ export class Gallery extends SideEpisode {
     this.cabinetThing = { x0: CB.x0, x1: CB.x1, y0: CB.top, y1: GROUND, use: () => this.openDrawer() };
     this.robotThing = { x0: 0, x1: 0, y0: GROUND - 8, y1: GROUND, use: () => this.robotTalk() };
     this.things.push(this.cabinetThing, this.robotThing, { x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', use: () => this.enterRoom('staff') });
-    this.events.on('wake', () => { this.ctl.endFrame(); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; });
     this.cams = LEVEL.cameras.map(c => Object.assign({}, c, { lock: 0, cone: null, angle: 0 }));
     this.laser = { awake: false, t: 0, phase: '', n: -2, st: null };
     this.drawBodies();
@@ -144,19 +143,6 @@ export class Gallery extends SideEpisode {
         if (hit && !this.dead) this.die({ x: X.x, y: GROUND - 10, id: 'chandelier', direct: true });
       }
     }
-  }
-
-  // ------------------------------------------------------------------ the staff room
-  enterRoom(id) {
-    if (this.leaving || this.dead) return;
-    this.leaving = true;
-    Sound.tone(300, 0.08, 'triangle', 0.02); this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.time.delayedCall(260, () => {
-      this.leaving = false; this.kid.vx = 0;
-      Object.values(this.beds).forEach(b => b.set(0.0001, 0.3));
-      this.scene.launch('room', { id, from: this.scene.key, take: this.ep.take });
-      this.scene.sleep();
-    });
   }
 
   // ------------------------------------------------------------------ cameras

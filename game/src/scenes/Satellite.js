@@ -1,5 +1,7 @@
-// Satellite batches: routing puzzles on a screen whose look drifts, batch by batch, from an
-// engineer's back end to a kids' game show. Same board layout every time, so the drift shows.
+// Satellite batches between episodes, on a screen whose look drifts batch by batch from an
+// engineer's back end to a kids' game show: routing (batch 1), a sorting shift (batch 2), routing
+// with a reveal at the end (batch 3), a game show finale (batch 4). Every screen celebrates a
+// solved board its own way, and every win plays the laser's charging sound.
 import Z from '../core/zip-logic.js';
 import LEVELS from '../data/routing-levels.json';
 import { pixText, textWidth } from '../art/pixfont.js';
@@ -8,8 +10,14 @@ import { Sound } from '../core/sound.js';
 import { overlay } from '../core/overlay.js';
 import { pixelZoom } from '../core/display.js';
 import { nextStep, goNext } from '../core/flow.js';
+import { state } from '../core/state.js';
+import { Sorter, ROUNDS } from '../sat/sorting.js';
+import { WinFx, winSound, WIN_SECONDS, drawDeathMap } from '../sat/wins.js';
 
-const BATCHES = { 1: ['basic', 'walls', 'orbit'], 2: ['b2a', 'b2b', 'b2c'] };
+const BATCHES = { 1: ['basic', 'walls', 'orbit'], 2: ['sort1', 'sort2', 'sort3'], 3: ['b2a', 'b2b', 'b2c'], 4: ['rotate', 'moving', 'orbit'] };
+const MODE = { 2: 'sort' };
+// a pentatonic ladder: each step of the line plays the next note up
+const LADDER = [0, 2, 4, 7, 9].map(n => n); const ladder = i => 440 * Math.pow(2, (LADDER[i % 5] + 12 * Math.floor(i / 5)) / 12);
 const H = h => parseInt(h.slice(1), 16);
 const hex2 = n => n.toString(16).toUpperCase().padStart(2, '0');
 
@@ -33,6 +41,7 @@ export class Satellite extends Phaser.Scene {
     this.skinN = data.skin || this.batch;
     this.K = SKINS[this.skinN];
     this.ids = data.ids || BATCHES[this.batch] || BATCHES[1];
+    this.mode = !this.embedded && MODE[this.batch] === 'sort' ? 'sort' : 'route';
     this.levelIdx = 0; this.score = data.score || 0; this.clock = 0; this.ended = false; this.final = false;
     this.preview = !!data.preview; // screen previews (K) stay on the satellite
     const cam = this.cameras.main;
@@ -40,16 +49,21 @@ export class Satellite extends Phaser.Scene {
     cam.setBackgroundColor(H(this.K.bg));
     this.bgG = this.add.graphics(); this.liveG = this.add.graphics(); this.boardG = this.add.graphics();
     this.pathG = this.add.graphics(); this.dotsG = this.add.graphics(); this.fxG = this.add.graphics();
-    this.confetti = [];
+    this.confetti = []; this.winFx = new WinFx(this); this.reveal = null;
     this.ctl = makeControls(this);
     if (!this.embedded) {
-      this.input.on('pointerdown', p => this.onDown(p));
+      this.input.on('pointerdown', p => { if (this.mode === 'sort') { const q = this.world(p); this.sorter.click(q.x, q.y); } else this.onDown(p); });
       this.input.on('pointermove', p => this.onMove(p));
       this.input.on('pointerup', () => { this.drawing = false; this.lastPt = null; });
     } else { cam.setViewport(0, 0, 1, 1); this.auto = { i: 0, t: -(data.autoDelay || 0), every: data.autoEvery || 0.2 }; this.roundN = data.round || 1; }
     this.scale.on('rescale', this.onRescale, this);
     this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
-    this.loadLevel(0);
+    if (this.mode === 'sort') {
+      // the sorting shift stands in for a level list; the HUD reads its progress
+      this.level = { w: 6, h: 6, id: 'sort' }; this.board = { n: 1 }; this.path = []; this.checkpoints = []; this.cs = 22; this.bx = 170; this.by = 24;
+      this.sorter = new Sorter(this); this.drawStatic();
+      overlay.hint('Sort the pings. Left, Down or Right sends the front one to that bin (or click a bin). The rule card says which bin takes which shape.');
+    } else this.loadLevel(0);
     if (!this.embedded) cam.fadeIn(500);
     if (!data.quiet && !this.embedded) { overlay.card('SATELLITE', 'Batch ' + this.batch, 2600); }
     if (!this.embedded) window.__game = { scene: this };
@@ -114,23 +128,51 @@ export class Satellite extends Phaser.Scene {
     if (o.has(c) && o.get(c) !== this.nextIdx()) { this.flashBad(o.get(c)); return; }
     if (c === last && path.length !== this.board.n - 1) { this.flashBad(this.checkpoints.length - 1); return; }
     path.push(c);
-    Sound.tone(o.has(c) ? 880 : 520 + (path.length % 5) * 30, 0.03, this.skinN === 4 ? 'triangle' : 'square', 0.012);
+    Sound.tone(o.has(c) ? ladder(path.length) * 2 : ladder(path.length), 0.035, this.skinN === 4 ? 'triangle' : 'square', o.has(c) ? 0.016 : 0.011);
+    if (o.has(c)) this.cpPop = { c, t: 0 };
     if (path.length === this.board.n) this.win();
   }
   flashBad(i) { this.badIdx = i; Sound.tone(160, 0.12, 'square', 0.02); this.time.delayedCall(260, () => { this.badIdx = -1; }); }
 
   win() {
+    if (this.mode === 'sort') { this.sorter.finishRound(); return; }
     this.solved = true; this.drawing = false;
-    Sound.charge(); // the same sound as the laser charging, on purpose
-    this.score += 400;
-    if (this.skinN === 4) { for (let i = 0; i < 70; i++) this.confetti.push({ x: 236 + (Math.random() - 0.5) * 120, y: 10, vx: (Math.random() - 0.5) * 60, vy: Math.random() * 30, c: ['#ff5fa2', '#ffd23f', '#3ee6c1', '#5b8cff'][i % 4], t: 0 }); }
+    this.celebrate();
     if (this.embedded) { this.events.emit('solved'); return; }
-    this.time.delayedCall(1700, () => {
+    this.time.delayedCall(WIN_SECONDS[this.skinN] * 1000, () => {
       if (this.levelIdx + 1 < this.ids.length) this.loadLevel(this.levelIdx + 1);
       else this.endBatch();
     });
   }
+  // the sorter finished a round
+  roundWon() {
+    this.celebrate();
+    this.time.delayedCall(WIN_SECONDS[this.skinN] * 1000, () => {
+      if (this.sorter.round + 1 < ROUNDS.length) this.sorter.start(this.sorter.round + 1);
+      else this.endBatch();
+    });
+  }
+  // every screen's own win: a sound, a picture, the laser's charge
+  celebrate() {
+    Sound.charge(); // the same sound as the laser charging, on purpose
+    this.score += 400;
+    winSound(this, this.skinN);
+    const bd = this.mode === 'sort' ? { x: 166, y: 10, w: 144, h: 160 } : { x: this.bx, y: this.by, w: this.cs * this.level.w, h: this.cs * this.level.h };
+    this.winFx.start(this.skinN, bd);
+    if (this.skinN === 4) { for (let i = 0; i < 70; i++) this.confetti.push({ x: 236 + (Math.random() - 0.5) * 120, y: 10, vx: (Math.random() - 0.5) * 60, vy: Math.random() * 30, c: ['#ff5fa2', '#ffd23f', '#3ee6c1', '#5b8cff'][i % 4], t: 0 }); }
+  }
   endBatch() {
+    // batch 3 ends on the estate from above, a pin wherever she died
+    if (this.batch === 3 && !this.reveal && !this.embedded) {
+      this.ended = true;
+      const bodies = [['ep1', 112], ['ep2', 88]].flatMap(([id, tiles]) => state.episode(id).bodies.map(b => Object.assign({}, b, { span: tiles * 16 * 1 })));
+      // place both episodes along one strip: the grounds first, then the house
+      bodies.forEach(b => { if (b.span === 88 * 16) { b.x = 112 * 16 + b.x; } b.span = 200 * 16; });
+      this.reveal = { t: 0, bodies };
+      Sound.tone(1318, 0.16, 'sine', 0.03); this.time.delayedCall(140, () => Sound.tone(1760, 0.3, 'sine', 0.03));
+      this.time.delayedCall(5200, () => { this.reveal.fade = true; this.endBatch(); });
+      return;
+    }
     this.ended = true;
     const next = this.batch + 1, step = 'batch' + this.batch;
     overlay.card('END OF BATCH ' + this.batch, 'Episode ' + next + ' is next', 3400);
@@ -147,7 +189,7 @@ export class Satellite extends Phaser.Scene {
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 20), c = this.ctl;
     this.clock += dt;
-    if (this.embedded) { this.autoStep(dt); this.drawLive(); this.drawBoard(); return; }
+    if (this.embedded) { this.autoStep(dt); this.drawLive(); this.drawBoard(); this.winFx.update(dt, this.K); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     if (c.nextScreen()) {
       const next = this.skinN % 4 + 1; overlay.note('Screen ' + next + ' · ' + SKINS[next].name, 1600);
@@ -156,8 +198,11 @@ export class Satellite extends Phaser.Scene {
     }
     if (c.restart()) { this.scene.restart({ batch: this.batch, skin: this.skinN, quiet: true, preview: this.preview }); return; }
     if (this.final && c.advance()) { this.scene.start('intro', {}); return; }
+    if (this.mode === 'sort') { this.sorter.update(dt, this.ended ? null : c); this.path = { length: this.sorter.sorted }; this.board = { n: this.sorter.R.quota }; }
     this.drawLive();
     this.drawBoard();
+    this.winFx.update(dt, this.K);
+    if (this.reveal) { this.reveal.t += dt; const g = this.winFx.top; drawDeathMap(g, this.K, this.reveal.t, this.reveal.bodies, (s, x, y, col, sc) => pixText(g, s, Math.round(x), Math.round(y), col, sc || 1, 1)); }
     c.endFrame();
   }
 
@@ -185,10 +230,12 @@ export class Satellite extends Phaser.Scene {
       tx('GROUND TRACK', 12, 10); for (let x = 0; x < 138; x++) { g.fillStyle(H(K.dotDone), 1); g.fillRect(12 + x, 40 + Math.round(16 * Math.sin(x / 22 + t * 0.3)), 1, 1); }
       const dx = (t * 20) % 138; g.fillStyle(H(K.accent), 1); g.fillRect(11 + dx, 39 + Math.round(16 * Math.sin(dx / 22 + t * 0.3)), 3, 3);
       tx('LINK', 12, 76); for (let i = 0; i < 24; i++) { const h = 4 + Math.round(18 * Math.abs(Math.sin(i * 1.7 + t * 2))); g.fillStyle(H(K.rule), 1); g.fillRect(12 + i * 6, 118 - h, 4, h); } tx('OK', 140, 76, K.dotDone);
-      tx('QUEUE ' + (this.ids.length - this.levelIdx), 12, 134); tx('RF SENSING: NOT LICENSED', 12, 144, K.dim);
-      const cmd = '> route --batch ' + this.batch + ' --task ' + (this.levelIdx + 1); tx(cmd, 12, 160, K.accent);
+      tx('QUEUE ' + (this.mode === 'sort' ? this.sorter.queue.length : this.ids.length - this.levelIdx), 12, 134); tx('RF SENSING: NOT LICENSED', 12, 144, K.dim);
+      const cmd = this.mode === 'sort' ? '> sort --batch ' + this.batch + ' --round ' + (this.levelIdx + 1) : '> route --batch ' + this.batch + ' --task ' + (this.levelIdx + 1); tx(cmd, 12, 160, K.accent);
+      // pings sent to TASK leave red ticks on the ground track
+      if (this.mode === 'sort') this.sorter.ticks.forEach((tk, i) => { const x = (i * 23 + 9) % 138; g.fillStyle(0xff5a4a, Math.max(0.35, 1 - (t - tk) / 4)); g.fillRect(12 + x, 40 + Math.round(16 * Math.sin(x / 22 + t * 0.3)) - 3, 1, 7); });
       if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(H(K.accent), 1); g.fillRect(12 + textWidth(cmd) + 2, 160, 3, 5); }
-      tx('ROUTE', 168, 10);
+      if (this.mode !== 'sort') tx('ROUTE', 168, 10);
     } else if (this.skinN === 3) {
       tx('ROUTE', 14, 14, K.text, 2); tx(String(this.levelIdx + 1).padStart(2, '0'), 14, 30, K.accent, 3);
       g.fillStyle(0xffffff, 1); g.fillRect(84, 72, 46, 44); g.fillStyle(H(K.text), 1); g.fillRect(84, 72, 46, 1); g.fillRect(84, 115, 46, 1);
@@ -213,6 +260,9 @@ export class Satellite extends Phaser.Scene {
   drawBoard() {
     const K = this.K, L = this.level, cs = this.cs, g = this.boardG, pg = this.pathG, dg = this.dotsG, fx = this.fxG, t = this.clock;
     g.clear(); pg.clear(); dg.clear(); fx.clear();
+    if (this.mode === 'sort') { this.sorter.draw(K, t); return; }
+    // a ring pops out of a checkpoint when the line reaches it
+    if (this.cpPop) { this.cpPop.t += 1 / 60; const p = this.center(this.cpPop.c), u = this.cpPop.t / 0.35; if (u < 1) { fx.lineStyle(2, H(K.accent), 1 - u); fx.strokeCircle(p.x, p.y, 6 + u * 12); } else this.cpPop = null; }
     // cells
     for (let c = 0; c < this.board.n; c++) {
       const x = this.bx + (c % L.w) * cs, y = this.by + Math.floor(c / L.w) * cs;
