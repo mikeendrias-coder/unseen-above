@@ -240,14 +240,15 @@ export function paintLastRoom() {
 }
 // what the old TV shows: the Moon, with the lit dome on its edge
 export const TVSCREEN = { x: 72, y: 34, w: 146, h: 100, moon: { x: 140, y: 88, r: 36 }, dome: { x: 164, y: 58 } };
+// what the old TV shows, in two layers so the blast can take the Moon apart: the sky, and the Moon
 export function paintTvMoon() {
-  const S = TVSCREEN, p = new Painter(S.w, S.h), ox = -S.x, oy = -S.y, rs = rng(5);
-  p.rect(0, 0, S.w, S.h, M.space);
-  for (let i = 0; i < 40; i++) p.px(rs() * S.w, rs() * S.h, M.star);
+  const S = TVSCREEN, sky = new Painter(S.w, S.h), moon = new Painter(S.w, S.h), ox = -S.x, oy = -S.y, rs = rng(5);
+  sky.rect(0, 0, S.w, S.h, M.space);
+  for (let i = 0; i < 70; i++) sky.px(rs() * S.w, rs() * S.h, i % 9 ? M.star : M.white);
+  ptext(sky, 'CH 07', 120, 4, M.yellow);
   const m = S.moon, x = m.x + ox, y = m.y + oy;
-  p.circle(x, y, m.r, M.lunar); p.circle(x - 6, y - 6, m.r - 9, M.lunarHi);
-  [[124, 76, 6], [150, 100, 8], [128, 104, 4], [156, 74, 3], [114, 92, 3]].forEach(([cx, cy, r]) => { p.circle(cx + ox, cy + oy, r, M.lunarLo); p.circle(cx + ox - 1, cy + oy - 1, Math.max(1, r - 2), M.lunar); });
-  const d = S.dome; p.rect(d.x + ox - 4, d.y + oy, 8, 4, M.trim); p.rect(d.x + ox - 2, d.y + oy - 2, 4, 2, M.trimHi); p.px(d.x + ox, d.y + oy + 1, M.warm);
-  ptext(p, 'CH 07', 120, 4, M.yellow);
-  return p;
+  moon.circle(x, y, m.r, M.lunar); moon.circle(x - 6, y - 6, m.r - 9, M.lunarHi);
+  [[124, 76, 6], [150, 100, 8], [128, 104, 4], [156, 74, 3], [114, 92, 3], [146, 82, 2], [120, 100, 2]].forEach(([cx, cy, r]) => { moon.circle(cx + ox, cy + oy, r, M.lunarLo); moon.circle(cx + ox - 1, cy + oy - 1, Math.max(1, r - 2), M.lunar); });
+  const d = S.dome; moon.rect(d.x + ox - 4, d.y + oy, 8, 4, M.trim); moon.rect(d.x + ox - 2, d.y + oy - 2, 4, 2, M.trimHi); moon.px(d.x + ox, d.y + oy + 1, M.warm);
+  return { sky, moon };
 }

@@ -90,7 +90,7 @@ export function paintMap(P, m) {
     if (c === 'r') { p.rect(px, py, T, T, P.fabric); p.rect(px, py + 7, T, 2, P.fabricLo); if (r() < 0.3) p.rect(px + r() * 10, py + r() * 10, 5, 4, P.wood); }
     if (c === ',') debris(p, P, px, py, r);
     if (c === 'b') oldBody(p, P, px, py, r, x + y);
-    if (c === 'p') { for (let i = 0; i < 7; i++) p.rect(px + 4 + r() * 8, py + 6 + r() * 6, 2, 2, i % 2 ? P.rubbleHi : P.col); }
+    if (c === 'p') { const stones = []; for (let i = 0; i < 7; i++) stones.push([Math.round(px + 4 + r() * 8), Math.round(py + 6 + r() * 6)]); p.mark('pile', px, py, { stones }); } // drawn live, so it can go
     if (c === 'o') { p.rect(px + 1, py + 1, 14, 14, P.void); for (let i = 0; i < 8; i++) p.rect(px + r() * 13, py + (i % 2 ? 0 : 13), 3, 2, P.rubble); }
     if (c === 'R') { p.ellipse(px + 8, py + 10, 7, 5, P.rubble); for (let i = 0; i < 6; i++) p.rect(px + 2 + r() * 11, py + 4 + r() * 9, 3, 2, r() < 0.5 ? P.rubbleHi : P.crack); }
     if (c === 'K') { p.rect(px, py + 2, T, 12, P.wood); p.rect(px, py + 2, T, 1, P.woodHi); for (let i = 1; i < 15; i += 2) p.rect(px + i, py + 4, 1, 8, [P.fabric, P.glass, P.gold, P.fabricLo, P.col][(i + x) % 5]); p.rect(px, py + 13, T, 1, P.crack); }

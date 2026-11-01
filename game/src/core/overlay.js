@@ -33,6 +33,26 @@ export const overlay = {
     n.textContent = text; n.classList.add('on');
     later('note', ms || 1800, () => n.classList.remove('on'));
   },
+  // An instruction panel over the game: a kicker, a title, a few lines. Any key or a click closes it.
+  panel(kicker, title, lines, accent, onClose) {
+    const p = el('panel'); if (!p) { if (onClose) onClose(); return; }
+    p.querySelector('.panel-kicker').textContent = kicker;
+    p.querySelector('.panel-title').textContent = title;
+    p.querySelector('.panel-body').replaceChildren(...lines.map(l => { const d = document.createElement('p'); d.textContent = l; return d; }));
+    if (accent) p.style.setProperty('--panel-accent', accent);
+    p.classList.add('on');
+    let done = false;
+    const close = ev => {
+      if (done || (ev && ev.repeat)) return;
+      if (ev && ev.type === 'keydown') ev.preventDefault();
+      done = true; p.classList.remove('on');
+      window.removeEventListener('keydown', close, true); p.removeEventListener('pointerdown', close);
+      if (onClose) setTimeout(onClose, 0);
+    };
+    setTimeout(() => { if (!done) { window.addEventListener('keydown', close, true); p.addEventListener('pointerdown', close); } }, 450);
+    overlay.closePanel = () => close();
+  },
+  immune(on) { const t = el('immune'); if (t) t.classList.toggle('on', !!on); },
   hint(text) { const h = el('h-hint'); if (h && h.textContent !== text) h.textContent = text || ''; },
   fade(on, ms) { const f = el('blackout'); if (!f) return; f.style.transitionDuration = (ms || 600) + 'ms'; f.classList.toggle('on', !!on); }
 };

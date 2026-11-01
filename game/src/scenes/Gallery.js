@@ -2,6 +2,7 @@
 // goes. Glasses in a sideboard drawer show what the cameras see (a chatty cleaning robot asks her
 // not to touch the drawer). A sweeping camera covers the corridor, a chandelier drops, a broken
 // camera keeps turning to look at the Moon, and a laser wakes up in the last hall.
+import { Music } from '../core/music.js';
 import { hexNum, flat, Painter } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText } from '../art/pixfont.js';
@@ -11,6 +12,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode } from '../core/side.js';
 import { goNext } from '../core/flow.js';
+import { Glasses } from '../core/glasses.js';
 
 const rgb = c => { const n = hexNum(c); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 
@@ -42,6 +44,8 @@ export class Gallery extends SideEpisode {
     this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 18, max: 55 }, angle: { min: 20, max: 160 }, gravityY: 260, lifespan: { min: 300, max: 700 }, tint: [hexNum(P.lamp), 0xffffff], emitting: false, blendMode: 'ADD' }).setDepth(6);
 
     this.glasses = false; this.hudT = 0; this.sparkT = 0; this.zapT = 2;
+    this.gl = new Glasses({ has: false });
+    this.skipPoints = [10 * TILE, 27 * TILE, 45 * TILE, 64 * TILE, 84 * TILE];
     this.robot = { x: LEVEL.robot.x0 + 40, dir: 1, line: 0, talkT: 0 };
     this.drawer = { open: 0, opening: false, fly: -1 };
     this.drop = { phase: 'hang', t: 0, y: LEVEL.dropper.hang, sway: 0 };
@@ -53,12 +57,16 @@ export class Gallery extends SideEpisode {
     this.things.push(this.cabinetThing, this.robotThing, { x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', use: () => this.enterRoom('staff') });
     this.cams = LEVEL.cameras.map(c => Object.assign({}, c, { lock: 0, cone: null, angle: 0 }));
     this.laser = { awake: false, t: 0, phase: '', n: -2, st: null };
+    // the laser's order is new every take, and its rhythm a little different: no learning it by heart
+    const order = []; for (let i = 0; i < 10; i++) { let s = Math.random() < 0.5 ? 'low' : 'high'; if (i >= 2 && order[i - 1] === s && order[i - 2] === s) s = s === 'low' ? 'high' : 'low'; order.push(s); }
+    this.laserDef = Object.assign({}, LEVEL.laser, { order, idle: LEVEL.laser.idle * (0.8 + Math.random() * 0.4), first: LEVEL.laser.first * (0.7 + Math.random() * 0.6) });
     this.drawBodies();
     this.spawn();
     this.followGirl();
     const fromCut = !!(data && data.fromCut);
     this.cameras.main.fadeIn(fromCut ? 900 : 350);
     this.beds = { lounge: Sound.lounge(0.04), wind: Sound.wind(0.0001), hum: Sound.hum(0.0001) };
+    Music.play('housedeep', { level: 0.0001 });
     this.events.once('shutdown', () => Object.values(this.beds).forEach(b => b.stop(0.4)));
     this.takeNote({ fromCut }, 2, 'The Gallery');
     window.__game = { scene: this, state };
@@ -79,7 +87,8 @@ export class Gallery extends SideEpisode {
     this.clock += dt;
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
-    if (!this.dead && !this.leaving) { this.moveKid(dt); this.updateThings(); }
+    if (!this.dead && !this.leaving) { this.moveKid(dt); this.updateThings(); if (c.glasses()) this.gl.toggle(); }
+    this.gl.update(dt);
     this.updateDrawer(dt);
     this.updateDropper(dt);
     this.updateCameras(dt);
@@ -110,10 +119,10 @@ export class Gallery extends SideEpisode {
     }
   }
   putOnGlasses() {
-    this.glasses = true; this.hudT = 0;
+    this.glasses = true; this.hudT = 0; this.gl.has = true; this.gl.on = true;
+    this.time.delayedCall(450, () => this.itemPanel('glasses'));
     const [r, g, b] = rgb(this.P.overlay); this.cameras.main.flash(220, r, g, b);
     Sound.tone(660, 0.09, 'sine', 0.03, null, 0.3); this.time.delayedCall(110, () => Sound.tone(990, 0.16, 'sine', 0.03, null, 0.3));
-    overlay.note('Glasses on', 1600);
   }
 
   // ------------------------------------------------------------------ the chandelier that drops
@@ -159,7 +168,7 @@ export class Gallery extends SideEpisode {
 
   // ------------------------------------------------------------------ the laser
   updateLaser(dt) {
-    const L = LEVEL.laser, k = this.kid, z = this.laser;
+    const L = this.laserDef, k = this.kid, z = this.laser;
     if (!z.awake) {
       if (!this.dead && k.x + k.w > L.x0 - 12) { z.awake = true; z.t = 0; Sound.tone(70, 0.9, 'sawtooth', 0.05, 140); this.beds.hum.set(0.05, 1.2); this.cameras.main.shake(160, 0.004); }
       return;
@@ -193,17 +202,19 @@ export class Gallery extends SideEpisode {
     const tex = near || talking ? 'robot_c' : Math.floor(this.clock * 4) % 2 ? 'robot_a' : 'robot_b';
     this.robotSprite.setTexture(tex).setPosition(Math.round(R.x), GROUND).setFlipX(R.dir < 0);
   }
-  robotSay(text) {
+  robotStyle() {
     // the robot speaks in its LED color, unless that is too dark to read (the ink look)
     const led = hexNum(this.P.robotLed), lum = ((led >> 16) & 255) * 0.3 + ((led >> 8) & 255) * 0.59 + (led & 255) * 0.11;
-    this.bubbles.say('robot', text, () => ({ x: this.robot.x, y: GROUND - 8 }), { ink: lum > 90 ? led : 0xe9fff2, edge: hexNum(this.P.robot), pitch: 1180 });
+    return { ink: lum > 90 ? led : 0xe9fff2, edge: hexNum(this.P.robot), pitch: 1180, leave: 64 };
   }
+  robotSay(text) { this.bubbles.say('robot', text, () => ({ x: this.robot.x, y: GROUND - 8 }), Object.assign(this.robotStyle(), { leave: 200 })); }
   robotTalk() {
     const before = ['Welcome home. Please wipe your feet.', 'You are not on the guest list. That is fine. Nobody is.', 'I have cleaned this floor 41,207 times. It was clean every time.', 'Please do not touch the drawer.', 'I did not say anything about a drawer.', 'Mind the cameras. They are very shy.'];
     const after = ['Those suit you.', 'The last one wore them too.', 'Please return them when you are done. Nobody does.', 'I will tidy up after you. I always do.'];
-    const lines = this.glasses || this.drawer.opening ? after : before, R = this.robot;
-    this.robotSay(lines[R.line % lines.length]); R.line++;
-    if (lines === before && R.line >= before.length) R.line = 1;
+    if (!this.robotSrc) this.robotSrc = { lines: () => this.glasses || this.drawer.opening ? after : before, i: 0, loop: true, from: 1 };
+    const after2 = this.glasses || this.drawer.opening;
+    if (after2 && !this.robotSrc.after) { this.robotSrc.after = true; this.robotSrc.i = 0; this.robotSrc.from = 0; }
+    this.bubbles.press('robot', this.robotSrc, () => ({ x: this.robot.x, y: GROUND - 8 }), this.robotStyle());
   }
 
   // ------------------------------------------------------------------ the door
@@ -228,6 +239,8 @@ export class Gallery extends SideEpisode {
     // the house music thins out as the rooms wear; wind comes in through the roof
     if (!this.leaving) {
       this.beds.lounge.set(0.045 * clamp(1 - (x - 30 * TILE) / (22 * TILE)) + 0.0001, 0.5);
+      // deeper in, the house's own music thins out and something lower takes over
+      const deep = clamp((x - 34 * TILE) / (20 * TILE)); if (Math.abs(deep - (this.deepLv || 0)) > 0.04) { this.deepLv = deep; Music.level(0.0001 + deep, 0.8); }
       const hc = (H.x0 + H.x1) / 2; this.beds.wind.set(0.09 * clamp(1 - Math.abs(x - hc) / 280) + 0.0001, 0.5);
     }
     this.sparkT -= dt;
@@ -262,12 +275,12 @@ export class Gallery extends SideEpisode {
     });
     // what the cameras see, once she has the glasses
     const bg = this.beamG; bg.clear();
-    if (this.glasses) this.cams.forEach(cm => this.drawView(bg, cm));
+    if (this.gl.showing) this.cams.forEach(cm => this.drawView(bg, cm));
     this.drawLocks(this.cams, LEVEL.camLock);
     this.drawLaser();
     // her glasses
     const eg = this.eyeG; eg.clear();
-    if (this.glasses && !this.dead && this.girl.visible) {
+    if (this.gl.on && !this.dead && this.girl.visible) {
       const k = this.kid, left = Math.round(k.x + k.w / 2) - 4, top = Math.round(k.y + k.h) - (k.crouch ? 9 : 14), row = k.crouch ? 1 : 2;
       eg.fillStyle(hexNum(P.overlay), 1); eg.fillRect(left + (k.face < 0 ? 1 : 4), top + row, 3, 1);
     }
@@ -313,12 +326,12 @@ export class Gallery extends SideEpisode {
   }
 
   drawLaser() {
-    const P = this.P, L = LEVEL.laser, z = this.laser, g = this.laserG, t = this.clock; g.clear();
+    const P = this.P, L = this.laserDef, z = this.laser, g = this.laserG, t = this.clock; g.clear();
     const all = [...new Set([].concat(...Object.values(L.shots)))], hz = hexNum(P.hazard);
     all.forEach(y => { g.fillStyle(hz, z.awake ? 0.6 : 0.15); g.fillRect(L.x1 - 3, y - 1, 2, 2); g.fillRect(L.x0, y - 1, 2, 2); });
     if (!z.awake || !z.st) return;
     const st = z.st, ys = L.shots[st.shot], w = L.x1 - L.x0;
-    if (st.phase === 'tell' && this.glasses) {
+    if (st.phase === 'tell' && this.gl.showing) {
       const on = Math.floor(st.f * 10) % 2 === 0, off = Math.floor(t * 40) % 6;
       ys.forEach(y => { g.fillStyle(hexNum(P.overlay), on ? 0.7 : 0.35); for (let x = L.x0 + off; x < L.x1; x += 6) g.fillRect(x, y, 3, 1); });
     } else if (st.phase === 'charge') {
@@ -334,8 +347,13 @@ export class Gallery extends SideEpisode {
   drawHud() {
     const g = this.hudG; g.clear();
     if (!this.glasses || this.done) return;
+    const P = this.P, col = hexNum(P.overlay);
+    this.gl.drawMeter(g, 18, 166, col);
+    if (!this.gl.on) { this.hudT = 0; return; }
+    this.gl.drawStatic(g, col);
+    if (!this.gl.showing) return;
     this.hudT += 1 / 60;
-    const P = this.P, col = hexNum(P.overlay), a = Math.min(0.55, this.hudT * 1.5) * (this.dead ? 0.3 : 1), s = 8, m = 5;
+    const a = Math.min(0.55, this.hudT * 1.5) * (this.dead ? 0.3 : 1), s = 8, m = 5;
     g.fillStyle(col, a);
     [[m, m, 1, 1], [320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
     if (this.hudT > 0.4) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
@@ -347,7 +365,7 @@ export class Gallery extends SideEpisode {
     if (this.leaving || this.done) return;
     if (!this.glasses && x < 26) return overlay.hint('Arrows or A/D move. Space jumps. Down crouches. E uses things and talks to things.');
     if (!this.glasses) return overlay.hint('Something in this corridor is watching you. You cannot see it yet.');
-    if (x < 26) return overlay.hint('The glasses show what the cameras see. A camera takes a moment to lock on.');
+    if (x < 26) return overlay.hint('The glasses show what the cameras see, in short looks: G puts them on and takes them off. A camera takes a moment to lock on.');
     if (x < 45) return overlay.hint('A camera sweeps the corridor. Stand under the desk while it looks your way.');
     if (x < 63) return overlay.hint('A broken camera. It keeps turning to the hole in the roof. Move while it looks away.');
     return overlay.hint('The laser shows its aim first. One low line: jump it. Two lines: crouch under them. Then Up or E at the door.');

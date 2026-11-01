@@ -4,6 +4,7 @@
 // the playroom: two kids, a giant screen, round two. The third dialogue scene (a DRAFT), two
 // clicks, and the last shot: an old TV in a dark room on Earth, showing the Moon. No end card.
 // Michael set the ending; the staging here is a first pass for him.
+import { Music } from '../core/music.js';
 import { hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText, textWidth } from '../art/pixfont.js';
@@ -15,6 +16,7 @@ import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
 import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, LOOK_SAID, lineSeconds } from '../data/dialogue.js';
+import { reviewKeys } from '../core/review.js';
 
 const n = c => hexNum(c);
 const ROOM_TEXT = [
@@ -34,7 +36,12 @@ export class Moon extends SideEpisode {
     [true, false].forEach(bun => ['back', 'cheer', 'turned'].forEach(pose => paintKid(bun, pose).toTexture(this, 'mk_' + (bun ? 'a' : 'b') + '_' + pose)));
     paintRobot(M.robotLed, 0).toTexture(this, 'mr_a'); paintRobot(M.robotLed, 1).toTexture(this, 'mr_b'); paintRobot(M.pink, 0).toTexture(this, 'mr_c');
     paintLastRoom().toTexture(this, 'mn_last');
-    this.tvBase = paintTvMoon().canvas; this.tvCanvas = document.createElement('canvas'); this.tvCanvas.width = TVSCREEN.w; this.tvCanvas.height = TVSCREEN.h; this.tvCtx = this.tvCanvas.getContext('2d');
+    const tv = paintTvMoon(); this.tvSky = tv.sky.canvas; this.tvMoonBody = tv.moon.canvas;
+    this.tvCanvas = document.createElement('canvas'); this.tvCanvas.width = TVSCREEN.w; this.tvCanvas.height = TVSCREEN.h; this.tvCtx = this.tvCanvas.getContext('2d');
+    this.moonWork = document.createElement('canvas'); this.moonWork.width = TVSCREEN.w; this.moonWork.height = TVSCREEN.h;
+    // the edge of the bite: a ragged circle, the same every time
+    this.bite = Array.from({ length: 28 }, (_, i) => 0.82 + 0.18 * Math.abs(Math.sin(i * 2.7) * Math.cos(i * 1.3)));
+    this.pieces = Array.from({ length: 26 }, (_, i) => ({ a: -2.4 + (i / 26) * 3.6 + Math.sin(i * 7) * 0.3, v: 2 + (i % 5) * 1.6, s: i % 4 === 0 ? 2 : 1, hot: i % 3 === 0, spin: i }));
     if (this.textures.exists('mn_tvlive')) this.textures.remove('mn_tvlive');
     this.tvTex = this.textures.addCanvas('mn_tvlive', this.tvCanvas);
     this.pixelCamera(LEVEL.w * TILE, M.wall);
@@ -68,7 +75,8 @@ export class Moon extends SideEpisode {
     const fromCut = !!(data && data.fromCut);
     // she steps out of the door into the light
     this.cameras.main.fadeIn(fromCut ? 2200 : 600, 255, 255, 255);
-    this.beds = { lounge: Sound.lounge(0.04), hum: Sound.hum(0.008) };
+    this.beds = { hum: Sound.hum(0.008) };
+    Music.play('moon', { fadeIn: 3 });
     this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
     this.takeNote({ fromCut }, 5, 'The Moon');
     window.__game = { scene: this, state };
@@ -78,6 +86,7 @@ export class Moon extends SideEpisode {
     const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
     this.clock += dt;
     c.restart(); // no takes up here: nothing hunts her
+    reviewKeys(this);
     if (this.mode !== 'walk') c.look(); else if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     if (this.mode === 'walk' || this.mode === 'room') { if (!this.leaving) { this.moveKid(dt); this.updateThings(); } }
@@ -92,6 +101,12 @@ export class Moon extends SideEpisode {
     c.endFrame();
   }
 
+  // review: N walks her down the corridor, into the playroom, through the talk
+  skipAhead() {
+    if (this.mode === 'walk' && !this.leaving) { const x = [10, 30, 50, 70, 79].map(v => v * TILE).find(p => p > this.kid.x + 12); if (x != null) { this.kid.x = x; return; } return this.enterDoor(); }
+    if (this.mode === 'room') { this.kid.x = LEVEL.stand; return; }
+    if (this.mode === 'talk' && this.talkI < this.lines.length - 1) { this.talkI = this.lines.length - 2; this.nextLine(); }
+  }
   updateView(dt) {
     const S = display.S, cam = this.cameras.main;
     if (this.mode === 'walk') { const k = this.kid, want = Math.max(0, Math.min(83 * TILE + TILE - 320, k.x + k.w / 2 + 18 - 160)); this.view.x += (want - this.view.x) * Math.min(1, dt * 9); }
@@ -107,17 +122,17 @@ export class Moon extends SideEpisode {
       if (this.heard.has(i) || cx < (R.x0 + R.x1) / 2 - 30) return;
       this.heard.add(i);
       const lines = MOON_OVERHEARD[i], seat = (j) => ({ x: R.x0 + 34 + j * 40, y: 88 });
-      lines.forEach((text, j) => this.time.delayedCall(j * 2600, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: n(M.wallHi), edge: n(M.adultHi), pitch: 300 + j * 80 })));
+      lines.forEach((text, j) => this.time.delayedCall(j * 2300, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: n(M.wallHi), edge: n(M.adultHi), pitch: 300 + j * 80, leave: 170, hold: 1300 })));
     });
   }
-  describe(lines, it, x, y) { const text = lines[it.n % lines.length]; it.n++; this.bubbles.say('item', text, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { edge: 0xffffff, ink: 0xffffff, pitch: 520 }); }
+  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.press('item', it, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { edge: 0xffffff, ink: 0xffffff, pitch: 520, leave: 80 }); }
   updateRobot(dt) {
     const R = this.robot, B = LEVEL.robot, k = this.kid, talking = this.bubbles.busy('robot'), near = Math.abs(R.x - (k.x + k.w / 2)) < 22;
     if (!near && !talking) { R.x += R.dir * B.speed * dt; if (R.x > B.x1) { R.x = B.x1; R.dir = -1; } if (R.x < B.x0) { R.x = B.x0; R.dir = 1; } }
     this.robotProp.x = Math.round(R.x) - 5; this.robotThing.x0 = R.x - 8; this.robotThing.x1 = R.x + 8;
     this.robotImg.setTexture(near || talking ? 'mr_c' : Math.floor(this.clock * 4) % 2 ? 'mr_a' : 'mr_b').setPosition(Math.round(R.x), GROUND).setFlipX(R.dir < 0);
   }
-  robotTalk() { const R = this.robot; this.bubbles.say('robot', MOON_ROBOT[R.line % MOON_ROBOT.length], () => ({ x: R.x, y: GROUND - 8 }), { ink: n(M.mint), edge: n(M.robotLo), pitch: 1180 }); R.line++; }
+  robotTalk() { const R = this.robot; if (!this.robotSrc) this.robotSrc = { lines: MOON_ROBOT, i: 0, loop: true }; this.bubbles.press('robot', this.robotSrc, () => ({ x: R.x, y: GROUND - 8 }), { ink: n(M.mint), edge: n(M.robotLo), pitch: 1180, leave: 64 }); }
 
   // ------------------------------------------------------------------ the playroom
   enterDoor() {
@@ -127,7 +142,7 @@ export class Moon extends SideEpisode {
     this.time.delayedCall(470, () => {
       this.mode = 'room'; this.leaving = false; this.things = [];
       const k = this.kid; k.x = KX + 40; k.y = GROUND - K.hStand; k.vx = 0; k.face = 1;
-      this.beds.lounge.set(0.0001, 0.6); this.beds.show = Sound.show(0.04);
+      Music.stop(0.6); this.beds.show = Sound.show(0.04);
       this.roomT = 0; this.updateView(0);
       this.cameras.main.fadeIn(700, 255, 255, 255);
       overlay.hint('');
@@ -152,7 +167,7 @@ export class Moon extends SideEpisode {
     // the flash: white, a sound too low to hear properly, then nothing
     this.flashRect.setAlpha(1); this.cameras.main.shake(300, 0.01);
     Sound.tone(42, 2.6, 'sine', 0.12, 30); Sound.noise(2.2, 0.16, 300);
-    Object.values(this.beds).forEach(b => b.stop(0.05));
+    Object.values(this.beds).forEach(b => b.stop(0.05)); Music.stop(0.05);
   }
   updateVest(dt) {
     this.vestT += dt;
@@ -244,28 +259,47 @@ export class Moon extends SideEpisode {
   // Drawn into the TV's own small canvas, so nothing spills past the glass.
   drawLast(t) {
     const x = this.tvCtx, S = TVSCREEN, d = { x: S.dome.x - S.x, y: S.dome.y - S.y }, m = { x: S.moon.x - S.x, y: S.moon.y - S.y };
+    const blast = Math.max(0, t - 2.4), grow = Math.min(1, blast / 1.3), R = 34 * (1 - Math.pow(1 - grow, 3));
     x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
-    x.drawImage(this.tvBase, 0, 0);
-    const blast = Math.max(0, t - 2.4), grow = Math.min(1, blast / 2.2), fade = blast > 3.4 ? Math.max(0.22, 1 - (blast - 3.4) / 4) : 1;
-    const disc = (r, rgba) => { x.fillStyle = rgba; x.beginPath(); x.arc(d.x, d.y, r, 0, Math.PI * 2); x.fill(); };
+    x.drawImage(this.tvSky, 0, 0);
+    // the Moon, with nothing where the blast touched it: the stars show through the bite
+    const w = this.moonWork.getContext('2d');
+    w.globalCompositeOperation = 'source-over'; w.clearRect(0, 0, S.w, S.h); w.drawImage(this.tvMoonBody, 0, 0);
+    if (R > 0.5) {
+      const ragged = (r) => { w.beginPath(); this.bite.forEach((k, i) => { const a = i / this.bite.length * Math.PI * 2, rr = r * (i % 2 ? k : 1); if (i) w.lineTo(d.x + Math.cos(a) * rr, d.y + Math.sin(a) * rr); else w.moveTo(d.x + Math.cos(a) * rr, d.y + Math.sin(a) * rr); }); w.closePath(); };
+      // cut the bite out completely, then heat the rim of what is left, cooling over time
+      w.globalCompositeOperation = 'destination-out'; w.fillStyle = '#000'; ragged(R); w.fill();
+      const cool = Math.min(1, Math.max(0, (blast - 2) / 14));
+      w.globalCompositeOperation = 'source-atop';
+      const rim = w.createRadialGradient(d.x, d.y, R * 0.85, d.x, d.y, R + 7);
+      rim.addColorStop(0, `rgba(255,${Math.round(210 - 120 * cool)},${Math.round(120 - 90 * cool)},${0.95 - 0.55 * cool})`); rim.addColorStop(1, 'rgba(120,30,10,0)');
+      w.fillStyle = rim; w.beginPath(); w.arc(d.x, d.y, R + 7, 0, Math.PI * 2); w.fill();
+    }
+    x.drawImage(this.moonWork, 0, 0);
     if (blast > 0) {
-      const r = 4 + grow * 70;
-      const gr = x.createRadialGradient(d.x, d.y, 0, d.x, d.y, Math.min(r * 1.5, 110));
-      gr.addColorStop(0, `rgba(255,255,255,${0.95 * fade})`); gr.addColorStop(0.25, `rgba(255,244,214,${0.7 * fade})`); gr.addColorStop(1, 'rgba(255,244,214,0)');
-      x.fillStyle = gr; x.fillRect(0, 0, S.w, S.h);
-      disc(Math.max(2, Math.min(r * 0.3, 22)), `rgba(255,255,255,${fade})`);
-      if (blast < 1.6) { x.strokeStyle = `rgba(255,255,255,${0.8 * (1 - blast / 1.6)})`; x.lineWidth = 1; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.3, L = 10 + grow * 44; x.beginPath(); x.moveTo(d.x + Math.cos(a) * 6, d.y + Math.sin(a) * 6); x.lineTo(d.x + Math.cos(a) * L, d.y + Math.sin(a) * L); x.stroke(); } }
-      // afterwards: cracks running across the Moon from where the dome was, pieces drifting off
-      if (blast > 2.6) {
-        const u = Math.min(1, (blast - 2.6) / 3);
-        x.strokeStyle = 'rgba(255,154,74,' + (0.85 * u) + ')'; x.lineWidth = 1;
-        [[[d.x, d.y + 4], [d.x - 10, d.y + 18], [d.x - 14, d.y + 30], [d.x - 26, d.y + 44]], [[d.x - 4, d.y + 2], [d.x - 22, d.y + 8], [d.x - 40, d.y + 20]], [[d.x + 2, d.y + 6], [d.x + 4, d.y + 22], [m.x + 10, m.y + 30]]].forEach(line => {
+      // the flash, then pieces of the Moon drifting away from the bite
+      const fade = blast > 1.6 ? Math.max(0, 1 - (blast - 1.6) / 2.4) : 1;
+      if (fade > 0) {
+        const gr = x.createRadialGradient(d.x, d.y, 0, d.x, d.y, 18 + grow * 80);
+        gr.addColorStop(0, `rgba(255,255,255,${0.95 * fade})`); gr.addColorStop(0.3, `rgba(255,244,214,${0.6 * fade})`); gr.addColorStop(1, 'rgba(255,244,214,0)');
+        x.fillStyle = gr; x.fillRect(0, 0, S.w, S.h);
+        if (blast < 1.2) { x.strokeStyle = `rgba(255,255,255,${0.8 * (1 - blast / 1.2)})`; x.lineWidth = 1; for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + 0.3, L = 10 + grow * 50; x.beginPath(); x.moveTo(d.x + Math.cos(a) * 6, d.y + Math.sin(a) * 6); x.lineTo(d.x + Math.cos(a) * L, d.y + Math.sin(a) * L); x.stroke(); } }
+      }
+      const life = blast - 0.4;
+      if (life > 0) this.pieces.forEach(pc => {
+        const dist = R * 0.6 + life * pc.v, px = d.x + Math.cos(pc.a) * dist, py = d.y + Math.sin(pc.a) * dist * 0.9;
+        x.fillStyle = pc.hot && life < 9 ? `rgba(255,${Math.round(150 + 60 * Math.sin(life * 3 + pc.spin))},80,${Math.max(0.3, 1 - life / 12)})` : M.lunarHi;
+        x.fillRect(Math.round(px), Math.round(py), pc.s, pc.s);
+      });
+      // cracks running out from the bite across what is left
+      if (blast > 1.4) {
+        const u = Math.min(1, (blast - 1.4) / 3), cool = Math.min(1, Math.max(0, (blast - 4) / 12));
+        x.strokeStyle = `rgba(255,${Math.round(154 - 90 * cool)},74,${0.85 - 0.45 * cool})`; x.lineWidth = 1;
+        [[[d.x - 20, d.y + 18], [d.x - 26, d.y + 30], [d.x - 38, d.y + 44]], [[d.x - 26, d.y + 6], [d.x - 40, d.y + 12], [d.x - 54, d.y + 24]], [[d.x - 8, d.y + 26], [d.x - 6, d.y + 40], [m.x + 4, m.y + 30]]].forEach(line => {
           x.beginPath(); x.moveTo(line[0][0], line[0][1]);
           for (let i = 1; i < line.length; i++) { const v = Math.max(0, Math.min(1, u * line.length - i + 1)); if (v <= 0) break; const [ax, ay] = line[i - 1], [bx, by] = line[i]; x.lineTo(ax + (bx - ax) * v, ay + (by - ay) * v); }
           x.stroke();
         });
-        for (let i = 0; i < 16; i++) { const a = i * 0.9, dist = 8 + (blast - 2.6) * (3 + (i % 4) * 2); x.fillStyle = i % 3 ? M.lunarHi : M.fire; x.globalAlpha = Math.max(0, 1 - (blast - 2.6) / 40); x.fillRect(Math.round(d.x + Math.cos(a) * dist), Math.round(d.y + Math.sin(a) * dist * 0.8), 1, 1); }
-        x.globalAlpha = 1;
       }
     }
     // scanlines and the picture's own flicker

@@ -34,6 +34,9 @@ export function makeControls(scene) {
     useHeld: () => K.e.isDown,
     run: () => K.shift.isDown,
     throwP: () => take(KC.F),
+    glasses: () => take(KC.G),
+    immune: () => take(KC.I),
+    skipAhead: () => take(KC.N),
     endFrame: () => pressed.clear()
   };
 }

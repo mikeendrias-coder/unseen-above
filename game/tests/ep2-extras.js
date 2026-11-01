@@ -10,14 +10,20 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   const shot = name => p.screenshot({ path: `tests/out/e2-${name}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
   const press = async key => { await p.keyboard.down(key); await p.waitForTimeout(120); await p.keyboard.up(key); };
-  await p.addInitScript(() => { try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: 'A', episodes: {}, seenIntro: true })); } catch (e) {} });
+  await p.addInitScript(() => { window.__noPanels = true; try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: 'A', episodes: {}, seenIntro: true })); } catch (e) {} });
   await p.goto(BASE + '/local.html#gallery'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'gallery' && window.__game.scene.clock > 0.8);
   // the robot
   await p.evaluate(() => { const s = window.__game.scene; s.robot.x = 120; s.kid.x = 106; s.kid.y = 146; s.kid.face = 1; });
   await until(() => window.__game.scene.nearThing === window.__game.scene.robotThing);
-  for (let i = 0; i < 4; i++) { await press('KeyE'); await p.waitForTimeout(i === 3 ? 1600 : 500); }
-  await shot('robot'); ok('the robot talks: line ' + await p.evaluate(() => window.__game.scene.robot.line), await p.evaluate(() => window.__game.scene.robot.line === 4));
+  // E shows a line; E while it types finishes it; E again moves to the next line
+  for (let i = 0; i < 4; i++) { await press('KeyE'); await p.waitForTimeout(i === 3 ? 900 : 450); }
+  await shot('robot'); ok('the robot talks, and E steps through its lines (' + await p.evaluate(() => window.__game.scene.robotSrc.i) + ' shown)', await p.evaluate(() => window.__game.scene.robotSrc.i >= 2 && window.__game.scene.bubbles.busy('robot')));
+  // walking away closes the bubble
+  await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 230; });
+  await p.waitForTimeout(450);
+  ok('walking away closes the robot\u2019s bubble', await p.evaluate(() => !window.__game.scene.bubbles.list.has('robot')));
+  await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 106; });
   // the drawer
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 14 * 16 + 4; s.kid.y = 146; });
   await until(() => window.__game.scene.nearThing === window.__game.scene.cabinetThing);
@@ -26,7 +32,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.glasses); ok('the drawer gives up the glasses', true);
   await p.waitForTimeout(900); await shot('glasses-on');
   // the staff room and back
-  await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 8 * 16 + 4; s.kid.y = 146; });
+  await p.evaluate(() => { const s = window.__game.scene; s.robot.x = 205; s.robot.dir = 1; s.kid.x = 8 * 16 + 4; s.kid.y = 146; });
   await until(() => { const s = window.__game.scene; return s.nearThing && s.nearThing.label === 'E' && s.nearThing !== s.cabinetThing; });
   await press('KeyE');
   await until(() => window.__game.scene.sys.settings.key === 'room' && window.__game.scene.clock > 0.5);

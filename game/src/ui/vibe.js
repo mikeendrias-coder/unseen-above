@@ -2,6 +2,7 @@
 // through them shows the grounds live in each one, with static between channels. Whoever picks
 // the look is doing what the kids at home do, which is the point. Painted with the game's own
 // painter, before the game starts.
+import { Music } from '../core/music.js';
 import { LOOKS, LOOK_KEYS } from '../art/palettes.js';
 import { flat } from '../art/painter.js';
 import { paintSky, paintMoon, paintLevel } from '../art/estate.js';
@@ -61,6 +62,7 @@ export function initPicker(onBegin) {
     const k = LOOK_KEYS[current]; state.setLook(k);
     buttons.forEach((b, j) => b.setAttribute('aria-selected', j === current ? 'true' : 'false'));
     tv.style.setProperty('--sel', accent(k)); tv.style.setProperty('--glow', glow(k) + '40');
+    if (gestured && !Music.playing) Music.play('menu');
     if (gestured && !quiet) { Sound.ensure(); Sound.noise(0.12, 0.03, 6000); Sound.tone(392 * Math.pow(2, current / 5), 0.12, 'triangle', 0.02); }
   }
   pick(current, true);

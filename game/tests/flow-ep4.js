@@ -11,7 +11,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   const put = x => p.evaluate(x => { const s = window.__game.scene, k = s.kid; k.x = x; k.y = 160 - 14; k.h = 14; k.crouch = false; k.vx = 0; k.vy = 0; }, x);
   const fresh = take => until(t => { const s = window.__game.scene; return s && s.sys.settings.key === 'bedroom' && s.ep.take === t && !s.dead && s.clock > 0.4; }, take);
-  await p.addInitScript(() => { try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
+  await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html#bedroom'); await p.click('#start');
   await fresh(1);
   ok('episode 4 opens in the dark (a dark layer over the house)', await p.evaluate(() => !!window.__game.scene.darkImg && window.__game.scene.mode === 'house'));

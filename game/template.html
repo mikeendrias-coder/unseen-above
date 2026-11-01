@@ -74,7 +74,16 @@
   .jump b { color: var(--ink); font-weight: 600; }
   .jump a { color: var(--ink-quiet); text-decoration: underline; text-decoration-color: var(--ink-quiet); text-underline-offset: 3px; }
   .jump a:hover, .jump a:focus-visible { color: var(--accent); text-decoration-color: var(--accent); }
-  @media (prefers-reduced-motion: reduce) { #cc, #card, #bug, #note, #blackout { transition: none; } }
+  /* an instruction panel when she gains something */
+  #panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -44%); width: min(64%, 600px); background: rgba(6, 6, 10, 0.95); border: 1px solid var(--panel-accent, #6fe3ff); box-shadow: 0 0 0 calc(var(--u) * 1.2) rgba(0, 0, 0, 0.55); padding: calc(var(--u) * 5) calc(var(--u) * 6) calc(var(--u) * 4); opacity: 0; transition: opacity 160ms, transform 160ms; pointer-events: none; text-align: left; }
+  #panel.on { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer; }
+  .panel-kicker { font-size: calc(var(--u) * 3.1); letter-spacing: 0.42em; color: var(--panel-accent, #6fe3ff); font-weight: 600; }
+  .panel-title { font-size: calc(var(--u) * 7); font-weight: 600; letter-spacing: 0.08em; margin: 0.2em 0 0.5em; color: var(--cc-ink); }
+  .panel-body p { margin: 0 0 0.55em; font-size: calc(var(--u) * 4); line-height: 1.5; color: #e9e6dc; max-width: 46ch; }
+  .panel-key { margin-top: 0.9em; padding-top: 0.7em; border-top: 1px solid rgba(255, 255, 255, 0.14); font-size: calc(var(--u) * 3); color: var(--ink-quiet); letter-spacing: 0.12em; text-transform: uppercase; }
+  #immune { position: absolute; top: 3%; left: 50%; transform: translateX(-50%); font-size: calc(var(--u) * 3); letter-spacing: 0.3em; color: #ff8a7a; background: rgba(0, 0, 0, 0.6); padding: 0.25em 0.8em; opacity: 0; }
+  #immune.on { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { #cc, #card, #bug, #note, #blackout, #panel { transition: none; } }
 </style>
 <header id="chrome-top">
   <h1>Unseen Above</h1>
@@ -87,6 +96,8 @@
     <div id="cc"></div>
     <div id="bug"></div>
     <div id="note"></div>
+    <div id="panel" role="dialog" aria-live="assertive"><div class="panel-kicker">NEW</div><div class="panel-title"></div><div class="panel-body"></div><div class="panel-key">Any key or a click to go on</div></div>
+    <div id="immune">IMMUNE · N SKIPS AHEAD</div>
   </div>
   <div id="tv">
     <div class="tv-screen"><canvas id="tv-canvas" width="320" height="180" aria-label="A preview of the chosen look"></canvas></div>
@@ -108,11 +119,15 @@
     <li><b>Jump</b> Space</li>
     <li><b>Crouch</b> Down</li>
     <li><b>Door</b> Up or E</li>
+    <li><b>Use, talk</b> E</li>
+    <li><b>Glasses</b> G</li>
+    <li><b>Throw</b> F or click</li>
     <li><b>Restart episode</b> R</li>
     <li><b>Switch look</b> L</li>
     <li><b>Sound</b> M</li>
     <li><b>Skip the opening</b> Esc</li>
     <li><b>Satellite</b> drag with the mouse · K previews later screens</li>
+    <li><b>Immunity, for review</b> I · then N skips ahead</li>
   </ul>
   <nav class="jump" aria-label="Jump to a part">
     <b>Jump to</b>

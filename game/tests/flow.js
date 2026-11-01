@@ -14,7 +14,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const cardOn = top => until(t => document.querySelector('#card').classList.contains('on') && document.querySelector('.card-top').textContent === t, top);
   const fresh = () => until(() => { const s = window.__game.scene; return s.kid && !s.dead && s.clock > 0.3; });
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
-  await p.addInitScript(() => { try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
+  await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html');
   await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.T);
@@ -47,7 +47,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.down('KeyE'); await p.waitForTimeout(150); await p.keyboard.up('KeyE');
   await until(() => window.__game.scene.glasses); ok('the drawer gives up the glasses', true);
   // a laser death: stand in the hall during a low shot
-  await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 1150; s.kid.y = 146; s.kid.vy = 0; s.laser.awake = true; window.__laserT = 2.6; });
+  await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 1150; s.kid.y = 146; s.kid.vy = 0; s.laser.awake = true; const L = s.laserDef || { first: 1.2, tell: 0.7, charge: 0.5 }; window.__laserT = L.first + L.tell + L.charge + 0.1; });
   await until(() => window.__game.scene.ep.take === 2);
   await p.evaluate(() => { window.__laserT = null; });
   await until(() => window.__game.scene.bodyLayer && window.__game.scene.bodyLayer.list.length === 1 && !window.__game.scene.dead);

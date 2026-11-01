@@ -2,6 +2,8 @@
 // engineer's back end to a kids' game show: routing (batch 1), a sorting shift (batch 2), routing
 // with a reveal at the end (batch 3), a game show finale (batch 4). Every screen celebrates a
 // solved board its own way, and every win plays the laser's charging sound.
+import { Music } from '../core/music.js';
+import { reviewKeys } from '../core/review.js';
 import Z from '../core/zip-logic.js';
 import LEVELS from '../data/routing-levels.json';
 import { pixText, textWidth } from '../art/pixfont.js';
@@ -58,6 +60,11 @@ export class Satellite extends Phaser.Scene {
     } else { cam.setViewport(0, 0, 1, 1); this.auto = { i: 0, t: -(data.autoDelay || 0), every: data.autoEvery || 0.2 }; this.roundN = data.round || 1; }
     this.scale.on('rescale', this.onRescale, this);
     this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
+    // music per screen; the game show screen plays the same show tune the kids hear
+    if (!this.embedded) {
+      if (this.skinN === 4) { Music.stop(0.8); this.showBed = Sound.show(0.03); this.events.once('shutdown', () => this.showBed.stop(0.6)); }
+      else Music.play('sat' + Math.min(3, this.skinN));
+    }
     if (this.mode === 'sort') {
       // the sorting shift stands in for a level list; the HUD reads its progress
       this.level = { w: 6, h: 6, id: 'sort' }; this.board = { n: 1 }; this.path = []; this.checkpoints = []; this.cs = 22; this.bx = 170; this.by = 24;
@@ -134,6 +141,8 @@ export class Satellite extends Phaser.Scene {
   }
   flashBad(i) { this.badIdx = i; Sound.tone(160, 0.12, 'square', 0.02); this.time.delayedCall(260, () => { this.badIdx = -1; }); }
 
+  // review: N solves the puzzle on the screen
+  skipAhead() { if (!this.ended && !this.solved) this.win(); }
   win() {
     if (this.mode === 'sort') { this.sorter.finishRound(); return; }
     this.solved = true; this.drawing = false;
@@ -191,6 +200,7 @@ export class Satellite extends Phaser.Scene {
     this.clock += dt;
     if (this.embedded) { this.autoStep(dt); this.drawLive(); this.drawBoard(); this.winFx.update(dt, this.K); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
+    reviewKeys(this);
     if (c.nextScreen()) {
       const next = this.skinN % 4 + 1; overlay.note('Screen ' + next + ' · ' + SKINS[next].name, 1600);
       this.scene.restart({ batch: this.batch, skin: next, quiet: true, score: this.score, preview: true });

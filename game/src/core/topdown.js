@@ -11,6 +11,8 @@ import { LOOKS } from '../art/palettes.js';
 import { Painter, hexNum, flat } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
+import { reviewKeys, syncImmunity } from './review.js';
+import { itemPanel } from './panels.js';
 
 export const T = 16;
 export const LOCK_TD = 0.5;
@@ -36,12 +38,13 @@ export function makeTopSprites(scene, P) {
 export class TopDownEpisode extends Phaser.Scene {
   // level: { W, H, solid(x, y), start: [tx, ty] }
   initTop(id, level) {
+    syncImmunity();
     this.P = LOOKS[state.look];
     this.epId = id; this.ep = state.episode(id);
     this.level = level;
     this.ctl = makeControls(this);
     this.clock = 0; this.dead = false; this.leaving = false; this.done = false;
-    this.noises = []; this.flight = null; this.pebbles = 0; this.things = []; this.nearThing = null; this.sources = []; this.satX = null;
+    this.noises = []; this.flight = null; this.pebbles = 0; this.things = []; this.nearThing = null; this.sources = []; this.satX = null; this.floorPebbles = [];
     this.lights = []; this.par = [];
     this.scale.on('rescale', this.onRescale, this);
     this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
@@ -67,6 +70,7 @@ export class TopDownEpisode extends Phaser.Scene {
     this.fxG = this.add.graphics().setDepth(7.5);
     this.strikeFx = new SatelliteStrike(this, { depth: 8 });
     this.bubbles = new Bubbles(this, 9);
+    this.bubbles.player = () => this.kid ? this.kidPx() : null;
   }
 
   // ------------------------------------------------------------------ the girl
@@ -132,7 +136,35 @@ export class TopDownEpisode extends Phaser.Scene {
     f.t += dt; const u = Math.min(1, f.t / f.dur);
     const gx = (f.sx + (f.ex - f.sx) * u) * T + 8, gy = (f.sy + (f.ey - f.sy) * u) * T + 8, z = 4 * 12 * u * (1 - u);
     this.pebbleImg.setVisible(true).setPosition(Math.round(gx), Math.round(gy - z));
-    if (u >= 1) { this.flight = null; Sound.tone(1600, 0.03, 'square', 0.02); Sound.noise(0.08, 0.05, 4000); this.noise(f.ex, f.ey, 4, 'pebble'); }
+    if (u >= 1) {
+      this.flight = null; Sound.tone(1600, 0.03, 'square', 0.02); Sound.noise(0.08, 0.05, 4000);
+      // it stays where it lands; E picks it up again
+      const fp = { x: f.ex, y: f.ey, dx: Math.round((Math.random() - 0.5) * 6), dy: Math.round((Math.random() - 0.5) * 6) };
+      fp.thing = { tx: f.ex, ty: f.ey, reach: 1, label: 'E', use: () => this.pickPebble(fp) };
+      this.floorPebbles.push(fp); this.things.push(fp.thing);
+      this.noise(f.ex, f.ey, 4, 'pebble');
+    }
+  }
+
+  pickPebble(fp) {
+    this.floorPebbles = this.floorPebbles.filter(q => q !== fp); fp.thing.off = true;
+    this.pebbles++; Sound.tone(500, 0.06, 'triangle', 0.02);
+  }
+  // the satellite answers a noise it can see by shooting at it: a pebble on the floor
+  strikeAt(fp) {
+    if (this.strikeFx.busy || this.dead) return false;
+    const x = fp.x * T + 8 + fp.dx, y = fp.y * T + 8 + fp.dy;
+    this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: x, ty: y, P: this.P, small: true, onImpact: () => {
+      this.floorPebbles = this.floorPebbles.filter(q => q !== fp); if (fp.thing) fp.thing.off = true;
+      this.scorches = (this.scorches || []).concat([{ x, y, t: 0 }]);
+      Sound.tone(1400, 0.1, 'sawtooth', 0.03, 300); Sound.noise(0.25, 0.1); this.cameras.main.shake(90, 0.004);
+    } });
+    return true;
+  }
+  drawFloorPebbles(g, dt) {
+    this.floorPebbles.forEach(fp => { const x = fp.x * T + 8 + fp.dx, y = fp.y * T + 8 + fp.dy; g.fillStyle(hexNum(this.P.rubbleHi), 1); g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); g.fillStyle(hexNum(this.P.colHi), 1); g.fillRect(x, y, 1, 1); });
+    this.scorches = (this.scorches || []).filter(s => (s.t += dt) < 6);
+    this.scorches.forEach(s => { const a = 1 - s.t / 6; g.fillStyle(0x000000, 0.5 * a); g.fillCircle(s.x, s.y, 3); g.fillStyle(hexNum(this.P.hazard), 0.5 * a * a); g.fillRect(s.x - 1, s.y - 1, 2, 2); });
   }
 
   // ------------------------------------------------------------------ cones and the lock
@@ -200,6 +232,10 @@ export class TopDownEpisode extends Phaser.Scene {
   }
   // A side room behind an optional door, as in the side-view episodes: this scene sleeps and
   // wakes where she left it.
+  itemPanel(kind) { return itemPanel(this, kind); }
+  reviewKeys() { return reviewKeys(this); }
+  // review: put her on a tile
+  placeTile(x, y) { const k = this.kid; k.tx = k.fx = x; k.ty = k.fy = y; k.p = 1; k.moving = false; this.camX = x * T + 8; this.camY = y * T + 8; }
   enterRoom(id) {
     if (this.leaving || this.dead) return;
     this.leaving = true;

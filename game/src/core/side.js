@@ -9,6 +9,8 @@ import { LOOKS } from '../art/palettes.js';
 import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
+import { reviewKeys, syncImmunity } from './review.js';
+import { itemPanel } from './panels.js';
 
 export const TILE = 16;
 export const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2 };
@@ -28,6 +30,29 @@ export class SideEpisode extends Phaser.Scene {
     this.things = []; // things she can use with E
     this.scale.on('rescale', this.onRescale, this);
     this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
+    syncImmunity();
+  }
+  itemPanel(kind) { return itemPanel(this, kind); }
+  // Review: with immunity on, N moves her to the next of this.skipPoints (x positions).
+  skipAhead() {
+    const k = this.kid, pts = this.skipPoints || []; if (!k || this.dead || this.leaving) return;
+    const x = pts.find(p => p > k.x + 12); if (x == null) return;
+    this.placeAt(x);
+  }
+  // put her standing on the floor at x (the first floor found going down)
+  placeAt(x) {
+    const k = this.kid, tx = Math.floor((x + k.w / 2) / TILE);
+    let y = 160;
+    for (let ty = 1; ty < this.map.H; ty++) if (this.solidTile(tx, ty) && !this.solidTile(tx, ty - 1)) { y = ty * TILE; break; }
+    k.x = x; k.h = K.hStand; k.crouch = false; k.y = y - k.h; k.vx = 0; k.vy = 0;
+  }
+  // immune and falling out of the world: back onto the nearest floor
+  rescue() {
+    const k = this.kid;
+    for (let d = 0; d < 400; d += 4) for (const s of [1, -1]) {
+      const x = k.x + s * d, tx = Math.floor((x + k.w / 2) / TILE);
+      if (tx > 0 && tx < this.map.W - 1 && this.solidTile(tx, 10) && !this.solidTile(tx, 9)) { this.placeAt(x); return; }
+    }
   }
   pixelCamera(worldW, bg) {
     const cam = this.cameras.main;
@@ -44,11 +69,14 @@ export class SideEpisode extends Phaser.Scene {
   commonLayers() {
     const P = this.P;
     this.bodyLayer = this.add.layer().setDepth(2);
+    this.shadowG = this.add.graphics().setDepth(3.9);
     this.girl = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1).setDepth(4);
+    this.puffs = this.add.particles(0, 0, 'dot', { speedX: { min: -22, max: 22 }, speedY: { min: -14, max: -3 }, gravityY: 30, lifespan: { min: 260, max: 520 }, alpha: { start: 0.7, end: 0 }, tint: [hexNum(P.dust), hexNum(P.colLo)], emitting: false }).setDepth(4.2);
     this.beamG = this.add.graphics().setDepth(5).setBlendMode(Phaser.BlendModes.ADD);
     this.fxG = this.add.graphics().setDepth(7);
     this.strikeFx = new SatelliteStrike(this, { depth: 8 });
     this.bubbles = new Bubbles(this, 9);
+    this.bubbles.player = () => this.kid ? { x: this.kid.x + this.kid.w / 2, y: this.kid.y } : null;
     this.burst = this.add.particles(0, 0, 'dot2', { speed: { min: 25, max: 95 }, lifespan: { min: 260, max: 560 }, scale: { start: 1, end: 0 }, tint: [0xffffff, hexNum(P.lamp), hexNum(P.hazard)], emitting: false }).setDepth(8);
   }
   drawBodies() {
@@ -116,7 +144,7 @@ export class SideEpisode extends Phaser.Scene {
     // move a pixel at a time, so props off the tile grid stop her exactly where they are
     let dx = k.vx * dt;
     while (dx !== 0) { const st = Math.abs(dx) >= 1 ? Math.sign(dx) : dx; if (this.boxHits(k.x + st, k.y, k.w, k.h)) { k.vx = 0; break; } k.x += st; dx -= st; }
-    let dy = k.vy * dt; k.onGround = false;
+    let dy = k.vy * dt; const wasAir = !k.onGround, fallV = k.vy; k.onGround = false;
     while (dy !== 0) {
       const st = Math.abs(dy) >= 1 ? Math.sign(dy) : dy;
       if (this.boxHits(k.x, k.y + st, k.w, k.h)) {
@@ -128,6 +156,8 @@ export class SideEpisode extends Phaser.Scene {
       k.y += st; dy -= st;
     }
     if (!k.onGround && k.vy >= 0 && this.boxHits(k.x, k.y + 0.5, k.w, k.h)) k.onGround = true;
+    // a little dust where she lands
+    if (wasAir && k.onGround && fallV > 140 && this.puffs) this.puffs.explode(Math.min(9, 3 + Math.round(fallV / 60)), k.x + k.w / 2, k.y + k.h - 1);
     k.walkT = k.onGround && Math.abs(k.vx) > 8 ? k.walkT + dt : 0;
     if (this.atDoor() && (c.interact() || c.up())) this.enterDoor();
   }
@@ -181,6 +211,7 @@ export class SideEpisode extends Phaser.Scene {
   // Mute, switch look, restart. Returns true when the scene is restarting.
   commonKeys() {
     const c = this.ctl;
+    reviewKeys(this);
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return true; }
     if (c.restart() && !this.leaving && !this.done) { this.restartTake(); return true; }
@@ -192,6 +223,14 @@ export class SideEpisode extends Phaser.Scene {
     const k = this.kid;
     const tex = k.crouch ? 'girl_crouch' : !k.onGround ? 'girl_jump' : (k.walkT > 0 && Math.floor(k.walkT * 9) % 2) ? 'girl_pass' : 'girl_stand';
     this.girl.setTexture(tex).setPosition(Math.round(k.x + k.w / 2), Math.round(k.y + k.h)).setFlipX(k.face < 0);
+    // her shadow on whatever is under her, smaller the higher she is
+    const sg = this.shadowG; if (!sg) return; sg.clear();
+    if (!this.girl.visible || this.dead) return;
+    const cx = k.x + k.w / 2; let gy = null;
+    for (let d = 0; d < 48; d++) if (this.solidPx(cx, k.y + k.h + d)) { gy = k.y + k.h + d; break; }
+    if (gy == null) return;
+    const h = gy - (k.y + k.h), w = Math.max(2, 7 - h / 6);
+    sg.fillStyle(0x000000, Math.max(0.08, 0.32 - h / 120) * this.girl.alpha); sg.fillEllipse(Math.round(cx), Math.round(gy), w * 2, 2);
   }
   // Soft layered cone, red as it locks on.
   drawCone(g, src, base, color, limit) {

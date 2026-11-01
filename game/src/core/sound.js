@@ -164,8 +164,12 @@ export const Sound = (() => {
     return { stop: secs => fadeStop(g, [s, lfo], secs), set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
   };
 
+  // a bus for the music, through the master (so M mutes it too) and a little of the room
+  const bus = () => { const c = ensure(); if (!c) return null; const g = c.createGain(); g.gain.value = 1; out(g, 0.18); return g; };
+
   return {
-    ensure, tone, noise, wind, lounge, swell, hum, show, breath, rumble,
+    ensure, tone, noise, wind, lounge, swell, hum, show, breath, rumble, bus,
+    get ctx() { return ctx; },
     // a clock's bell, one stroke
     bell: vol => { const v = vol || 0.05; tone(196, 2.4, 'sine', v, null, 0.6); tone(392.5, 1.7, 'sine', v * 0.45, null, 0.6); tone(588, 1.1, 'triangle', v * 0.2, null, 0.6); tone(98, 2.8, 'sine', v * 0.5); },
     // a flash camera: a click before, the shutter and the whine of the flash

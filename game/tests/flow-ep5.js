@@ -11,7 +11,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   const key = () => p.evaluate(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key);
   const solveBatch = async () => { for (let i = 0; i < 3; i++) { await until(() => !window.__game.scene.solved); await p.evaluate(() => window.__game.scene.win()); await until(i => window.__game.scene.levelIdx > i || window.__game.scene.ended, i); } };
-  await p.addInitScript(() => { try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
+  await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html#batch4'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'satellite' && window.__game.scene.batch === 4);
   await solveBatch();

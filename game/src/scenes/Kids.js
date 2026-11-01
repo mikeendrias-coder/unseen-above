@@ -3,6 +3,7 @@
 // live feed from Earth, where a girl is struck the moment the same charge sound plays. The next
 // take walks in. The game asks if they are ready for round two. Michael described this beat;
 // the staging here is a first pass for him to approve or change.
+import { Music } from '../core/music.js';
 import { LOOKS } from '../art/palettes.js';
 import { hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
@@ -16,6 +17,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { goNext } from '../core/flow.js';
+import { reviewKeys } from '../core/review.js';
 
 const TV = { x: 500, y: 110, w: 640, h: 360 };
 const X0 = 440; // the feed shows the garden from this x
@@ -115,6 +117,7 @@ export class Kids extends Phaser.Scene {
 
     this.t = 0; this.fired = {}; this.solvedAt = null; this.over = false;
     this.beds = { show: Sound.show(0.045), hum: Sound.hum(0.0001) };
+    Music.stop(0.8);
     this.scene.launch('satellite', { embed: true, batch: 4, skin: 4, ids: ['walls'], autoDelay: 1.5, autoEvery: 0.2, round: 3, score: 2400 });
     this.sat = this.scene.get('satellite');
     this.onSolved = () => { if (this.solvedAt == null) this.solvedAt = this.t; };
@@ -131,6 +134,7 @@ export class Kids extends Phaser.Scene {
     window.__game = { scene: this, T };
   }
 
+  skipAhead() { if (this.inFlow) { if (!goNext(this, 'kids')) this.scene.start('intro', {}); } else this.t = Math.max(this.t, T.black); }
   cue(key, at, fn) { if (this.t >= at && !this.fired[key]) { this.fired[key] = true; fn(); } }
 
   update(time, delta) {
@@ -138,6 +142,7 @@ export class Kids extends Phaser.Scene {
     this.t += dt;
     const t = this.t;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
+    if (reviewKeys(this)) { c.endFrame(); return; }
     if (c.skip()) { if (this.inFlow) { if (!goNext(this, 'kids')) this.scene.start('intro', {}); } else this.scene.start('intro', {}); return; }
     if (this.over && c.advance()) { this.scene.restart(); return; }
     this.script(t);

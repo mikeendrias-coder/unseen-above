@@ -1,12 +1,14 @@
 // Side rooms behind optional doors: one screen, no hazards, things to look at with E. The
 // episode sleeps while she is inside and wakes where she left it. Clues live here, never
 // anything she needs to finish.
+import { Music } from '../core/music.js';
 import { Painter, rng, hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode } from '../core/side.js';
+import { reviewKeys } from '../core/review.js';
 import { paintWardrobe } from '../art/bedroom.js';
 
 const G = 160;
@@ -172,7 +174,7 @@ export class Room extends SideEpisode {
     this.spawn(40); this.kid.face = 1;
     R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'E', noPrompt: false, use: () => this.describe(it) }); });
     this.things.push({ x0: 18, x1: 34, y0: G - 30, y1: G, label: 'E', use: () => this.leave() });
-    this.hum = Sound.hum(0.02);
+    this.hum = Sound.hum(0.02); Music.level(0.45, 0.5);
     this.events.once('shutdown', () => { this.hum.stop(0.2); overlay.hint(''); });
     this.cameras.main.fadeIn(300);
     overlay.hint('E looks at things. E at the door goes back.');
@@ -180,13 +182,14 @@ export class Room extends SideEpisode {
   }
 
   describe(it) {
-    const raw = it.text[it.n % it.text.length], text = typeof raw === 'function' ? raw(this.take) : raw;
-    it.n++;
-    this.bubbles.say('item', text, () => ({ x: Math.max(60, Math.min(260, (it.x0 + it.x1) / 2)), y: it.y }), { edge: 0xffffff, ink: 0xffffff, pitch: 520 });
+    if (!it.src) it.src = { lines: () => it.text.map(raw => typeof raw === 'function' ? raw(this.take) : raw) };
+    this.bubbles.press('item', it.src, () => ({ x: Math.max(60, Math.min(260, (it.x0 + it.x1) / 2)), y: it.y }), { edge: 0xffffff, ink: 0xffffff, pitch: 520, leave: 70 });
   }
 
+  skipAhead() { this.leave(); }
   leave() {
     if (this.leaving) return;
+    Music.level(1, 0.8);
     this.leaving = true; Sound.tone(300, 0.08, 'triangle', 0.02);
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.time.delayedCall(260, () => { this.scene.wake(this.from); this.scene.stop(); });
@@ -196,6 +199,7 @@ export class Room extends SideEpisode {
     const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
     this.clock += dt;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
+    reviewKeys(this);
     if (!this.leaving) { this.moveKid(dt); this.updateThings(); }
     this.drawGirl();
     const g = this.roomFx; g.clear();

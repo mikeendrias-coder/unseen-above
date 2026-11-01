@@ -10,7 +10,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   const press = async (key, ms) => { await p.keyboard.down(key); await p.waitForTimeout(ms || 120); await p.keyboard.up(key); };
   const put = (x, y) => p.evaluate(([x, y]) => { const s = window.__game.scene, k = s.kid; k.tx = k.fx = x; k.ty = k.fy = y; k.p = 1; k.moving = false; s.camX = x * 16 + 8; s.camY = y * 16 + 8; }, [x, y]);
-  await p.addInitScript(() => { try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
+  await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html#fall'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'fall' && window.__game.scene.clock > 0.6);
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 16 * 16; s.kid.y = 128 - 14; s.kid.vy = 0; });
@@ -20,6 +20,20 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await press('KeyE'); await until(() => window.__game.scene.pebbles === 5); ok('five pebbles from the pile', true);
   await p.evaluate(() => { window.__game.scene.kid.face = 'up'; }); await press('KeyF'); await until(() => window.__game.scene.pebbles === 4 && !window.__game.scene.flight);
   ok('a thrown pebble makes a noise', await p.evaluate(() => window.__game.scene.noises.length > 0 || true));
+  ok('the pile is gone once she takes it', await p.evaluate(() => window.__game.scene.pileTaken && window.__game.scene.pileThing.off));
+  await until(() => window.__game.scene.floorPebbles.length === 1, null, 4000);
+  ok('the thrown pebble stays where it landed', true);
+  // a pebble thrown into a sensor's reach: the satellite shoots the pebble, not her
+  await p.evaluate(() => { window.__noDeath = true; });
+  await put(14, 22); await p.evaluate(() => { window.__game.scene.kid.face = 'right'; window.__game.scene.sensors.forEach(s => { s.cool = 0; }); });
+  await press('KeyF');
+  await until(() => window.__game.scene.strikeFx.busy, null, 5000);
+  const tgt = await p.evaluate(() => { const s = window.__game.scene, sh = s.strikeFx.shot, e = sh.paths[0].pts[sh.paths[0].pts.length - 1]; return { x: Math.round(e.x), y: Math.round(e.y), kx: Math.round(s.kidPx().x), style: sh.style }; });
+  ok('a sensor sees the pebble and the satellite fires at it (' + tgt.style + ', at x ' + tgt.x + ', she is at x ' + tgt.kx + ')', Math.abs(tgt.x - tgt.kx) > 20);
+  await until(() => !window.__game.scene.strikeFx.busy, null, 5000);
+  ok('the pebble it hit is gone', await p.evaluate(() => window.__game.scene.floorPebbles.length === 1));
+  await p.evaluate(() => { window.__noDeath = false; });
+  await until(() => window.__game.scene.sensors.every(s => s.cool <= 0), null, 6000); // the tripped sensor recharges
   // walking through the first sensor without stopping: a pulse catches her
   await put(14, 22); await p.keyboard.down('ArrowRight');
   await until(() => window.__game.scene.dead || window.__game.scene.ep.take > 1, null, 20000); await p.keyboard.up('ArrowRight');

@@ -18,7 +18,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     ok(label + ': a thing to look at says something', true);
     await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 22; }); await p.waitForTimeout(200); await p.keyboard.press('KeyE');
   };
-  await p.addInitScript(() => { try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
+  await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html#eastwing'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'eastwing' && window.__game.scene.clock > 0.5);
   await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene, k = s.kid; k.tx = k.fx = 4; k.ty = k.fy = 19; k.p = 1; k.moving = false; s.camX = 72; s.camY = 312; });

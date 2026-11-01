@@ -2,7 +2,7 @@
 import { LOOK_KEYS } from '../art/palettes.js';
 
 const KEY = 'unseen-above-v1';
-const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false });
+const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false, panels: {}, immune: false });
 let mem = fresh();
 try { const raw = window.localStorage.getItem(KEY); if (raw) mem = Object.assign(fresh(), JSON.parse(raw)); } catch (e) { /* private window or blocked storage: keep it in memory */ }
 if (!LOOK_KEYS.includes(mem.look)) mem.look = 'A';
@@ -20,6 +20,12 @@ export const state = {
   // A death leaves a body; the next attempt is the next take.
   addBody(id, x, y, cause) { const e = state.episode(id); e.bodies.push({ x: Math.round(x), y: Math.round(y), take: e.take, cause }); if (e.bodies.length > 40) e.bodies.shift(); e.take++; save(); },
   finish(id) { state.episode(id).done = true; save(); },
+  // instruction panels show once
+  seenPanel(k) { return !!(mem.panels && mem.panels[k]); },
+  markPanel(k) { if (!mem.panels) mem.panels = {}; mem.panels[k] = true; save(); },
+  // immunity, for reviewing the game: nothing kills her, N skips ahead
+  get immune() { return !!mem.immune; },
+  set immune(v) { mem.immune = !!v; save(); },
   get seenIntro() { return mem.seenIntro; },
   set seenIntro(v) { mem.seenIntro = !!v; save(); },
   resetAll() { mem = fresh(); save(); }

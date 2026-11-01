@@ -1,6 +1,7 @@
 // Episode 1: the grounds. Side view, from the ash outside the gate to the front door.
 // Searchlights and drones are both the spectacle and the surveillance. A death restarts the
 // episode, and the body stays where it fell, older on every take.
+import { Music } from '../core/music.js';
 import { LOOKS } from '../art/palettes.js';
 import { hexNum, flat, rng } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
@@ -62,7 +63,8 @@ export class Grounds extends SideEpisode {
     this.commonLayers();
     this.props = LEVEL.props.map(r => Object.assign({}, r));
     const CB = LEVEL.crowbar, SD = LEVEL.shedDoor;
-    this.things.push({ x0: CB.x - 8, x1: CB.x + 8, y0: GROUND - 6, y1: GROUND, use: () => this.bubbles.say('item', 'His crowbar. He came this way.', () => ({ x: CB.x, y: GROUND - 6 }), { edge: 0xffffff, pitch: 520 }) });
+    this.crowbarSrc = { lines: ['His crowbar. He came this way.'] };
+    this.things.push({ x0: CB.x - 8, x1: CB.x + 8, y0: GROUND - 6, y1: GROUND, use: () => this.bubbles.press('item', this.crowbarSrc, () => ({ x: CB.x, y: GROUND - 6 }), { edge: 0xffffff, pitch: 520 }) });
     this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, use: () => this.enterRoom('keeper') });
     this.scan = null;
 
@@ -79,11 +81,13 @@ export class Grounds extends SideEpisode {
     this.wasInside = undefined; this.sparkT = 0;
     this.lights = LEVEL.lights.map(l => Object.assign({}, l, { lock: 0, cone: null }));
     this.drones = LEVEL.drones.map(d => Object.assign({}, d, { x: d.x0 + (d.x1 - d.x0) * 0.3, dir: 1, lock: 0, cone: null }));
+    this.skipPoints = [12, 30, 50, 70, 88, 103].map(v => v * TILE);
     this.drawBodies();
     this.spawn(data && data.fromIntro ? 1 * TILE : null);
     this.followGirl();
     this.cameras.main.fadeIn(data && data.fromIntro ? 900 : 350);
     this.beds = { wind: Sound.wind(0.14), lounge: Sound.lounge(0.0001) };
+    Music.play('grounds');
     this.events.once('shutdown', () => { this.beds.wind.stop(0.4); this.beds.lounge.stop(0.4); });
     this.takeNote({ fromCut: data && data.fromIntro }, 1, 'The Grounds');
     window.__game = { scene: this, state };

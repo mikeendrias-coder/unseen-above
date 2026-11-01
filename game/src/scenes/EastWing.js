@@ -2,11 +2,13 @@
 // show what watches her only now and then. Motion sensors in a corridor, a patrol robot that
 // goes to look at noises, a camera in the study, and a ballroom where a chandelier full of eyes
 // has to be brought down before the door will open.
+import { Music } from '../core/music.js';
 import { hexNum, flat, Painter } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText, textWidth } from '../art/pixfont.js';
 import { LOOKS } from '../art/palettes.js';
 import { T, W, H, LEVEL, buildMap, paintMap, isSolid, isOpaque } from '../art/eastwing.js';
+import { Glasses } from '../core/glasses.js';
 import { TopDownEpisode, makeTopSprites, LOCK_TD } from '../core/topdown.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -35,7 +37,7 @@ export class EastWing extends TopDownEpisode {
     });
     const P = this.P;
     makeSprites(this, P); makeTopSprites(this, P); this.makeProps(P);
-    paintMap(P, m).toTexture(this, 'ew_map');
+    const art = paintMap(P, m); art.toTexture(this, 'ew_map'); this.marks = art.marks;
     this.add.image(0, 0, 'ew_map').setOrigin(0).setDepth(0);
     this.setupView(P.void);
     this.floorG = this.add.graphics().setDepth(1);
@@ -53,7 +55,11 @@ export class EastWing extends TopDownEpisode {
     this.sources = [this.camSrc, this.robotSrc, this.chSrc];
     const C = LEVEL.chandelier;
     this.ch = { cut: 0, angle: 0, focus: null, focusT: 0, phase: 'up', t: 0, shake: 0, hold: 0, holdAt: null };
-    this.things.push({ tx: 9, ty: 21, use: () => { this.pebbles = 5; Sound.tone(500, 0.06, 'triangle', 0.02); this.bubbles.say('item', 'Pebbles. Five in a pocket.', () => ({ x: 9 * T + 8, y: 21 * T + 4 }), { edge: 0xffffff, pitch: 520 }); } });
+    this.gl = new Glasses({ has: true, on: true, cracked: true });
+    this.skipTiles = [[13, 22], [25, 14], [20, 10], [29, 6], [35, 8]];
+    this.pile = this.marks.find(mk => mk.kind === 'pile'); this.pileTaken = false;
+    this.pileThing = { tx: 9, ty: 21, use: () => this.takePile() };
+    this.things.push(this.pileThing);
     C.chains.forEach(([px, py], i) => this.things.push({ tx: px, ty: py, reach: 2, hold: true, chain: i, label: 'E' }));
     this.things.push({ tx: 4, ty: 18, label: 'E', use: () => this.enterRoom('workshop') }); // optional
     this.cutChains = new Set();
@@ -64,9 +70,11 @@ export class EastWing extends TopDownEpisode {
     this.cameras.main.fadeIn(data.fromFall ? 1400 : 400);
     this.glitchT = data.fromFall ? 0 : 3;
     this.beds = { hum: Sound.hum(0.012), wind: Sound.wind(0.03) };
+    Music.play('eastwing', { fadeIn: 3 });
     this.events.once('shutdown', () => Object.values(this.beds).forEach(b => b.stop(0.4)));
     this.takeNote({ fromCut: data.fromCut && !data.fromFall }, 3, 'The East Wing');
     if (data.fromFall) this.time.delayedCall(900, () => overlay.note('The glasses cracked', 2200));
+    this.time.delayedCall(data.fromFall ? 1900 : 600, () => this.itemPanel('cracked'));
     window.__game = { scene: this, state };
   }
 
@@ -80,15 +88,18 @@ export class EastWing extends TopDownEpisode {
     const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
     this.clock += dt;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
+    this.reviewKeys();
     if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
     if (c.restart() && !this.leaving && !this.done && !this.dead) { this.dead = true; this.ep.take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) {
       this.moveKid(dt);
       if (c.throwP()) this.throwAhead();
+      if (c.glasses()) this.gl.toggle();
       this.updateThings();
       this.holdChain(dt);
     }
+    this.gl.update(dt);
     this.updateFlight(dt);
     this.updateSensors(dt);
     this.updateCamera(dt);
@@ -100,17 +111,44 @@ export class EastWing extends TopDownEpisode {
     c.endFrame();
   }
 
+  // review: N moves her through the wing room by room; in the ballroom it brings the chandelier down
+  skipAhead() {
+    const o = this.tileOf(), next = this.skipTiles.find(([x, y]) => x + y * 0.01 > o.x + o.y * 0.01 + 0.5 && !(x === o.x && y === o.y));
+    if (o.x >= 31 && o.y <= 12) {
+      if (!this.doorOpen && this.ch.phase === 'up') LEVEL.chandelier.chains.forEach((c, i) => { if (!this.cutChains.has(i)) { this.cutChain(i); const th = this.things.find(q => q.chain === i); if (th) th.off = true; } });
+      else if (this.doorOpen) this.placeTile(LEVEL.exit[0], LEVEL.exit[1] + 1);
+      return;
+    }
+    if (next) this.placeTile(next[0], next[1]);
+  }
   onArrive(x, y) {
     if (this.doorOpen && x === LEVEL.exit[0] && y === LEVEL.exit[1]) this.leave();
   }
-  onNoise(x, y, r) {
+  onNoise(x, y, r, kind) {
     // the robot comes to look
     const R = this.robot, L = LEVEL.robot;
     if (Math.hypot(R.x - x, R.y - y) <= Math.max(L.hear, r + 3) && R.mode !== 'off') { R.mode = 'investigate'; R.target = [x, y]; R.route = this.path([Math.round(R.x), Math.round(R.y)], [x, y]); R.wait = 0; this.bubbles.say('robot', '?', () => ({ x: R.x * T + 8, y: R.y * T + 2 }), { edge: 0xff5a4a, ink: 0xffffff, pitch: 900, ms: 900 }); }
-    // a sensor in range of a noise fires once and needs time to recharge
-    this.sensors.forEach(s => { if (s.cool <= 0 && Math.hypot(s.x - x, s.y - y) <= s.r + 0.5) { s.cool = 3.2; s.flash = 0.5; Sound.tone(1900, 0.08, 'square', 0.02); } });
+    // a sensor in range of a noise fires once and needs time to recharge; if a pebble set it
+    // off, the satellite shoots the pebble
+    let seen = false;
+    this.sensors.forEach(s => { if (s.cool <= 0 && Math.hypot(s.x - x, s.y - y) <= s.r + 0.5) { s.cool = 3.2; s.flash = 0.5; Sound.tone(1900, 0.08, 'square', 0.02); seen = true; } });
+    if (kind === 'pebble') {
+      const i = y * W + x;
+      if ((this.camSrc.tiles && this.camSrc.tiles.has(i)) || (this.chSrc.tiles && this.chSrc.tiles.has(i))) seen = true;
+      const fp = this.floorPebbles.find(q => q.x === x && q.y === y);
+      if (seen && fp) this.time.delayedCall(260, () => { if (Sound.charge) Sound.charge(); this.strikeAt(fp); });
+    }
     // the chandelier's eyes turn toward a noise in the ballroom
     if (x >= 30 && y <= 13 && this.ch.phase === 'up') { this.ch.focus = Math.atan2(y + 0.5 - LEVEL.chandelier.y, x + 0.5 - LEVEL.chandelier.x) * 180 / Math.PI; this.ch.focusT = 1.4; }
+  }
+
+  takePile() {
+    if (this.pileTaken) return;
+    this.pileTaken = true; this.pileThing.off = true; this.pebbles += 5;
+    Sound.tone(500, 0.06, 'triangle', 0.02); this.time.delayedCall(70, () => Sound.tone(620, 0.06, 'triangle', 0.02));
+    // the stones jump into her pocket
+    const k = this.kidPx(); this.pocket = (this.pile ? this.pile.stones : []).map(([x, y]) => ({ x, y, tx: k.x, ty: k.y - 4, t: 0 }));
+    this.itemPanel('pebbles');
   }
 
   // ------------------------------------------------------------------ sensors, camera, robot
@@ -223,7 +261,7 @@ export class EastWing extends TopDownEpisode {
     this.drawDark(0.88);
     // what the cracked glasses still show: cones that flicker in and out, split in two colors
     const g = this.overG; g.clear();
-    const glassesOn = (Math.sin(t * 2.3) + Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 13.1) * 0.3) > -0.35 || this.glitchT < 2.5;
+    const glassesOn = this.gl.showing && ((Math.sin(t * 2.3) + Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 13.1) * 0.3) > -0.35 || this.glitchT < 2.5);
     const tileFill = (tiles, col, a, off) => tiles && tiles.forEach(i => { const x = (i % W) * T, y = Math.floor(i / W) * T; g.fillStyle(col, a); g.fillRect(x + 1 + (off || 0), y + 1, 14, 14); });
     [this.camSrc, this.robotSrc, this.chSrc].forEach(s => {
       if (!s.tiles) return;
@@ -257,6 +295,10 @@ export class EastWing extends TopDownEpisode {
     }
     // the open door
     const fg = this.floorG; fg.clear();
+    // the pile of loose pebbles until she takes it, then the stones flying to her pocket
+    if (this.pile && !this.pileTaken) this.pile.stones.forEach(([x, y], i) => { fg.fillStyle(hexNum(i % 2 ? P.rubbleHi : P.col), 1); fg.fillRect(x, y, 2, 2); });
+    if (this.pocket) { const k = this.kidPx(); this.pocket.forEach((s, i) => { s.t += dt; const u = Math.min(1, s.t / (0.25 + i * 0.04)); if (u < 1) { fg.fillStyle(hexNum(P.colHi), 1); fg.fillRect(Math.round(s.x + (k.x - s.x) * u), Math.round(s.y + (k.y - 4 - s.y) * u - Math.sin(u * Math.PI) * 8), 2, 2); } }); if (this.pocket.every((s, i) => s.t > 0.25 + i * 0.04)) this.pocket = null; }
+    this.drawFloorPebbles(fg, dt);
     if (this.doorOpen) { const [ex, ey] = LEVEL.exit; fg.fillStyle(hexNum(P.void), 1); fg.fillRect(ex * T + 2, ey * T + 4, 12, 12); fg.fillStyle(hexNum(P.lamp), 0.5 + 0.3 * Math.sin(t * 4)); fg.fillRect(ex * T + 4, ey * T + 13, 8, 2); }
     // LEDs that survive the dark: sensors, the camera, the robot
     const lg = this.ledG; lg.clear();
@@ -281,6 +323,10 @@ export class EastWing extends TopDownEpisode {
     const g = this.hud, P = this.P, col = hexNum(P.overlay); g.clear();
     if (this.done) return;
     this.glitchT += dt;
+    this.gl.drawMeter(g, 18, 166, col);
+    pixText(g, 'PEBBLES ' + this.pebbles, 76, 167, 0xffffff, 1, 0.75);
+    if (!this.gl.on) return;
+    this.gl.drawStatic(g, col);
     const a = this.glitchT < 2 ? (Math.random() < 0.5 ? 0.9 : 0.1) : 0.5, m = 5, s = 8;
     g.fillStyle(col, a);
     [[320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
@@ -290,7 +336,6 @@ export class EastWing extends TopDownEpisode {
     g.lineStyle(1, 0xffffff, 0.35); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19); g.lineBetween(31, 18, 37, 13);
     g.fillStyle(col, a); g.fillRect(m, m + 6, 1, 3);
     const label = this.glitchT < 3 && Math.random() < 0.3 ? 'V1EW' : 'VIEW'; if (Math.floor(this.clock * 3) % 5) pixText(g, label, 44, m + 3, col, 1, a);
-    pixText(g, 'PEBBLES ' + this.pebbles, m + 3, 180 - m - 8, 0xffffff, 1, 0.75);
     pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
   }
 

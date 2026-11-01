@@ -9,7 +9,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const errs = [];
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   p.on('pageerror', e => errs.push('pageerror: ' + e.message));
-  await p.addInitScript(l => { try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: l, episodes: {}, seenIntro: false })); } catch (e) {} }, look);
+  await p.addInitScript(l => { window.__noPanels = true; try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: l, episodes: {}, seenIntro: false })); } catch (e) {} }, look);
   await p.goto(BASE + '/local.html');
   await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.T, null, { timeout: 30000 });

@@ -1,6 +1,8 @@
 // The opening: a dead city under ash, two siblings on a ridge, and across the valley a mansion
 // that is perfectly lit. They talk, he goes down for supplies, she waits, then follows; the
 // picture breaks into pixels and the game begins at the gate.
+import { Music } from '../core/music.js';
+import { reviewKeys } from '../core/review.js';
 import { LOOKS } from '../art/palettes.js';
 import { cinemaPalette, makeCinemaTextures, skyline, ridgeShape, drawMansion, drawFigure, mix, num } from '../art/cinema.js';
 import { makeControls } from '../core/controls.js';
@@ -110,6 +112,7 @@ export class Intro extends Phaser.Scene {
     this.bro = { x: 520, y: 600, s: 1, face: 1, walk: null, crouch: 0, point: 0, look: 0, breathe: 0, alpha: 1 };
     this.sis = { x: 470, y: 600, s: 1, face: 1, walk: null, crouch: 0, point: 0, look: 0, breathe: 1, alpha: 1 };
     this.wind = Sound.wind(0.18); this.music = null;
+    Music.play('opening', { fadeIn: 3 });
     this.events.once('shutdown', () => { this.wind.stop(0.6); if (this.music) this.music.stop(0.6); overlay.clearCaption(); this.nightFx = null; this.pixFx = null; });
     overlay.hint('Space or Enter moves to the next line. Esc skips the opening.');
     cam.fadeIn(1400);
@@ -153,8 +156,10 @@ export class Intro extends Phaser.Scene {
     return { x: lerp(pts[i][0], pts[i + 1][0], r), y: lerp(pts[i][1], pts[i + 1][1], r), s: lerp(scales[i], scales[i + 1], r) };
   }
 
+  skipAhead() { this.finish(true); }
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 20), c = this.ctl, T = this.T;
+    if (reviewKeys(this)) { c.endFrame(); return; }
     if (c.skip()) { this.finish(true); c.endFrame(); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     // Space or Enter jumps to the next line while they talk
@@ -182,7 +187,7 @@ export class Intro extends Phaser.Scene {
     } else { b.x = CREST_B; s.x = CREST_S; }
     b.y = groundY(b.x); s.y = groundY(s.x);
     // reveal sounds
-    if (t >= T.reveal && !this.revealed) { this.revealed = true; Sound.swell(7, 0.07); this.time.delayedCall(2500, () => { this.music = Sound.lounge(0.022); }); if (t < T.lines[0].start) { overlay.caption(null, SOUNDS.hum); this.time.delayedCall(2600, () => { if (this.t < T.lines[0].start) overlay.clearCaption(); }); } }
+    if (t >= T.reveal && !this.revealed) { this.revealed = true; Music.stop(4); Sound.swell(7, 0.07); this.time.delayedCall(2500, () => { this.music = Sound.lounge(0.022); }); if (t < T.lines[0].start) { overlay.caption(null, SOUNDS.hum); this.time.delayedCall(2600, () => { if (this.t < T.lines[0].start) overlay.clearCaption(); }); } }
     if (t > 1 && t < 4.5 && !this.windCap) { this.windCap = true; overlay.caption(null, SOUNDS.wind); this.time.delayedCall(2200, () => { if (this.t < T.reveal) overlay.clearCaption(); }); }
     // dialogue and gestures
     const line = T.lines.find(l => t >= l.start && t < l.end);
