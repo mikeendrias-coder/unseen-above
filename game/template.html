@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unseen Above</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  /* A game screen: one fixed dark look. Captions imitate broadcast closed captions on purpose. */
+  :root {
+    --ground: #030306;
+    --ink: #e8e3d6;
+    --ink-quiet: #8e8a96;
+    --rule: #1b1c26;
+    --accent: #f2c14e;
+    --mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--mono); }
+  body { padding: 10px max(16px, env(safe-area-inset-left, 0px)) 14px max(16px, env(safe-area-inset-right, 0px)); }
+  #chrome-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; max-width: 1940px; margin: 0 auto 8px; }
+  h1 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; }
+  .tag { font-size: 11px; color: var(--ink-quiet); letter-spacing: 0.04em; }
+  #stage { position: relative; display: flex; justify-content: center; max-width: 1940px; margin: 0 auto; min-height: 180px; }
+  #stage canvas { display: block; image-rendering: pixelated; outline: none; }
+  #overlay { position: absolute; top: 0; left: 50%; transform: translateX(-50%); pointer-events: none; overflow: hidden; --u: 4px; }
+  #cc { position: absolute; left: 0; right: 0; bottom: 7%; display: flex; justify-content: center; opacity: 0; transition: opacity 120ms; }
+  #cc.on { opacity: 1; }
+  .cc-line { background: rgba(0, 0, 0, 0.88); color: #fff; font-size: calc(var(--u) * 5.2); line-height: 1.45; padding: 0.15em 0.55em; letter-spacing: 0.02em; max-width: 78%; text-align: center; font-weight: 400; }
+  .cc-who { color: #f5f0e0; font-weight: 600; }
+  #card { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; opacity: 0; transition: opacity 700ms; }
+  #card.on { opacity: 1; }
+  .card-top { font-size: calc(var(--u) * 4); letter-spacing: 0.5em; color: var(--accent); font-weight: 600; padding-left: 0.5em; }
+  .card-title { font-size: calc(var(--u) * 9); font-weight: 300; letter-spacing: 0.06em; margin-top: 0.25em; text-shadow: 0 0 calc(var(--u) * 3) rgba(0, 0, 0, 0.9); }
+  .card-top::after { content: ""; display: block; height: 1px; background: currentColor; opacity: 0.5; width: 60%; margin: 0.9em auto 0; }
+  #bug { position: absolute; top: 4%; right: 3%; font-size: calc(var(--u) * 3.6); font-weight: 600; letter-spacing: 0.12em; color: rgba(255, 255, 255, 0.55); opacity: 0; transition: opacity 90ms; }
+  #bug.on { opacity: 1; }
+  #note { position: absolute; top: 4%; left: 3%; font-size: calc(var(--u) * 3.6); letter-spacing: 0.2em; color: rgba(255, 255, 255, 0.75); opacity: 0; transition: opacity 400ms; }
+  #note.on { opacity: 1; }
+  #blackout { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 600ms; }
+  #blackout.on { opacity: 1; }
+  #start { position: absolute; inset: 0; width: 100%; min-height: 60vh; display: grid; place-items: center; background: var(--ground); border: 0; color: var(--ink); font: 400 13px var(--mono); cursor: pointer; letter-spacing: 0.2em; text-transform: uppercase; }
+  #start[hidden] { display: none; }
+  #start span { border: 1px solid var(--ink-quiet); padding: 14px 22px; }
+  #start:hover span, #start:focus-visible span { border-color: var(--accent); color: var(--accent); }
+  #start:focus-visible { outline: none; }
+  #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
+  #h-hint { font-size: 12px; min-height: 1.5em; margin: 0 0 6px; color: var(--ink); }
+  .keys { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 11px; color: var(--ink-quiet); }
+  .keys b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<header id="chrome-top">
+  <h1>Unseen Above</h1>
+  <div class="tag">Working build · the opening and episode 1</div>
+</header>
+<div id="stage">
+  <div id="overlay" aria-live="polite">
+    <div id="blackout"></div>
+    <div id="card"><div class="card-top"></div><div class="card-title"></div></div>
+    <div id="cc"></div>
+    <div id="bug"></div>
+    <div id="note"></div>
+  </div>
+  <button id="start" type="button"><span>Click to begin · sound on</span></button>
+</div>
+<footer id="chrome-bottom">
+  <p id="h-hint"></p>
+  <ul class="keys">
+    <li><b>Move</b> arrows or A/D</li>
+    <li><b>Jump</b> Space</li>
+    <li><b>Crouch</b> Down</li>
+    <li><b>Door</b> Up or E</li>
+    <li><b>Restart episode</b> R</li>
+    <li><b>Switch look</b> L</li>
+    <li><b>Sound</b> M</li>
+    <li><b>Skip the opening</b> Esc</li>
+  </ul>
+</footer>
+<script src="__PHASER_SRC__"></script>
+<script>
+__BUNDLE__
+</script>
+</body>
+</html>
