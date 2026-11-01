@@ -110,7 +110,7 @@ export class Intro extends Phaser.Scene {
     this.bro = { x: 520, y: 600, s: 1, face: 1, walk: null, crouch: 0, point: 0, look: 0, breathe: 0, alpha: 1 };
     this.sis = { x: 470, y: 600, s: 1, face: 1, walk: null, crouch: 0, point: 0, look: 0, breathe: 1, alpha: 1 };
     this.wind = Sound.wind(0.18); this.music = null;
-    this.events.once('shutdown', () => { this.wind.stop(0.6); if (this.music) this.music.stop(0.6); overlay.clearCaption(); this.cameras.main.filters.internal.clear(); });
+    this.events.once('shutdown', () => { this.wind.stop(0.6); if (this.music) this.music.stop(0.6); overlay.clearCaption(); this.nightFx = null; this.pixFx = null; });
     overlay.hint('Space or Enter moves to the next line. Esc skips the opening.');
     cam.fadeIn(1400);
     window.__game = { scene: this, state };

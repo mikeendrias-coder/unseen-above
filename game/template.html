@@ -1,62 +1,61 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Unseen Above</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-  /* A game screen: one fixed dark look. Captions imitate broadcast closed captions on purpose. */
+  /* A game screen with one committed dark look. Captions imitate broadcast closed captions on purpose.
+     Layout: title strip, the stage (canvas plus an HTML caption layer), hint and keys below. */
   :root {
     --ground: #030306;
     --ink: #e8e3d6;
     --ink-quiet: #8e8a96;
-    --rule: #1b1c26;
     --accent: #f2c14e;
+    --cc-bg: rgba(0, 0, 0, 0.88);
+    --cc-ink: #ffffff;
+    --cc-who: #f5f0e0;
+    --bug: rgba(255, 255, 255, 0.55);
+    --note: rgba(255, 255, 255, 0.75);
+    --shade: rgba(0, 0, 0, 0.9);
     --mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     color-scheme: dark;
   }
-  html, body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--mono); }
-  body { padding: 10px max(16px, env(safe-area-inset-left, 0px)) 14px max(16px, env(safe-area-inset-right, 0px)); }
+  body { background: var(--ground); color: var(--ink); font-family: var(--mono); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 10px 14px; }
   #chrome-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; max-width: 1940px; margin: 0 auto 8px; }
   h1 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; }
   .tag { font-size: 11px; color: var(--ink-quiet); letter-spacing: 0.04em; }
   #stage { position: relative; display: flex; justify-content: center; max-width: 1940px; margin: 0 auto; min-height: 180px; }
-  #stage canvas { display: block; image-rendering: pixelated; outline: none; }
+  #stage canvas { display: block; image-rendering: pixelated; outline: none; max-width: 100%; }
   #overlay { position: absolute; top: 0; left: 50%; transform: translateX(-50%); pointer-events: none; overflow: hidden; --u: 4px; }
   #cc { position: absolute; left: 0; right: 0; bottom: 7%; display: flex; justify-content: center; opacity: 0; transition: opacity 120ms; }
   #cc.on { opacity: 1; }
-  .cc-line { background: rgba(0, 0, 0, 0.88); color: #fff; font-size: calc(var(--u) * 5.2); line-height: 1.45; padding: 0.15em 0.55em; letter-spacing: 0.02em; max-width: 78%; text-align: center; font-weight: 400; }
-  .cc-who { color: #f5f0e0; font-weight: 600; }
+  .cc-line { background: var(--cc-bg); color: var(--cc-ink); font-size: calc(var(--u) * 5.2); line-height: 1.45; padding: 0.15em 0.55em; letter-spacing: 0.02em; max-width: 78%; text-align: center; }
+  .cc-who { color: var(--cc-who); font-weight: 600; }
   #card { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; opacity: 0; transition: opacity 700ms; }
   #card.on { opacity: 1; }
   .card-top { font-size: calc(var(--u) * 4); letter-spacing: 0.5em; color: var(--accent); font-weight: 600; padding-left: 0.5em; }
-  .card-title { font-size: calc(var(--u) * 9); font-weight: 300; letter-spacing: 0.06em; margin-top: 0.25em; text-shadow: 0 0 calc(var(--u) * 3) rgba(0, 0, 0, 0.9); }
   .card-top::after { content: ""; display: block; height: 1px; background: currentColor; opacity: 0.5; width: 60%; margin: 0.9em auto 0; }
-  #bug { position: absolute; top: 4%; right: 3%; font-size: calc(var(--u) * 3.6); font-weight: 600; letter-spacing: 0.12em; color: rgba(255, 255, 255, 0.55); opacity: 0; transition: opacity 90ms; }
+  .card-title { font-size: calc(var(--u) * 9); font-weight: 300; letter-spacing: 0.06em; margin-top: 0.25em; text-shadow: 0 0 calc(var(--u) * 3) var(--shade); }
+  #bug { position: absolute; top: 4%; right: 3%; font-size: calc(var(--u) * 3.6); font-weight: 600; letter-spacing: 0.12em; color: var(--bug); opacity: 0; transition: opacity 90ms; }
   #bug.on { opacity: 1; }
-  #note { position: absolute; top: 4%; left: 3%; font-size: calc(var(--u) * 3.6); letter-spacing: 0.2em; color: rgba(255, 255, 255, 0.75); opacity: 0; transition: opacity 400ms; }
+  #note { position: absolute; top: 4%; left: 3%; font-size: calc(var(--u) * 3.6); letter-spacing: 0.2em; color: var(--note); opacity: 0; transition: opacity 400ms; }
   #note.on { opacity: 1; }
-  #blackout { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 600ms; }
+  #blackout { position: absolute; inset: 0; background: var(--ground); opacity: 0; transition: opacity 600ms; }
   #blackout.on { opacity: 1; }
-  #start { position: absolute; inset: 0; width: 100%; min-height: 60vh; display: grid; place-items: center; background: var(--ground); border: 0; color: var(--ink); font: 400 13px var(--mono); cursor: pointer; letter-spacing: 0.2em; text-transform: uppercase; }
-  #start[hidden] { display: none; }
-  #start span { border: 1px solid var(--ink-quiet); padding: 14px 22px; }
+  #start { position: relative; width: 100%; max-width: 1280px; aspect-ratio: 16 / 9; display: grid; place-items: end center; padding: 0 0 7%; background: var(--ground); border: 0; color: var(--ink); font: 400 13px var(--mono); cursor: pointer; letter-spacing: 0.2em; text-transform: uppercase; overflow: hidden; }
+  #start svg { position: absolute; inset: 0; width: 100%; height: 100%; shape-rendering: crispEdges; }
+  #start span { position: relative; border: 1px solid var(--ink-quiet); background: var(--cc-bg); padding: 14px 22px; }
   #start:hover span, #start:focus-visible span { border-color: var(--accent); color: var(--accent); }
-  #start:focus-visible { outline: none; }
+  #start:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
   #h-hint { font-size: 12px; min-height: 1.5em; margin: 0 0 6px; color: var(--ink); }
   .keys { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 11px; color: var(--ink-quiet); }
   .keys b { color: var(--ink); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { #cc, #card, #bug, #note, #blackout { transition: none; } }
 </style>
-</head>
-<body>
 <header id="chrome-top">
   <h1>Unseen Above</h1>
-  <div class="tag">Working build · the opening and episode 1</div>
+  <div class="tag">Working build · the opening and episode 1 · keyboard needed</div>
 </header>
 <div id="stage">
   <div id="overlay" aria-live="polite">
@@ -66,7 +65,25 @@
     <div id="bug"></div>
     <div id="note"></div>
   </div>
-  <button id="start" type="button"><span>Click to begin · sound on</span></button>
+  <button id="start" type="button">
+    <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070b1f"/><stop offset="0.6" stop-color="#121a3a"/><stop offset="1" stop-color="#1c2650"/></linearGradient></defs>
+      <rect width="320" height="180" fill="url(#sky)"/>
+      <g fill="#b8c4f5" opacity="0.07"><polygon points="196,74 150,0 176,0"/><polygon points="214,72 236,0 262,0"/><polygon points="168,80 96,0 120,0"/><polygon points="246,76 300,0 320,0 320,10"/></g>
+      <circle cx="58" cy="30" r="10" fill="#ece8d6"/><rect x="54" y="35" width="2" height="1" fill="#ffb85c"/>
+      <g fill="#e9e2cc" opacity="0.8"><rect x="196" y="22" width="1" height="1"/><rect x="202" y="16" width="1" height="1"/><rect x="210" y="16" width="1" height="1"/><rect x="216" y="22" width="1" height="1"/><rect x="206" y="34" width="1" height="1"/><rect x="200" y="28" width="1" height="1"/><rect x="212" y="28" width="1" height="1"/><rect x="206" y="16" width="1" height="1"/><rect x="204" y="22" width="1" height="1"/><rect x="208" y="22" width="1" height="1"/></g>
+      <g fill="#0b1124"><rect x="0" y="104" width="22" height="46"/><rect x="24" y="92" width="16" height="58"/><rect x="42" y="112" width="26" height="38"/><rect x="70" y="98" width="14" height="52"/><rect x="86" y="118" width="22" height="32"/></g>
+      <rect x="0" y="150" width="320" height="30" fill="#0d1226"/>
+      <rect x="112" y="96" width="44" height="54" fill="#1b3558"/><g fill="#86c9ff"><rect x="116" y="100" width="6" height="6"/><rect x="132" y="108" width="6" height="6"/><rect x="146" y="100" width="6" height="6"/><rect x="124" y="124" width="6" height="6"/></g><g fill="#ffb85c"><rect x="140" y="116" width="6" height="6"/><rect x="116" y="132" width="6" height="6"/></g>
+      <rect x="158" y="102" width="40" height="48" fill="#2b3463"/><path d="M166 102 A12 12 0 0 1 190 102 Z" fill="#e2b146"/><rect x="177" y="84" width="2" height="6" fill="#e2b146"/>
+      <rect x="200" y="94" width="70" height="56" fill="#2b3463"/><polygon points="196,94 235,74 274,94" fill="#e2b146"/><polygon points="202,93 235,78 268,93" fill="#f1ead6"/>
+      <g fill="#cfc8b6"><rect x="206" y="98" width="5" height="48"/><rect x="218" y="98" width="5" height="48"/><rect x="246" y="98" width="5" height="48"/><rect x="258" y="98" width="5" height="48"/></g>
+      <rect x="229" y="118" width="12" height="28" fill="#ffe2a6"/><rect x="196" y="146" width="78" height="4" fill="#cfc8b6"/>
+      <rect x="272" y="80" width="26" height="70" fill="#1c2347"/><g fill="#ffb85c"><rect x="276" y="86" width="5" height="5"/><rect x="288" y="98" width="5" height="5"/><rect x="276" y="110" width="5" height="5"/><rect x="288" y="122" width="5" height="5"/></g>
+      <g fill="#030306"><polygon points="0,180 0,140 40,142 70,138 92,150 92,180"/><rect x="34" y="118" width="4" height="12"/><circle cx="36" cy="116" r="2.4"/><rect x="40" y="122" width="3" height="9"/><circle cx="41.5" cy="120" r="2"/></g>
+    </svg>
+    <span>Click to begin · sound on</span>
+  </button>
 </div>
 <footer id="chrome-bottom">
   <p id="h-hint"></p>
@@ -85,5 +102,3 @@
 <script>
 __BUNDLE__
 </script>
-</body>
-</html>

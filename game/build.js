@@ -17,7 +17,10 @@ const result = esbuild.buildSync({
 const bundle = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const template = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf8');
 const page = src => template.replace('__PHASER_SRC__', src).replace('__BUNDLE__', () => bundle);
+// The published page is wrapped in a document skeleton by the host, so it has none of its own;
+// the local test page gets a matching skeleton here.
+const skeleton = body => '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style></head><body>' + body + '</body></html>';
 fs.writeFileSync(path.join(out, 'unseen-above.html'), page(PHASER_CDN));
-fs.writeFileSync(path.join(out, 'local.html'), page('phaser.min.js'));
+fs.writeFileSync(path.join(out, 'local.html'), skeleton(page('phaser.min.js')));
 fs.copyFileSync(path.join(__dirname, 'node_modules/phaser/dist/phaser.min.js'), path.join(out, 'phaser.min.js'));
 console.log('built', (bundle.length / 1024).toFixed(1) + ' KB bundle');

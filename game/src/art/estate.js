@@ -29,7 +29,7 @@ export function buildMap() {
   for (let y = 0; y < H; y++) m.push(new Array(W).fill(0));
   const solid = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y] && x >= 0 && x < W) m[y][x] = 1; };
   solid(0, 10, W - 1, 11);                       // ground
-  solid(21, 8, 22, 9); solid(27, 7, 27, 9); solid(32, 8, 33, 9); // hedges
+  solid(21, 8, 22, 9); solid(27, 8, 27, 9); solid(32, 8, 33, 9); // hedges (2 tiles: a jump clears them)
   solid(43, 9, 43, 9); solid(51, 9, 51, 9); solid(45, 7, 49, 7); // fountain rim and upper bowl
   solid(60, 8, 60, 9); solid(66, 8, 66, 9); solid(72, 8, 72, 9); // statue plinths
   solid(81, 6, 83, 6); solid(88, 6, 90, 6);      // pergola tops
@@ -188,7 +188,7 @@ export function paintLevel(P) {
   for (let x = gx0 + 2; x < gx1 - 10; x += 24) p.glowRect(x, G + 1, 14, 3, P.glassLit, 0.08);
   p.rect(15 * TILE, G + 5, W - 15 * TILE, 5, P.path); p.rect(15 * TILE, G + 5, W - 15 * TILE, 1, P.pathHi);
   // hedges (solid in the map)
-  hedgeBlock(p, P, 21 * TILE, 8 * TILE, 32, 32, 11); hedgeBlock(p, P, 27 * TILE - 2, 7 * TILE, 20, 48, 12); hedgeBlock(p, P, 32 * TILE, 8 * TILE, 32, 32, 13);
+  hedgeBlock(p, P, 21 * TILE, 8 * TILE, 32, 32, 11); hedgeBlock(p, P, 27 * TILE - 2, 8 * TILE - 6, 20, 38, 12); hedgeBlock(p, P, 32 * TILE, 8 * TILE, 32, 32, 13);
   // garden lamp post (searchlight 1)
   lampPost(p, P, 37 * TILE + 8, 120, G);
   // fountain: rim, water, floating upper bowl on a thin stem
