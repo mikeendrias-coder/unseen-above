@@ -2,14 +2,16 @@
 import { measure, applyCss, display } from './core/display.js';
 import { Sound } from './core/sound.js';
 import { Grounds } from './scenes/Grounds.js';
+import { Gallery } from './scenes/Gallery.js';
 import { Intro } from './scenes/Intro.js';
 import { Satellite } from './scenes/Satellite.js';
 
 function start() {
   measure();
   const params = new URLSearchParams(location.search);
-  const first = ['grounds', 'satellite'].includes(params.get('scene')) ? params.get('scene') : 'intro';
-  const firstData = first === 'satellite' ? { batch: 1, skin: Number(params.get('skin')) || 1 } : {};
+  const first = ['grounds', 'gallery', 'satellite'].includes(params.get('scene')) ? params.get('scene') : 'intro';
+  const batch = Number(params.get('batch')) === 2 ? 2 : 1;
+  const firstData = first === 'satellite' ? { batch, skin: Number(params.get('skin')) || batch } : {};
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: 'stage',
@@ -24,6 +26,7 @@ function start() {
   });
   game.scene.add('intro', Intro, false);
   game.scene.add('grounds', Grounds, false);
+  game.scene.add('gallery', Gallery, false);
   game.scene.add('satellite', Satellite, false);
   game.events.once('ready', () => {
     applyCss(game);

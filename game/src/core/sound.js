@@ -93,8 +93,19 @@ export const Sound = (() => {
     }));
   };
 
+  // Hum: mains hum and a ballast buzz, for rooms where the machines are awake.
+  const hum = (vol) => {
+    const c = ensure(); if (!c) return { stop() {}, set() {} };
+    const g = c.createGain(); g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(vol || 0.03, c.currentTime + 1.5);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.connect(g); out(g, 0.15);
+    const oscs = [[55, 'sawtooth', 0.5], [55.4, 'sawtooth', 0.4], [110, 'square', 0.08], [165, 'sine', 0.12]].map(([f, type, v]) => {
+      const o = c.createOscillator(), og = c.createGain(); o.type = type; o.frequency.value = f; og.gain.value = v; o.connect(og); og.connect(lp); o.start(); return o;
+    });
+    return { stop: secs => fadeStop(g, oscs, secs), set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
+  };
+
   return {
-    ensure, tone, noise, wind, lounge, swell,
+    ensure, tone, noise, wind, lounge, swell, hum,
     // The laser's charge. The satellite plays the same sound when a route is accepted (a clue).
     charge: () => tone(300, 0.55, 'sawtooth', 0.02, 900, 0.2),
     chime: () => { tone(1568, 0.5, 'sine', 0.03, null, 0.5); setTimeout(() => tone(2093, 0.6, 'sine', 0.025, null, 0.5), 90); },

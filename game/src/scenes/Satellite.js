@@ -8,7 +8,7 @@ import { Sound } from '../core/sound.js';
 import { overlay } from '../core/overlay.js';
 import { pixelZoom } from '../core/display.js';
 
-const BATCHES = { 1: ['basic', 'walls', 'orbit'] };
+const BATCHES = { 1: ['basic', 'walls', 'orbit'], 2: ['b2a', 'b2b', 'b2c'] };
 const H = h => parseInt(h.slice(1), 16);
 const hex2 = n => n.toString(16).toUpperCase().padStart(2, '0');
 
@@ -29,7 +29,8 @@ export class Satellite extends Phaser.Scene {
     this.skinN = data.skin || this.batch;
     this.K = SKINS[this.skinN];
     this.ids = BATCHES[this.batch] || BATCHES[1];
-    this.levelIdx = 0; this.score = data.score || 0; this.clock = 0; this.ended = false;
+    this.levelIdx = 0; this.score = data.score || 0; this.clock = 0; this.ended = false; this.final = false;
+    this.preview = !!data.preview; // screen previews (K) stay on the satellite
     const cam = this.cameras.main;
     cam.setZoom(pixelZoom()); cam.setBounds(0, 0, 320, 180); cam.centerOn(160, 90); cam.setRoundPixels(true);
     cam.setBackgroundColor(H(this.K.bg));
@@ -119,7 +120,15 @@ export class Satellite extends Phaser.Scene {
   }
   endBatch() {
     this.ended = true;
-    overlay.card('END OF BATCH ' + this.batch, 'Episode 2 is next', 4200);
+    const next = this.batch + 1;
+    overlay.card('END OF BATCH ' + this.batch, 'Episode ' + next + ' is next', 3400);
+    if (next === 2 && !this.preview) {
+      // on to the next episode
+      this.time.delayedCall(2600, () => this.cameras.main.fadeOut(700, 0, 0, 0));
+      this.time.delayedCall(3500, () => this.scene.start('gallery', { fromCut: true }));
+      return;
+    }
+    this.final = true;
     overlay.hint('That is the end of this build. K shows how this screen changes in later batches. Enter watches the opening again. R replays this batch.');
   }
 
@@ -129,11 +138,11 @@ export class Satellite extends Phaser.Scene {
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     if (c.nextScreen()) {
       const next = this.skinN % 4 + 1; overlay.note('Screen ' + next + ' · ' + SKINS[next].name, 1600);
-      this.scene.restart({ batch: this.batch, skin: next, quiet: true, score: this.score });
+      this.scene.restart({ batch: this.batch, skin: next, quiet: true, score: this.score, preview: true });
       return;
     }
-    if (c.restart()) { this.scene.restart({ batch: this.batch, skin: this.skinN, quiet: true }); return; }
-    if (this.ended && c.advance()) { this.scene.start('intro', {}); return; }
+    if (c.restart()) { this.scene.restart({ batch: this.batch, skin: this.skinN, quiet: true, preview: this.preview }); return; }
+    if (this.final && c.advance()) { this.scene.start('intro', {}); return; }
     this.drawLive();
     this.drawBoard();
     c.endFrame();
