@@ -122,17 +122,17 @@ export class Moon extends SideEpisode {
       if (this.heard.has(i) || cx < (R.x0 + R.x1) / 2 - 30) return;
       this.heard.add(i);
       const lines = MOON_OVERHEARD[i], seat = (j) => ({ x: R.x0 + 34 + j * 40, y: 88 });
-      lines.forEach((text, j) => this.time.delayedCall(j * 2300, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: n(M.wallHi), edge: n(M.adultHi), pitch: 300 + j * 80, leave: 170, hold: 1300 })));
+      lines.forEach((text, j) => this.time.delayedCall(j * 2300, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: 0xffffff, italic: true, pitch: 300 + j * 80, leave: 170, hold: 1300 })));
     });
   }
-  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.press('item', it, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { edge: 0xffffff, ink: 0xffffff, pitch: 520, leave: 80 }); }
+  describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.press('item', it, () => ({ x: Math.max(this.view.x + 60, Math.min(this.view.x + 260, x)), y }), { ink: 0xffffff, italic: true, pitch: 520, leave: 80 }); }
   updateRobot(dt) {
     const R = this.robot, B = LEVEL.robot, k = this.kid, talking = this.bubbles.busy('robot'), near = Math.abs(R.x - (k.x + k.w / 2)) < 22;
     if (!near && !talking) { R.x += R.dir * B.speed * dt; if (R.x > B.x1) { R.x = B.x1; R.dir = -1; } if (R.x < B.x0) { R.x = B.x0; R.dir = 1; } }
     this.robotProp.x = Math.round(R.x) - 5; this.robotThing.x0 = R.x - 8; this.robotThing.x1 = R.x + 8;
     this.robotImg.setTexture(near || talking ? 'mr_c' : Math.floor(this.clock * 4) % 2 ? 'mr_a' : 'mr_b').setPosition(Math.round(R.x), GROUND).setFlipX(R.dir < 0);
   }
-  robotTalk() { const R = this.robot; if (!this.robotSrc) this.robotSrc = { lines: MOON_ROBOT, i: 0, loop: true }; this.bubbles.press('robot', this.robotSrc, () => ({ x: R.x, y: GROUND - 8 }), { ink: n(M.mint), edge: n(M.robotLo), pitch: 1180, leave: 64 }); }
+  robotTalk() { const R = this.robot; if (!this.robotSrc) this.robotSrc = { lines: MOON_ROBOT, i: 0, loop: true }; this.bubbles.press('robot', this.robotSrc, () => ({ x: R.x, y: GROUND - 8 }), { ink: 0x4ae8ff, pitch: 1180, leave: 64 }); }
 
   // ------------------------------------------------------------------ the playroom
   enterDoor() {

@@ -73,7 +73,7 @@ export class EastWing extends TopDownEpisode {
     Music.play('eastwing', { fadeIn: 3 });
     this.events.once('shutdown', () => Object.values(this.beds).forEach(b => b.stop(0.4)));
     this.takeNote({ fromCut: data.fromCut && !data.fromFall }, 3, 'The East Wing');
-    if (data.fromFall) this.time.delayedCall(900, () => overlay.note('The glasses cracked', 2200));
+    if (data.fromFall) this.time.delayedCall(900, () => overlay.sfx('[GLASS CRACKS]', 1700));
     this.time.delayedCall(data.fromFall ? 1900 : 600, () => this.itemPanel('cracked'));
     window.__game = { scene: this, state };
   }
@@ -127,7 +127,7 @@ export class EastWing extends TopDownEpisode {
   onNoise(x, y, r, kind) {
     // the robot comes to look
     const R = this.robot, L = LEVEL.robot;
-    if (Math.hypot(R.x - x, R.y - y) <= Math.max(L.hear, r + 3) && R.mode !== 'off') { R.mode = 'investigate'; R.target = [x, y]; R.route = this.path([Math.round(R.x), Math.round(R.y)], [x, y]); R.wait = 0; this.bubbles.say('robot', '?', () => ({ x: R.x * T + 8, y: R.y * T + 2 }), { edge: 0xff5a4a, ink: 0xffffff, pitch: 900, ms: 900 }); }
+    if (Math.hypot(R.x - x, R.y - y) <= Math.max(L.hear, r + 3) && R.mode !== 'off') { R.mode = 'investigate'; R.target = [x, y]; R.route = this.path([Math.round(R.x), Math.round(R.y)], [x, y]); R.wait = 0; this.bubbles.say('robot', '?', () => ({ x: R.x * T + 8, y: R.y * T + 2 }), { ink: 0xffe94a, pitch: 900, ms: 900 }); }
     // a sensor in range of a noise fires once and needs time to recharge; if a pebble set it
     // off, the satellite shoots the pebble
     let seen = false;
@@ -234,7 +234,7 @@ export class EastWing extends TopDownEpisode {
         this.cameras.main.shake(500, 0.02); Sound.noise(1.0, 0.25, 2000); Sound.tone(60, 0.8, 'sawtooth', 0.05, 30);
         this.noise(Math.floor(C.x), Math.floor(C.y), 9, 'crash');
         this.dust = { t: 0 };
-        this.doorOpen = true; this.time.delayedCall(600, () => { Sound.chime(); overlay.note('The door is open', 2000); });
+        this.doorOpen = true; this.time.delayedCall(600, () => { Sound.chime(); overlay.sfx('[A DOOR UNLOCKS]', 2200); });
         const k = this.kidPx(); if (!window.__noDeath && Math.hypot(k.x - C.x * T, k.y - C.y * T) < 26) this.die({ id: 'chandelier', direct: true });
       }
     }
@@ -261,16 +261,19 @@ export class EastWing extends TopDownEpisode {
     this.drawDark(0.88);
     // what the cracked glasses still show: cones that flicker in and out, split in two colors
     const g = this.overG; g.clear();
-    const glassesOn = this.gl.showing && ((Math.sin(t * 2.3) + Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 13.1) * 0.3) > -0.35 || this.glitchT < 2.5);
+    // Only the glasses show what watches her. Off, or in a dropout, none of this is drawn: she
+    // has the LEDs in the walls, the sounds, and the lock box once something has her.
+    const seeing = this.gl.showing;
+    const glassesOn = seeing && ((Math.sin(t * 2.3) + Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 13.1) * 0.3) > -0.35 || this.glitchT < 2.5);
     const tileFill = (tiles, col, a, off) => tiles && tiles.forEach(i => { const x = (i % W) * T, y = Math.floor(i / W) * T; g.fillStyle(col, a); g.fillRect(x + 1 + (off || 0), y + 1, 14, 14); });
-    [this.camSrc, this.robotSrc, this.chSrc].forEach(s => {
+    if (seeing) [this.camSrc, this.robotSrc, this.chSrc].forEach(s => {
       if (!s.tiles) return;
       const locking = s.lock > 0;
       if (locking) tileFill(s.tiles, red, 0.22 + Math.min(1, s.lock / LOCK_TD) * 0.15);
       else if (glassesOn) { tileFill(s.tiles, hexNum(P.overlay), 0.13); if (Math.floor(t * 9) % 4 === 0) tileFill(s.tiles, red, 0.07, 1); }
     });
-    // sensors: a red eye in the wall, a pulse you can always see
-    this.sensors.forEach(s => {
+    // sensors: through the glasses, the ground each one covers and its pulse
+    if (glassesOn) this.sensors.forEach(s => {
       const x = s.x * T + 8, y = s.y * T + 8, on = this.sensorOn(s);
       g.lineStyle(1, red, on ? 0.7 : s.cool > 0 ? 0.12 : 0.25); g.strokeCircle(x, y, s.r * T);
       if (on) { g.fillStyle(red, 0.09); g.fillCircle(x, y, s.r * T); }
@@ -303,7 +306,14 @@ export class EastWing extends TopDownEpisode {
     // LEDs that survive the dark: sensors, the camera, the robot
     const lg = this.ledG; lg.clear();
     const blink = Math.floor(t * 2) % 2 === 0;
-    this.sensors.forEach(s => { lg.fillStyle(hexNum(P.device), 1); lg.fillRect(s.x * T + 5, s.y * T + 10, 6, 5); lg.fillStyle(this.sensorOn(s) || blink ? red : hexNum(P.wallLine), 1); lg.fillRect(s.x * T + 7, s.y * T + 12, 2, 2); });
+    // a sensor's LED is real light: it glows while the sensor pulses and pops white when it fires
+    this.sensors.forEach(s => {
+      const on = this.sensorOn(s), lx = s.x * T + 8, ly = s.y * T + 13;
+      lg.fillStyle(hexNum(P.device), 1); lg.fillRect(s.x * T + 5, s.y * T + 10, 6, 5);
+      if (on) { lg.fillStyle(red, 0.16 + 0.06 * Math.sin(t * 20)); lg.fillCircle(lx, ly, 5); lg.fillStyle(red, 0.3); lg.fillCircle(lx, ly, 2.5); }
+      lg.fillStyle(on || (blink && s.cool <= 0) ? red : hexNum(P.wallLine), 1); lg.fillRect(s.x * T + 7, s.y * T + 12, 2, 2);
+      if (s.flash > 0) { lg.fillStyle(0xffffff, Math.min(1, s.flash * 2)); lg.fillCircle(lx, ly, 1.5 + (0.5 - s.flash) * 8); }
+    });
     const Cm = LEVEL.camera, ca = this.camAngle * Math.PI / 180; lg.fillStyle(hexNum(P.device), 1); lg.fillRect(Cm.x * T - 3, Cm.y * T - 3, 7, 5); lg.fillStyle(hexNum(P.glassLit), 1); lg.fillRect(Math.round(Cm.x * T + Math.cos(ca) * 3), Math.round(Cm.y * T + Math.sin(ca) * 3), 2, 2); if (blink || this.camSrc.lock > 0) { lg.fillStyle(led, 1); lg.fillRect(Cm.x * T - 2, Cm.y * T - 2, 1, 1); }
     const R = this.robot, ra = R.face * Math.PI / 180; lg.fillStyle(R.mode === 'investigate' ? red : hexNum(P.robotLed), 1); lg.fillRect(Math.round(R.x * T + 8 + Math.cos(ra) * 4), Math.round(R.y * T + 8 + Math.sin(ra) * 4), 2, 2);
     // the satellite, the strike, a burst where she was

@@ -183,7 +183,7 @@ export class Room extends SideEpisode {
 
   describe(it) {
     if (!it.src) it.src = { lines: () => it.text.map(raw => typeof raw === 'function' ? raw(this.take) : raw) };
-    this.bubbles.press('item', it.src, () => ({ x: Math.max(60, Math.min(260, (it.x0 + it.x1) / 2)), y: it.y }), { edge: 0xffffff, ink: 0xffffff, pitch: 520, leave: 70 });
+    this.bubbles.press('item', it.src, () => ({ x: Math.max(60, Math.min(260, (it.x0 + it.x1) / 2)), y: it.y }), { ink: 0xffffff, italic: true, pitch: 520, leave: 70 });
   }
 
   skipAhead() { this.leave(); }

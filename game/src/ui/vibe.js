@@ -6,7 +6,7 @@ import { Music } from '../core/music.js';
 import { LOOKS, LOOK_KEYS } from '../art/palettes.js';
 import { flat } from '../art/painter.js';
 import { paintSky, paintMoon, paintLevel } from '../art/estate.js';
-import { pixText, textWidth } from '../art/pixfont.js';
+import { ccText, ccWidth, ccBox } from '../art/ccfont.js';
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
 
@@ -21,12 +21,6 @@ function base(key) {
   x.drawImage(paintLevel(P).canvas, -X0, 0);
   return (cache[key] = c);
 }
-// a tiny pixel text on a 2d context, through the same 3x5 font the game uses
-function ctxText(x, s, px, py, color) {
-  const g = { fillStyle: (c, a) => { x.fillStyle = typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : c; x.globalAlpha = a == null ? 1 : a; }, fillRect: (a, b, w, h) => x.fillRect(a, b, w, h) };
-  pixText(g, s, px, py, color, 1, 1); x.globalAlpha = 1;
-}
-
 export function initPicker(onBegin) {
   const list = document.getElementById('tv-list'), canvas = document.getElementById('tv-canvas'), tv = document.getElementById('tv');
   if (!list || !canvas || !tv) return () => {};
@@ -38,7 +32,7 @@ export function initPicker(onBegin) {
     const P = LOOKS[k], li = document.createElement('li'), b = document.createElement('button');
     b.type = 'button'; b.setAttribute('role', 'option');
     const n = document.createElement('span'); n.className = 'n'; n.textContent = String(i + 1);
-    const name = document.createElement('span'); name.textContent = P.name;
+    const name = document.createElement('span'); name.className = 'name'; name.textContent = P.name;
     const v = document.createElement('span'); v.className = 'v';
     const sw = document.createElement('span'); sw.className = 'sw';
     ['skyMid', 'wall', 'gold', 'glassLit'].forEach(r => { const d = document.createElement('i'); d.style.background = flat(P[r]); sw.append(d); });
@@ -93,9 +87,12 @@ export function initPicker(onBegin) {
     for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2, r = 16 + 3 * Math.sin(t * 2 + i), x = 160 + Math.cos(a + t * 0.4) * r * 1.6, y = 40 + Math.sin(a + t * 0.4) * r * 0.7; ctx.fillStyle = flat([P.glint, P.goldHi, P.glassLit][i % 3]); ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 6 + i); ctx.fillRect(Math.round(x), Math.round(y), 1, 1); }
     ctx.globalAlpha = 1;
     // the broadcast marks
-    if (Math.floor(t * 2) % 2 === 0) { ctx.fillStyle = '#ff4d5e'; ctx.fillRect(8, 8, 3, 3); }
-    ctxText(ctx, 'LIVE', 14, 7, '#ffffff'); ctxText(ctx, 'CH 07', 320 - 8 - textWidth('CH 07'), 7, '#ffffff');
-    const label = (current + 1) + ' ' + P.name.toUpperCase(); ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(4, 162, textWidth(label) + 8, 11); ctxText(ctx, label, 8, 165, flat(P.goldHi));
+    if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 9, 9, '#ff4d5e');
+    ccText(ctx, 'LIVE', 16, 9, '#ffffff'); ccText(ctx, 'CH 07', 311 - ccWidth('CH 07'), 9, '#ffffff', { alpha: 0.7 });
+    // the look as a lower third: a red tag over the name
+    const tag = 'LOOK ' + (current + 1), tw = ccWidth(tag) + 8, nw = ccWidth(P.name) + 8;
+    ccBox(ctx, 10, 144, tw, 11, '#ff4d5e', 1); ccText(ctx, tag, 14, 146, '#ffffff');
+    ccBox(ctx, 10, 155, nw, 13, '#000000', 0.9); ccText(ctx, P.name, 14, 158, '#ffffff');
     // static between channels
     if (flip > 0) { const img = ctx.getImageData(0, 0, 320, 180), d = img.data, s = flip / 0.22; for (let i = 0; i < d.length; i += 4) { if (Math.random() < s) { const v = Math.random() * 255; d[i] = d[i + 1] = d[i + 2] = v; } } ctx.putImageData(img, 0, 0); }
     requestAnimationFrame(frame);

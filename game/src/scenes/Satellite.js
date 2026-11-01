@@ -72,7 +72,7 @@ export class Satellite extends Phaser.Scene {
       overlay.hint('Sort the pings. Left, Down or Right sends the front one to that bin (or click a bin). The rule card says which bin takes which shape.');
     } else this.loadLevel(0);
     if (!this.embedded) cam.fadeIn(500);
-    if (!data.quiet && !this.embedded) { overlay.card('SATELLITE', 'Batch ' + this.batch, 2600); }
+    if (!data.quiet && !this.embedded) { overlay.card('SATELLITE', 'Batch ' + this.batch, 2600, 'lower'); }
     if (!this.embedded) window.__game = { scene: this };
   }
   onRescale() { if (!this.embedded) this.cameras.main.setZoom(pixelZoom()); }

@@ -203,9 +203,8 @@ export class Gallery extends SideEpisode {
     this.robotSprite.setTexture(tex).setPosition(Math.round(R.x), GROUND).setFlipX(R.dir < 0);
   }
   robotStyle() {
-    // the robot speaks in its LED color, unless that is too dark to read (the ink look)
-    const led = hexNum(this.P.robotLed), lum = ((led >> 16) & 255) * 0.3 + ((led >> 8) & 255) * 0.59 + (led & 255) * 0.11;
-    return { ink: lum > 90 ? led : 0xe9fff2, edge: hexNum(this.P.robot), pitch: 1180, leave: 64 };
+    // machines speak in caption cyan, in every look
+    return { ink: 0x4ae8ff, pitch: 1180, leave: 64 };
   }
   robotSay(text) { this.bubbles.say('robot', text, () => ({ x: this.robot.x, y: GROUND - 8 }), Object.assign(this.robotStyle(), { leave: 200 })); }
   robotTalk() {

@@ -64,7 +64,7 @@ export class Grounds extends SideEpisode {
     this.props = LEVEL.props.map(r => Object.assign({}, r));
     const CB = LEVEL.crowbar, SD = LEVEL.shedDoor;
     this.crowbarSrc = { lines: ['His crowbar. He came this way.'] };
-    this.things.push({ x0: CB.x - 8, x1: CB.x + 8, y0: GROUND - 6, y1: GROUND, use: () => this.bubbles.press('item', this.crowbarSrc, () => ({ x: CB.x, y: GROUND - 6 }), { edge: 0xffffff, pitch: 520 }) });
+    this.things.push({ x0: CB.x - 8, x1: CB.x + 8, y0: GROUND - 6, y1: GROUND, use: () => this.bubbles.press('item', this.crowbarSrc, () => ({ x: CB.x, y: GROUND - 6 }), { ink: 0xffffff, italic: true, pitch: 520 }) });
     this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, use: () => this.enterRoom('keeper') });
     this.scan = null;
 
@@ -159,7 +159,7 @@ export class Grounds extends SideEpisode {
     if (!this.scan) {
       if (!this.dead && !this.leaving && k.x > S.trigger) {
         this.scan = { x: k.x - S.behind, t: 0 };
-        overlay.note('SCAN', 1600); Sound.tone(520, 0.5, 'sawtooth', 0.03, 1040);
+        overlay.sfx('[ALARM]', 1600); Sound.tone(520, 0.5, 'sawtooth', 0.03, 1040);
         this.cameras.main.flash(120, 90, 20, 20);
       }
       return;

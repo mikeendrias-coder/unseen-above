@@ -11,7 +11,7 @@ export function reviewKeys(scene) {
   const c = scene.ctl; if (!c) return false;
   if (c.immune()) {
     state.immune = !state.immune; window.__noDeath = state.immune; overlay.immune(state.immune);
-    overlay.note(state.immune ? 'Immunity on · N skips ahead' : 'Immunity off', 1800);
+    overlay.note(state.immune ? 'Immunity on' : 'Immunity off', 1800);
     Sound.tone(state.immune ? 880 : 440, 0.08, 'triangle', 0.02);
   }
   if (c.skipAhead() && state.immune && scene.skipAhead) { scene.skipAhead(); Sound.tone(1200, 0.05, 'square', 0.015); return true; }

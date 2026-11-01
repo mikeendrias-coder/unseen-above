@@ -361,7 +361,7 @@ export class Bedroom extends SideEpisode {
   }
 
   say(text) {
-    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xffffff, edge: hexNum(this.P.kid), pitch: 760 });
+    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xffffff, pitch: 760 });
   }
 
   // ------------------------------------------------------------------ drawing
@@ -517,11 +517,12 @@ export class Bedroom extends SideEpisode {
       g.fillStyle(red, 0.13 + ahead); g.fillRect(d.x, d.y, d.w, 1);
     });
     if (this.mode === 'house') {
+      // the cones exist only in the glasses; off, she has the LEDs and the two clicks
       const on = this.gl.showing && glassesOn(t);
       this.cams.forEach(cm => {
         if (!cm.cone) return;
         const o = cm.cone[0], a = cm.cone[1], b = cm.cone[cm.cone.length - 1];
-        if (cm.warn && !cm.caught) {
+        if (cm.warn && !cm.caught && this.gl.showing) {
           const blink = Math.floor(t * 16) % 2 === 0;
           g.fillStyle(red, blink ? 0.12 : 0.05); g.fillPoints(cm.cone, true);
           g.lineStyle(1, red, blink ? 0.85 : 0.4); g.lineBetween(o.x, o.y, a.x, a.y); g.lineBetween(o.x, o.y, b.x, b.y);

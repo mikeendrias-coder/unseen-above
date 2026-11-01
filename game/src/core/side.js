@@ -257,7 +257,7 @@ export class SideEpisode extends Phaser.Scene {
     } else if (!this.dead) this.satX = null;
   }
   takeNote(data, num, title) {
-    if (data && data.fromCut) { this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600); overlay.bug('CH 07', 900); }); }
-    else if (this.ep.take > 1) overlay.note('TAKE ' + this.ep.take, 1600);
+    if (data && data.fromCut) { this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600, 'lower'); overlay.bug('CH 07', 3600); }); }
+    else if (this.ep.take > 1) overlay.take(this.ep.take);
   }
 }

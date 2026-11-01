@@ -218,8 +218,8 @@ export class TopDownEpisode extends Phaser.Scene {
     this.ep.bodies.forEach(b => { const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take)); this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1)); });
   }
   takeNote(data, num, title) {
-    if (data && data.fromCut) this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600); overlay.bug('CH 07', 900); });
-    else if (this.ep.take > 1) overlay.note('TAKE ' + this.ep.take, 1600);
+    if (data && data.fromCut) this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600, 'lower'); overlay.bug('CH 07', 3600); });
+    else if (this.ep.take > 1) overlay.take(this.ep.take);
   }
 
   // ------------------------------------------------------------------ things, the camera, the dark

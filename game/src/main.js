@@ -4,6 +4,7 @@ import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
 import { initPicker } from './ui/vibe.js';
 import { syncImmunity } from './core/review.js';
+import { itemPanel } from './core/panels.js';
 import { Grounds } from './scenes/Grounds.js';
 import { Gallery } from './scenes/Gallery.js';
 import { Intro } from './scenes/Intro.js';
@@ -73,7 +74,7 @@ function start() {
     overlay.clearCaption(); overlay.hint('');
     game.scene.start(r.first, r.firstData);
   });
-  window.__unseen = { game, display, Sound };
+  window.__unseen = { game, display, Sound, overlay, itemPanel };
 }
 
 const go = document.getElementById('start'), tv = document.getElementById('tv');

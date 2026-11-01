@@ -217,7 +217,7 @@ export class Intro extends Phaser.Scene {
           this.nightFx = this.cameras.main.filters.internal.addColorMatrix();
           this.nightFx.colorMatrix.set([0.12, 0.3, 0.1, 0, 0, 0.55, 1.45, 0.5, 0, 0, 0.08, 0.22, 0.08, 0, 0, 0, 0, 0, 1, 0]);
         } catch (e) { this.nightFx = null; }
-        overlay.clearCaption(); overlay.bug('CH 07', 2400); overlay.note('● REC', 2400);
+        overlay.clearCaption(); overlay.bug('CH 07', 2400); overlay.rec(2400);
         Sound.tone(220, 0.5, 'sawtooth', 0.012, 330); Sound.tone(1800, 0.05, 'square', 0.01);
       }
     } else if (this.nightFx) { this.cameras.main.filters.internal.remove(this.nightFx); this.nightFx = null; }
