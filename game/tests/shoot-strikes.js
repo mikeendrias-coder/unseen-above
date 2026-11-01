@@ -11,7 +11,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   for (const style of ['zigzag', 'ceiling', 'bend', 'orbit', 'floor', 'split']) {
     await p.evaluate(style => { const s = window.__game.scene, k = s.kid, v = s.cameras.main.worldView; window.__strikeHold = null; const tot = s.strikeFx.fire({ view: v, tx: k.x + 4, ty: k.y + 7, P: s.P, style }); window.__strikeHold = 0.14 + s.strikeFx.shot.travel - 0.02; }, style);
     await p.waitForTimeout(250);
-    await p.screenshot({ path: `tests/out/strike-${style}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+    await p.screenshot({ path: `tests/out/strike-${style}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   }
   console.log(errs.length ? 'ERRORS:\n' + errs.join('\n') : 'no errors');
   await b.close();

@@ -8,7 +8,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   const until = (fn, arg, ms) => p.waitForFunction(fn, arg, { timeout: ms || 60000, polling: 50 });
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
-  const shot = name => p.screenshot({ path: `tests/out/e2-${name}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+  const shot = name => p.screenshot({ path: `tests/out/e2-${name}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   const press = async key => { await p.keyboard.down(key); await p.waitForTimeout(120); await p.keyboard.up(key); };
   await p.addInitScript(() => { window.__noPanels = true; try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: 'A', episodes: {}, seenIntro: true })); } catch (e) {} });
   await p.goto(BASE + '/local.html#gallery'); await p.click('#start');

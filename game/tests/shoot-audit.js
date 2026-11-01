@@ -13,7 +13,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await p.waitForFunction(([k, panels]) => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === k && window.__game.scene.clock > (panels ? 0.2 : 1), [{ grounds: 'grounds', bedroom: 'bedroom', eastwing: 'eastwing' }[part], !!panels], { timeout: 60000 });
     return p;
   };
-  const shot = (p, n) => p.screenshot({ path: `tests/out/audit-${n}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+  const shot = (p, n) => p.screenshot({ path: `tests/out/audit-${n}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   const g = await open('grounds');
   await g.evaluate(() => { window.__noDeath = true; const s = window.__game.scene; s.kid.x = 17 * 16 + 6; s.kid.y = 120; s.kid.vy = 200; });
   await g.waitForTimeout(250); await shot(g, 'landing-dust');

@@ -12,7 +12,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'satellite' && window.__game.scene.clock > 1.2, null, { timeout: 60000 });
     return p;
   };
-  const shot = (p, n) => p.screenshot({ path: `tests/out/w-${n}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+  const shot = (p, n) => p.screenshot({ path: `tests/out/w-${n}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   for (const [skin, at] of [[1, 1.1], [2, 1.2], [3, 0.7], [4, 0.9]]) {
     const p = await open('?scene=satellite&batch=1&skin=' + skin);
     await p.evaluate(() => window.__game.scene.win());

@@ -35,7 +35,7 @@ function frame() {
   if (S.rec && t > S.rec.until) S.rec = null;
   ctx.clearRect(0, 0, W, H);
   if (!busy()) { running = false; return; }
-  drawCards(t); drawCaption(t); drawTop(t); drawPage(t);
+  drawCards(t); drawCaption(t); drawPage(t); drawTop(t); // the set's own messages sit over everything, teletext included
   requestAnimationFrame(frame);
 }
 
@@ -86,12 +86,14 @@ function drawCards(t) { S.cards.forEach(c => chyron(c, t)); }
 
 // ------------------------------------------------------------------ the top of the screen
 function drawTop(t) {
+  if (S.page) return; // a teletext page has the screen: the set's messages wait
   let y = 9;
-  if (S.bug) { const w = ccWidth(S.bug.text); ccText(ctx, S.bug.text, 310 - w, y, TV.white, { alpha: 0.6 }); y += 11; }
+  // review mode, top right, out of the way of anything the game draws at the top center
+  if (S.immune) { const s = 'IMMUNE · N SKIPS AHEAD', w = ccWidth(s); ccBox(ctx, 314 - w - 4, 2, w + 8, 11, TV.black, 0.85); ccText(ctx, s, 314 - w, 4, TV.salmon); y = 20; }
+  if (S.bug) { const w = ccWidth(S.bug.text); ccText(ctx, S.bug.text, 311 - w, y + 1, TV.black, { alpha: 0.6 }); ccText(ctx, S.bug.text, 310 - w, y, TV.white, { alpha: 0.75 }); y += 11; }
   // the set's on-screen display: green, with a hard shadow, like an old TV
   S.osd.forEach(o => { const s = o.text.toUpperCase(), w = ccWidth(s); ccText(ctx, s, 311 - w, y + 1, TV.black, { alpha: 0.85 }); ccText(ctx, s, 310 - w, y, TV.green); y += 11; });
   if (S.rec) { if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 10, 9, TV.red); ccText(ctx, 'REC', 17, 9, TV.white); }
-  if (S.immune) { const s = 'IMMUNE · N SKIPS AHEAD', w = ccWidth(s); ccBox(ctx, 160 - w / 2 - 4, 2, w + 8, 11, TV.black, 0.85); ccText(ctx, s, Math.round(160 - w / 2), 4, TV.salmon); }
 }
 
 // ------------------------------------------------------------------ text pages

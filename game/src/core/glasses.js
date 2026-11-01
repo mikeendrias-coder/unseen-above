@@ -25,7 +25,10 @@ export class Glasses {
   update(dt) {
     this.t += dt; this.flash = Math.max(0, this.flash - dt);
     const full = this.cracked ? 7 : 10;
+    const was = this.heat;
     if (this.on) this.heat = Math.min(1, this.heat + dt / full); else this.heat = Math.max(0, this.heat - dt / 3.5);
+    // a beep at each step toward cutting out, higher each time
+    if (this.on) [0.75, 0.85, 0.93].forEach((h, i) => { if (was < h && this.heat >= h) Sound.tone(700 + i * 220, 0.06, 'square', 0.016); });
     if (this.over > 0) this.over = Math.max(0, this.over - dt);
     if (this.on && this.heat >= 1) { this.on = false; this.over = 3; this.flash = 0.6; Sound.noise(0.4, 0.08, 6000); Sound.tone(220, 0.3, 'sawtooth', 0.02, 90); }
     // the picture blinks out now and then, more as they heat up, more when cracked
@@ -47,6 +50,8 @@ export class Glasses {
     const tears = Math.floor(lv * 4 + Math.random() * 1.5);
     for (let i = 0; i < tears; i++) { g.fillStyle(col, 0.06 + lv * 0.12); g.fillRect(0, Math.floor(Math.random() * 180), 320, 1 + Math.floor(Math.random() * 2)); }
     if (this.out > 0) { g.fillStyle(col, 0.05 + lv * 0.06); g.fillRect(0, 0, 320, 180); }
+    // running hot: a red edge pulses slowly around the view before they cut out
+    if (this.on && this.heat > 0.72) { const a = 0.18 + 0.22 * (0.5 + 0.5 * Math.sin(this.t * 11)); g.fillStyle(0xff5a4a, a); g.fillRect(0, 0, 320, 2); g.fillRect(0, 178, 320, 2); g.fillRect(0, 2, 2, 176); g.fillRect(318, 2, 2, 176); }
   }
   // a small readout in the corner: the key, on or off, and how hot they are
   drawMeter(g, x, y, col) {

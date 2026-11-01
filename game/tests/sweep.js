@@ -16,7 +16,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.isActive() && (window.__game.scene.clock || 0) > 0.3, null, { timeout: 60000 }).catch(() => {});
     return p;
   };
-  const shot = async (p, n) => { const f = `tests/out/sweep-${look}-${n}.png`; await p.screenshot({ path: f, clip: { x: 40, y: 34, width: 1280, height: 720 } }); shots.push(f); };
+  const shot = async (p, n) => { const f = `tests/out/sweep-${look}-${n}.png`; await p.screenshot({ path: f, clip: { x: 40, y: 42, width: 1280, height: 720 } }); shots.push(f); };
   const ev = (p, fn, arg) => p.evaluate(fn, arg);
   // episode 1: the start as it comes from the opening, the crowbar, the scan
   let p = await open('grounds');

@@ -12,7 +12,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.goto(BASE + '/local.html#bedroom'); await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'bedroom' && window.__game.scene.clock > 1, null, { timeout: 60000 });
   await p.evaluate(() => { window.__noDeath = true; });
-  const shot = n => p.screenshot({ path: `tests/out/e4-${look}-${n}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+  const shot = n => p.screenshot({ path: `tests/out/e4-${look}-${n}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   const put = x => p.evaluate(x => { const s = window.__game.scene, k = s.kid; k.x = x; k.y = 160 - 14; k.vx = 0; k.vy = 0; s.view.x = Math.max(0, Math.min(1088, x + 22 - 160)); }, x);
   // wait for a given camera to flash, then shoot while the flash is bright
   const flash = async (i, n) => { await p.waitForFunction(i => window.__game.scene.cams[i].flash > 0.8, i, { timeout: 15000 }); await shot(n); };

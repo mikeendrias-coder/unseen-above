@@ -573,8 +573,10 @@ export class Bedroom extends SideEpisode {
     }
   }
 
+  doorReady() { return this.mode === 'house' && !this.dead && !this.leaving; }
   drawThings() {
-    const t = this.nearThing;
+    const t = this.nearThing, d = this.level.door;
+    if (!t && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(d.x + d.w / 2, d.y, 'E');
     if (t && !t.noPrompt) { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0 - 2, t.label); }
     if (t === this.bagThing && this.bag.hold > 0) {
       const g = this.fxG, x = LEVEL.bag.x + 1, y = GROUND - 26;

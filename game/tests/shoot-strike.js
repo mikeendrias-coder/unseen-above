@@ -15,13 +15,13 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     else { s.glasses = true; s.cams[0].a0 = s.cams[0].a1 = 70; s.kid.x = 556; s.kid.y = 146; }
   }, scene);
   await p.waitForFunction(() => { const s = window.__game.scene; return [...(Array.isArray(s.lights) ? s.lights : []), ...(s.cams || [])].some(l => l.lock > 0.2); }, null, { timeout: 30000, polling: 20 });
-  await p.screenshot({ path: `tests/out/strike-${scene}-lock.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+  await p.screenshot({ path: `tests/out/strike-${scene}-lock.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   await p.waitForFunction(() => window.__game.scene.dead, null, { timeout: 30000 });
   await p.evaluate(() => { window.__game.scene.time.paused = true; });
   for (const t of [0.05, 0.2, 0.3, 0.42, 0.55, 0.75]) {
     await p.evaluate(t => { window.__strikeHold = t; }, t);
     await p.waitForTimeout(350);
-    await p.screenshot({ path: `tests/out/strike-${scene}-${t}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+    await p.screenshot({ path: `tests/out/strike-${scene}-${t}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   }
   await p.evaluate(() => { window.__strikeHold = null; window.__game.scene.time.paused = false; });
   console.log(errs.join('\n') || 'no errors');

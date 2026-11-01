@@ -151,6 +151,7 @@ export class Moon extends SideEpisode {
   }
 
   lookable() { return this.mode === 'walk' || this.mode === 'room'; }
+  doorReady() { return this.mode === 'walk' && !this.leaving; }
   // E on someone in the street: their next line, over their head
   npcTalk(Nn) { this.bubbles.press('npc' + Nn.i, Nn.src, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xffffff, pitch: 560 + Nn.i * 90, leave: 64 }); }
   npcSay(Nn, text) { this.bubbles.say('npc' + Nn.i, text, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xffffff, pitch: 700 + Nn.i * 90, leave: 64, hold: 900 }); }
@@ -289,7 +290,7 @@ export class Moon extends SideEpisode {
     this.kidImgs.forEach((img, i) => { const pose = this.mode === 'talk' && this.talkI < 1 ? 'back' : poseOf(i); img.setTexture('mk_' + (i ? 'b' : 'a') + '_' + pose).setFlipX(false).setY(LEVEL.couch.y + 4 + (pose === 'cheer' ? Math.round(Math.abs(Math.sin(t * 9 + i)) * -2) : 0)); });
     // a red light on her chest, at the end
     const e = this.eyeG; e.clear();
-    if (this.vest > 0 && this.mode !== 'last') { const k = this.kid, cx = Math.round(k.x + k.w / 2), top = Math.round(k.y); if (Math.floor(t * 8) % 2 === 0) { e.fillStyle(n(M.red), 1); e.fillRect(cx - 1, top + 7, 1, 1); e.fillStyle(n(M.red), 0.3); e.fillRect(cx - 2, top + 6, 3, 3); } }
+    if (this.vest > 0 && this.mode !== 'last') { const k = this.kid, cx = Math.round(k.x + k.w / 2), top = Math.round(k.y); const on = Math.floor(t * 4) % 2 === 0; e.fillStyle(on ? 0xff3b3b : 0x9c1f26, 1); e.fillRect(cx - 1, top + 7, 2, 2); if (on) { e.fillStyle(n(M.red), 0.28); e.fillRect(cx - 3, top + 6, 6, 4); e.fillRect(cx - 2, top + 5, 4, 6); e.fillStyle(0xffd0d0, 1); e.fillRect(cx - 1, top + 7, 1, 1); } }
     this.drawThings();
     this.drawLocks([], 1);
     this.drawHud();

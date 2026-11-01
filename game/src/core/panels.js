@@ -17,7 +17,10 @@ export function itemPanel(scene, kind, force) {
   const show = () => {
     state.markPanel(kind);
     scene.scene.pause();
+    // words in the world wait behind the page: nothing peeks out around its edges
+    const words = scene.bubbles && scene.bubbles.g; if (words) words.setVisible(false);
     overlay.panel(it, () => {
+      if (words) words.setVisible(true);
       if (scene.scene.isPaused()) scene.scene.resume();
       if (scene.ctl) scene.ctl.endFrame();
     });

@@ -88,7 +88,8 @@ export function initPicker(onBegin) {
     ctx.globalAlpha = 1;
     // the broadcast marks
     if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 9, 9, '#ff4d5e');
-    ccText(ctx, 'LIVE', 16, 9, '#ffffff'); ccText(ctx, 'CH 07', 311 - ccWidth('CH 07'), 9, '#ffffff', { alpha: 0.7 });
+    ccText(ctx, 'LIVE', 17, 10, '#000000', { alpha: 0.6 }); ccText(ctx, 'LIVE', 16, 9, '#ffffff');
+    ccText(ctx, 'CH 07', 312 - ccWidth('CH 07'), 10, '#000000', { alpha: 0.6 }); ccText(ctx, 'CH 07', 311 - ccWidth('CH 07'), 9, '#ffffff', { alpha: 0.85 });
     // the look as a lower third: a red tag over the name
     const tag = 'LOOK ' + (current + 1), tw = ccWidth(tag) + 8, nw = ccWidth(P.name) + 8;
     ccBox(ctx, 10, 144, tw, 11, '#ff4d5e', 1); ccText(ctx, tag, 14, 146, '#ffffff');

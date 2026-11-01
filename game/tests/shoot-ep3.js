@@ -13,8 +13,9 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.clock > 1, null, { timeout: 60000 });
     return p;
   };
-  const shot = (p, n) => p.screenshot({ path: `tests/out/e3-${look}-${n}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
-  if (!process.argv[3] || process.argv[3] === 'fall') {
+  const shot = (p, n) => p.screenshot({ path: `tests/out/e3-${look}-${n}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
+  // the fall is a long tumble now and has its own script (shoot-fall.js); run this part with 'fall'
+  if (process.argv[3] === 'fall') {
     const f = await page('fall');
     await shot(f, 'fall-start');
     await f.evaluate(() => { const s = window.__game.scene; s.kid.x = 16 * 16; s.kid.y = 128 - 14; s.kid.vy = 0; });

@@ -96,6 +96,7 @@ export class Hallway extends SideEpisode {
 
   // things to look at: on the way in, and on the stage once the fight is over
   lookable() { return this.mode === 'walk' || this.mode === 'after'; }
+  doorReady() { return this.mode === 'after' && !this.dead && !this.leaving; }
 
   // ------------------------------------------------------------------ the loop
   update(time, delta) {
@@ -208,7 +209,7 @@ export class Hallway extends SideEpisode {
     // the toss: a spinning arc that lands near her
     if (s.fly) {
       s.fly.t += dt; const u = Math.min(1, s.fly.t / 0.7);
-      if (u >= 1) { s.floor = { x: s.fly.ex }; s.fly = null; this.swordThing.x0 = s.floor.x - 8; this.swordThing.x1 = s.floor.x + 8; this.swordThing.off = false; Sound.tone(1500, 0.06, 'square', 0.03); Sound.noise(0.12, 0.06, 5000); this.sparks.explode(5, s.floor.x, G - 1); }
+      if (u >= 1) { s.floor = { x: s.fly.ex }; s.fly = null; this.swordThing.x0 = s.floor.x - 12; this.swordThing.x1 = s.floor.x + 12; this.swordThing.y0 = G - 22; this.swordThing.py = G - 4; this.swordThing.off = false; Sound.tone(1500, 0.06, 'square', 0.03); Sound.noise(0.12, 0.06, 5000); this.sparks.explode(5, s.floor.x, G - 1); }
     }
     // a hit lands in the middle of the swing, once
     if (s.swing > 0.04 && s.swing < 0.16 && !s.hitThis) {

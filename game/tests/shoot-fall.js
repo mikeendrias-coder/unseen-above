@@ -9,7 +9,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.addInitScript(l => { window.__noPanels = true; try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: l, episodes: {}, seenIntro: true })); } catch (e) {} }, look);
   await p.goto(BASE + '/local.html#fall'); await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'fall' && window.__game.scene.clock > 0.8, null, { timeout: 60000 });
-  const shot = n => p.screenshot({ path: `tests/out/fall-${look}-${n}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+  const shot = n => p.screenshot({ path: `tests/out/fall-${look}-${n}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   await p.evaluate(() => window.__game.scene.skipAhead());
   await p.waitForFunction(() => window.__game.scene.phase === 'crack', null, { timeout: 8000 }); await shot('1-crack');
   for (const [n, t] of [['2-drop', 0.35], ['3-tumble', 1.2], ['4-deep', 2.3]]) { await p.waitForFunction(t => window.__game.scene.phase === 'falling' && window.__game.scene.fallT > t, t, { timeout: 10000 }); await shot(n); }

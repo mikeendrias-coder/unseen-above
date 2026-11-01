@@ -6,7 +6,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const p = await b.newPage({ viewport: { width: 1360, height: 880 }, deviceScaleFactor: 1 });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.addInitScript(() => { try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
-  const shot = n => p.screenshot({ path: `tests/out/gl-${n}.png`, clip: { x: 40, y: 34, width: 1280, height: 720 } });
+  const shot = n => p.screenshot({ path: `tests/out/gl-${n}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
   await p.goto(BASE + '/local.html#gallery'); await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'gallery' && window.__game.scene.clock > 1, null, { timeout: 60000 });
   await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene; s.kid.x = 14 * 16 + 4; s.kid.y = 146; });

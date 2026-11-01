@@ -145,9 +145,12 @@ export class SideEpisode extends Phaser.Scene {
       this.scene.sleep();
     });
   }
+  // whether the level's door would take her now (a scene says no while it is not open yet)
+  doorReady() { return !this.dead && !this.leaving; }
   drawThings() {
-    const t = this.nearThing;
+    const t = this.nearThing, d = this.level.door;
     if (t && !t.noPrompt) { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0, t.label); }
+    else if (!t && d && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(d.x + d.w / 2, d.y, 'E'); // the way out
     this.bubbles.update(this.game.loop.delta / 1000, this.clock);
   }
 

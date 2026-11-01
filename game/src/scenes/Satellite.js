@@ -19,7 +19,8 @@ import { WinFx, winSound, WIN_SECONDS, drawDeathMap } from '../sat/wins.js';
 const BATCHES = { 1: ['basic', 'walls', 'orbit'], 2: ['sort1', 'sort2', 'sort3'], 3: ['b2a', 'b2b', 'b2c'], 4: ['rotate', 'moving', 'orbit'] };
 const MODE = { 2: 'sort' };
 // a pentatonic ladder: each step of the line plays the next note up
-const LADDER = [0, 2, 4, 7, 9].map(n => n); const ladder = i => 440 * Math.pow(2, (LADDER[i % 5] + 12 * Math.floor(i / 5)) / 12);
+// (it climbs two octaves, then keeps to the top one: a long route never goes past hearing)
+const LADDER = [0, 2, 4, 7, 9].map(n => n); const ladder = i => 440 * Math.pow(2, (LADDER[i % 5] + 12 * Math.min(2, Math.floor(i / 5))) / 12);
 const H = h => parseInt(h.slice(1), 16);
 const hex2 = n => n.toString(16).toUpperCase().padStart(2, '0');
 
