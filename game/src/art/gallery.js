@@ -159,6 +159,7 @@ export function paintLevel(P) {
   for (let x = 66 * TILE; x < 87 * TILE; x += 48) { p.rect(x + 20, 30, 8, 96, P.wallLine); }
   p.rect(64 * TILE, 16, 2 * TILE, 10, P.colLo); p.rect(64 * TILE, 26, 6, 134, P.colLo); p.rect(66 * TILE - 6, 26, 6, 134, P.colLo);
   p.rect(64 * TILE + 1, 26, 1, 134, P.col); p.rect(66 * TILE - 5, 26, 1, 134, P.col);
+  for (let x = 67 * TILE; x < 86 * TILE; x += 64) { p.rect(x, 16, 26, 3, P.device); p.rect(x + 2, 19, 22, 1, P.glassLit); p.glowPoly([[x + 2, 20], [x + 24, 20], [x + 32, G], [x - 6, G]], P.glassLit, 0.035); }
   p.rect(87 * TILE, 0, 16, G, P.device); p.rect(87 * TILE, 0, 1, G, P.wallLine);
   const beams = [...new Set([].concat(...Object.values(LEVEL.laser.shots)))];
   beams.forEach(y => { p.rect(87 * TILE - 3, y - 3, 4, 6, P.device); p.rect(87 * TILE - 2, y - 1, 2, 2, P.crack); p.rect(LEVEL.laser.x0 - 1, y - 2, 3, 4, P.device); });

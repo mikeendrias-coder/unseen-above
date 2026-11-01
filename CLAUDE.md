@@ -28,9 +28,13 @@
 - `prototypes/`: first prototypes and their Playwright tests. `art/lookboard/`: the look board generator.
 
 ## Status (Nov 1, 2026)
-- Built: the opening cinematic (src/scenes/Intro.js), episode 1 on the grounds (src/scenes/Grounds.js), satellite batch 1 with four screen looks (src/scenes/Satellite.js).
+- Built: the opening cinematic (src/scenes/Intro.js), episode 1 on the grounds (src/scenes/Grounds.js), satellite batch 1 (back end screen), episode 2 in the gallery (src/scenes/Gallery.js), satellite batch 2 (ground station screen). Satellite.js has all four screen looks; K previews them.
+- Side episodes extend src/core/side.js (controller, collision, lock-on, deaths, bodies, takes). Level data and painting live in src/art/estate.js and src/art/gallery.js.
+- Episode 2 mechanics: glasses on the bench show camera views; a sweeping ceiling camera; a broken camera that snaps between aims and turns up to look at the Moon; a laser that tells, charges, fires (jump the low beam, crouch under the pair).
+- Clues planted so far: the laser charge sound is the satellite success sound; the broken camera looks at the Moon (which has a lit window); the glasses show CH 07; the glasses are back on the bench every take while the bodies stay.
 - Dialogue lives in src/data/dialogue.js (drafts). Look palettes in src/art/palettes.js.
-- Tests: tests/flow.js (hand-offs, a death, the door), tests/plan-ep1.mjs (safe-path search), tests/shoot-*.js (screenshots). Serve game/dist on port 8766 first.
+- Tests: tests/flow.js (every hand-off, deaths, doors, both batches; waits on game state), tests/plan-ep1.mjs and tests/plan-ep2.mjs (safe-path search; bundle with esbuild into tests/out first), tests/shoot-*.js (screenshots), tests/fps.js. Serve game/dist on port 8766 first (python3 -m http.server 8766).
+- URL params for testing: ?scene=grounds | gallery | satellite (&batch=2 &skin=N).
 
 ## Working rules
 - Pixel scenes are 320 x 180, scaled by whole numbers. Cinematic scenes use a 1280 x 720 design space.
