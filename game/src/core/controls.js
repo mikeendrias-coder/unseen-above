@@ -6,7 +6,7 @@ export function makeControls(scene) {
   const kb = scene.input.keyboard;
   const K = kb.addKeys({
     left: 'LEFT', right: 'RIGHT', up: 'UP', down: 'DOWN', a: 'A', d: 'D', w: 'W', s: 'S',
-    space: 'SPACE', z: 'Z', enter: 'ENTER', shift: 'SHIFT'
+    space: 'SPACE', z: 'Z', enter: 'ENTER', shift: 'SHIFT', e: 'E', f: 'F'
   }, true, true);
   const KC = Phaser.Input.Keyboard.KeyCodes, pressed = new Set();
   const onDown = ev => { Sound.ensure(); if (!ev.repeat) pressed.add(ev.keyCode); };
@@ -31,6 +31,9 @@ export function makeControls(scene) {
     nextScreen: () => take(KC.K),
     mute: () => take(KC.M),
     enterHeld: () => K.enter.isDown,
+    useHeld: () => K.e.isDown,
+    run: () => K.shift.isDown,
+    throwP: () => take(KC.F),
     endFrame: () => pressed.clear()
   };
 }
