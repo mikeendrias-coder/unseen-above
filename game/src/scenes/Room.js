@@ -173,7 +173,7 @@ export class Room extends SideEpisode {
     this.commonLayers();
     this.spawn(40); this.kid.face = 1;
     R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'E', noPrompt: false, use: () => this.describe(it) }); });
-    this.things.push({ x0: 18, x1: 34, y0: G - 30, y1: G, label: 'E', use: () => this.leave() });
+    this.things.push({ x0: 18, x1: 34, y0: G - 30, y1: G, label: 'E', door: true, use: () => this.leave() });
     this.hum = Sound.hum(0.02); Music.level(0.45, 0.5);
     this.events.once('shutdown', () => { this.hum.stop(0.2); overlay.hint(''); });
     this.cameras.main.fadeIn(300);

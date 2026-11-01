@@ -142,7 +142,8 @@ export class Hallway extends SideEpisode {
     if (this.lineT <= 0) this.nextLine();
   }
   nextLine() {
-    const l = this.queue.shift();
+    let l = this.queue.shift();
+    while (!l && this.queue.length) l = this.queue.shift(); // an empty entry never stalls the queue
     if (!l) { this.lineT = 0; overlay.clearCaption(); return; }
     // a callback may start lines of its own; then those play, and this queue is done
     if (l.cb) { l.cb(); if (this.lineT <= 0) this.nextLine(); return; }
@@ -228,12 +229,14 @@ export class Hallway extends SideEpisode {
   }
   hitCreator() {
     const c = this.cr, k = this.kid;
+    if (c.hp <= 0) return; // it is over: no hits after the last
     c.hp--; c.st = 'hurt'; c.t = 0.55; c.open = false; c.flash = 0.12;
     c.kx = (c.x < k.x + k.w / 2 ? -1 : 1) * 90;
     Sound.tone(220, 0.16, 'sawtooth', 0.04, 110); Sound.noise(0.12, 0.07, 2200); this.cameras.main.shake(120, 0.006);
     this.sparks.explode(10, c.x, G - 14);
     const line = HALL_HIT[HP - c.hp - 1];
-    if (c.hp <= 0) { this.say([line], () => this.yieldFight(), false, true); return; }
+    // the last hit stops everything at once: no more attacks, no traps, then the yield
+    if (c.hp <= 0) { this.mode = 'between'; c.st = 'between'; c.t = 99; this.endTraps(); this.say([line], () => this.yieldFight(), false, true); return; }
     const next = ROUND_AT.indexOf(c.hp);
     if (next > 0) { c.st = 'between'; c.t = 99; this.mode = 'between'; this.say([line].concat(HALL_ROUND[next]), () => this.startRound(next), false, true); this.endTraps(); }
     else this.say([line], null, false, true);

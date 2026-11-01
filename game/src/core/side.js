@@ -126,7 +126,10 @@ export class SideEpisode extends Phaser.Scene {
     const near = this.things.filter(t => !t.off && (looks || !t.look) && k.x + k.w > t.x0 - 6 && k.x < t.x1 + 6 && k.y < t.y1 && k.y + k.h > t.y0 - 10);
     // things to use come before things to look at; then the nearest
     this.nearThing = near.sort((a, b) => (a.look ? 1 : 0) - (b.look ? 1 : 0) || Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
-    if (this.nearThing && this.ctl.interact()) this.nearThing.use();
+    // E uses anything; Up also goes through a door, as the key list says. Up counts once per
+    // press, and not at all if it was already held when the scene began (no bouncing back out).
+    const up = this.ctl.up(), upTap = up && this.upHeld === false; this.upHeld = up;
+    if (this.nearThing && (this.ctl.interact() || (this.nearThing.door && upTap))) this.nearThing.use();
   }
   // A side room behind an optional door: this episode sleeps (its clock and lights freeze) and
   // wakes where she left it.

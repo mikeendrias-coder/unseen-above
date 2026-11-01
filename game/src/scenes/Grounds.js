@@ -66,7 +66,7 @@ export class Grounds extends SideEpisode {
     const CB = LEVEL.crowbar, SD = LEVEL.shedDoor;
     this.crowbarSrc = { lines: ['His crowbar. He came this way.'] };
     this.things.push({ x0: CB.x - 8, x1: CB.x + 8, y0: GROUND - 6, y1: GROUND, use: () => this.bubbles.look('item', this.crowbarSrc, () => ({ x: CB.x, y: GROUND - 6 })) });
-    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, use: () => this.enterRoom('keeper') });
+    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, door: true, use: () => this.enterRoom('keeper') });
     // things to look at on the way up to the house
     const N = NOTICE.grounds, G = GROUND, T = TILE, look = (x0, x1, py, lines, more) => this.addLook(Object.assign({ x0, x1, y0: G - 40, py, lines }, more));
     look(28, 58, G - 50, N.tree);

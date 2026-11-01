@@ -69,7 +69,7 @@ export class Bedroom extends SideEpisode {
     this.skipPoints = [12 * TILE + 20, 20 * TILE, 34 * TILE + 8, 56 * TILE + 8];
     const SD = LEVEL.sideDoor, bx = LEVEL.bag.x;
     this.bagThing = { x0: bx - 12, x1: bx + 14, y0: 140, y1: GROUND, label: 'E', use: () => {} };
-    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', use: () => this.enterRoom('wardrobe') }, this.bagThing);
+    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', door: true, use: () => this.enterRoom('wardrobe') }, this.bagThing);
     // things to look at in the dark (not once the floor starts to go)
     const N = NOTICE.bedroom, look = (x0, x1, py, lines, y0) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 112, py, lines });
     look(94, 148, 126, N.piano); look(238, 298, 130, N.table); look(556, 580, 50, N.clock, 100); look(626, 694, 130, N.silver); look(754, 822, 132, N.billiards);

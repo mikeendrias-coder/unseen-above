@@ -55,7 +55,7 @@ export class Gallery extends SideEpisode {
     const CB = LEVEL.cabinet, SD = LEVEL.staffDoor;
     this.cabinetThing = { x0: CB.x0, x1: CB.x1, y0: CB.top, y1: GROUND, use: () => this.openDrawer() };
     this.robotThing = { x0: 0, x1: 0, y0: GROUND - 8, y1: GROUND, use: () => this.robotTalk() };
-    this.things.push(this.cabinetThing, this.robotThing, { x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', use: () => this.enterRoom('staff') });
+    this.things.push(this.cabinetThing, this.robotThing, { x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', door: true, use: () => this.enterRoom('staff') });
     // things to look at: the hall's portraits, then the worn middle
     const N = NOTICE.gallery, T = TILE, look = (x0, x1, py, lines, y0) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 110, py, lines });
     look(50, 80, 106, N.man); look(164, 200, 108, N.family); look(290, 322, 106, N.boy); look(398, 428, 106, N.cake);
