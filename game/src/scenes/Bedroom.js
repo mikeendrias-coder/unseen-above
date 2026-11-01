@@ -7,6 +7,7 @@ import { Music } from '../core/music.js';
 import { hexNum, flat } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText, textWidth } from '../art/pixfont.js';
+import { ccText, ccWidth, ccBox } from '../art/ccfont.js';
 import { TILE, GROUND, BX, LEVEL, buildMap, paintLevel, paintBrother, bloodOf, trail } from '../art/bedroom.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -229,7 +230,7 @@ export class Bedroom extends SideEpisode {
     this.cameras.main.shake(450, 0.012); Sound.noise(0.9, 0.22, 1500); Sound.tone(70, 1.2, 'sawtooth', 0.05, 40);
     for (let i = 0; i < 24; i++) this.debris.emitParticleAt(LEVEL.bag.wall.x + Math.random() * 30, 100 + Math.random() * 50, 1);
     this.collapse = { x: LEVEL.collapse.from, t: 0, done: false };
-    this.beds.rumble = Sound.rumble(0.26); this.runNote = 1.6;
+    this.beds.rumble = Sound.rumble(0.26); this.runNote = 1.6; overlay.sfx('[THE FLOOR GIVES WAY]', 2000);
     Music.play('run', { fade: 0.2, fadeIn: 0.15 });
   }
 
@@ -584,7 +585,8 @@ export class Bedroom extends SideEpisode {
     const dim = this.mode === 'house' ? 1 : 0.4, a = (this.glitchT < 2 ? (Math.random() < 0.5 ? 0.9 : 0.1) : 0.45) * dim, m = 5, s = 8;
     if (this.runNote > 0) {
       this.runNote -= dt;
-      if (Math.floor(this.runNote * 6) % 2 === 0) { const w = textWidth('RUN') * 2; pixText(g, 'RUN', 160 - w / 2, 30, 0xffffff, 2, 0.95); }
+      // the glasses flash one word at her, in the caption face, in their own color
+      if (Math.floor(this.runNote * 6) % 2 === 0) { const w = ccWidth('RUN'); ccBox(g, 160 - w / 2 - 4, 26, w + 8, 11, 0x000000, 0.85); ccText(g, 'RUN', 160 - w / 2, 28, col); }
     }
     if (this.mode === 'house') this.gl.drawMeter(g, 18, 166, col);
     if (!this.gl.on && this.mode === 'house') return;

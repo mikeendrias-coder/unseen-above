@@ -46,9 +46,10 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('crouching, the high lunge passes over', !(await lunge(true, 'crouch')));
   ok('a low lunge kills her standing', await lunge(false, 'stand'));
   ok('jumping, the low lunge passes under', !(await lunge(false, 'air')));
-  const chop = (dx) => p.evaluate(dx => { const s = window.__game.scene, c = s.cr, k = s.kid; c.face = 1; c.x = 30 * 16; k.crouch = false; k.h = 14; k.y = 146; k.x = c.x + dx; let died = false; const d = s.die; s.die = function () { died = true; }; s.chopHits(); s.die = d; return died; }, dx);
-  ok('the chop kills her in front of them', await chop(8));
-  ok('backed off, the chop misses', !(await chop(34)));
+  const chop = (dx, at) => p.evaluate(([dx, at]) => { const s = window.__game.scene, c = s.cr, k = s.kid; c.face = 1; c.x = at; k.crouch = false; k.h = 14; k.y = 146; k.x = c.x + dx; let died = false; const d = s.die; s.die = function () { died = true; }; s.chopHits(); s.die = d; return died; }, [dx, at]);
+  ok('the chop kills her in front of them', await chop(8, 25 * 16));
+  ok('backed off, the chop misses', !(await chop(34, 25 * 16)));
+  ok('under the desk, the chop bites the tabletop', !(await chop(8, 29 * 16 + 10)));
   // the searchlight sees her in the open, not crouched in the shadow of a crate; a flash camera
   // overhead cannot see her under the desk
   const sees = (x, crouch, ox, oy, aimX) => p.evaluate(([x, crouch, ox, oy, aimX]) => {
@@ -80,6 +81,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   for (let r = 0; r < 3; r++) { await p.keyboard.press('KeyN'); await until(r => window.__game.scene.mode !== 'fight' || window.__game.scene.cr.round > r, r, 20000); if (r < 2) await until(r => window.__game.scene.mode === 'fight' && window.__game.scene.cr.round === r + 1, r, 40000); }
   await until(() => window.__game.scene.mode === 'yield', null, 20000);
   ok('nine hits: the creator yields', await p.evaluate(() => window.__game.scene.cr.hp === 0));
+  await until(() => /cut me/.test(document.getElementById('cc').textContent), null, 15000);
+  ok('the yield opens with its first line: "' + await p.evaluate(() => document.getElementById('cc').textContent) + '"', true);
   for (let i = 0; i < 8; i++) { await p.keyboard.press('Enter'); await p.waitForTimeout(250); }
   await until(() => window.__game.scene.mode === 'after', null, 40000);
   ok('the red light on their headset is off', await p.evaluate(() => !window.__game.scene.cr.tally));

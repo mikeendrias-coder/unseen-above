@@ -34,7 +34,7 @@ export const M = {
 export const LEVEL = {
   w: CW + 21, h: 12,
   start: { x: 50, y: G - 14 },
-  arrive: { x: 24, y: G - 36, w: 22, h: 36 },                   // the door she comes out of, on a plinth
+  arrive: { x: 24, y: G - 40, w: 22, h: 36 },                   // the door she comes out of, on a plinth 4 px high
   door: { x: 100 * T, y: G - 36, w: 22, h: 36 },                 // STAFF ONLY: backstage
   fountain: { x: 19 * T },
   viewer: { x: 10 * T + 8 },                                     // a coin viewer pointed at Earth
@@ -225,7 +225,7 @@ function building(p, B, r) {
 // the door she came out of, on a plinth behind ropes, a plaque in front
 function exhibitDoor(p, A) {
   p.rect(A.x - 10, G - 4, A.w + 20, 4, M.trim); p.rect(A.x - 10, G - 4, A.w + 20, 1, M.trimHi);
-  oddDoor(p, Object.assign({}, A, { y: A.y - 4 }), true);
+  oddDoor(p, A, true);
   [A.x - 16, A.x + A.w + 14].forEach(x => { p.rect(x, G - 14, 2, 14, M.trimLo); p.circle(x + 1, G - 15, 1, M.trim); });
   for (let i = 0; i <= 10; i++) p.px(A.x - 15 + i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#c23f78');
   for (let i = 0; i <= 10; i++) p.px(A.x + A.w + 15 - i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#c23f78');

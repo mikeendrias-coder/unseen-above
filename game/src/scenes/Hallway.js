@@ -124,8 +124,9 @@ export class Hallway extends SideEpisode {
 
   // ------------------------------------------------------------------ lines
   // Captions in a queue: each line holds for as long as it takes to read, then the next.
-  say(lines, cb, keep) {
+  say(lines, cb, keep, now) {
     if (!keep) this.queue = [];
+    if (now) this.lineT = 0; // cut in over whatever is up
     lines.forEach(l => this.queue.push(typeof l === 'string' ? { who: 'CREATOR', text: l } : l));
     if (cb) this.queue.push({ cb });
     if (this.lineT <= 0) this.nextLine();
@@ -133,7 +134,8 @@ export class Hallway extends SideEpisode {
   nextLine() {
     const l = this.queue.shift();
     if (!l) { this.lineT = 0; overlay.clearCaption(); return; }
-    if (l.cb) { l.cb(); return this.nextLine(); }
+    // a callback may start lines of its own; then those play, and this queue is done
+    if (l.cb) { l.cb(); if (this.lineT <= 0) this.nextLine(); return; }
     const text = l.text.replace('{take}', this.ep.take);
     // a voice from off screen is captioned in italics
     const off = l.who === 'CREATOR' && (this.cr.x < this.view.x - 4 || this.cr.x > this.view.x + 324);
@@ -220,10 +222,10 @@ export class Hallway extends SideEpisode {
     Sound.tone(220, 0.16, 'sawtooth', 0.04, 110); Sound.noise(0.12, 0.07, 2200); this.cameras.main.shake(120, 0.006);
     this.sparks.explode(10, c.x, G - 14);
     const line = HALL_HIT[HP - c.hp - 1];
-    if (c.hp <= 0) { this.say([line], () => this.yieldFight()); return; }
+    if (c.hp <= 0) { this.say([line], () => this.yieldFight(), false, true); return; }
     const next = ROUND_AT.indexOf(c.hp);
-    if (next > 0) { c.st = 'between'; c.t = 99; this.mode = 'between'; this.say([line].concat(HALL_ROUND[next]), () => this.startRound(next)); this.endTraps(); }
-    else this.say([line]);
+    if (next > 0) { c.st = 'between'; c.t = 99; this.mode = 'between'; this.say([line].concat(HALL_ROUND[next]), () => this.startRound(next), false, true); this.endTraps(); }
+    else this.say([line], null, false, true);
   }
 
   // ------------------------------------------------------------------ the creator
@@ -249,7 +251,7 @@ export class Hallway extends SideEpisode {
           // never a chop when she has her back to a wall: they step back and lunge instead
           const room = dx < 0 ? kc - (ARENA.x0 + 2) : (ARENA.x1 - 2) - kc;
           if (dist < 34 && room > 34) { c.st = 'raise'; c.t = TELL[R] * 0.85; Sound.tone(300, 0.4, 'sine', 0.02, 1200); }
-          else if (dist < 34) { c.x = clampX(c.x - Math.sign(dx) * 26); c.t = 0.3; c.attacks--; }
+          else if (dist < 34) { c.st = 'hop'; c.hopTo = clampX(c.x - Math.sign(dx) * 32); c.t = 0.4; c.attacks--; Sound.noise(0.1, 0.02, 1500); }
           else {
             const hist = c.lastLunge, hi = hist.length >= 2 && hist[0] === hist[1] ? !hist[0] : Math.random() < 0.5;
             hist.unshift(hi); hist.length = Math.min(hist.length, 3);
@@ -279,6 +281,11 @@ export class Hallway extends SideEpisode {
       case 'recover': case 'stuck':
         c.pose = c.st === 'stuck' ? 'lean' : 'stand';
         if (c.t <= 0) { c.st = 'idle'; c.open = false; c.t = 0.45 + Math.random() * 0.5; }
+        break;
+      case 'hop':
+        // a quick step back to give her room
+        c.pose = 'b'; c.x += Math.sign(c.hopTo - c.x) * Math.min(Math.abs(c.hopTo - c.x), 130 * dt);
+        if (c.t <= 0 || Math.abs(c.hopTo - c.x) < 1) { c.st = 'idle'; c.t = 0.15; }
         break;
       case 'flinch':
         c.pose = 'back'; c.open = true;

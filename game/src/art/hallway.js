@@ -64,7 +64,7 @@ function flatBack(p, x, w, label) {
   for (let xx = x + 22; xx < x + w; xx += 44) p.rect(xx, 34, 3, G - 34, H.plyLo);
   // braces and their weights
   [x + 14, x + w - 22].forEach(bx => { p.line(bx, 80, bx + 14, G - 1, H.plyLo); p.line(bx + 1, 80, bx + 15, G - 1, H.plyLo); p.rect(bx + 10, G - 6, 12, 6, H.sand); p.rect(bx + 10, G - 6, 12, 1, H.plyHi); });
-  p.rect(x + 8, 42, label.length * 4 + 3, 9, H.ply); ptext(p, label, x + 10, 44, H.plyLo);
+  p.rect(x + 8, 56, label.length * 4 + 3, 9, H.ply); ptext(p, label, x + 10, 58, H.plyLo);
 }
 
 export function paintLevel() {

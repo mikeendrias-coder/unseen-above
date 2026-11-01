@@ -40,9 +40,9 @@ function frame() {
 }
 
 // ------------------------------------------------------------------ captions
-const CAP_BOTTOM = 171, CAP_COLS = 30;
+const CAP_BOTTOM = 162, CAP_COLS = 30; // above the glasses' readout along the bottom
 function drawCaption() {
-  const c = S.caption; if (!c) return;
+  const c = S.caption; if (!c || S.page) return; // a text page replaces the captions while it is up
   ccCaptionBlock(ctx, c.lines, 160, CAP_BOTTOM, { italic: c.italic });
 }
 
@@ -53,14 +53,14 @@ function drawCaption() {
 function chyron(c, t) {
   const TAG = 11, TITLE = 21, title = c.title.toUpperCase();
   let tagW = ccWidth(c.tag) + 8, titleW = title ? ccWidth(title) + 10 : 0;
-  const center = c.place !== 'lower';
+  const center = c.place !== 'lower' && c.place !== 'lowerLeft', left = c.place === 'lowerLeft';
   if (center && title) tagW = titleW = Math.max(tagW, titleW);
   const y = center ? Math.round(90 - (TAG + (title ? TITLE : 0)) / 2) : 152 - (title ? TITLE : 0) - TAG;
   const inT = t - c.t0, outU = (t - c.outAt) / 0.16;
   const grow = (delay, dur) => ease((inT - delay) / dur) * (1 - ease(outU));
   const box = (w, full, h, yy, color, alpha, text, sy) => {
     if (w <= 0) return;
-    const x = center ? Math.round(160 - full / 2) : 308 - full, vx = center ? x : 308 - w;
+    const x = center ? Math.round(160 - full / 2) : left ? 12 : 308 - full, vx = center || left ? x : 308 - w;
     ccBox(ctx, vx, yy, w, h, color, alpha);
     ctx.save(); ctx.beginPath(); ctx.rect(vx, yy, w, h); ctx.clip();
     const tw = ccWidth(text, 1), tx = center ? Math.round(160 - tw / 2) : x + (sy ? 5 : 4);
