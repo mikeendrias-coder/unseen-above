@@ -21,10 +21,16 @@
 - Ending (Michael's, kept): she passes adults watching Earth channels, reaches the kids' game room, and blows up the Moon with a hidden vest. It ends with us watching the Moon. No end card.
 
 ## Where things are
+- Working build (Artifact, republished from the scratchpad copy of game/dist/unseen-above.html): https://claude.ai/artifact/UrA74gTXSbyzUrJ1iJMEvZ
 - Research and plan doc (Claude Doc): https://claude.ai/artifact/CNSz6vg5W587eqPS5Fhi3E
 - Game Look Board (Design canvas): https://claude.ai/artifact/2BhhizAt6c43ijdc3FVh18
 - `game/`: the real game. `npm run build` writes `dist/unseen-above.html` (CDN Phaser) and `dist/local.html` (local Phaser).
 - `prototypes/`: first prototypes and their Playwright tests. `art/lookboard/`: the look board generator.
+
+## Status (Nov 1, 2026)
+- Built: the opening cinematic (src/scenes/Intro.js), episode 1 on the grounds (src/scenes/Grounds.js), satellite batch 1 with four screen looks (src/scenes/Satellite.js).
+- Dialogue lives in src/data/dialogue.js (drafts). Look palettes in src/art/palettes.js.
+- Tests: tests/flow.js (hand-offs, a death, the door), tests/plan-ep1.mjs (safe-path search), tests/shoot-*.js (screenshots). Serve game/dist on port 8766 first.
 
 ## Working rules
 - Pixel scenes are 320 x 180, scaled by whole numbers. Cinematic scenes use a 1280 x 720 design space.
