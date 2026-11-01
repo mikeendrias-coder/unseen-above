@@ -162,7 +162,7 @@ export class SideEpisode extends Phaser.Scene {
   die(src) {
     if (this.dead) return;
     this.dead = true;
-    const k = this.kid, x = k.x + k.w / 2, y = k.y + k.h / 2, footY = k.onGround ? k.y + k.h : this.groundBelow(x);
+    const k = this.kid, x = k.x + k.w / 2, y = k.y + k.h / 2, footY = src && src.footY != null ? src.footY : k.onGround ? k.y + k.h : this.groundBelow(x);
     const impact = () => {
       this.girl.setVisible(false);
       this.burst.explode(16, x, y);

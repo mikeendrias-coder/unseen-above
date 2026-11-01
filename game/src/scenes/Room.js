@@ -7,6 +7,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode } from '../core/side.js';
+import { paintWardrobe } from '../art/bedroom.js';
 
 const G = 160;
 
@@ -91,6 +92,15 @@ const ROOMS = {
       { x0: 128, x1: 192, y: 50, text: ['Six drones on chargers. Each one has a camera.'] },
       { x0: 200, x1: 270, y: 110, text: ['Spare searchlight bulbs. Hundreds.', 'A small TV. CH 07. Stand by.'] },
       { x0: 278, x1: 304, y: 42, text: ['A crew coat. The pass says SEASON 41.'] }
+    ]
+  },
+  wardrobe: {
+    paint: paintWardrobe, bg: 'wallLo',
+    items: [
+      { x0: 56, x1: 174, y: 54, text: ['Jackets on a rail. Her jacket, in her size.', 'Every one has the same tear in the left sleeve.'] },
+      { x0: 186, x1: 242, y: 38, text: ['Photos pinned in a row, all of her, in that jacket.', 'Each one is stamped CONTINUITY.'] },
+      { x0: 250, x1: 300, y: 42, text: ['A mirror ringed with bulbs.', 'Behind the glass, a small red light.'] },
+      { x0: 60, x1: 168, y: 146, text: ['Small shoes in a row, worn down at the same heel.'] }
     ]
   },
   staff: {

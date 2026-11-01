@@ -124,8 +124,53 @@ export const Sound = (() => {
     return { stop: secs => { alive = false; timers.forEach(clearTimeout); fadeStop(g, [lp], secs); }, set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
   };
 
+  // Breath: slow, wet breathing, one breath at a time. slow(p) stretches it; set() fades it.
+  const breath = (vol) => {
+    const c = ensure(); if (!c) return { stop() {}, set() {}, slow() {} };
+    const g = c.createGain(); g.gain.value = Math.max(0.0001, vol || 0.05); out(g, 0.35);
+    const buf = noiseBuffer(3);
+    let alive = true, pace = 1, timer = null;
+    const puff = (dur, f0, f1, peak) => {
+      const t = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), e = c.createGain();
+      s.buffer = buf; f.type = 'bandpass'; f.Q.value = 1.6; f.frequency.setValueAtTime(f0, t); f.frequency.linearRampToValueAtTime(f1, t + dur);
+      e.gain.setValueAtTime(0.0001, t); e.gain.linearRampToValueAtTime(peak, t + dur * 0.4); e.gain.linearRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(e); e.connect(g); s.start(t, Math.random() * 2); s.stop(t + dur + 0.05);
+    };
+    const cycle = () => {
+      if (!alive || !ctx) return;
+      puff(1.0 * pace, 480, 880, 0.9);
+      timer = setTimeout(() => {
+        if (!alive) return;
+        puff(1.5 * pace, 720, 360, 0.75);
+        timer = setTimeout(cycle, (1.5 + 0.8) * pace * 1000);
+      }, (1.0 + 0.3) * pace * 1000);
+    };
+    cycle();
+    return {
+      stop: secs => { alive = false; clearTimeout(timer); fadeStop(g, [], secs); },
+      set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); },
+      slow: p => { pace = p; }
+    };
+  };
+
+  // Rumble: a floor giving way, low and uneven.
+  const rumble = (vol) => {
+    const c = ensure(); if (!c) return { stop() {}, set() {} };
+    const s = c.createBufferSource(); s.buffer = noiseBuffer(4); s.loop = true;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 160;
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 3.1; lg.gain.value = 70; lfo.connect(lg); lg.connect(f.frequency);
+    const g = c.createGain(); g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(vol || 0.3, c.currentTime + 0.3);
+    s.connect(f); f.connect(g); out(g, 0.3); s.start(); lfo.start();
+    return { stop: secs => fadeStop(g, [s, lfo], secs), set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
+  };
+
   return {
-    ensure, tone, noise, wind, lounge, swell, hum, show,
+    ensure, tone, noise, wind, lounge, swell, hum, show, breath, rumble,
+    // a clock's bell, one stroke
+    bell: vol => { const v = vol || 0.05; tone(196, 2.4, 'sine', v, null, 0.6); tone(392.5, 1.7, 'sine', v * 0.45, null, 0.6); tone(588, 1.1, 'triangle', v * 0.2, null, 0.6); tone(98, 2.8, 'sine', v * 0.5); },
+    // a flash camera: a click before, the shutter and the whine of the flash
+    click: vol => tone(2600, 0.025, 'square', vol || 0.012),
+    shutter: vol => { const v = vol || 0.08; noise(0.06, v, 7000); tone(3400, 0.22, 'sine', v * 0.25, 700); },
     // The laser's charge. The satellite plays the same sound when a route is accepted (a clue).
     charge: () => tone(300, 0.55, 'sawtooth', 0.02, 900, 0.2),
     chime: () => { tone(1568, 0.5, 'sine', 0.03, null, 0.5); setTimeout(() => tone(2093, 0.6, 'sine', 0.025, null, 0.5), 90); },
