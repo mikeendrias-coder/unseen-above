@@ -7,7 +7,7 @@ export const STEPS = [
   { id: 'ep2', scene: 'gallery', data: { fromCut: true } },
   { id: 'batch2', scene: 'satellite', data: { batch: 2 } },
   { id: 'ep3', scene: 'fall', data: { fromCut: true } },      // the side-view fall that breaks the glasses
-  { id: 'ep3b', scene: 'eastwing', data: { fromCut: true } }, // then the east wing, top-down
+  { id: 'ep3b', scene: 'eastwing', data: { fromFall: true } }, // then the east wing, top-down
   { id: 'batch3', scene: 'satellite', data: { batch: 3 } },
   { id: 'ep4', scene: 'bedroom', data: { fromCut: true } },
   { id: 'batch4', scene: 'satellite', data: { batch: 4 } },

@@ -1,6 +1,6 @@
 // Flow checks: the opening hands off to episode 1, a death leaves a body and a new take, the
 // door ends the episode, satellite batch 1 leads to episode 2 (glasses, a laser death, a camera
-// death, the door), then batch 2 on the ground station screen. Also loads every look once.
+// death, the door), then batch 2 (the sorting shift), then episode 3 begins. Also loads every look.
 // Every step waits on game state, not on wall-clock time, so slow headless frames do not matter.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
@@ -69,7 +69,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('then satellite batch ' + sat2.batch + ' on screen ' + sat2.skin + ' (' + sat2.ids + ')', sat2.batch === 2 && sat2.skin === 2);
   await p.screenshot({ path: 'tests/out/flow-batch2.png' });
   await solveBatch();
-  await cardOn('END OF BATCH 2'); ok('end of batch 2: ' + await card() + ', final ' + await p.evaluate(() => window.__game.scene.final), await p.evaluate(() => window.__game.scene.final));
+  await cardOn('END OF BATCH 2'); ok('end of batch 2: ' + await card(), true);
+  await scene('fall'); await cardOn('EPISODE 3'); ok('then episode 3 opens with ' + await card() + ' (tests/flow-ep3.js covers the rest)', true);
   // every look loads
   await p.goto(BASE + '/local.html?scene=grounds'); await p.click('#start');
   await scene('grounds'); await fresh();
