@@ -1,5 +1,5 @@
 // Episode 2, the gallery: inside the front door, from a pristine hall into the worn middle.
-// Glasses wait on a bench; a ceiling camera sweeps the corridor; a broken camera twitches over
+// Glasses wait in a drawer; a ceiling camera sweeps the corridor; a broken camera twitches over
 // the worn rooms under a hole in the roof; a laser wakes up in the last hall before the next door.
 import { Painter, rng } from './painter.js';
 
@@ -8,8 +8,17 @@ export const LEVEL = {
   w: 88, h: 12,
   start: { x: 2 * TILE, y: GROUND - 14 },
   door: { x: 85 * TILE - 2, y: GROUND - 32, w: 20, h: 32 },
-  bench: { x0: 14 * TILE, x1: 17 * TILE, top: 9 * TILE },
-  glasses: { x: 15 * TILE + 8, y: 9 * TILE },
+  // a sideboard with two drawers; the glasses are in the left one, and only E finds them
+  cabinet: { x0: 14 * TILE, x1: 17 * TILE, top: 9 * TILE, drawer: { x: 14 * TILE + 5, y: 147, w: 17, h: 5 } },
+  staffDoor: { x: 8 * TILE + 2, y: GROUND - 28, w: 14, h: 28 },
+  // a chandelier in the corridor that drops when she passes under it
+  dropper: { x: 43 * TILE, hang: 52, warn: 0.45, footprint: 14 },
+  // low debris she bumps into, jumps over and can hide behind (x, y, w, h)
+  props: [
+    { id: 'drums', x: 46 * TILE, y: 152, w: 18, h: 8 },
+    { id: 'old chandelier', x: 55 * TILE - 13, y: 153, w: 26, h: 7 },
+    { id: 'dead robot', x: 59 * TILE - 6, y: 151, w: 13, h: 9 }
+  ],
   robot: { x0: 3 * TILE, x1: 13 * TILE, speed: 16 },
   camLock: 0.55, // cameras take a little longer than lamps to lock on
   cameras: [
@@ -56,7 +65,7 @@ export function buildMap() {
   solid(0, 0, W - 1, 0);              // ceiling
   for (let x = 56; x <= 60; x++) m[0][x] = 0; // the hole in the roof
   solid(0, 0, 0, 9);                  // the front door behind her
-  solid(14, 9, 16, 9);                // bench
+  solid(14, 9, 16, 9);                // sideboard
   solid(30, 8, 32, 8);                // desk top (room to stand under it)
   solid(38, 9, 38, 9);                // cabinet
   solid(48, 8, 48, 9);                // snapped column
@@ -115,11 +124,20 @@ export function paintLevel(P) {
   // the front door she came in by, seen from inside
   p.rect(0, 112, 18, 48, P.goldLo); p.rect(0, 116, 15, 44, P.wood); p.rect(3, 120, 8, 14, P.woodHi); p.rect(3, 140, 8, 14, P.woodHi); p.px(12, 138, P.gold);
   p.glowRect(0, 158, 22, 2, P.lamp, 0.12);
-  // ---- the pristine hall: chandeliers, portraits, the bench with the glasses
+  // ---- the pristine hall: chandeliers, portraits, a staff door, the sideboard with the drawer
   chandelier(p, P, 7 * TILE, 50); chandelier(p, P, 22 * TILE, 50);
-  portrait(p, P, 3 * TILE + 4, 58, 26, 34, 1); portrait(p, P, 10 * TILE + 2, 50, 32, 44, 2); portrait(p, P, 18 * TILE + 6, 58, 26, 34, 3); portrait(p, P, 25 * TILE, 58, 26, 34, 6);
-  p.rect(14 * TILE, 144, 48, 4, P.fabric); p.rect(14 * TILE, 144, 48, 1, P.goldHi); p.rect(14 * TILE, 148, 48, 3, P.goldLo);
-  [14 * TILE + 2, 17 * TILE - 4].forEach(x => p.rect(x, 151, 2, 9, P.gold));
+  portrait(p, P, 3 * TILE + 4, 58, 26, 34, 1); portrait(p, P, 10 * TILE + 6, 50, 32, 44, 2); portrait(p, P, 18 * TILE + 6, 58, 26, 34, 3); portrait(p, P, 25 * TILE, 58, 26, 34, 6);
+  const SD = LEVEL.staffDoor;
+  p.rect(SD.x - 2, SD.y - 2, SD.w + 4, SD.h + 2, P.wallLine); p.rect(SD.x, SD.y, SD.w, SD.h, P.wallLo); p.rect(SD.x + 1, SD.y + 1, SD.w - 2, SD.h - 1, P.wall);
+  p.rect(SD.x + SD.w - 4, SD.y + 14, 2, 2, P.goldLo); p.rect(SD.x + 2, SD.y + 4, SD.w - 4, 4, P.colLo); p.rect(SD.x + 3, SD.y + 5, SD.w - 6, 2, P.device);
+  const CB = LEVEL.cabinet, cx = CB.x0;
+  p.rect(cx - 1, 144, 50, 3, P.woodHi); p.rect(cx - 1, 144, 50, 1, P.goldHi);
+  p.rect(cx, 147, 48, 10, P.wood); p.rect(cx, 157, 48, 1, P.goldLo);
+  [[cx + 5, 17], [cx + 26, 17]].forEach(([dx, dw]) => { p.rect(dx, 147, dw, 5, P.woodHi); p.rect(dx, 151, dw, 1, P.goldLo); p.rect(dx + Math.floor(dw / 2) - 1, 149, 2, 1, P.gold); });
+  p.rect(cx + 2, 153, 44, 3, P.wood); p.rect(cx + 3, 154, 42, 1, P.goldLo);
+  [cx + 1, cx + 45].forEach(x => { p.rect(x, 158, 2, 2, P.gold); });
+  p.rect(cx + 34, 134, 6, 10, P.col); p.rect(cx + 35, 132, 4, 2, P.colHi); p.rect(cx + 33, 128, 2, 4, P.fabric); p.rect(cx + 38, 127, 2, 5, P.fabric); // a vase of flowers
+  p.rect(cx + 8, 137, 9, 7, P.goldLo); p.rect(cx + 9, 138, 7, 5, P.skyLow); p.px(cx + 12, 140, P.kidLo); // a small framed photo
   // ---- the corridor: sconces, a desk you can stand under, a cabinet
   sconce(p, P, 28 * TILE, 72, true); sconce(p, P, 36 * TILE, 72, true); sconce(p, P, 44 * TILE, 72, true);
   portrait(p, P, 33 * TILE, 58, 24, 32, 4); portrait(p, P, 40 * TILE, 58, 24, 32, 5);

@@ -19,7 +19,11 @@ export function lyingFigure(p, P, x, y, stage) {
   else { p.rect(x - 2, y - 2, 26, 2, P.dust); p.circle(x + 4, y - 3, 2, P.bone); for (let i = 0; i < 3; i++) p.px(x + 9 + i * 3, y - 3, P.bone); p.rect(x + 17, y - 2, 4, 1, P.bone); }
 }
 
+// Made once per look: rebuilding a texture that a sleeping scene still shows would break it.
+let madeFor = null;
 export function makeSprites(scene, P) {
+  if (madeFor === P.name && scene.textures.exists('girl_stand')) return;
+  madeFor = P.name;
   const add = (key, w, h, draw) => { const p = new Painter(w, h); draw(p); p.toTexture(scene, key); };
   const map = { h: P.hair, k: P.kid, s: P.kidLo };
   add('girl_stand', 8, 14, p => { rows(p, GIRL_TOP, 0, 0, map); rows(p, LEGS.stand, 0, 10, map); });

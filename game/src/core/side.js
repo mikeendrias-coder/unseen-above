@@ -8,6 +8,7 @@ import { display, pixelZoom } from './display.js';
 import { LOOKS } from '../art/palettes.js';
 import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
+import { Bubbles } from './bubbles.js';
 
 export const TILE = 16;
 export const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2 };
@@ -23,6 +24,8 @@ export class SideEpisode extends Phaser.Scene {
     this.ctl = makeControls(this);
     this.clock = 0; this.culprit = null; this.dead = false; this.leaving = false; this.done = false;
     this.par = [];
+    this.props = [];  // solid rectangles off the tile grid: low debris, furniture, a robot
+    this.things = []; // things she can use with E
     this.scale.on('rescale', this.onRescale, this);
     this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
   }
@@ -45,6 +48,7 @@ export class SideEpisode extends Phaser.Scene {
     this.beamG = this.add.graphics().setDepth(5).setBlendMode(Phaser.BlendModes.ADD);
     this.fxG = this.add.graphics().setDepth(7);
     this.strikeFx = new SatelliteStrike(this, { depth: 8 });
+    this.bubbles = new Bubbles(this, 9);
     this.burst = this.add.particles(0, 0, 'dot2', { speed: { min: 25, max: 95 }, lifespan: { min: 260, max: 560 }, scale: { start: 1, end: 0 }, tint: [0xffffff, hexNum(P.lamp), hexNum(P.hazard)], emitting: false }).setDepth(8);
   }
   drawBodies() {
@@ -61,11 +65,24 @@ export class SideEpisode extends Phaser.Scene {
 
   // ------------------------------------------------------------------ collision
   solidTile(tx, ty) { if (tx < 0 || tx >= this.map.W || ty >= this.map.H) return true; if (ty < 0) return false; return this.map.m[ty][tx] === 1; }
-  solidPx(px, py) { return this.solidTile(Math.floor(px / TILE), Math.floor(py / TILE)); }
+  solidPx(px, py) { return this.solidTile(Math.floor(px / TILE), Math.floor(py / TILE)) || this.props.some(r => r.solid !== false && px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h); }
   boxHits(x, y, w, h) {
     const x0 = Math.floor(x / TILE), x1 = Math.floor((x + w - 0.001) / TILE), y0 = Math.floor(y / TILE), y1 = Math.floor((y + h - 0.001) / TILE);
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (this.solidTile(tx, ty)) return true;
-    return false;
+    return this.props.some(r => r.solid !== false && x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y);
+  }
+  // Things she can use: { x0, x1, y0, y1, use(), label? }. The nearest one shows an E prompt.
+  updateThings() {
+    const k = this.kid; this.nearThing = null;
+    if (this.dead || this.leaving || this.done) return;
+    const cx = k.x + k.w / 2, near = this.things.filter(t => !t.off && k.x + k.w > t.x0 - 6 && k.x < t.x1 + 6 && k.y < t.y1 && k.y + k.h > t.y0 - 10);
+    this.nearThing = near.sort((a, b) => Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
+    if (this.nearThing && this.ctl.interact()) this.nearThing.use();
+  }
+  drawThings() {
+    const t = this.nearThing;
+    if (t && !t.noPrompt && !this.bubbles.list.size) this.bubbles.showPrompt((t.x0 + t.x1) / 2, t.y0, t.label);
+    this.bubbles.update(this.game.loop.delta / 1000, this.clock);
   }
 
   moveKid(dt) {
@@ -82,17 +99,23 @@ export class SideEpisode extends Phaser.Scene {
     if (k.holdT > 0) { k.holdT -= dt; if (!c.jumpHeld()) { if (k.vy < 0) k.vy *= 0.5; k.holdT = 0; } }
     const apex = Math.abs(k.vy) < 40 && c.jumpHeld();
     k.vy = Math.min(K.maxFall, k.vy + K.g * (apex ? 0.5 : 1) * dt);
-    let nx = k.x + k.vx * dt;
-    if (this.boxHits(nx, k.y, k.w, k.h)) { nx = k.vx > 0 ? Math.floor((nx + k.w) / TILE) * TILE - k.w : (Math.floor(nx / TILE) + 1) * TILE; k.vx = 0; }
-    k.x = nx;
-    let ny = k.y + k.vy * dt; k.onGround = false;
-    if (this.boxHits(k.x, ny, k.w, k.h)) {
-      if (k.vy > 0) { ny = Math.floor((ny + k.h) / TILE) * TILE - k.h; k.onGround = true; k.vy = 0; }
-      else { let nudged = false; for (const s of [1, -1, 2, -2, 3, -3, 4, -4]) if (!this.boxHits(k.x + s, ny, k.w, k.h)) { k.x += s; nudged = true; break; } if (!nudged) { ny = (Math.floor(ny / TILE) + 1) * TILE; k.vy = 0; } }
+    // move a pixel at a time, so props off the tile grid stop her exactly where they are
+    let dx = k.vx * dt;
+    while (dx !== 0) { const st = Math.abs(dx) >= 1 ? Math.sign(dx) : dx; if (this.boxHits(k.x + st, k.y, k.w, k.h)) { k.vx = 0; break; } k.x += st; dx -= st; }
+    let dy = k.vy * dt; k.onGround = false;
+    while (dy !== 0) {
+      const st = Math.abs(dy) >= 1 ? Math.sign(dy) : dy;
+      if (this.boxHits(k.x, k.y + st, k.w, k.h)) {
+        if (st > 0) { k.onGround = true; k.vy = 0; break; }
+        // a head bump at a corner slides her past it, as before
+        let nudged = false; for (const s of [1, -1, 2, -2, 3, -3, 4, -4]) if (!this.boxHits(k.x + s, k.y + st, k.w, k.h)) { k.x += s; nudged = true; break; }
+        if (!nudged) { k.vy = 0; break; }
+      }
+      k.y += st; dy -= st;
     }
-    k.y = ny;
+    if (!k.onGround && k.vy >= 0 && this.boxHits(k.x, k.y + 0.5, k.w, k.h)) k.onGround = true;
     k.walkT = k.onGround && Math.abs(k.vx) > 8 ? k.walkT + dt : 0;
-    if ((c.interact() || c.up()) && this.atDoor()) this.enterDoor();
+    if (this.atDoor() && (c.interact() || c.up())) this.enterDoor();
   }
   atDoor() { const k = this.kid, d = this.level.door; return k.x + k.w > d.x + 2 && k.x < d.x + d.w - 2 && Math.abs(k.y + k.h - (d.y + d.h)) < 4; }
   probes() { const k = this.kid, cx = k.x + k.w / 2; return [{ x: cx, y: k.y + 2 }, { x: cx, y: k.y + k.h / 2 }, { x: cx, y: k.y + k.h - 2 }, { x: k.x + 1, y: k.y + k.h / 2 }, { x: k.x + k.w - 1, y: k.y + k.h / 2 }]; }

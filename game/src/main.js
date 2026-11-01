@@ -7,6 +7,7 @@ import { Gallery } from './scenes/Gallery.js';
 import { Intro } from './scenes/Intro.js';
 import { Satellite } from './scenes/Satellite.js';
 import { Kids } from './scenes/Kids.js';
+import { Room } from './scenes/Room.js';
 
 // Which part to open: ?scene=grounds|gallery|satellite|kids (&batch=2 &skin=N), or a plain #name
 // (a shared link keeps only that): #opening, #grounds, #gallery, #batch1, #batch2, #kids
@@ -39,6 +40,7 @@ function start() {
   game.scene.add('grounds', Grounds, false);
   game.scene.add('gallery', Gallery, false);
   game.scene.add('satellite', Satellite, false);
+  game.scene.add('room', Room, false);
   game.scene.add('kids', Kids, false); // after satellite, so it draws over the screen it embeds
   game.events.once('ready', () => {
     applyCss(game);
