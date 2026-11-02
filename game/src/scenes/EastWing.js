@@ -15,6 +15,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
+import { fx } from '../core/fx.js';
 
 const ROOMS = [
   { x0: 0, y0: 18, x1: 12, y1: 29, hint: 'The glasses are cracked: they show what watches you only now and then. E picks up pebbles, F or a click throws one. Shift runs, but running is loud.' },
@@ -95,8 +96,9 @@ export class EastWing extends TopDownEpisode {
     this.clock += dt;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     this.reviewKeys();
-    if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
-    if (c.restart() && !this.leaving && !this.done && !this.dead) { this.dead = true; this.ep.take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); c.endFrame(); return; }
+    if (this.dead) { if (c.advance() || c.restart() || c.throwP()) this.skipDeath(); c.look(); }
+    else if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
+    if (c.restart() && this.restartTake()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) {
       this.moveKid(dt);
@@ -164,7 +166,12 @@ export class EastWing extends TopDownEpisode {
     this.sensors.forEach(s => {
       s.cool = Math.max(0, s.cool - dt); s.flash = Math.max(0, s.flash - dt);
       const on = this.sensorOn(s);
-      if (on && !s.was) Sound.tone(1300, 0.04, 'sine', 0.008);
+      if (on && !s.was) {
+        // the pulse is heard louder as she nears its range, and lower once she is inside it, so
+        // the glasses are not the only warning
+        const d = Math.hypot(o.x - s.x, o.y - s.y), near = Math.max(0, Math.min(1, 1 - (d - s.r) / 4));
+        Sound.tone(d <= s.r ? 820 : 1300, 0.05, 'sine', 0.008 + 0.03 * near);
+      }
       s.was = on;
       if (on && !this.dead && !window.__noDeath && this.kid.moving && Math.hypot(o.x - s.x, o.y - s.y) <= s.r) { this.sensorSrc.x = s.x * T + 8; this.die(this.sensorSrc); }
     });
@@ -218,7 +225,7 @@ export class EastWing extends TopDownEpisode {
   }
   cutChain(i) {
     this.cutChains.add(i); this.ch.cut++; this.ch.shake = 0.8;
-    Sound.tone(900, 0.2, 'sawtooth', 0.03, 200); Sound.noise(0.4, 0.1, 3000); this.cameras.main.shake(260, 0.008);
+    Sound.tone(900, 0.2, 'sawtooth', 0.03, 200); Sound.noise(0.4, 0.1, 3000); fx.shake(this.cameras.main, 260, 0.008);
     this.noise(LEVEL.chandelier.chains[i][0], LEVEL.chandelier.chains[i][1], 5, 'chain');
     if (this.ch.cut >= 3) { this.ch.phase = 'falling'; this.ch.t = 0; Sound.tone(120, 1.2, 'sawtooth', 0.04, 60); }
   }
@@ -237,7 +244,7 @@ export class EastWing extends TopDownEpisode {
       ch.t += dt; this.chSrc.tiles = null; this.chSrc.lock = 0;
       if (ch.t >= 1.1 && !ch.crashed) {
         ch.crashed = true; ch.phase = 'down';
-        this.cameras.main.shake(500, 0.02); Sound.noise(1.0, 0.25, 2000); Sound.tone(60, 0.8, 'sawtooth', 0.05, 30);
+        fx.shake(this.cameras.main, 500, 0.02); Sound.noise(1.0, 0.25, 2000); Sound.tone(60, 0.8, 'sawtooth', 0.05, 30);
         this.noise(Math.floor(C.x), Math.floor(C.y), 9, 'crash');
         this.dust = { t: 0 };
         this.doorOpen = true; this.time.delayedCall(600, () => { Sound.chime(); overlay.sfx('[A DOOR UNLOCKS]', 2200); });
@@ -343,7 +350,7 @@ export class EastWing extends TopDownEpisode {
     if (overlay.free(74, 165, 44, 9)) pixText(g, 'PEBBLES ' + this.pebbles, 76, 167, 0xffffff, 1, 0.75);
     if (!this.gl.on) return;
     this.gl.drawStatic(g, col);
-    const a = this.glitchT < 2 ? (Math.random() < 0.5 ? 0.9 : 0.1) : 0.5, m = 5, s = 8;
+    const a = this.glitchT < 2 ? fx.flicker(0.9, 0.1, 0.5) : 0.5, m = 5, s = 8;
     g.fillStyle(col, a);
     [[320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
     // the crack: from the top left corner, jagged, with a shard missing from the corner mark

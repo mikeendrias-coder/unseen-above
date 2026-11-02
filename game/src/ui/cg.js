@@ -12,7 +12,7 @@ const W = 320, H = 180;
 // a broadcast palette that never changes with her world's look
 export const TV = { black: '#000000', white: '#ffffff', yellow: '#ffe94a', cyan: '#4ae8ff', red: '#ff4d5e', green: '#62ff8c', magenta: '#ff70e4', grey: '#a5a3b2', salmon: '#ff8a7a' };
 
-const S = { caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null };
+const S = { caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null, menu: null };
 let cv = null, ctx = null, running = false;
 const now = () => performance.now() / 1000;
 const ease = u => 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3);
@@ -24,7 +24,7 @@ function ensure() {
   return true;
 }
 function kick() { if (!ensure() || running) return; running = true; requestAnimationFrame(frame); }
-const busy = () => !!(S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page);
+const busy = () => !!(S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page || S.menu);
 
 function frame() {
   const t = now();
@@ -35,7 +35,8 @@ function frame() {
   if (S.rec && t > S.rec.until) S.rec = null;
   ctx.clearRect(0, 0, W, H);
   if (!busy()) { running = false; return; }
-  drawCards(t); drawCaption(t); drawPage(t); drawTop(t); // the set's own messages sit over everything, teletext included
+  if (!S.menu) { drawCards(t); drawCaption(t); }
+  drawPage(t); drawMenu(t); drawTop(t); // the set's own messages sit over the picture; pages and the menu cover them
   requestAnimationFrame(frame);
 }
 
@@ -86,10 +87,10 @@ function drawCards(t) { S.cards.forEach(c => chyron(c, t)); }
 
 // ------------------------------------------------------------------ the top of the screen
 function drawTop(t) {
-  if (S.page) return; // a teletext page has the screen: the set's messages wait
+  if (S.page || S.menu) return; // a teletext page has the screen: the set's messages wait
   let y = 9;
   // review mode, top right, out of the way of anything the game draws at the top center
-  if (S.immune) { const s = 'IMMUNE · N SKIPS AHEAD', w = ccWidth(s); ccBox(ctx, 314 - w - 4, 2, w + 8, 11, TV.black, 0.85); ccText(ctx, s, 314 - w, 4, TV.salmon); y = 20; }
+  if (S.immune) { const s = 'STORY MODE · N SKIPS AHEAD', w = ccWidth(s); ccBox(ctx, 314 - w - 4, 2, w + 8, 11, TV.black, 0.85); ccText(ctx, s, 314 - w, 4, TV.salmon); y = 20; }
   if (S.bug) { const w = ccWidth(S.bug.text); ccText(ctx, S.bug.text, 311 - w, y + 1, TV.black, { alpha: 0.6 }); ccText(ctx, S.bug.text, 310 - w, y, TV.white, { alpha: 0.75 }); y += 11; }
   // the set's on-screen display: green, with a hard shadow, like an old TV
   S.osd.forEach(o => { const s = o.text.toUpperCase(), w = ccWidth(s); ccText(ctx, s, 311 - w, y + 1, TV.black, { alpha: 0.85 }); ccText(ctx, s, 310 - w, y, TV.green); y += 11; });
@@ -135,6 +136,37 @@ function drawPage(t) {
   });
 }
 
+// ------------------------------------------------------------------ the pause menu
+// Page 100: the show waits while she changes things. rows: [{ label, value, adjust, help }],
+// at: the row picked. The band says where she is; the line under the rows says what a row does.
+function drawMenu(t) {
+  const m = S.menu; if (!m || S.page) return;
+  const rows = m.rows, n = rows.length, h = (3 + n + 2) * ROW + 4, y0 = Math.round((H - h) / 2);
+  ccBox(ctx, PX - 4, y0 - 4, COLS * ADV + 7, h + 7, TV.black, 0.92);
+  let y = y0;
+  ccText(ctx, 'P100', PX, y + 1, TV.white); ccText(ctx, 'CH 07 TEXT', PX + 5 * ADV, y + 1, TV.yellow);
+  const d = new Date(), z = v => String(v).padStart(2, '0'), clock = z(d.getHours()) + ':' + z(d.getMinutes()) + '/' + z(d.getSeconds());
+  ccText(ctx, clock, PX + (COLS - clock.length) * ADV, y + 1, TV.yellow);
+  y += ROW;
+  ccBox(ctx, PX, y, COLS * ADV - 1, ROW * 2, TV.cyan, 1);
+  ccText(ctx, 'PAUSED', PX + ADV, y + 3, TV.black, { sy: 2 });
+  if (m.where) ccText(ctx, m.where, PX + (COLS - 1 - m.where.length) * ADV, y + 7, TV.black);
+  y += ROW * 2 + 2;
+  m.hit = [];
+  rows.forEach((r, i) => {
+    const sel = i === m.at;
+    if (sel) ccBox(ctx, PX, y, COLS * ADV - 1, ROW, TV.yellow, 1);
+    ccText(ctx, (sel ? '▶ ' : '  ') + r.label, PX + ADV, y + 1, sel ? TV.black : TV.white);
+    if (r.value != null) { const v = sel && r.adjust ? '< ' + r.value + ' >' : r.value; ccText(ctx, v, PX + (COLS - 1 - v.length) * ADV, y + 1, sel ? TV.black : TV.cyan); }
+    m.hit.push({ y0: y, y1: y + ROW, i });
+    y += ROW;
+  });
+  y += 2;
+  const r = rows[m.at];
+  if (r && r.help) ccText(ctx, r.help, PX + ADV, y + ROW / 2 + 1, TV.green);
+  if (Math.floor(t * 2.2) % 2 === 0 && r && r.help) ccText(ctx, '█', PX + ADV + (r.help.length + 1) * ADV, y + ROW / 2 + 1, TV.green);
+}
+
 // ------------------------------------------------------------------ the API
 export const cg = {
   caption(speaker, text, opts) {
@@ -162,5 +194,11 @@ export const cg = {
   immune(on) { S.immune = !!on; kick(); },
   page(spec) { S.page = Object.assign({ t0: now(), closeAt: 0, band: TV.cyan, num: 701 }, spec); kick(); },
   closePage() { if (S.page && !S.page.closeAt) S.page.closeAt = now(); },
-  clearAll() { S.caption = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; }
+  get pageUp() { return !!S.page && !S.page.closeAt; },
+  menu(spec) { S.menu = spec; kick(); },
+  get menuUp() { return !!S.menu; },
+  closeMenu() { S.menu = null; },
+  // the row of the menu at this point of the pixel grid, or -1
+  menuHit(x, y) { const m = S.menu; if (!m || !m.hit || S.page || x < PX || x > PX + COLS * ADV) return -1; const h = m.hit.find(r => y >= r.y0 && y < r.y1); return h ? h.i : -1; },
+  clearAll() { S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; }
 };

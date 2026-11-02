@@ -187,6 +187,7 @@ export class Room extends SideEpisode {
   }
 
   skipAhead() { this.leave(); }
+  canRestart() { return false; } // a side room: the episode restarts from the episode
   leave() {
     if (this.leaving) return;
     Music.level(1, 0.8);

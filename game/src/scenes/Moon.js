@@ -21,6 +21,7 @@ import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
 import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, LOOK_SAID, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { reviewKeys } from '../core/review.js';
+import { fx } from '../core/fx.js';
 
 const n = c => hexNum(c);
 const ROOM_TEXT = [
@@ -170,6 +171,7 @@ export class Moon extends SideEpisode {
     }
   }
   // review: N walks her down the corridor, into the playroom, through the talk
+  canRestart() { return false; } // no takes up here: nothing hunts her
   skipAhead() {
     if (this.mode === 'walk' && !this.leaving) { const x = [10, 29, 50, 66, 82, 99].map(v => v * TILE).find(p => p > this.kid.x + 12); if (x != null) { const k = this.kid; k.y = GROUND - k.h; k.vy = 0; k.x = this.clearX(x); return; } return this.enterDoor(); }
     if (this.mode === 'room') { this.kid.x = LEVEL.stand; return; }
@@ -238,7 +240,7 @@ export class Moon extends SideEpisode {
   startVest() {
     this.mode = 'vest'; this.vestT = 0; overlay.clearCaption();
     // the flash: white, a sound too low to hear properly, then nothing
-    this.flashRect.setAlpha(1); this.cameras.main.shake(300, 0.01);
+    this.flashRect.setAlpha(fx.reduced ? 0.55 : 1); fx.shake(this.cameras.main, 300, 0.01);
     Sound.tone(42, 2.6, 'sine', 0.12, 30); Sound.noise(2.2, 0.16, 300);
     Object.values(this.beds).forEach(b => b.stop(0.05)); Music.stop(0.05);
   }
@@ -249,7 +251,7 @@ export class Moon extends SideEpisode {
   }
   updateLast(dt) {
     this.lastT += dt;
-    this.flashRect.setAlpha(Math.max(0, 1 - this.lastT / 2.5));
+    this.flashRect.setAlpha(Math.max(0, 1 - this.lastT / 2.5)); // black, fading up on the last shot
     if (this.lastT > 4.2 && !this.boomed) { this.boomed = true; Sound.noise(0.9, 0.05, 2500); }
     if (this.lastT > 30 && this.hiss && !this.quiet) { this.quiet = true; this.hiss.set(0.0001, 8); }
   }

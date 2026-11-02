@@ -14,6 +14,7 @@ import { SideEpisode } from '../core/side.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
+import { fx } from '../core/fx.js';
 
 const rgb = c => { const n = hexNum(c); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 
@@ -129,7 +130,7 @@ export class Gallery extends SideEpisode {
   putOnGlasses() {
     this.glasses = true; this.hudT = 0; this.gl.has = true; this.gl.on = true;
     this.time.delayedCall(450, () => this.itemPanel('glasses'));
-    const [r, g, b] = rgb(this.P.overlay); this.cameras.main.flash(220, r, g, b);
+    const [r, g, b] = rgb(this.P.overlay); fx.flash(this.cameras.main, 220, r, g, b);
     Sound.tone(660, 0.09, 'sine', 0.03, null, 0.3); this.time.delayedCall(110, () => Sound.tone(990, 0.16, 'sine', 0.03, null, 0.3));
   }
 
@@ -141,7 +142,7 @@ export class Gallery extends SideEpisode {
       if (!this.dead && !this.leaving && kc > X.x - 26 && kc < X.x + 8 && k.y + k.h > GROUND - 24) {
         D.phase = 'warn'; D.t = 0;
         Sound.tone(95, 0.45, 'sawtooth', 0.04, 70); Sound.noise(0.4, 0.06, 900);
-        this.cameras.main.shake(120, 0.003);
+        fx.shake(this.cameras.main, 120, 0.003);
         this.sparks.explode(6, X.x, 18);
       }
     } else if (D.phase === 'warn') {
@@ -152,7 +153,7 @@ export class Gallery extends SideEpisode {
       D.v += 1600 * dt; D.y += D.v * dt; D.sway *= 0.9;
       if (D.y >= GROUND - 6) {
         D.y = GROUND - 6; D.phase = 'down';
-        this.cameras.main.shake(260, 0.014); Sound.noise(0.6, 0.18, 3000); Sound.tone(1800, 0.25, 'triangle', 0.025, 2600);
+        fx.shake(this.cameras.main, 260, 0.014); Sound.noise(0.6, 0.18, 3000); Sound.tone(1800, 0.25, 'triangle', 0.025, 2600);
         for (let i = 0; i < 14; i++) this.sparkle.emitParticleAt(X.x + (Math.random() - 0.5) * 30, GROUND - 4 - Math.random() * 8, 1);
         this.burst.explode(10, X.x, GROUND - 4);
         this.props.push({ id: 'fallen chandelier', x: X.x - 13, y: GROUND - 7, w: 26, h: 7 });
@@ -178,7 +179,7 @@ export class Gallery extends SideEpisode {
   updateLaser(dt) {
     const L = this.laserDef, k = this.kid, z = this.laser;
     if (!z.awake) {
-      if (!this.dead && k.x + k.w > L.x0 - 12) { z.awake = true; z.t = 0; Sound.tone(70, 0.9, 'sawtooth', 0.05, 140); this.beds.hum.set(0.05, 1.2); this.cameras.main.shake(160, 0.004); }
+      if (!this.dead && k.x + k.w > L.x0 - 12) { z.awake = true; z.t = 0; Sound.tone(70, 0.9, 'sawtooth', 0.05, 140); this.beds.hum.set(0.05, 1.2); fx.shake(this.cameras.main, 160, 0.004); }
       return;
     }
     z.t = window.__laserT != null ? window.__laserT : z.t + dt; // tests can hold the laser at a moment
@@ -338,6 +339,7 @@ export class Gallery extends SideEpisode {
     all.forEach(y => { g.fillStyle(hz, z.awake ? 0.6 : 0.15); g.fillRect(L.x1 - 3, y - 1, 2, 2); g.fillRect(L.x0, y - 1, 2, 2); });
     if (!z.awake || !z.st) return;
     const st = z.st, ys = L.shots[st.shot], w = L.x1 - L.x0;
+    if (st.phase === 'tell' && Math.floor(st.f * 10) % 2 === 0) ys.forEach(y => { g.fillStyle(hz, 1); g.fillRect(L.x1 - 4, y - 1, 3, 3); g.fillRect(L.x0, y - 1, 3, 3); g.fillStyle(hz, 0.35); g.fillRect(L.x1 - 14, y, 10, 1); g.fillRect(L.x0 + 3, y, 10, 1); });
     if (st.phase === 'tell' && this.gl.showing) {
       const on = Math.floor(st.f * 10) % 2 === 0, off = Math.floor(t * 40) % 6;
       ys.forEach(y => { g.fillStyle(hexNum(P.overlay), on ? 0.7 : 0.35); for (let x = L.x0 + off; x < L.x1; x += 6) g.fillRect(x, y, 3, 1); });

@@ -18,6 +18,7 @@ import { goNext } from '../core/flow.js';
 import { BEDROOM, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
 import { reviewKeys } from '../core/review.js';
+import { fx } from '../core/fx.js';
 
 const ARC = { ceiling: [35, 145], wall: [150, 200] };
 const glassesOn = t => (Math.sin(t * 2.3) + Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 13.1) * 0.3) > -0.35;
@@ -114,6 +115,7 @@ export class Bedroom extends SideEpisode {
   lookable() { return this.mode === 'house' && !this.bag.have; }
   // review: N moves her section by section; at the stairs it pulls the bag; after the bag, the
   // doors; in the bedroom it moves the scene on
+  canRestart() { return this.mode === 'house' && super.canRestart(); }
   skipAhead() {
     if (this.mode === 'house') {
       if (this.leaving || this.dead) return;
@@ -161,7 +163,7 @@ export class Bedroom extends SideEpisode {
     });
   }
   fire(cm) {
-    cm.flash = 1; cm.clicks = 0;
+    cm.flash = 1; cm.clicks = 0; cm.lit = fx.allowFlash() ? 1 : 0.15; // three flashes a second at most
     if (cm.snap) cm.snap.fired = true; else cm.next += cm.period;
     this.camSound(cm, 'shutter');
     if (!cm.cone) cm.cone = this.cone(cm.x, cm.y, cm.angle, cm.half, cm.range);
@@ -231,7 +233,7 @@ export class Bedroom extends SideEpisode {
     if (this.dead || this.collapse) return;
     // the beam shifts, the stairs slump, and the floor behind her starts to go
     this.props = this.props.filter(r => r !== this.wallProp); this.props.push(this.lowProp);
-    this.cameras.main.shake(450, 0.012); Sound.noise(0.9, 0.22, 1500); Sound.tone(70, 1.2, 'sawtooth', 0.05, 40);
+    fx.shake(this.cameras.main, 450, 0.012); Sound.noise(0.9, 0.22, 1500); Sound.tone(70, 1.2, 'sawtooth', 0.05, 40);
     for (let i = 0; i < 24; i++) this.debris.emitParticleAt(LEVEL.bag.wall.x + Math.random() * 30, 100 + Math.random() * 50, 1);
     this.collapse = { x: LEVEL.collapse.from, t: 0, done: false };
     this.beds.rumble = Sound.rumble(0.26); this.runNote = 1.6; overlay.sfx('[THE FLOOR GIVES WAY]', 2000);
@@ -256,7 +258,7 @@ export class Bedroom extends SideEpisode {
   chunk(tx) {
     for (let i = 0; i < 6; i++) this.debris.emitParticleAt(tx * TILE + Math.random() * 16, GROUND + Math.random() * 3, 1);
     for (let i = 0; i < 3; i++) this.debris.emitParticleAt(tx * TILE + Math.random() * 16, 14, 1);
-    if (Math.abs(tx * TILE - this.kid.x) < 200) { Sound.noise(0.18, 0.05, 900); this.cameras.main.shake(90, 0.004); }
+    if (Math.abs(tx * TILE - this.kid.x) < 200) { Sound.noise(0.18, 0.05, 900); fx.shake(this.cameras.main, 90, 0.004); }
   }
   updateRun(dt) {
     if (!this.collapse || this.dead) return;
@@ -265,7 +267,7 @@ export class Bedroom extends SideEpisode {
       if (g.state === 'whole' && k.x + k.w > g.at) { g.state = 'crack'; g.t = 0; Sound.noise(0.3, 0.1, 2500); Sound.tone(240, 0.35, 'sawtooth', 0.02, 110); }
       else if (g.state === 'crack') {
         g.t += dt;
-        if (g.t >= 0.42) { g.state = 'open'; for (let tx = g.t0; tx <= g.t1; tx++) { m[10][tx] = 0; m[11][tx] = 0; m[0][tx] = 0; this.chunk(tx); } Sound.noise(0.5, 0.15, 1200); this.cameras.main.shake(160, 0.007); }
+        if (g.t >= 0.42) { g.state = 'open'; for (let tx = g.t0; tx <= g.t1; tx++) { m[10][tx] = 0; m[11][tx] = 0; m[0][tx] = 0; this.chunk(tx); } Sound.noise(0.5, 0.15, 1200); fx.shake(this.cameras.main, 160, 0.007); }
       }
     });
     const S = R.slab, L = LEVEL.run.slab;
@@ -277,7 +279,7 @@ export class Bedroom extends SideEpisode {
       S.t += dt; S.y = 16 + Math.min(1, S.t / 0.16) * (L.top - 16);
       if (S.t >= 0.16) {
         S.state = 'down'; S.y = L.top; this.props.push(this.slabProp);
-        Sound.noise(0.6, 0.2, 1500); this.cameras.main.shake(220, 0.012);
+        Sound.noise(0.6, 0.2, 1500); fx.shake(this.cameras.main, 220, 0.012);
         for (let i = 0; i < 14; i++) this.debris.emitParticleAt(L.x + Math.random() * L.w, L.bottom, 1);
         const r = this.slabProp;
         if (!window.__noDeath && k.x < r.x + r.w && k.x + k.w > r.x && k.y < r.y + r.h && k.y + k.h > r.y) this.die({ id: 'the ceiling', direct: true });
@@ -393,9 +395,10 @@ export class Bedroom extends SideEpisode {
         lights.push({ x: cm.x, y: cm.y, r: 8, soft: 0.8, a: cm.warn ? 0.6 : 0.3 });
         if (cm.flash > 0 && cm.cone) {
           const f = cm.flash * cm.flash, r = cm.angle * Math.PI / 180;
-          lights.push({ poly: cm.cone, a: 0.9 * f });
-          lights.push({ x: cm.x + Math.cos(r) * cm.range * 0.55, y: cm.y + Math.sin(r) * cm.range * 0.55, r: cm.range * 0.6, soft: 0.9, a: 0.4 * f });
-          fg.fillStyle(0xff4a4a, 0.85 * f); fg.fillPoints(cm.cone, true);
+          const fl = f * fx.level * (cm.lit == null ? 1 : cm.lit); // reduced flashing: a dimmer flash
+          lights.push({ poly: cm.cone, a: 0.9 * fl });
+          lights.push({ x: cm.x + Math.cos(r) * cm.range * 0.55, y: cm.y + Math.sin(r) * cm.range * 0.55, r: cm.range * 0.6, soft: 0.9, a: 0.4 * fl });
+          fg.fillStyle(0xff4a4a, 0.85 * fl); fg.fillPoints(cm.cone, true);
           lg.fillStyle(red, 0.08 * f); lg.fillPoints(cm.cone, true);
         }
       });
@@ -590,7 +593,7 @@ export class Bedroom extends SideEpisode {
     const g = this.hudG, P = this.P, col = hexNum(P.overlay); g.clear();
     if (this.fading) return;
     this.glitchT += dt;
-    const dim = this.mode === 'house' ? 1 : 0.4, a = (this.glitchT < 2 ? (Math.random() < 0.5 ? 0.9 : 0.1) : 0.45) * dim, m = 5, s = 8;
+    const dim = this.mode === 'house' ? 1 : 0.4, a = (this.glitchT < 2 ? fx.flicker(0.9, 0.1, 0.5) : 0.45) * dim, m = 5, s = 8;
     if (this.runNote > 0) {
       this.runNote -= dt;
       // the glasses flash one word at her, in the caption face, in their own color

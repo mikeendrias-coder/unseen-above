@@ -1,23 +1,32 @@
 // A small synth so the game ships with no audio files. Beds (wind, lounge music, hum) loop until
 // stopped; one-shots are tones and noise bursts. Everything goes through one master gain.
 export const Sound = (() => {
-  let ctx = null, master = null, muted = false, verb = null;
+  let ctx = null, master = null, muted = false, verb = null, sfx = null, mus = null, held = false, ducked = false;
+  const vols = { music: 1, sfx: 1 };
+  const level = n => [0, 0.15, 0.3, 0.5, 0.75, 1][Math.max(0, Math.min(5, Math.round(n)))];
   const ensure = () => {
     if (!ctx) {
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
+        // two buses under the master, each with its own volume: effects (and the room) and music
+        sfx = ctx.createGain(); sfx.gain.value = vols.sfx; sfx.connect(master);
+        mus = ctx.createGain(); mus.gain.value = vols.music; mus.connect(master);
         // a short feedback delay stands in for a room
         const d = ctx.createDelay(1), fb = ctx.createGain(), lp = ctx.createBiquadFilter();
         d.delayTime.value = 0.23; fb.gain.value = 0.32; lp.type = 'lowpass'; lp.frequency.value = 2400;
-        d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(master);
+        d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(sfx);
         verb = d;
+        // a little of the room on the music, after its volume (so music at 0 leaves no echo)
+        const mw = ctx.createGain(); mw.gain.value = 0.18; mus.connect(mw); mw.connect(verb);
       } catch (e) { ctx = null; }
     }
-    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (ctx && ctx.state === 'suspended' && !held) ctx.resume().catch(() => {});
     return ctx;
   };
-  const out = (node, wet) => { node.connect(master); if (wet && verb) { const g = ctx.createGain(); g.gain.value = wet; node.connect(g); g.connect(verb); } };
+  // the two bus volumes, less while ducked (the pause menu)
+  const apply = () => { if (!ctx) return; mus.gain.setTargetAtTime(vols.music * (ducked ? 0.35 : 1), ctx.currentTime, 0.04); sfx.gain.setTargetAtTime(vols.sfx * (ducked ? 0.5 : 1), ctx.currentTime, 0.04); };
+  const out = (node, wet) => { node.connect(sfx); if (wet && verb) { const g = ctx.createGain(); g.gain.value = wet; node.connect(g); g.connect(verb); } };
 
   const tone = (freq, dur, type, vol, slideTo, wet) => {
     const c = ensure(); if (!c) return;
@@ -165,7 +174,7 @@ export const Sound = (() => {
   };
 
   // a bus for the music, through the master (so M mutes it too) and a little of the room
-  const bus = () => { const c = ensure(); if (!c) return null; const g = c.createGain(); g.gain.value = 1; out(g, 0.18); return g; };
+  const bus = () => { const c = ensure(); if (!c) return null; const g = c.createGain(); g.gain.value = 1; g.connect(mus); return g; };
 
   return {
     ensure, tone, noise, wind, lounge, swell, hum, show, breath, rumble, bus,
@@ -179,6 +188,13 @@ export const Sound = (() => {
     charge: () => tone(300, 0.55, 'sawtooth', 0.02, 900, 0.2),
     chime: () => { tone(1568, 0.5, 'sine', 0.03, null, 0.5); setTimeout(() => tone(2093, 0.6, 'sine', 0.025, null, 0.5), 90); },
     toggle() { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.9; return muted; },
-    get muted() { return muted; }
+    get muted() { return muted; },
+    // volume 0 to 5 for 'music' or 'sfx'
+    volume(which, n) { vols[which] = level(n); apply(); },
+    // the pause menu: everything quieter while the show waits
+    duck(on) { ducked = !!on; apply(); },
+    // pause: everything stops where it is, and nothing wakes the sound until it is let go
+    hold(on) { held = !!on; if (!ctx) return; if (held) ctx.suspend().catch(() => {}); else ctx.resume().catch(() => {}); },
+    get held() { return held; }
   };
 })();

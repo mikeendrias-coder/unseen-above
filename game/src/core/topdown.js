@@ -11,9 +11,11 @@ import { LOOKS } from '../art/palettes.js';
 import { Painter, hexNum, flat } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
-import { reviewKeys, syncImmunity } from './review.js';
+import { reviewKeys, syncImmunity, offerNote } from './review.js';
+import { beginDeath, skipDeath } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
+import { fx } from './fx.js';
 
 export const T = 16;
 export const LOCK_TD = 0.5;
@@ -159,7 +161,7 @@ export class TopDownEpisode extends Phaser.Scene {
     this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: x, ty: y, P: this.P, small: true, onImpact: () => {
       this.floorPebbles = this.floorPebbles.filter(q => q !== fp); if (fp.thing) fp.thing.off = true;
       this.scorches = (this.scorches || []).concat([{ x, y, t: 0 }]);
-      Sound.tone(1400, 0.1, 'sawtooth', 0.03, 300); Sound.noise(0.25, 0.1); this.cameras.main.shake(90, 0.004);
+      Sound.tone(1400, 0.1, 'sawtooth', 0.03, 300); Sound.noise(0.25, 0.1); fx.shake(this.cameras.main, 90, 0.004);
     } });
     return true;
   }
@@ -202,19 +204,21 @@ export class TopDownEpisode extends Phaser.Scene {
     if (this.dead) return;
     this.dead = true;
     const p = this.kidPx(), P = this.P, tile = this.tileOf();
-    const impact = () => {
+    const impact = quiet => {
       this.girl.setVisible(false);
-      this.fxBurst = { x: p.x, y: p.y, t: 0 };
-      this.cameras.main.shake(200, 0.012); this.cameras.main.flash(110, 70, 18, 18);
-      Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
+      if (!quiet) {
+        this.fxBurst = { x: p.x, y: p.y, t: 0 };
+        fx.shake(this.cameras.main, 200, 0.012); fx.flash(this.cameras.main, 110, 70, 18, 18);
+        Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
+      }
       state.addBody(this.epId, tile.x * T + 8, tile.y * T + 13, src && src.id);
     };
-    let after = 0.4;
-    if (src && src.direct) impact();
-    else after = this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: p.x, ty: p.y - 3, P, onImpact: impact, from: this.satX });
-    this.time.delayedCall((after + 0.12) * 1000, () => this.cameras.main.fadeOut(260, 0, 0, 0));
-    this.time.delayedCall((after + 0.42) * 1000, () => this.scene.restart({}));
+    beginDeath(this, src, impact, onImpact => this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: p.x, ty: p.y - 3, P, onImpact, from: this.satX }));
   }
+  // a restart by choice (R, or the pause menu): the next take, no body
+  canRestart() { return !this.dead && !this.leaving && !this.done; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; this.ep.take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); return true; }
+  skipDeath() { return skipDeath(this); }
   // her bodies from earlier takes; each one can be looked at with E
   drawBodies() {
     this.bodyLayer.removeAll(true);
@@ -234,6 +238,7 @@ export class TopDownEpisode extends Phaser.Scene {
   takeNote(data, num, title) {
     if (data && data.fromCut) this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600, 'lower'); overlay.bug('CH 07', 3600); });
     else if (this.ep.take > 1) overlay.take(this.ep.take);
+    offerNote(this);
   }
 
   // ------------------------------------------------------------------ things, the camera, the dark

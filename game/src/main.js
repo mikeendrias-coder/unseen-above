@@ -3,6 +3,12 @@ import { measure, applyCss, display } from './core/display.js';
 import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
 import { initPicker } from './ui/vibe.js';
+import { initPause } from './ui/pause.js';
+import { cg } from './ui/cg.js';
+import { STEPS } from './core/flow.js';
+import { state } from './core/state.js';
+import { Music } from './core/music.js';
+import { setStory } from './core/review.js';
 import { syncImmunity } from './core/review.js';
 import { itemPanel } from './core/panels.js';
 import { Grounds } from './scenes/Grounds.js';
@@ -30,10 +36,16 @@ function route() {
   return { first, firstData: first === 'satellite' ? { batch, skin: Number(params.get('skin')) || batch } : {} };
 }
 
-function start() {
+let game = null, pause = null, playing = false;
+// the game's picture and its overlay, hidden while the channel guide is up
+function showGame(on) {
+  if (game && game.canvas) game.canvas.style.display = on ? '' : 'none';
+  const o = document.getElementById('overlay'); if (o) o.style.display = on ? '' : 'none';
+}
+function start(entry) {
   measure();
-  const { first, firstData } = route();
-  const game = new Phaser.Game({
+  const { first, firstData } = entry || route();
+  game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: 'stage',
     width: display.w, height: display.h,
@@ -60,6 +72,7 @@ function start() {
     applyCss(game); syncImmunity();
     game.scene.start(first, firstData);
   });
+  pause = initPause(game, { playing: () => playing, guide: toGuide });
   let t = null;
   window.addEventListener('resize', () => {
     clearTimeout(t);
@@ -70,21 +83,70 @@ function start() {
       game.scale.emit('rescale');
     }, 150);
   });
-  window.addEventListener('hashchange', () => {
-    const r = route();
-    game.scene.getScenes(true).forEach(sc => game.scene.stop(sc.sys.settings.key));
-    overlay.clearCaption(); overlay.hint('');
-    game.scene.start(r.first, r.firstData);
-  });
-  window.__unseen = { game, display, Sound, overlay, itemPanel };
+  window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state };
+}
+function stopAll() {
+  game.scene.getScenes(false).forEach(sc => { const s = sc.sys; if (s.isActive() || s.isPaused() || s.isSleeping()) game.scene.stop(s.settings.key); });
+}
+// a jump link: that part, now
+function jumpTo() {
+  if (!game) return;
+  if (pause) pause.drop();
+  const r = route();
+  stopAll(); overlay.clearCaption(); overlay.hint('');
+  game.scene.start(r.first, r.firstData);
+}
+// the pause menu's CHANNEL GUIDE: the show stops, the guide comes back (her place is kept)
+function toGuide() {
+  playing = false;
+  stopAll(); Music.stop(0.5);
+  cg.clearAll(); overlay.clearCaption(); overlay.hint(''); overlay.fade(false, 0);
+  showGame(false);
+  if (tv) tv.hidden = false;
+  guide();
 }
 
-const go = document.getElementById('start'), tv = document.getElementById('tv');
-let started = false, stopPicker = () => {};
-const begin = () => { if (started) return; started = true; stopPicker(); if (tv) tv.hidden = true; if (go) go.hidden = true; Sound.ensure(); start(); };
+const go = document.getElementById('start'), tv = document.getElementById('tv'), cont = document.getElementById('continue');
+const optStory = document.getElementById('opt-story'), optFlash = document.getElementById('opt-flash');
+let stopPicker = () => {};
+// saved volumes, before any sound is made
+Sound.volume('music', state.settings.music); Sound.volume('sfx', state.settings.sfx);
+
+// Continue: the part she reached last, in the show's order
+const saved = () => { const st = STEPS.find(s => s.id === state.reached); return st && st.id !== 'intro' ? st : null; };
+function syncGuide() {
+  const st = saved();
+  if (cont) { cont.hidden = !st; const at = cont.querySelector('span'); if (at && st) at.textContent = st.label; }
+  if (go) { go.classList.toggle('second', !!st); go.firstChild.textContent = st ? 'FROM THE START' : 'BEGIN'; }
+  if (optStory) { optStory.setAttribute('aria-pressed', state.immune ? 'true' : 'false'); optStory.querySelector('i').textContent = state.immune ? 'ON' : 'OFF'; }
+  if (optFlash) { const r = !!state.settings.reduceFlash; optFlash.setAttribute('aria-pressed', r ? 'true' : 'false'); optFlash.querySelector('i').textContent = r ? 'REDUCED' : 'FULL'; }
+}
+const begin = entry => {
+  if (playing) return;
+  playing = true; stopPicker();
+  if (tv) tv.hidden = true;
+  Sound.ensure();
+  if (!game) { start(entry); return; }
+  showGame(true);
+  const { first, firstData } = entry || route();
+  game.scene.start(first, firstData);
+};
+const resume = () => { const st = saved(); begin(st ? { first: st.scene, firstData: Object.assign({}, st.data) } : null); };
+// Enter on the guide: Continue when there is a place to go back to
+const primary = () => (saved() ? resume() : begin(null));
+function guide() { syncGuide(); stopPicker = initPicker(primary); }
+
 if (go) {
-  stopPicker = initPicker(begin);
-  go.addEventListener('click', begin);
-  // a jump link clicked before the game starts also starts it, at that part
-  document.querySelectorAll('.jump a').forEach(a => a.addEventListener('click', () => setTimeout(begin, 0)));
-} else begin();
+  guide();
+  go.addEventListener('click', () => begin(null));
+  if (cont) cont.addEventListener('click', resume);
+  if (optStory) optStory.addEventListener('click', () => { setStory(!state.immune); syncGuide(); });
+  if (optFlash) optFlash.addEventListener('click', () => { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); syncGuide(); });
+  // a jump link starts the game at that part (clicked again, it starts that part again)
+  document.querySelectorAll('.jump a').forEach(a => a.addEventListener('click', () => {
+    const same = a.getAttribute('href') === location.hash;
+    setTimeout(() => { if (!playing) begin(null); else if (same) jumpTo(); }, 0);
+  }));
+  // a new # while the show is on goes there; on the guide, BEGIN will use it
+  window.addEventListener('hashchange', () => { if (playing) jumpTo(); });
+} else begin(null);

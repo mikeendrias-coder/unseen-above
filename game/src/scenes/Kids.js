@@ -18,6 +18,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { goNext } from '../core/flow.js';
 import { reviewKeys } from '../core/review.js';
+import { fx } from '../core/fx.js';
 
 const TV = { x: 500, y: 110, w: 640, h: 360 };
 const X0 = 440; // the feed shows the garden from this x
@@ -168,7 +169,7 @@ export class Kids extends Phaser.Scene {
     this.cue('lock', T.lockAt, () => Sound.charge());
     // the satellite fires; the beam ricochets down the feed and hits her
     this.cue('fire', T.fire, () => this.feedStrike.fire({ view: { x: 0, y: 0, width: 320, height: 180 }, tx: (this.g1x || 570) - X0, ty: 153, P: this.P, from: this.satX, onImpact: () => {
-      this.hitAt = this.t; Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16); this.cameras.main.shake(140, 0.003);
+      this.hitAt = this.t; Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16); fx.shake(this.cameras.main, 140, 0.003);
     } }));
     this.cue('round2', T.round2, () => { overlay.caption(null, '[GAME SHOW JINGLE]'); [523, 659, 784, 1047].forEach((f, i) => this.time.delayedCall(i * 140, () => Sound.tone(f, 0.16, 'square', 0.025, null, 0.3))); });
     this.cue('round2x', T.round2 + 2.4, () => overlay.clearCaption());

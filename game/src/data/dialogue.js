@@ -206,6 +206,29 @@ export function bodyLines(b, age) {
   return [BODY_SEEN.age[age].replace('{take}', b.take), c ? c[1] : BODY_SEEN.fallback, BODY_SEEN.last];
 }
 
+// DRAFT, for Michael: a caption at each death that says what got her, in the style of a sound
+// caption. Matched on the id of what killed her (first match wins); {WHAT} is that id. direct
+// is for things that hit her themselves rather than calling the satellite.
+export const DEATH_SAID = [
+  [/scan/, '[THE SCAN FOUND HER]'],
+  [/drone/, '[THE {WHAT} SAW HER]'],
+  [/lamp|searchlight/, '[THE {WHAT} FOUND HER]'],
+  [/laser/, '[THE LASER CUT HER DOWN]'],
+  [/camera/, '[THE {WHAT} SAW HER]'],
+  [/chandelier/, '[THE CHANDELIER SAW HER]', '[THE CHANDELIER CAME DOWN ON HER]'],
+  [/fall/, '[SHE FELL]'],
+  [/ceiling/, '[THE CEILING CAME DOWN]'],
+  [/creator/, '[ONE CUT]'],
+  [/sensor/, '[A MOTION SENSOR CAUGHT HER MOVING]'],
+  [/robot/, '[THE {WHAT} SAW HER]']
+];
+export const DEATH_FALLBACK = '[SOMETHING UP THERE SAW HER]';
+export function deathLine(id, direct) {
+  const m = DEATH_SAID.find(([re]) => re.test(id || ''));
+  if (!m) return DEATH_FALLBACK;
+  return ((direct && m[2]) || m[1]).replace('{WHAT}', String(id).toUpperCase());
+}
+
 // DRAFT, for Michael: people out in the city. E talks to them (speech over their heads); bump
 // is what they say when she walks into them, head when she lands on one. {look} as above.
 export const MOON_PEOPLE = [

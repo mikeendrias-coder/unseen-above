@@ -7,6 +7,7 @@ import { Sound } from './sound.js';
 import { pixText } from '../art/pixfont.js';
 import { hexNum } from '../art/painter.js';
 import { overlay } from './overlay.js';
+import { fx } from './fx.js';
 
 export class Glasses {
   constructor(opts) {
@@ -49,7 +50,7 @@ export class Glasses {
     for (let i = 0; i < n; i++) { g.fillStyle(Math.random() < 0.5 ? 0xffffff : col, (0.08 + Math.random() * 0.25) * Math.min(1, lv * 1.6)); g.fillRect(Math.floor(Math.random() * 320), Math.floor(Math.random() * 180), Math.random() < 0.85 ? 1 : 2, 1); }
     const tears = Math.floor(lv * 4 + Math.random() * 1.5);
     for (let i = 0; i < tears; i++) { g.fillStyle(col, 0.06 + lv * 0.12); g.fillRect(0, Math.floor(Math.random() * 180), 320, 1 + Math.floor(Math.random() * 2)); }
-    if (this.out > 0) { g.fillStyle(col, 0.05 + lv * 0.06); g.fillRect(0, 0, 320, 180); }
+    if (this.out > 0) { g.fillStyle(col, (0.05 + lv * 0.06) * fx.level); g.fillRect(0, 0, 320, 180); }
     // running hot: a red edge pulses slowly around the view before they cut out
     if (this.on && this.heat > 0.72) { const a = 0.18 + 0.22 * (0.5 + 0.5 * Math.sin(this.t * 11)); g.fillStyle(0xff5a4a, a); g.fillRect(0, 0, 320, 2); g.fillRect(0, 178, 320, 2); g.fillRect(0, 2, 2, 176); g.fillRect(318, 2, 2, 176); }
   }

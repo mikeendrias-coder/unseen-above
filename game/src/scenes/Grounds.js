@@ -14,6 +14,7 @@ import { goNext } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
 import { Painter } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
+import { fx } from '../core/fx.js';
 
 // Drone show figures, as point lists in a 64 x 30 box.
 function outline(pts, n) {
@@ -172,7 +173,7 @@ export class Grounds extends SideEpisode {
       if (!this.dead && !this.leaving && k.x > S.trigger) {
         this.scan = { x: k.x - S.behind, t: 0 };
         overlay.sfx('[ALARM]', 1600); Sound.tone(520, 0.5, 'sawtooth', 0.03, 1040);
-        this.cameras.main.flash(120, 90, 20, 20);
+        fx.flash(this.cameras.main, 120, 90, 20, 20);
       }
       return;
     }

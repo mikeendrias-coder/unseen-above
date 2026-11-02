@@ -33,7 +33,7 @@
   /* The start screen: tonight on CH 07, pick how her world looks. A teletext guide beside the
      picture: no outlines, rows of color, the chosen row in its own look's color. */
   #tv { position: relative; width: 100%; max-width: 1280px; display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); gap: 20px; align-items: stretch; background: var(--ground); }
-  .tv-screen { position: relative; background: #000; box-shadow: 0 0 0 8px #0c0b11, 0 0 0 9px #1c1a24, 0 0 70px var(--glow, rgba(242, 193, 78, 0.16)); aspect-ratio: 16 / 9; max-width: 100%; transition: box-shadow 300ms; }
+  .tv-screen { position: relative; align-self: start; background: #000; box-shadow: 0 0 0 8px #0c0b11, 0 0 0 9px #1c1a24, 0 0 70px var(--glow, rgba(242, 193, 78, 0.16)); aspect-ratio: 16 / 9; max-width: 100%; transition: box-shadow 300ms; }
   .tv-screen canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
   .tv-guide { display: flex; flex-direction: column; gap: 10px; min-width: 0; font-size: 20px; line-height: 1.2; }
   .tv-ch { margin: 0; color: var(--yellow); }
@@ -51,10 +51,23 @@
   .tv-list button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .tv-votes { margin: 0; font-size: 10px; color: var(--quiet); }
   .tv-votes b { font-weight: normal; color: var(--ink); }
-  #start { margin-top: auto; padding: 10px 12px; background: var(--sel, var(--yellow)); border: 0; color: #000; font: 40px/1 var(--pix); text-align: left; cursor: pointer; }
-  #start span { display: block; margin-top: 8px; font-size: 10px; line-height: 1.2; }
-  #start:hover, #start:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  /* two switches: story mode, and flashing (reduced also stops the shake) */
+  .tv-opts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
+  .tv-opts button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 8px; padding: 4px 6px; background: #0c0b11; border: 0; color: var(--ink); font: 10px/1.2 var(--pix); text-align: left; cursor: pointer; }
+  .tv-opts b { font-weight: normal; color: var(--ink); }
+  .tv-opts i { font-style: normal; color: var(--quiet); }
+  .tv-opts span { grid-column: 1 / -1; color: var(--quiet); }
+  .tv-opts button[aria-pressed="true"] i { color: #000; background: var(--green); padding: 0 4px; }
+  .tv-opts button:hover, .tv-opts button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .tv-go { margin-top: auto; display: grid; gap: 6px; }
+  #start, #continue { padding: 10px 12px; background: var(--sel, var(--yellow)); border: 0; color: #000; font: 40px/1 var(--pix); text-align: left; cursor: pointer; }
+  #start span, #continue span { display: block; margin-top: 8px; font-size: 10px; line-height: 1.2; }
+  #start:hover, #start:focus-visible, #continue:hover, #continue:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  /* with a place to go back to, starting over is the quieter choice */
+  #start.second { padding: 6px 12px; background: transparent; color: var(--ink); font-size: 20px; box-shadow: inset 0 0 0 2px #1c1a24; }
+  #start.second span { display: none; }
   .tv-note { margin: 0; font-size: 10px; color: var(--quiet); }
+  .tv-note b { font-weight: normal; color: var(--yellow); }
   @media (max-width: 760px) { #tv { grid-template-columns: minmax(0, 1fr); } .tv-title { font-size: 20px; } .tv-list button { grid-template-columns: 24px minmax(0, 1fr) 48px; } .tv-list button .sw { display: none; } }
 
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
@@ -80,7 +93,7 @@
     <div id="bug" class="sr"></div>
     <div id="note" class="sr"></div>
     <div id="panel" class="sr" role="dialog" aria-live="assertive"><div class="panel-kicker"></div><div class="panel-title"></div><div class="panel-body"></div><div class="panel-key">Any key or a click to go on</div></div>
-    <div id="immune" class="sr">Immune. N skips ahead.</div>
+    <div id="immune" class="sr">Story mode. N skips ahead.</div>
   </div>
   <div id="tv">
     <div class="tv-screen"><canvas id="tv-canvas" width="320" height="180" aria-label="A preview of the chosen look"></canvas></div>
@@ -90,8 +103,15 @@
       <p class="tv-sub">Pick how her world looks.</p>
       <ol class="tv-list" id="tv-list" role="listbox" aria-label="Looks"></ol>
       <p class="tv-votes"><b id="tv-count">0</b> votes from home so far. Yours counts too.</p>
-      <button id="start" type="button">BEGIN<span>Sound on. Arrows pick a look, Enter begins.</span></button>
-      <p class="tv-note">Best on a desktop with a keyboard. L switches the look during play.</p>
+      <div class="tv-opts">
+        <button id="opt-story" type="button" aria-pressed="false"><b>STORY MODE</b><i>OFF</i><span>Nothing can kill her. N skips ahead.</span></button>
+        <button id="opt-flash" type="button" aria-pressed="false"><b>FLASHING</b><i>FULL</i><span>Reduced: dim, slow flashes and no shake.</span></button>
+      </div>
+      <div class="tv-go">
+        <button id="continue" type="button" hidden>CONTINUE<span>Episode 1</span></button>
+        <button id="start" type="button">BEGIN<span>Sound on. Arrows pick a look, Enter begins.</span></button>
+      </div>
+      <p class="tv-note"><b>Flashing lights and screen shake.</b> P pauses, and the pause menu turns them down. Best on a desktop with a keyboard.</p>
     </div>
   </div>
 </div>
@@ -107,11 +127,12 @@
     <li><b>Throw, swing</b> F or click</li>
     <li><b>Skip a line</b> Enter</li>
     <li><b>Restart episode</b> R</li>
+    <li><b>Pause</b> P or Esc</li>
     <li><b>Switch look</b> L</li>
     <li><b>Sound</b> M</li>
     <li><b>Skip the opening</b> Esc</li>
     <li><b>Satellite</b> drag with the mouse, K previews later screens</li>
-    <li><b>Immunity, for review</b> I, then N skips ahead</li>
+    <li><b>Story mode</b> on the guide or in the pause menu; N skips ahead</li>
   </ul>
   <nav class="jump" aria-label="Jump to a part">
     <b>Jump to</b>

@@ -144,6 +144,17 @@ export class Satellite extends Phaser.Scene {
 
   // review: N solves the puzzle on the screen
   skipAhead() { if (!this.ended && !this.solved) this.win(); }
+  // R, or the pause menu: this batch again from its first screen
+  canRestart() { return !this.embedded && !this.ended; }
+  restartTake() { if (this.embedded) return false; this.scene.restart({ batch: this.batch, skin: this.skinN, quiet: true, preview: this.preview }); return true; }
+  // a long time on one screen: the show offers N (no story mode needed)
+  watchStuck(dt) {
+    if (this.ended || this.solved || this.preview) return;
+    const key = this.mode === 'sort' ? 'r' + (this.sorter ? this.sorter.round : 0) : 'l' + this.levelIdx;
+    if (key !== this.stuckKey) { this.stuckKey = key; this.stuckT = 0; this.offerSkip = false; }
+    this.stuckT += dt;
+    if (!this.offerSkip && this.stuckT > 90) { this.offerSkip = true; if (!state.immune) overlay.note('Stuck? N solves it', 6500); }
+  }
   win() {
     if (this.mode === 'sort') { this.sorter.finishRound(); return; }
     this.solved = true; this.drawing = false;
@@ -207,7 +218,8 @@ export class Satellite extends Phaser.Scene {
       this.scene.restart({ batch: this.batch, skin: next, quiet: true, score: this.score, preview: true });
       return;
     }
-    if (c.restart()) { this.scene.restart({ batch: this.batch, skin: this.skinN, quiet: true, preview: this.preview }); return; }
+    if (c.restart() && this.restartTake()) return;
+    this.watchStuck(dt);
     if (this.final && c.advance()) { this.scene.start('intro', {}); return; }
     if (this.mode === 'sort') { this.sorter.update(dt, this.ended ? null : c); this.path = { length: this.sorter.sorted }; this.board = { n: this.sorter.R.quota }; }
     this.drawLive();

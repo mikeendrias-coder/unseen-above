@@ -25,6 +25,7 @@ export function initPicker(onBegin) {
   const list = document.getElementById('tv-list'), canvas = document.getElementById('tv-canvas'), tv = document.getElementById('tv');
   if (!list || !canvas || !tv) return () => {};
   const ctx = canvas.getContext('2d');
+  list.replaceChildren(); // the guide can come back (the pause menu's CHANNEL GUIDE)
   let current = LOOK_KEYS.indexOf(state.look); if (current < 0) current = 0;
   let flip = 0, alive = true, last = performance.now(), t = 0, gestured = false;
   const accent = k => flat(LOOKS[k].gold), glow = k => flat(LOOKS[k].lamp);
@@ -65,7 +66,11 @@ export function initPicker(onBegin) {
     if (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') { gestured = true; pick(current + 1); ev.preventDefault(); }
     else if (ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') { gestured = true; pick(current - 1); ev.preventDefault(); }
     else if (/^[1-5]$/.test(ev.key)) { gestured = true; pick(Number(ev.key) - 1); }
-    else if (ev.key === 'Enter' && document.activeElement && document.activeElement.closest && !document.activeElement.closest('.jump')) { ev.preventDefault(); onBegin(); }
+    else if (ev.key === 'Enter') {
+      // a focused button (Continue, From the start, a switch) or a jump link takes its own Enter
+      const a = document.activeElement, own = a && a.closest && (a.closest('.jump') || (a.tagName === 'BUTTON' && !a.closest('.tv-list')));
+      if (!own) { ev.preventDefault(); onBegin(); }
+    }
   };
   window.addEventListener('keydown', onKey);
   // the preview: the grounds at night in this look, beams and drones moving, a channel switch

@@ -13,6 +13,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode, TILE } from '../core/side.js';
 import { goNext } from '../core/flow.js';
+import { fx } from '../core/fx.js';
 
 const W = 30, H = 64, G = 160, ROT = 58; // ROT: the rotten floor near the bottom of the shaft
 const LEVEL = { w: W, h: H, start: { x: 2 * TILE, y: G - 14 }, door: { x: -999, y: -999, w: 0, h: 0 }, beam: { x0: 15, x1: 19, row: 8 } };
@@ -107,6 +108,7 @@ export class Fall extends SideEpisode {
   }
 
   // review: N puts her on the balcony
+  canRestart() { return (this.phase === 'walk' || this.phase === 'crack') && super.canRestart(); }
   skipAhead() { if (this.phase === 'walk') { this.kid.x = LEVEL.beam.x0 * TILE + 20; this.kid.y = LEVEL.beam.row * TILE - 14; this.kid.vy = 0; this.kid.onGround = true; } }
 
   update(time, delta) {
@@ -118,7 +120,7 @@ export class Fall extends SideEpisode {
     // she lands on the balcony: a crack, a beat, then it goes
     if (this.phase === 'walk' && k.onGround && k.y + k.h <= B.row * TILE + 1 && k.x + k.w > B.x0 * TILE && k.x < (B.x1 + 1) * TILE) {
       this.phase = 'crack'; this.t = 0;
-      Sound.noise(0.25, 0.12, 1800); Sound.tone(140, 0.3, 'sawtooth', 0.03, 90); this.cameras.main.shake(140, 0.004);
+      Sound.noise(0.25, 0.12, 1800); Sound.tone(140, 0.3, 'sawtooth', 0.03, 90); fx.shake(this.cameras.main, 140, 0.004);
       this.dust.explode(10, k.x + 4, B.row * TILE + 6);
     }
     if (this.phase === 'crack' && this.t > 0.38) {
@@ -165,7 +167,7 @@ export class Fall extends SideEpisode {
         this.phase = 'through'; this.t = 0;
         for (let x = 12; x <= 20; x++) this.map.m[ROT][x] = 0;
         this.splinters.explode(40, k.x + 4, ROT * TILE + 2); this.dust.explode(20, k.x + 4, ROT * TILE);
-        Sound.noise(0.5, 0.2, 2600); Sound.tone(180, 0.4, 'sawtooth', 0.04, 70); cam.shake(260, 0.012);
+        Sound.noise(0.5, 0.2, 2600); Sound.tone(180, 0.4, 'sawtooth', 0.04, 70); fx.shake(cam, 260, 0.012);
         this.holeX = k.x;
       }
     } else if (this.t > 0.15 && k.y > cam.worldView.bottom + 12) this.goDark();
@@ -179,7 +181,7 @@ export class Fall extends SideEpisode {
     // in the black: a long beat, the landing, then her glasses crack
     if (this.t > 0.7 && !this.landed) {
       this.landed = true; this.cracked = true; this.crackT = 0;
-      Sound.noise(0.6, 0.28, 400); Sound.tone(55, 0.5, 'sine', 0.08, 35); this.cameras.main.shake(320, 0.02);
+      Sound.noise(0.6, 0.28, 400); Sound.tone(55, 0.5, 'sine', 0.08, 35); fx.shake(this.cameras.main, 320, 0.02);
       this.time.delayedCall(120, () => { Sound.tone(2400, 0.08, 'square', 0.03); this.time.delayedCall(90, () => Sound.tone(1700, 0.12, 'square', 0.025, 400)); });
       this.time.delayedCall(1900, () => { if (!goNext(this, 'ep3')) overlay.hint('The east wing is not built yet.'); });
     }
@@ -211,7 +213,7 @@ export class Fall extends SideEpisode {
     const g = this.hudG, col = hexNum(this.P.overlay); g.clear();
     const m = 5, s = 8;
     if (this.cracked) this.crackT += 1 / 60;
-    const a = this.cracked ? (Math.random() < 0.5 ? 0.9 : 0.15) : 0.5;
+    const a = this.cracked ? fx.flicker(0.9, 0.15, 0.5) : 0.5;
     g.fillStyle(col, a);
     [[m, m, 1, 1], [320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy], i) => { if (this.cracked && i === 0) return; g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
     if (overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);

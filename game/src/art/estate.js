@@ -27,7 +27,7 @@ export const LEVEL = {
   ],
   // patrol drones with a downward spotlight
   drones: [
-    { id: 'fountain drone', x0: 40 * TILE, x1: 56 * TILE, y: 74, speed: 26, half: 11, range: 120 },
+    { id: 'fountain drone', x0: 43 * TILE, x1: 56 * TILE, y: 74, speed: 26, half: 11, range: 120 },
     { id: 'pergola drone', x0: 78 * TILE, x1: 93 * TILE, y: 86, speed: 38, half: 10, range: 110 }
   ]
 };

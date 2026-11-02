@@ -21,6 +21,7 @@ import { SideEpisode, K, inPoly } from '../core/side.js';
 import { goNext } from '../core/flow.js';
 import { Glasses } from '../core/glasses.js';
 import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, NOTICE, lineSeconds } from '../data/dialogue.js';
+import { fx } from '../core/fx.js';
 
 const T = TILE, G = GROUND, n = c => hexNum(c);
 const HP = 9, ROUND_AT = [9, 6, 3];                     // hits left when each round starts
@@ -79,9 +80,12 @@ export class Hallway extends SideEpisode {
     this.things.push({ x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'E', look: true, use: () => this.describe(HALL_THINGS.console, it, D.x + D.w / 2, D.y - 17) });
     this.swordThing = { x0: 0, x1: 0, y0: G - 6, y1: G, label: 'E', off: true, use: () => this.pickUp() };
     this.things.push(this.swordThing);
+    // in round two the desk is the laser's console: E fires one high shot across the stage
+    this.consoleThing = { x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'E', off: true, use: () => this.pressConsole() };
+    this.things.push(this.consoleThing); this.consoleAt = 0;
 
     this.drawBodies();
-    const retry = this.ep.take > 1 && !data.fresh;
+    const retry = this.retry = this.ep.take > 1 && !data.fresh;
     this.spawn(retry ? 21 * T + 6 : null); this.kid.face = 1;
     this.mode = 'walk'; this.heardIn = 0;
     this.input.on('pointerdown', () => { if (this.mode === 'fight') this.swing(); });
@@ -105,6 +109,7 @@ export class Hallway extends SideEpisode {
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) {
+      this.consoleThing.off = !this.consoleReady();
       this.moveKid(dt); this.updateThings();
       if (c.glasses()) this.gl.toggle();
       if (c.throwP() && this.mode === 'fight') this.swing();
@@ -185,12 +190,14 @@ export class Hallway extends SideEpisode {
     this.sword.have = true; this.sword.floor = null; this.swordThing.off = true;
     Sound.tone(660, 0.08, 'triangle', 0.03); this.time.delayedCall(70, () => Sound.tone(990, 0.12, 'triangle', 0.025));
     const shown = this.itemPanel('sword');
-    const go = () => this.say([HALL_TOSS[4]], () => this.startRound(0));
+    // on a retry she has heard it: straight to the round
+    const go = () => (this.retry ? this.startRound(0) : this.say([HALL_TOSS[4]], () => this.startRound(0)));
     if (shown) this.time.delayedCall(50, go); else go();
   }
   startRound(i) {
     const c = this.cr;
-    c.round = i; c.st = 'idle'; c.t = 0.5; c.open = false; c.attacks = 0;
+    // a beat first: the round's line is still on screen, and the first round is the longest wait
+    c.round = i; c.st = 'idle'; c.t = i === 0 ? 1.8 : 1.0; c.open = false; c.attacks = 0;
     this.mode = 'fight';
     if (i === 2) this.lightsOff();
   }
@@ -233,7 +240,7 @@ export class Hallway extends SideEpisode {
     if (c.hp <= 0) return; // it is over: no hits after the last
     c.hp--; c.st = 'hurt'; c.t = 0.55; c.open = false; c.flash = 0.12;
     c.kx = (c.x < k.x + k.w / 2 ? -1 : 1) * 90;
-    Sound.tone(220, 0.16, 'sawtooth', 0.04, 110); Sound.noise(0.12, 0.07, 2200); this.cameras.main.shake(120, 0.006);
+    Sound.tone(220, 0.16, 'sawtooth', 0.04, 110); Sound.noise(0.12, 0.07, 2200); fx.shake(this.cameras.main, 120, 0.006);
     this.sparks.explode(10, c.x, G - 14);
     const line = HALL_HIT[HP - c.hp - 1];
     // the last hit stops everything at once: no more attacks, no traps, then the yield
@@ -288,7 +295,7 @@ export class Hallway extends SideEpisode {
       }
       case 'raise':
         c.pose = 'stand'; c.face = dx < 0 ? -1 : 1;
-        if (c.t <= 0) { c.st = 'chop'; c.t = 0.08; this.chopHits(); Sound.tone(140, 0.2, 'sawtooth', 0.04, 70); Sound.noise(0.15, 0.08, 2600); this.cameras.main.shake(90, 0.005); this.sparks.explode(8, c.x + c.face * 16, G - 1); }
+        if (c.t <= 0) { c.st = 'chop'; c.t = 0.08; this.chopHits(); Sound.tone(140, 0.2, 'sawtooth', 0.04, 70); Sound.noise(0.15, 0.08, 2600); fx.shake(this.cameras.main, 90, 0.005); this.sparks.explode(8, c.x + c.face * 16, G - 1); }
         break;
       case 'chop':
         c.pose = 'lean'; if (c.t <= 0) { c.st = 'stuck'; c.t = 1.15; c.open = true; }
@@ -404,6 +411,8 @@ export class Hallway extends SideEpisode {
       if (L.warm && !L.wasWarm) Sound.tone(260, 0.6, 'sawtooth', 0.015, 520);
       L.wasWarm = L.warm;
       L.cone = L.on ? this.cone(LV.x, LV.y + 4, L.angle, LV.half, LV.range) : null;
+      if (!L.on) L.blinded = false;
+      else if (!L.blinded && this.pointSeen(LV.x, LV.y + 4, L.angle, LV.half, LV.range, this.cr.x, G - 16) && this.blindCreator()) L.blinded = true;
       if (L.on && !L.was) Sound.tone(520, 0.3, 'sawtooth', 0.02, 1040);
       L.was = L.on;
       if (L.cone && !this.dead) {
@@ -419,7 +428,11 @@ export class Hallway extends SideEpisode {
       if (ph !== Z.phase) { Z.phase = ph; if (ph === 'tell') { Sound.tone(1320, 0.05, 'square', 0.014); this.time.delayedCall(130, () => Sound.tone(s === 'low' ? 990 : 1760, 0.06, 'square', 0.014)); } if (ph === 'charge') Sound.charge(); if (ph === 'fire') { Sound.tone(1500, 0.35, 'sawtooth', 0.03, 1200); Sound.noise(0.3, 0.05, 7000); } }
       Z.shot = s;
       if (ph === 'fire' && !this.dead && !window.__noDeath) { const k = this.kid, y = s === 'low' ? LEVEL.lasers.lo : LEVEL.lasers.hi; if (y >= k.y && y <= k.y + k.h) this.die({ id: 'laser', direct: true }); }
-      if (f > 1.9) { Z.shots.shift(); Z.t = 0; Z.phase = ''; if (!Z.shots.length) Z.done = true; }
+      if (ph === 'fire' && Z.hers && !Z.hitThem) {
+        const c = this.cr, b = this.crBox(), y = s === 'low' ? LEVEL.lasers.lo : LEVEL.lasers.hi;
+        if (y >= b.y0 && y <= b.y1 && !['hurt', 'between', 'yield', 'talk', 'wait'].includes(c.st)) { Z.hitThem = true; this.hitCreator(); }
+      }
+      if (f > 1.9) { Z.shots.shift(); Z.t = 0; Z.phase = ''; if (!Z.shots.length) { if (Z.hers) Z.hers = false; else Z.done = true; } }
     }
     // round three: lights off, two flash cameras that click twice, turn to her, and flash
     if (live && R === 2) this.cams.forEach(cm => {
@@ -430,7 +443,7 @@ export class Hallway extends SideEpisode {
       if (cm.next <= 0.55 && cm.clicks === 1) { cm.clicks = 2; Sound.click(0.03); }
       if (cm.aim) { cm.ang = Math.atan2(cm.aim.y - cm.y, cm.aim.x - cm.x) * 180 / Math.PI; cm.cone = this.cone(cm.x, cm.y + 2, cm.ang, 12, 190); }
       if (cm.next <= 0) {
-        cm.flash = 1; cm.warn = false; cm.clicks = 0; cm.next = 3 + Math.random() * 1.2; Sound.shutter(0.1);
+        cm.flash = 1; cm.lit = fx.allowFlash() ? 1 : 0.15; cm.warn = false; cm.clicks = 0; cm.next = 3 + Math.random() * 1.2; Sound.shutter(0.1);
         // the flash catches her if she is in it, and blinds the creator wherever they are
         const seen = !window.__noDeath && !this.dead && cm.cone && this.seenFrom(cm.x, cm.y + 2, cm.ang, 12, 190);
         if (seen) { this.satX = cm.x; this.die(cm); }
@@ -448,6 +461,29 @@ export class Hallway extends SideEpisode {
       for (let s = 3; s < d - 1; s += 0.5) if (this.solidPx(ox + dx / d * s, oy + dy / d * s)) return false;
       return true;
     });
+  }
+  // Their own traps work on them too. The console: in round two, while the creator is out on the
+  // stage, E at the desk fires one high shot of the laser (then it needs time to charge again).
+  consoleReady() { const c = this.cr; return this.mode === 'fight' && c.round === 1 && !this.laser.shots.length && c.st !== 'console' && this.clock >= this.consoleAt; }
+  pressConsole() {
+    if (!this.consoleReady()) return;
+    this.consoleAt = this.clock + 7;
+    Object.assign(this.laser, { shots: ['high'], t: 0, phase: '', done: false, hers: true, hitThem: false });
+    Sound.tone(300, 0.1, 'square', 0.02); Sound.tone(600, 0.08, 'square', 0.015);
+  }
+  // is a point (the creator) inside a rig's view, nothing solid between
+  pointSeen(ox, oy, angle, half, range, qx, qy) {
+    const dx = qx - ox, dy = qy - oy, d = Math.hypot(dx, dy); if (d > range) return false;
+    const diff = ((Math.atan2(dy, dx) * 180 / Math.PI - angle) % 360 + 540) % 360 - 180; if (Math.abs(diff) > half) return false;
+    for (let s = 3; s < d - 1; s += 0.5) if (this.solidPx(ox + dx / d * s, oy + dy / d * s)) return false;
+    return true;
+  }
+  // a light in their eyes: an opening, like the flash
+  blindCreator() {
+    const c = this.cr;
+    if (!['idle', 'windHi', 'windLo', 'raise', 'recover', 'hop'].includes(c.st)) return false;
+    c.st = 'flinch'; c.t = 1.3; Sound.tone(700, 0.2, 'triangle', 0.02, 350);
+    return true;
   }
   fireLaser() {
     const order = []; for (let i = 0; i < 3; i++) { let s = Math.random() < 0.5 ? 'low' : 'high'; if (i >= 2 && order[i - 1] === s && order[i - 2] === s) s = s === 'low' ? 'high' : 'low'; order.push(s); }
@@ -538,6 +574,7 @@ export class Hallway extends SideEpisode {
     const Z = this.laser, LZ = LEVEL.lasers;
     if (Z.shots.length) {
       const y = Z.shot === 'low' ? LZ.lo : LZ.hi, w = LZ.x1 - LZ.x0, f = Z.t;
+      if (f < 0.75 && Math.floor(f * 10) % 2 === 0) { g.fillStyle(red, 0.95); g.fillRect(LZ.x0 - 2, y - 1, 3, 3); g.fillRect(LZ.x1 - 1, y - 1, 3, 3); g.fillStyle(red, 0.35); g.fillRect(LZ.x0 + 1, y, 10, 1); g.fillRect(LZ.x1 - 11, y, 10, 1); }
       if (f < 0.75 && seeing) { tg.fillStyle(n(this.P.overlay), 0.6); for (let x = LZ.x0 + Math.floor(t * 40) % 6; x < LZ.x1; x += 6) tg.fillRect(x, y, 3, 1); }
       else if (f >= 0.75 && f < 1.2) { g.fillStyle(red, 0.06 + 0.3 * (f - 0.75) / 0.45); g.fillRect(LZ.x0, y - 1, w, 2); g.fillStyle(red, 0.9); g.fillRect(LZ.x0 - 2, y - 2, 3, 4); g.fillRect(LZ.x1 - 1, y - 2, 3, 4); }
       else if (f >= 1.2 && f < 1.5) { const fl = 0.8 + 0.2 * Math.sin(t * 90); g.fillStyle(red, 0.28 * fl); g.fillRect(LZ.x0, y - 3, w, 6); g.fillStyle(red, 0.7); g.fillRect(LZ.x0, y - 1, w, 2); g.fillStyle(n(this.P.hazardCore), 1); g.fillRect(LZ.x0, y, w, 1); }
@@ -552,7 +589,7 @@ export class Hallway extends SideEpisode {
       if (cm.cone && cm.warn && seeing) { const blink = Math.floor(t * 16) % 2 === 0; tg.fillStyle(red, blink ? 0.12 : 0.05); tg.fillPoints(cm.cone, true); }
       const ledOn = cm.warn ? Math.floor(t * 16) % 2 === 0 : Math.floor(t * 1.5) % 2 === 0;
       if (ledOn) { tg.fillStyle(red, 1); tg.fillRect(cm.x - 3, cm.y - 2, 1, 1); }
-      if (cm.flash > 0 && cm.cone) { g.fillStyle(0xffffff, 0.5 * cm.flash); g.fillPoints(cm.cone, true); g.fillStyle(0xffffff, cm.flash); g.fillCircle(cm.x, cm.y + 2, 3); }
+      if (cm.flash > 0 && cm.cone) { g.fillStyle(0xffffff, 0.5 * cm.flash * fx.level * (cm.lit == null ? 1 : cm.lit)); g.fillPoints(cm.cone, true); g.fillStyle(0xffffff, cm.flash); g.fillCircle(cm.x, cm.y + 2, 3); }
     });
   }
   drawLock() {
@@ -563,9 +600,9 @@ export class Hallway extends SideEpisode {
   drawDarkness() {
     if (!this.dark) { this.darkImg.setVisible(false); return; }
     const ctx = this.darkCanvas.getContext('2d'), vx = Math.round(this.view.x), k = this.kid, c = this.cr;
-    const flash = Math.max(0, ...this.cams.map(cm => cm.flash));
+    const flash = Math.max(0, ...this.cams.map(cm => cm.flash * (cm.lit == null ? 1 : cm.lit)));
     ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, 322, 182);
-    ctx.fillStyle = `rgba(6,5,10,${0.9 - flash * 0.75})`; ctx.fillRect(0, 0, 322, 182);
+    ctx.fillStyle = `rgba(6,5,10,${0.9 - flash * 0.75 * fx.level})`; ctx.fillRect(0, 0, 322, 182);
     ctx.globalCompositeOperation = 'destination-out';
     const hole = (x, y, r, a) => { const gr = ctx.createRadialGradient(x - vx + 1, y + 1, r * 0.35, x - vx + 1, y + 1, r); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x - vx + 1, y + 1, r, 0, Math.PI * 2); ctx.fill(); };
     if (this.girl.visible) hole(k.x + k.w / 2, k.y + 6, 34, 0.75);
@@ -592,7 +629,7 @@ export class Hallway extends SideEpisode {
     if (this.leaving || this.done) return;
     if (this.mode === 'walk') return overlay.hint(this.kid.x < 4 * T ? 'E looks at things.' : '');
     if (this.mode === 'toss') return overlay.hint(this.sword.floor ? 'The sword. E picks it up.' : '');
-    if (this.mode === 'fight') return overlay.hint(['F or a click swings. Hit when they are open: right after they attack. A high lunge, crouch. A low one, jump. Hide from the light behind a crate or under the desk.', 'The laser: G shows high or low. Crouch for high, jump for low.', 'Two clicks, then a flash: get under the desk or behind a crate. The flash blinds them too.'][this.cr.round]);
+    if (this.mode === 'fight') return overlay.hint(['F or a click swings. Hit when they are open: right after they attack. A high lunge, crouch. A low one, jump. Hide from the light behind a crate or under the desk. The light blinds them too.', 'The laser: a high beep and the top lights, crouch; a low one, jump. G shows it too. While they are out on the stage, E at the desk fires it at them.', 'Two clicks, then a flash: get under the desk or behind a crate. The flash blinds them too.'][this.cr.round]);
     if (this.mode === 'after') return overlay.hint('The playroom. Up or E.');
     overlay.hint('');
   }

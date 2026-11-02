@@ -9,9 +9,11 @@ import { LOOKS } from '../art/palettes.js';
 import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
-import { reviewKeys, syncImmunity } from './review.js';
+import { reviewKeys, syncImmunity, offerNote } from './review.js';
+import { beginDeath, skipDeath } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
+import { fx } from './fx.js';
 
 export const TILE = 16;
 export const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2 };
@@ -232,28 +234,30 @@ export class SideEpisode extends Phaser.Scene {
     this.dead = true;
     // caught in the air, she drops (see settle) and the strike meets her where she lands
     const k = this.kid, x = k.x + k.w / 2, footY = src && src.footY != null ? src.footY : k.onGround ? k.y + k.h : this.landingY(), y = k.onGround ? k.y + k.h / 2 : footY - k.h / 2;
-    const impact = () => {
+    const impact = quiet => {
       this.girl.setVisible(false);
-      this.burst.explode(16, x, y);
-      this.cameras.main.shake(200, 0.012); this.cameras.main.flash(110, 70, 18, 18);
-      Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
+      if (!quiet) {
+        this.burst.explode(16, x, y);
+        fx.shake(this.cameras.main, 200, 0.012); fx.flash(this.cameras.main, 110, 70, 18, 18);
+        Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
+      }
       state.addBody(this.epId, x, footY, src && src.id);
     };
-    let after = 0.4;
-    if (src && src.direct) impact();
-    else { this.cameras.main.stopFollow(); after = this.strikeFx.fire({ view: this.cameras.main.worldView, tx: x, ty: y, P: this.P, onImpact: impact, from: this.satX }); }
-    this.time.delayedCall((after + 0.12) * 1000, () => this.cameras.main.fadeOut(260, 0, 0, 0));
-    this.time.delayedCall((after + 0.42) * 1000, () => this.scene.restart({}));
+    beginDeath(this, src, impact, onImpact => { this.cameras.main.stopFollow(); return this.strikeFx.fire({ view: this.cameras.main.worldView, tx: x, ty: y, P: this.P, onImpact, from: this.satX }); });
   }
   groundBelow(x) { for (let ty = 0; ty < this.map.H; ty++) if (this.solidTile(Math.floor(x / TILE), ty) && !this.solidTile(Math.floor(x / TILE), ty - 1)) { if (ty * TILE > this.kid.y) return ty * TILE; } return 160; }
-  restartTake() { this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); }
-  // Mute, switch look, restart. Returns true when the scene is restarting.
+  // a restart by choice (R, or the pause menu): the next take, no body
+  canRestart() { return !this.dead && !this.leaving && !this.done; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); return true; }
+  // Mute, switch look, restart; while she is dying, a key skips the strike. Returns true when the
+  // scene is restarting.
   commonKeys() {
     const c = this.ctl;
     reviewKeys(this);
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
+    if (this.dead) { const go = c.advance() || c.restart() || c.jumpPressed(); c.look(); return go && skipDeath(this); }
     if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return true; }
-    if (c.restart() && !this.leaving && !this.done) { this.restartTake(); return true; }
+    if (c.restart() && this.restartTake()) return true;
     return false;
   }
 
@@ -298,5 +302,6 @@ export class SideEpisode extends Phaser.Scene {
   takeNote(data, num, title) {
     if (data && data.fromCut) { this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600, 'lower'); overlay.bug('CH 07', 3600); }); }
     else if (this.ep.take > 1) overlay.take(this.ep.take);
+    offerNote(this);
   }
 }
