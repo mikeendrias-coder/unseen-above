@@ -24,6 +24,7 @@
 - Working build (Artifact, republished from the scratchpad copy of game/dist/unseen-above.html): https://claude.ai/artifact/UrA74gTXSbyzUrJ1iJMEvZ
 - Research and plan doc (Claude Doc): https://claude.ai/artifact/CNSz6vg5W587eqPS5Fhi3E
 - Game Look Board (Design canvas): https://claude.ai/artifact/2BhhizAt6c43ijdc3FVh18
+- itch.io page (public since Nov 1, 2026): https://mikiend.itch.io/unseen-above (edit: https://itch.io/game/edit/5283446). HTML upload of the pack-itch zip, embed 1280 x 720, fullscreen button, scrollbars. Cover and screenshots come from tests/shoot-itch.js. AI disclosure: yes (graphics, sound, text, code). The description and tagline are drafts in Michael's voice for him to edit.
 - `game/`: the real game. `npm run build` writes `dist/unseen-above.html` (CDN Phaser) and `dist/local.html` (local Phaser). `python3 tools/pack-itch.py` then writes `dist/unseen-above-itch.zip` (index.html + phaser.min.js, runs offline; for itch.io).
 - `prototypes/`: first prototypes and their Playwright tests. `art/lookboard/`: the look board generator.
 
