@@ -70,6 +70,7 @@
   .tv-note b { font-weight: normal; color: var(--yellow); }
   @media (max-width: 760px) { #tv { grid-template-columns: minmax(0, 1fr); } .tv-title { font-size: 20px; } .tv-list button { grid-template-columns: 24px minmax(0, 1fr) 48px; } .tv-list button .sw { display: none; } }
 
+  #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--yellow); color: #000; border: 0; font: 20px/1 var(--pix); cursor: pointer; }
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
   #h-hint { min-height: 1.6em; margin: 0 0 4px; color: var(--ink); }
   .keys { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0 18px; color: var(--quiet); }
@@ -84,6 +85,7 @@
   <h1>Unseen Above <span>· CH 07</span></h1>
   <div class="tag">Working build. The whole game, start to end. Keyboard needed.</div>
 </header>
+<button id="focus-note" type="button" hidden>Click here, then the keyboard works</button>
 <div id="stage">
   <div id="overlay" aria-live="polite">
     <div id="blackout"></div>

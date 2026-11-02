@@ -122,9 +122,9 @@ export function ridgeShape() {
 export function drawMansion(g, C) {
   const fill = (c, a) => g.fillStyle(num(c), a == null ? 1 : a);
   // valley ground and the perimeter wall
-  fill(C.ink); g.fillRect(-900, 120, 1800, 400);
-  fill(mix(C.ink, C.gold, 0.08)); g.fillRect(-900, 120, 1800, 3);
-  for (let x = -880; x < 880; x += 22) { fill(C.lamp, 0.9); g.fillRect(x, 112, 2, 2); }
+  fill(C.ink); g.fillRect(-900, 111, 1800, 409);
+  fill(mix(C.ink, C.gold, 0.08)); g.fillRect(-900, 111, 1800, 3);
+  for (let x = -880; x < 880; x += 22) { fill(C.lamp, 0.9); g.fillRect(x, 109, 2, 2); }
   // glass wing (left), clashing with everything else
   fill(mix(C.glass, '#000000', 0.35)); g.fillRect(-250, -10, 150, 122);
   const r = rng(9);

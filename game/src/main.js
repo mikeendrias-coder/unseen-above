@@ -106,6 +106,15 @@ function toGuide() {
   guide();
 }
 
+// In an embed (itch.io) the keys go to the outer page until the game has focus: take it on load
+// and on any click, and show a line asking for a click while it is elsewhere.
+const grab = () => { try { window.focus(); } catch (e) { /* not allowed */ } };
+const focusNote = document.getElementById('focus-note');
+const syncFocus = () => { if (focusNote) focusNote.hidden = document.hasFocus(); };
+window.addEventListener('pointerdown', grab, true);
+window.addEventListener('focus', syncFocus); window.addEventListener('blur', syncFocus);
+grab(); setTimeout(syncFocus, 300);
+
 const go = document.getElementById('start'), tv = document.getElementById('tv'), cont = document.getElementById('continue');
 const optStory = document.getElementById('opt-story'), optFlash = document.getElementById('opt-flash');
 let stopPicker = () => {};
