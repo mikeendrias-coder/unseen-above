@@ -20,6 +20,8 @@ import { cg } from '../ui/cg.js';
 
 export const T = 16;
 export const LOCK_TD = 0.5;
+// she carries five pebbles at most (Michael, Nov 18 playtest)
+export const MAX_PEBBLES = 5;
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 // the girl from above: hair, face or back, a scarf band, coat, feet (8 x 11)
@@ -200,6 +202,7 @@ export class TopDownEpisode extends Phaser.Scene {
   }
 
   pickPebble(fp) {
+    if (this.pebbles >= MAX_PEBBLES) { Sound.tone(220, 0.06, 'triangle', 0.015); if (this.pocketsFull) this.pocketsFull(fp.x, fp.y); return; } // pockets full: it stays
     this.floorPebbles = this.floorPebbles.filter(q => q !== fp); fp.thing.off = true;
     this.pebbles++; Sound.tone(500, 0.06, 'triangle', 0.02);
   }
@@ -219,6 +222,11 @@ export class TopDownEpisode extends Phaser.Scene {
     this.scorches = (this.scorches || []).filter(s => (s.t += dt) < 6);
     this.scorches.forEach(s => { g.fillStyle(0x0e0f12, 1); g.fillRect(s.x - 2, s.y - 1, 5, 3); g.fillRect(s.x - 1, s.y - 2, 3, 5); if (s.t < 1.5) { g.fillStyle(hexNum(this.P.hazard), 1); g.fillRect(s.x, s.y, 1, 1); } });
   }
+
+  // Tests set window.__noDeath to walk past everything. Immunity never hides her from a hazard:
+  // the hazard plays and core/death.js decides what the death costs (in immune mode, nothing).
+  // (Builds where immunity also set __noDeath left the east wing's lasers doing nothing.)
+  shielded() { return !!window.__noDeath && !state.immune; }
 
   // ------------------------------------------------------------------ cones and the lock
   // tiles a viewer at (cx, cy) in tile units sees, facing `angle` degrees
@@ -243,7 +251,7 @@ export class TopDownEpisode extends Phaser.Scene {
   // a source: { tiles: Set, lock, id, x, y (px) }. Inside its tiles, lock builds; outside it fades.
   watchTiles(src, dt, limit) {
     if (this.dead || this.leaving) { src.lock = Math.max(0, src.lock - dt * 3); return; }
-    const o = this.tileOf(), seen = !window.__noDeath && src.tiles && src.tiles.has(o.y * this.level.W + o.x);
+    const o = this.tileOf(), seen = !this.shielded() && src.tiles && src.tiles.has(o.y * this.level.W + o.x);
     if (seen) { if (src.lock === 0) Sound.charge(); src.lock += dt; if (src.lock >= (limit || LOCK_TD)) this.die(src); }
     else src.lock = Math.max(0, src.lock - dt * 2);
   }

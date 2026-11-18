@@ -21,12 +21,13 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html#eastwing'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'eastwing' && window.__game.scene.clock > 0.5);
-  await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene, k = s.kid; k.tx = k.fx = 4; k.ty = k.fy = 19; k.p = 1; k.moving = false; s.camX = 72; s.camY = 312; });
-  await until(() => window.__game.scene.nearThing && window.__game.scene.nearThing.ty === 18, null, 4000);
+  // the workshop door is in the landing's north wall (rebuilt east wing, Nov 18); W walks her into it
+  await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene, k = s.kid; k.tx = k.fx = 4; k.ty = k.fy = 26; k.p = 1; k.moving = false; s.camX = 72; s.camY = 424; });
+  await until(() => { const d = window.__game.scene.doorAhead(); return d && d[0] === 4 && d[1] === 25; }, null, 4000);
   await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW');
   await visit('episode 3 workshop', 'room-workshop');
   await until(() => window.__game.scene.sys.settings.key === 'eastwing' && !window.__unseen.game.scene.isActive('room'), null, 8000);
-  ok('back in the east wing, on the same spot', await p.evaluate(() => window.__game.scene.kid.tx === 4 && window.__game.scene.kid.ty === 19));
+  ok('back in the east wing, on the same spot', await p.evaluate(() => window.__game.scene.kid.tx === 4 && window.__game.scene.kid.ty === 26));
   await p.goto(BASE + '/local.html#bedroom');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'bedroom' && window.__game.scene.clock > 0.5);
   await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene, k = s.kid; k.x = 12 * 16 + 6; k.y = 146; });
