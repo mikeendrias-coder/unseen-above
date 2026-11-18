@@ -1,21 +1,25 @@
-// Episode 1: the grounds. Side view, from the ash outside the gate to the front door.
-// Searchlights and drones are both the spectacle and the surveillance. A death restarts the
-// episode, and the body stays where it fell, older on every take.
+// Episode 1: the grounds. From the ash outside the gate, up through the garden, the terraces and
+// the face of the house to the front door on the balcony. Rebuilt Nov 17 (final pass): a tall
+// level in seven short sections (art/estate.js lists them), physics props (core/props.js), the
+// house hurts her (falls, a crate), what watches her kills her (lamps, drones, the scan).
+// A death restarts the episode; the body stays where it fell, older on every take.
 import { Music } from '../core/music.js';
-import { LOOKS } from '../art/palettes.js';
-import { hexNum, flat, rng } from '../art/painter.js';
-import { makeSprites } from '../art/sprites.js';
-import { TILE, VIEW_W, VIEW_H, GROUND, LEVEL, buildMap, paintSky, paintMoon, paintCity, paintLevel } from '../art/estate.js';
+import { hexNum, Painter } from '../art/painter.js';
+import { makeSprites, girlFrame } from '../art/sprites.js';
+import { TILE, VIEW_W, GROUND, TERRACE, BALCONY, LEVEL, CITY_GROUND, buildMap, paintSky, paintMoon, paintCity, paintLevel } from '../art/estate.js';
+import { ASH } from '../art/palettes.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
-import { SideEpisode } from '../core/side.js';
+import { display } from '../core/display.js';
+import { SideEpisode, inPoly } from '../core/side.js';
+import { Props, hardCone } from '../core/props.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
-import { Painter } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { fx } from '../core/fx.js';
 
+const T = TILE, C = k => hexNum(ASH[k]);
 // Drone show figures, as point lists in a 64 x 30 box.
 function outline(pts, n) {
   const segs = []; let total = 0;
@@ -23,79 +27,79 @@ function outline(pts, n) {
   const out = []; for (let k = 0; k < n; k++) { let d = (k / n) * total; for (const [a, b, l] of segs) { if (d <= l) { out.push([a[0] + (b[0] - a[0]) * d / l, a[1] + (b[1] - a[1]) * d / l]); break; } d -= l; } }
   return out;
 }
-const N_DRONES = 84;
+const N_DRONES = 72;
 const FIGURES = {
-  diamond: () => outline([[14, 8], [22, 0], [42, 0], [50, 8], [32, 30], [14, 8], [50, 8], [42, 0], [36, 8], [32, 0], [28, 8], [22, 0]], N_DRONES),
+  diamond: () => outline([[14, 8], [22, 0], [42, 0], [50, 8], [32, 30], [14, 8], [50, 8]], N_DRONES),
   crown: () => outline([[10, 28], [10, 6], [20, 18], [32, 0], [44, 18], [54, 6], [54, 28], [10, 28]], N_DRONES),
-  ring: () => Array.from({ length: N_DRONES }, (_, i) => { const a = i / N_DRONES * Math.PI * 2; return [32 + Math.cos(a) * 15, 15 + Math.sin(a) * 15]; }),
-  tv: () => outline([[22, -6], [30, 4], [38, -6], [30, 4], [14, 4], [50, 4], [50, 30], [14, 30], [14, 4], [20, 10], [27, 10], [27, 24], [20, 24], [20, 10], [33, 10], [42, 10], [36, 24]], N_DRONES)
+  seven: () => outline([[16, 2], [48, 2], [30, 30], [26, 30], [42, 6], [16, 6], [16, 2]], N_DRONES),
+  tv: () => outline([[22, -6], [30, 4], [38, -6], [30, 4], [14, 4], [50, 4], [50, 30], [14, 30], [14, 4]], N_DRONES)
 };
-const SHOW = [['diamond', 7], ['crown', 7], ['ring', 4], ['diamond', 6], ['tv', 1.1], ['crown', 6]];
+const SHOW = [['diamond', 7], ['crown', 7], ['seven', 5], ['tv', 4], ['crown', 6]];
 
 export class Grounds extends SideEpisode {
   constructor() { super('grounds'); }
 
   create(data) {
-    this.initSide('ep1', LEVEL, buildMap());
-    const P = this.P;
+    this.map0 = buildMap();
+    this.initSide('ep1', LEVEL, this.map0);
+    const P = this.P, LW = LEVEL.w * T, LH = LEVEL.h * T;
     makeSprites(this, P);
-    // painted layers
-    const LW = LEVEL.w * TILE;
     paintSky(P, VIEW_W).toTexture(this, 'g_sky');
     paintMoon(P).toTexture(this, 'g_moon');
     const city = paintCity(P, Math.ceil(LW * 0.15) + VIEW_W); city.toTexture(this, 'g_city');
-    const lvl = paintLevel(P); lvl.toTexture(this, 'g_level');
+    const lvl = paintLevel(P, this.map0); lvl.toTexture(this, 'g_level');
     this.marks = lvl.marks; this.cityMarks = city.marks;
     this.pixelCamera(LW, P.skyTop);
-    // parallax layers
+    this.cameras.main.setBounds(0, 0, LW, LH);
+    // far layers: the sky stays put; the city drifts with her (its ground line sits low on
+    // screen when she is on the lawn); the drone show and searchlights stay in the sky
+    const low = LH - 180;
     this.addParallax(this.add.image(0, 0, 'g_sky').setOrigin(0).setDepth(-10), 0);
-    this.addParallax(this.add.image(250, 22, 'g_moon').setDepth(-9), 0.02, 250, 22);
-    this.skyFx = this.addParallax(this.add.graphics().setDepth(-8).setBlendMode(Phaser.BlendModes.ADD), 0.3);
-    this.showG = this.addParallax(this.add.graphics().setDepth(-7), 0.25);
-    this.fireworksG = this.addParallax(this.add.graphics().setDepth(-7), 0.2);
-    this.addParallax(this.add.image(0, 0, 'g_city').setOrigin(0).setDepth(-6), 0.15);
-    this.cityFx = this.addParallax(this.add.graphics().setDepth(-6).setBlendMode(Phaser.BlendModes.ADD), 0.15);
+    this.addParallax(this.add.image(250, 26, 'g_moon').setDepth(-9), 0, 250, 26);
+    this.skyFx = this.addParallax(this.add.graphics().setDepth(-8), 0.3); this.skyFx.fy = 0;
+    this.showG = this.addParallax(this.add.graphics().setDepth(-7), 0.25); this.showG.fy = 0;
+    this.fireworksG = this.addParallax(this.add.graphics().setDepth(-7), 0.2); this.fireworksG.fy = 0;
+    const cityY = 152 - CITY_GROUND + low * 0.15;
+    this.addParallax(this.add.image(0, 0, 'g_city').setOrigin(0).setDepth(-6), 0.15, 0, cityY);
+    this.cityFx = this.addParallax(this.add.graphics().setDepth(-6), 0.15, 0, cityY);
+    this.place();
     this.add.image(0, 0, 'g_level').setOrigin(0).setDepth(0);
-    this.twinkleG = this.add.graphics().setDepth(1);
+    this.floorG = this.add.graphics().setDepth(1);   // footprints, koi
+    this.twinkleG = this.add.graphics().setDepth(1.2);
+    this.floorKoi = this.add.graphics().setDepth(1.1);
     this.droneSprites = LEVEL.drones.map(() => this.add.sprite(0, 0, 'drone_a').setDepth(3));
     // his crowbar, just inside the gate
-    const cb = new Painter(14, 5); cb.rect(1, 3, 11, 1, P.device); cb.rect(2, 2, 9, 1, P.colLo); cb.rect(11, 0, 1, 3, P.colLo); cb.rect(12, 0, 2, 1, P.colLo); cb.rect(0, 3, 3, 2, P.hazard); cb.toTexture(this, 'crowbar');
+    const cb = new Painter(16, 6); cb.rect(0, 2, 16, 4, '#0e0f12'); cb.rect(1, 3, 12, 1, P.device); cb.rect(2, 2, 10, 1, P.colLo); cb.rect(12, 0, 3, 4, '#0e0f12'); cb.rect(12, 1, 2, 2, P.colLo); cb.rect(1, 4, 3, 1, P.device); cb.toTexture(this, 'crowbar');
     this.add.image(LEVEL.crowbar.x, LEVEL.crowbar.y, 'crowbar').setOrigin(0.5, 1).setDepth(1.5);
-    this.scanG = this.add.graphics().setDepth(6).setBlendMode(Phaser.BlendModes.ADD);
+    this.coneG = this.add.graphics().setDepth(3.8);
+    this.scanG = this.add.graphics().setDepth(6);
     this.commonLayers();
     this.props = LEVEL.props.map(r => Object.assign({}, r));
-    const CB = LEVEL.crowbar, SD = LEVEL.shedDoor;
-    this.crowbarSrc = { lines: ['His crowbar. He came this way.'] };
-    this.things.push({ x0: CB.x - 8, x1: CB.x + 8, y0: GROUND - 6, y1: GROUND, use: () => this.bubbles.look('item', this.crowbarSrc, () => ({ x: CB.x, y: GROUND - 6 })) });
-    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, door: true, use: () => this.enterRoom('keeper') });
-    // things to look at on the way up to the house
-    const N = NOTICE.grounds, G = GROUND, T = TILE, look = (x0, x1, py, lines, more) => this.addLook(Object.assign({ x0, x1, y0: G - 40, py, lines }, more));
-    look(28, 58, G - 50, N.tree);
-    look(116, 158, G - 16, N.car);
-    look(222, 262, G - 54, N.gate);
-    look(21 * T - 4, 23 * T, 8 * T, N.hedge);
-    look(43 * T + 2, 52 * T - 2, 110, N.fountain, { y0: 100 });
-    [60, 66, 72].forEach(t => look(t * T - 4, t * T + 20, 104, N.statue, { y0: 100 }));
-    look(81 * T - 2, 84 * T + 2, 96, N.pergola, { y0: 90 }); look(88 * T - 2, 91 * T + 2, 96, N.pergola, { y0: 90 });
-    look(84 * T + 6, 88 * T - 6, 176, N.pool, { y0: 150 });
+    this.dyn = new Props(this, { depth: 3.6 });
+    this.crate = this.dyn.crate(Object.assign({ id: 'crate' }, LEVEL.crate));
+    const CR = LEVEL.cradle;
+    this.cradle = this.dyn.mover({ id: 'cradle', x: CR.x, y: CR.bottom, w: CR.w, h: 6, path: [{ x: CR.x, y: CR.bottom }, { x: CR.x, y: CR.top }], speed: CR.speed, pause: CR.pause, wait: CR.pause, roof: CR.roof, cable: 4 });
+    this.slabs = LEVEL.slabs.map(s => this.dyn.crumble({ id: 'foam slab', x: s.x, y: s.y, w: s.w, h: 8, delay: 0.32, back: 2.5 }));
+    this.addThings();
     this.scan = null;
 
-    // particles: fountain spray, ash outside the wall, sparkles on gold
+    // the fountain sprays square drops; ash drifts down outside the wall
     const fountain = this.marks.find(m => m.kind === 'fountain');
-    this.add.particles(fountain.x, fountain.y, 'dot', { speedY: { min: -46, max: -26 }, speedX: { min: -14, max: 14 }, gravityY: 90, lifespan: 900, frequency: 45, alpha: { start: 0.9, end: 0 }, tint: [hexNum(P.glassLit), 0xebe6d8] }).setDepth(1);
-    this.add.particles(0, -6, 'dot', { x: { min: 0, max: LEVEL.gateX + 20 }, speedY: { min: 7, max: 16 }, speedX: { min: 2, max: 9 }, lifespan: 15000, frequency: 70, alpha: { start: 0.8, end: 0.2 }, tint: [hexNum(flat(P.dust)), hexNum(flat(P.rubbleHi))], deathZone: { type: 'onLeave', source: new Phaser.Geom.Rectangle(-20, -20, LEVEL.gateX + 60, VIEW_H + 40) } }).setDepth(6);
-    this.sparkle = this.add.particles(0, 0, 'sparkle', { lifespan: 520, scale: { start: 0.2, end: 1, ease: 'Sine.easeOut' }, alpha: { start: 1, end: 0 }, emitting: false, blendMode: 'ADD' }).setDepth(6);
+    this.add.particles(fountain.x, fountain.y, 'dot', { speedY: { min: -40, max: -24 }, speedX: { min: -12, max: 12 }, gravityY: 90, lifespan: 800, frequency: 70, tint: [C('goldHi'), C('bone')] }).setDepth(1);
+    this.add.particles(0, 0, 'dot', { x: { min: 0, max: LEVEL.gateX + 20 }, y: { min: GROUND - 200, max: GROUND - 120 }, speedY: { min: 7, max: 14 }, speedX: { min: 2, max: 8 }, lifespan: 12000, frequency: 110, tint: [C('ash4'), C('ash5')], deathZone: { type: 'onLeave', source: new Phaser.Geom.Rectangle(-20, GROUND - 220, LEVEL.gateX + 60, 222) } }).setDepth(6);
+    this.glints = [];
 
     // drone show and fireworks state
-    this.show = { idx: 0, t: 0, drones: Array.from({ length: N_DRONES }, (_, i) => ({ x: 335 + (i % 12) * 3, y: 60, tx: 0, ty: 0, hue: i % 5 })) };
+    this.show = { idx: 0, t: 0, drones: Array.from({ length: N_DRONES }, (_, i) => ({ x: 335 + (i % 12) * 3, y: 60, tx: 0, ty: 0, hue: i % 3 })) };
     this.setFigure(SHOW[0][0]);
     this.fireworks = []; this.nextFirework = 3;
     this.wasInside = undefined; this.sparkT = 0;
-    this.lights = LEVEL.lights.map(l => Object.assign({}, l, { lock: 0, cone: null }));
+    this.lights = LEVEL.lights.map(l => Object.assign({}, l, { lock: 0, cone: null, u: 0, hold: 0, cd: 0 }));
     this.drones = LEVEL.drones.map(d => Object.assign({}, d, { x: d.x0 + (d.x1 - d.x0) * 0.3, dir: 1, lock: 0, cone: null }));
-    this.skipPoints = [12, 30, 50, 70, 88, 103].map(v => v * TILE);
+    this.skipPoints = LEVEL.skip.map(([x]) => x * T);
     this.drawBodies();
-    this.spawn(data && data.fromIntro ? 1 * TILE : null);
+    this.drawFloor();
+    this.spawn(data && data.fromIntro ? 1 * T : null);
     this.followGirl();
     this.cameras.main.fadeIn(data && data.fromIntro ? 900 : 350);
     this.beds = { wind: Sound.wind(0.14), lounge: Sound.lounge(0.0001) };
@@ -105,10 +109,60 @@ export class Grounds extends SideEpisode {
     window.__game = { scene: this, state };
   }
 
+  // A layer can keep still vertically (fy 0) while it drifts sideways: the sky's things.
+  place() {
+    super.place();
+    const S = display.S;
+    this.par.forEach(e => { if (e.o.fy === 0) e.o.setScrollFactor(e.f, 0).setPosition(e.x + 160 * (S - 1) * (1 - e.f), e.y + 90 * (S - 1)); });
+  }
+
+  // ------------------------------------------------------------------ things to use and look at
+  addThings() {
+    const N = NOTICE.grounds, G = GROUND, TR = TERRACE, CB = LEVEL.crowbar, SD = LEVEL.shedDoor, MB = LEVEL.mailbox, IC = LEVEL.intercom;
+    // a look says all of itself the first time; on a later take, only its last line
+    const once = (key, lines) => { if (state.heard('look:ep1:' + key)) return lines.slice(-1); return lines; };
+    const look = (key, x0, x1, y0, y1, py, lines, more) => this.addLook(Object.assign({ x0, x1, y0, y1, py, lines: once(key, lines), hearKey: 'look:ep1:' + key }, more));
+    this.crowbarSrc = { lines: once('crowbar', N.crowbar) };
+    this.things.push({ x0: CB.x - 9, x1: CB.x + 9, y0: G - 8, y1: G, label: 'J', look: true, use: () => { state.hear('look:ep1:crowbar'); this.bubbles.look('item', this.crowbarSrc, () => ({ x: CB.x, y: G - 8 })); } });
+    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: G, label: 'J', door: true, use: () => this.enterRoom('keeper') });
+    // the intercom on the gate pier answers in the house's machine voice
+    this.intercomSrc = { lines: N.intercom, loop: true, from: 1 };
+    this.things.push({ x0: IC.x - 10, x1: IC.x + 8, y0: G - 40, y1: G, px: IC.x + 1, py: IC.y, label: 'J', use: () => this.bubbles.press('intercom', this.intercomSrc, () => ({ x: IC.x + 1, y: IC.y - 2 }), { ink: 0xebe6d8, pitch: 1180, leave: 64 }) });
+    look('tree', 18, 46, G - 40, G, G - 40, N.tree);
+    look('car', 90, 128, G - 20, G, G - 18, N.car);
+    look('mailbox', MB.x - 8, MB.x + 8, G - 30, G, G - 28, N.mailbox, { clue: 'request1' });
+    // footprints in the ash: his; later, hers too
+    const mine = this.ep.bodies.length > 0;
+    this.addLook({ x0: 2 * T, x1: 9 * T, y0: G - 14, y1: G, py: G - 4, lines: mine ? N.footprints2 : N.footprints, clue: mine ? 'footprints' : undefined });
+    look('hedge', 20 * T, 22 * T, 22 * T - 10, G, 22 * T, N.hedge);
+    look('orangery', 23 * T, 25 * T - 2, G - 40, G, G - 44, N.orangery);
+    look('fountain', 42 * T, 48 * T, TR - 40, TR, TR - 10, N.fountain);
+    look('statue', 52 * T - 6, 53 * T + 6, 15 * T - 24, 15 * T, 15 * T - 26, N.statue, { clue: 'statue07' });
+    look('crate', LEVEL.crate.x - 4, LEVEL.crate.x + 20, TR - 30, TR, TR - 28, N.crate);
+    look('cradle', 70 * T, 72 * T, 12 * T - 30, 12 * T, 12 * T - 24, N.cradle);
+    // the house tidies its own looks away once said: mark them heard as they are used
+    this.things.forEach(t => { if (t.hearKey) { const use = t.use; t.use = () => { state.hear(t.hearKey); use(); }; } });
+  }
+
+  // footprints in the ash outside the wall, and the koi (drawn live)
+  drawFloor() {
+    const g = this.floorG, G = GROUND, gate = LEVEL.gateX + 8; g.clear();
+    // his: long strides, straight to the gate
+    g.fillStyle(C('ash1'), 1);
+    for (let x = 6; x < gate; x += 11) { g.fillRect(x, G + 4 + ((x / 11) & 1) * 2, 3, 1); }
+    // hers, one track a take (the last four), each a little off the last, stopping where she fell
+    const takes = this.ep.bodies.slice(-4);
+    takes.forEach((b, i) => {
+      const end = b.y >= G - 2 ? Math.min(b.x, gate) : gate, row = G + 9 + i * 2;
+      g.fillStyle(C(i % 2 ? 'ash1' : 'ash0'), 1);
+      for (let x = LEVEL.start.x + (i * 3) % 7; x < end; x += 8) g.fillRect(Math.round(x), row + ((x / 8) & 1), 2, 1);
+    });
+  }
+
   setFigure(name) {
     const pts = FIGURES[name]();
     const order = pts.map((p, i) => i).sort(() => Math.random() - 0.5);
-    this.show.drones.forEach((d, i) => { const p = pts[order[i]]; d.tx = 303 + p[0]; d.ty = 4 + p[1]; });
+    this.show.drones.forEach((d, i) => { const p = pts[order[i]]; d.tx = 300 + p[0]; d.ty = 8 + p[1]; });
     this.show.name = name;
   }
 
@@ -117,8 +171,8 @@ export class Grounds extends SideEpisode {
     this.clock += dt;
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
-    if (!this.dead && !this.leaving) { this.moveKid(dt); this.updateThings(); }
-    else if (this.dead && this.girl.visible) this.settle(dt);
+    if (!this.dead && !this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); }
+    else { this.dyn.update(dt); if (this.dead && this.girl.visible) this.settle(dt); }
     this.updateScan(dt);
     this.updateLights(dt);
     this.updateDrones(dt);
@@ -129,26 +183,32 @@ export class Grounds extends SideEpisode {
   }
 
   // ------------------------------------------------------------------ lights and drones
+  // A lamp sweeping across one of her old bodies stops on it for a beat, as if framing it.
   updateLights(dt) {
+    const bodies = this.ep.bodies, v = this.cameras.main.worldView;
     this.lights.forEach(l => {
-      const s = (Math.sin((this.clock / l.period + l.phase) * Math.PI * 2) + 1) / 2;
+      l.cd = Math.max(0, l.cd - dt);
+      if (l.hold > 0) l.hold -= dt; else l.u += dt;
+      const s = (Math.sin((l.u / l.period + l.phase) * Math.PI * 2) + 1) / 2;
       l.angle = l.a0 + (l.a1 - l.a0) * s;
+      // far off screen, a lamp still moves, but only lamps near her are worked out in full
+      if (Math.abs(l.x - v.centerX) > 520 || Math.abs(l.y - v.centerY) > 420) { l.cone = null; l.lock = 0; return; }
       l.cone = this.cone(l.x, l.y, l.angle, l.half, l.range);
+      if (l.hold <= 0 && l.cd <= 0) { const b = bodies.find(b => b !== l.last && inPoly(l.cone, b.x, b.y - 3)); if (b) { l.hold = 0.7; l.cd = 2.6; l.last = b; } }
       this.watch(l, dt);
     });
   }
   updateDrones(dt) {
     this.drones.forEach((d, i) => {
       if (d.lock === 0) { d.x += d.dir * d.speed * dt; if (d.x > d.x1) { d.x = d.x1; d.dir = -1; } if (d.x < d.x0) { d.x = d.x0; d.dir = 1; } }
-      const bob = Math.sin(this.clock * 3 + i) * 1.5;
-      d.cy = d.y + bob;
-      d.cone = this.cone(d.x, d.cy + 4, 90, d.half, d.range);
+      d.cy = d.y + (Math.floor(this.clock * 2 + i) % 2);
+      d.cone = this.cone(d.x, d.cy + 5, 90, d.half, d.range);
       this.watch(d, dt);
       this.droneSprites[i].setPosition(Math.round(d.x), Math.round(d.cy)).setTexture(Math.floor(this.clock * 20) % 2 ? 'drone_a' : 'drone_b');
     });
   }
 
-  // ------------------------------------------------------------------ death and the door
+  // ------------------------------------------------------------------ the door
   enterDoor() {
     if (this.leaving) return;
     this.leaving = true; state.finish(this.epId);
@@ -163,14 +223,27 @@ export class Grounds extends SideEpisode {
     });
     this.time.delayedCall(5600, () => goNext(this, 'ep1'));
   }
+  // story mode N: the start of the next section
+  skipAhead() {
+    const k = this.kid; if (!k || this.dead || this.leaving) return;
+    const at = LEVEL.skip.find(([x]) => x * T > k.x + 12); if (!at) return;
+    k.x = at[0] * T; k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null;
+  }
+  rescue() { this.skipAhead(); }
+  drawGirl() {
+    super.drawGirl();
+    const k = this.kid; if (!k || !this.girl.visible) return;
+    const f = this.dyn && this.dyn.riding ? { tex: 'girl_jump' } : girlFrame(k, this.clock);
+    this.girl.setTexture(f.tex); if (f.flip != null) this.girl.setFlipX(f.flip);
+  }
 
-  // ------------------------------------------------------------------ the scan: a fast run to the door
-  // At the foot of the stairs the satellite scans the grounds: a wall of light sweeps in from
-  // behind her. It is slower than she runs, but not by much. If it reaches her, the strike comes.
+  // ------------------------------------------------------------------ the scan: a run to the door
+  // On the balcony the satellite scans the house: a wall of light sweeps in from behind her. It
+  // is slower than she runs, but not by much. If it reaches her, the strike comes.
   updateScan(dt) {
     const S = LEVEL.scan, k = this.kid;
     if (!this.scan) {
-      if (!this.dead && !this.leaving && k.x > S.trigger) {
+      if (!this.dead && !this.leaving && k.x > S.trigger && k.y < S.below) {
         this.scan = { x: k.x - S.behind, t: 0 };
         overlay.sfx('[ALARM]', 1600); Sound.tone(520, 0.5, 'sawtooth', 0.03, 1040);
         fx.flash(this.cameras.main, 120, 90, 20, 20);
@@ -185,101 +258,95 @@ export class Grounds extends SideEpisode {
   drawScan() {
     const g = this.scanG; g.clear();
     if (!this.scan) return;
-    const P = this.P, v = this.cameras.main.worldView, x = this.scan.x, t = this.clock, col = hexNum(P.hazard), soft = hexNum(P.shaft);
-    // the band of light: soft edges, a hard core, scanlines running down it
-    g.fillStyle(soft, 0.06); g.fillRect(x - 40, v.y, 40, v.height);
-    g.fillStyle(col, 0.12); g.fillRect(x - 10, v.y, 12, v.height);
-    g.fillStyle(col, 0.35); g.fillRect(x - 2, v.y, 3, v.height);
-    g.fillStyle(0xebe6d8, 0.8); g.fillRect(x, v.y, 1, v.height);
-    for (let y = (t * 120) % 12; y < v.height; y += 12) { g.fillStyle(col, 0.4); g.fillRect(x - 8, v.y + y, 9, 1); }
-    // the satellite doing the scanning, at the top of the band
-    if (!this.dead) SatelliteStrike.drawSat(this.fxG, P, x, v.y + 3, g, 0.6 + 0.4 * Math.sin(t * 20));
+    const v = this.cameras.main.worldView, x = Math.round(this.scan.x), t = this.clock, y0 = Math.floor(v.y), h = Math.ceil(v.height) + 1;
+    // a hard band: dithered rows behind the edge, a solid red edge, a bone core line
+    g.fillStyle(C('red'), 1);
+    for (let y = y0 + ((y0 + Math.floor(t * 30)) & 1); y < y0 + h; y += 2) g.fillRect(x - 10, y, 8, 1);
+    g.fillRect(x - 2, y0, 2, h);
+    g.fillStyle(C('redHi'), 1); g.fillRect(x, y0, 1, h);
+    for (let y = (t * 120) % 12; y < h; y += 12) { g.fillStyle(C('red'), 1); g.fillRect(x - 16, y0 + Math.round(y), 6, 1); }
+    if (!this.dead) SatelliteStrike.drawSat(this.fxG, this.P, x, v.y + 3, g, Math.floor(t * 10) % 2 ? 1 : 0.6);
   }
 
   // ------------------------------------------------------------------ ambience: the spectacle
   updateAmbience(dt) {
-    // sound: wind outside the wall, the lounge inside
     const inside = this.kid.x > LEVEL.gateX + 10;
     if (inside !== this.wasInside) { this.wasInside = inside; this.beds.wind.set(inside ? 0.03 : 0.14, 1.5); this.beds.lounge.set(inside && !this.leaving ? 0.05 : 0.0001, 2); }
-    // drone show
     const S = this.show; S.t += dt;
     if (S.t > SHOW[S.idx][1]) { S.t = 0; S.idx = (S.idx + 1) % SHOW.length; this.setFigure(SHOW[S.idx][0]); }
     S.drones.forEach(d => { d.x += (d.tx - d.x) * Math.min(1, dt * 2.2); d.y += (d.ty - d.y) * Math.min(1, dt * 2.2); });
-    // fireworks now and then
     this.nextFirework -= dt;
     if (this.nextFirework <= 0) {
       this.nextFirework = 5 + Math.random() * 6;
-      const x = 120 + Math.random() * 500, y = 10 + Math.random() * 30;
-      this.fireworks.push({ x, y: 120, ty: y, t: 0, phase: 'rise', parts: [] });
+      this.fireworks.push({ x: 120 + Math.random() * 360, y: 120, ty: 14 + Math.random() * 30, t: 0, phase: 'rise', parts: [] });
     }
     this.fireworks.forEach(f => {
       f.t += dt;
-      if (f.phase === 'rise') { f.y -= 140 * dt; if (f.y <= f.ty) { f.phase = 'burst'; f.t = 0; const n = 26, col = [this.P.goldHi, this.P.glint, this.P.glassLit][Math.floor(Math.random() * 3)]; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, v = 26 + Math.random() * 14; f.parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, col }); } if (this.kid.x > LEVEL.gateX) Sound.noise(0.25, 0.03, 900); } }
+      if (f.phase === 'rise') { f.y -= 140 * dt; if (f.y <= f.ty) { f.phase = 'burst'; f.t = 0; const n = 20, col = ['goldHi', 'gold', 'bone'][Math.floor(Math.random() * 3)]; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, v = 24 + (i % 3) * 6; f.parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, col }); } if (this.kid.x > LEVEL.gateX) Sound.noise(0.25, 0.03, 900); } }
       else f.parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 30 * dt; p.vx *= 0.985; });
     });
-    this.fireworks = this.fireworks.filter(f => f.phase === 'rise' || f.t < 1.6);
-    // sparkles on gold within view
-    this.sparkT = (this.sparkT || 0) - dt;
+    this.fireworks = this.fireworks.filter(f => f.phase === 'rise' || f.t < 1.2);
+    // a glint on gold now and then, within view: a hard plus for a moment
+    this.sparkT -= dt;
     if (this.sparkT <= 0) {
-      this.sparkT = 0.09;
-      const v = this.cameras.main.worldView, vis = this.marks.filter(m => m.kind === 'glint' && m.x > v.x && m.x < v.x + v.width);
-      if (vis.length) { const m = vis[Math.floor(Math.random() * vis.length)]; this.sparkle.emitParticleAt(m.x, m.y, 1); }
+      this.sparkT = 0.16;
+      const v = this.cameras.main.worldView, vis = this.marks.filter(m => m.kind === 'glint' && v.contains(m.x, m.y));
+      if (vis.length) this.glints.push({ m: vis[Math.floor(Math.random() * vis.length)], t: 0 });
     }
+    this.glints.forEach(gl => { gl.t += dt; }); this.glints = this.glints.filter(gl => gl.t < 0.24);
   }
 
   draw() {
-    const P = this.P, t = this.clock;
+    const P = this.P, t = this.clock, v = this.cameras.main.worldView;
     this.drawGirl();
-    // sky searchlights behind the roof (parallax space)
+    // searchlights over the dead city, behind everything: thin dithered beams
     const sf = this.skyFx; sf.clear();
-    [[120, 0.21, 0], [250, 0.17, 1.7], [390, 0.23, 3.1], [520, 0.19, 4.4], [650, 0.2, 2.2], [780, 0.16, 5.3]].forEach(([x, sp, ph], i) => {
-      const a = -90 + Math.sin(t * sp * 2 + ph) * 28, r = a * Math.PI / 180, len = 280, w = 6;
-      const ex = x + Math.cos(r) * len, ey = 50 + Math.sin(r) * len, nx = -Math.sin(r) * w, ny = Math.cos(r) * w;
-      const col = hexNum(i % 2 ? P.shaft : P.lamp);
-      sf.fillStyle(col, 0.05); sf.fillTriangle(x, 50, ex + nx * 3, ey + ny * 3, ex - nx * 3, ey - ny * 3);
-      sf.fillStyle(col, 0.07); sf.fillTriangle(x, 50, ex + nx * 1.6, ey + ny * 1.6, ex - nx * 1.6, ey - ny * 1.6);
-      sf.fillStyle(col, 0.1); sf.fillTriangle(x, 50, ex + nx * 0.6, ey + ny * 0.6, ex - nx * 0.6, ey - ny * 0.6);
+    [[80, 0.21, 0], [210, 0.17, 1.7], [350, 0.23, 3.1], [480, 0.19, 4.4]].forEach(([x, sp, ph]) => {
+      const a = (-90 + Math.sin(t * sp * 2 + ph) * 26) * Math.PI / 180, len = 190, w = 4;
+      const ex = x + Math.cos(a) * len, ey = 170 + Math.sin(a) * len, nx = -Math.sin(a) * w, ny = Math.cos(a) * w;
+      hardCone(sf, [{ x, y: 170 }, { x: ex + nx, y: ey + ny }, { x: ex - nx, y: ey - ny }], C('ash2'));
     });
-    // the drone show
+    // the drone show: one gold pixel a drone
     const sg = this.showG; sg.clear();
-    const palette = [P.glint, P.goldHi, P.gold, P.glassLit, P.lamp].map(hexNum);
-    this.show.drones.forEach((d, i) => {
-      const tw = (Math.sin(t * 6 + i * 1.7) + 1) / 2;
-      const x = Math.round(d.x), y = Math.round(d.y);
-      sg.fillStyle(palette[d.hue], 0.12 + tw * 0.1); sg.fillRect(x - 1, y - 1, 3, 3);
-      sg.fillStyle(palette[d.hue], 0.6 + tw * 0.4); sg.fillRect(x, y, 1, 1);
-    });
-    // fireworks
+    const pal = [C('goldHi'), C('gold'), C('lit')];
+    this.show.drones.forEach((d, i) => { if (Math.sin(t * 5 + i * 1.7) > -0.6) { sg.fillStyle(pal[d.hue], 1); sg.fillRect(Math.round(d.x), Math.round(d.y), 1, 1); } });
     const fg = this.fireworksG; fg.clear();
     this.fireworks.forEach(f => {
-      if (f.phase === 'rise') { fg.fillStyle(0xebe6d8, 0.8); fg.fillRect(Math.round(f.x), Math.round(f.y), 1, 2); }
-      else { const a = Math.max(0, 1 - f.t / 1.6); f.parts.forEach(p => { fg.fillStyle(hexNum(p.col), a); fg.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }); }
+      if (f.phase === 'rise') { fg.fillStyle(C('bone'), 1); fg.fillRect(Math.round(f.x), Math.round(f.y), 1, 2); }
+      else if (f.t < 1.0 || Math.floor(f.t * 20) % 2) f.parts.forEach(p => { fg.fillStyle(C(p.col), 1); fg.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); });
     });
-    // fires in the dead city
+    // fires in the dead city flicker between two warm tones
     const cf = this.cityFx; cf.clear();
-    this.cityMarks.forEach((m, i) => { const fl = 0.5 + 0.5 * Math.sin(t * 9 + i * 3.1) * Math.sin(t * 4.3 + i); cf.fillStyle(hexNum(P.hazard), 0.08 + fl * 0.1); cf.fillCircle(m.x, m.y, 2 + fl * 1.5); cf.fillStyle(hexNum(P.lamp), 0.3 + fl * 0.4); cf.fillRect(m.x - 1, m.y - 1, 2, 2); });
-    // fairy lights twinkle
+    this.cityMarks.forEach((m, i) => { cf.fillStyle(Math.sin(t * 9 + i * 3.1) > 0 ? C('lit') : C('goldLo'), 1); cf.fillRect(m.x, m.y, 2, 2); if (Math.sin(t * 5 + i) > 0.5) cf.fillRect(m.x, m.y - 1, 1, 1); });
+    // fairy lights blink; gold glints
     const tg = this.twinkleG; tg.clear();
-    this.marks.forEach((m, i) => { if (m.kind === 'fairy' && Math.sin(t * 3 + i * 2.3) > 0.2) { tg.fillStyle(hexNum(P.glint), 0.9); tg.fillRect(m.x, m.y, 1, 1); } });
+    this.marks.forEach((m, i) => { if (m.kind === 'fairy' && v.contains(m.x, m.y) && Math.sin(t * 3 + i * 2.3) < -0.4) { tg.fillStyle(C('bronze'), 1); tg.fillRect(m.x, m.y, 1, 1); } });
+    this.glints.forEach(({ m, t: gt }) => { tg.fillStyle(C('bone'), 1); tg.fillRect(m.x, m.y, 1, 1); if (gt > 0.06 && gt < 0.18) { tg.fillStyle(C('goldHi'), 1); tg.fillRect(m.x - 2, m.y, 5, 1); tg.fillRect(m.x, m.y - 2, 1, 5); tg.fillStyle(C('bone'), 1); tg.fillRect(m.x, m.y, 1, 1); } });
+    // the koi: four gold fish on one loop, every one turning at the same moment
+    const F = LEVEL.fountain, cx = (F.x0 + F.x1) / 2, fy = TERRACE - 3;
+    const kg = this.floorKoi; kg.clear();
+    for (let i = 0; i < 4; i++) { const a = t * 0.9 + i * Math.PI / 2, x = Math.round(cx + Math.cos(a) * 34), dir = -Math.sin(a) > 0 ? 1 : -1; kg.fillStyle(C('gold'), 1); kg.fillRect(x - 2, fy + (i & 1), 4, 1); kg.fillStyle(C('goldHi'), 1); kg.fillRect(dir > 0 ? x + 2 : x - 3, fy + (i & 1), 1, 1); }
 
-    // hazard beams: soft layered cones, red when they lock on
-    const bg = this.beamG; bg.clear();
-    this.lights.forEach(l => this.drawCone(bg, l, 0.11, P.shaft));
-    this.drones.forEach(d => this.drawCone(bg, d, 0.13, P.shaft));
+    // what watches her: hard light, red as it locks on
+    const g = this.coneG; g.clear();
+    const lit = s => s.cone && hardCone(g, s.cone, s.lock > 0 ? C('red') : C('ash5'), v);
+    this.lights.forEach(lit); this.drones.forEach(lit);
     this.drawLocks([...this.lights, ...this.drones]);
+    this.dyn.draw();
     this.drawScan();
     this.drawThings();
   }
 
   hint() {
-    const x = this.kid.x / TILE;
     if (this.leaving || this.done) return;
-    if (x < 14) return overlay.hint('A and D move. Space jumps. S crouches. J uses things. Backspace restarts the episode.');
-    if (x < 39) return overlay.hint('A lamp sweeps the garden. Hedges block its light: wait in their shadow, move when it swings away.');
-    if (x < 56) return overlay.hint('A drone patrols the fountain. Its light cannot reach under the upper bowl.');
-    if (x < 77) return overlay.hint('Two lamps on the wall. The statue plinths cast shadows.');
-    if (x < 95) return overlay.hint('A faster drone. The pergolas are cover.');
-    if (this.scan) return overlay.hint('The grounds are being scanned. Keep moving: if the light reaches you, the strike comes. W or J at the door.');
-    return overlay.hint('Two lamps cross over the stairs. Find the gap, then press W or J at the door.');
+    const k = this.kid, x = k.x / T;
+    if (this.scan) return overlay.hint(x > 93 ? 'W or J at the door.' : 'Run. If the scan reaches you, the strike comes.');
+    if (x < 15) return overlay.hint('A and D move. Space jumps. J looks at things.');
+    if (x < 34) return overlay.hint('Hide in the hedges’ shadow. Space twice jumps higher.');
+    if (x < 38) return overlay.hint('Jump from wall to wall to climb.');
+    if (x < 56) return overlay.hint('The drone looks straight down. Wait under the bowl.');
+    if (x < 64 && k.y > 200) return overlay.hint('Push the crate. Stay in its shadow. Then climb it.');
+    if (x < 74 && k.y > 120) return overlay.hint('Ride the cradle. Its roof hides you from the drone.');
+    return overlay.hint('Foam slabs drop when you stand on them.');
   }
 }

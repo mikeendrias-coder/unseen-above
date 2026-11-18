@@ -1,232 +1,271 @@
-// Episode 1, the grounds: level layout (collision and hazards) and the painted art for it.
-// The facade runs behind the whole walk, and its styles clash on purpose: a glass wing,
-// a baroque dome wing, a colonnade, then the temple front with the door.
+// Episode 1, the grounds: level layout (collision, hazards, props) and the painted art.
+// Rebuilt Nov 17 (final pass) as a tall level, two and a half screens high, climbed in seven
+// short sections with one new idea each (docs/ART_DIRECTION.md, research/design_pass_nov17.md):
+//   A outside the wall: walk, jump, look      B the garden: a sweeping lamp, hedges, double jump
+//   C the hedge wall: wall jumps              D the fountain terrace: a drone, cover under the bowl
+//   E the lawn terrace: push the crate, ride in its shadow, climb it
+//   F the loggia: the window cleaners' cradle (a moving platform) under a drone
+//   G the balcony: the scan chases her over foam slabs that crumble, two lamps cross, the door
+// Art: flat palette colors, hard edges, dithered light, 1 px outlines on what she can touch.
 import { Painter, rng } from './painter.js';
 
-export const TILE = 16, VIEW_W = 320, VIEW_H = 180, GROUND = 160;
+export const TILE = 16, VIEW_W = 320, VIEW_H = 180;
+const T = TILE;
+export const ROWS = { lawn: 25, terrace: 17, loggia: 12, balcony: 5 };
+export const GROUND = ROWS.lawn * T;          // the lawn and the ash outside, y 400
+export const TERRACE = ROWS.terrace * T;      // y 272
+export const LOGGIA = ROWS.loggia * T;        // y 192
+export const BALCONY = ROWS.balcony * T;      // y 80
 export const LEVEL = {
-  w: 112, h: 12,
-  gateX: 15 * TILE,
-  door: { x: 106 * TILE - 2, y: 112 - 32, w: 20, h: 32 },
-  // a service door in the glass wing, to the groundskeeper's room (optional)
-  shedDoor: { x: 19 * TILE + 4, y: GROUND - 26, w: 14, h: 26 },
-  // his crowbar, dropped just inside the gate
-  crowbar: { x: 17 * TILE + 14, y: GROUND },
+  w: 100, h: 26,
+  gateX: 15 * T,
+  start: { x: 3 * T, y: GROUND - 14 },
+  door: { x: 96 * T, y: BALCONY - 32, w: 20, h: 32 },
+  // the groundskeeper's door in the base of the orangery (optional side room)
+  shedDoor: { x: 18 * T + 4, y: GROUND - 26, w: 14, h: 26 },
+  crowbar: { x: 17 * T + 10, y: GROUND },
+  mailbox: { x: 10 * T + 6, y: GROUND },
+  intercom: { x: 14 * T - 2, y: GROUND - 30 },
   // the burnt car outside the wall is solid; she can climb it
-  props: [{ id: 'car', x: 120, y: GROUND - 9, w: 34, h: 9 }, { id: 'car roof', x: 126, y: GROUND - 15, w: 20, h: 6 }],
-  // at the stairs the grounds are scanned: a wall of light follows her to the door
-  scan: { trigger: 96 * TILE, behind: 150, speed: 58 },
-  start: { x: 3 * TILE, y: GROUND - 14 },
+  props: [{ id: 'car', x: 92, y: GROUND - 9, w: 34, h: 9 }, { id: 'car roof', x: 98, y: GROUND - 15, w: 20, h: 6 }],
+  crate: { x: 57 * T, y: TERRACE - 22, w: 22, h: 22 },
+  cradle: { x: 72 * T, w: 32, top: BALCONY, bottom: LOGGIA, speed: 30, pause: 1.0, roof: 24 },
+  slabs: [{ x: 79 * T, y: BALCONY, w: 32 }, { x: 85 * T, y: BALCONY, w: 32 }],
+  fountain: { x0: 41 * T, x1: 49 * T, bowl: 14 },
+  // at the balcony the satellite scans the house: a wall of light follows her to the door
+  scan: { trigger: 76 * T, below: BALCONY + 20, behind: 140, speed: 50 },
   // searchlights: base point, sweep between angles (degrees, y down), period in seconds, phase 0..1
   lights: [
-    { id: 'garden lamp', x: 37 * TILE + 8, y: 122, a0: 157, a1: 174, period: 4.2, phase: 0.0, half: 6, range: 230 },
-    { id: 'west wall lamp', x: 63 * TILE + 8, y: 90, a0: 58, a1: 122, period: 5.0, phase: 0.25, half: 7, range: 200 },
-    { id: 'east wall lamp', x: 75 * TILE + 8, y: 90, a0: 70, a1: 135, period: 4.4, phase: 0.7, half: 7, range: 200 },
-    { id: 'stair lamp', x: 95 * TILE, y: 58, a0: 25, a1: 72, period: 3.6, phase: 0.1, half: 6, range: 190 },
-    { id: 'temple lamp', x: 110 * TILE + 8, y: 58, a0: 104, a1: 150, period: 3.6, phase: 0.6, half: 6, range: 190 }
+    { id: 'garden lamp', x: 34 * T + 8, y: 330, a0: 118, a1: 168, period: 4.6, phase: 0.0, half: 6, range: 330 },
+    { id: 'terrace lamp', x: 67 * T, y: 110, a0: 122, a1: 150, period: 3.8, phase: 0.3, half: 7, range: 260 },
+    { id: 'west balcony lamp', x: 80 * T, y: 14, a0: 62, a1: 118, period: 2.8, phase: 0.1, half: 8, range: 120 },
+    { id: 'east balcony lamp', x: 92 * T, y: 14, a0: 62, a1: 118, period: 2.8, phase: 0.6, half: 8, range: 120 }
   ],
-  // patrol drones with a downward spotlight
+  // patrol drones with a light straight down
   drones: [
-    { id: 'fountain drone', x0: 43 * TILE, x1: 56 * TILE, y: 74, speed: 26, half: 11, range: 120 },
-    { id: 'pergola drone', x0: 78 * TILE, x1: 93 * TILE, y: 86, speed: 38, half: 10, range: 110 }
-  ]
+    { id: 'fountain drone', x0: 39 * T, x1: 55 * T, y: 168, speed: 30, half: 11, range: 130 },
+    { id: 'loggia drone', x0: 62 * T, x1: 77 * T, y: 30, speed: 34, half: 10, range: 240 }
+  ],
+  // where N puts her in story mode: the start of each section
+  skip: [[16, ROWS.lawn], [36, ROWS.lawn], [39, ROWS.terrace], [56, ROWS.terrace], [65, ROWS.loggia], [75, ROWS.balcony], [94, ROWS.balcony]]
 };
 
+// Materials: a ash ground, g lawn, h hedge, s pale stone, w house base, b balcony slab.
 export function buildMap() {
-  const W = LEVEL.w, H = LEVEL.h, m = [];
-  for (let y = 0; y < H; y++) m.push(new Array(W).fill(0));
-  const solid = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y] && x >= 0 && x < W) m[y][x] = 1; };
-  solid(0, 10, W - 1, 11);                       // ground
-  solid(21, 8, 22, 9); solid(27, 8, 27, 9); solid(32, 8, 33, 9); // hedges (2 tiles: a jump clears them)
-  solid(43, 9, 43, 9); solid(51, 9, 51, 9); solid(45, 7, 49, 7); // fountain rim and upper bowl
-  solid(60, 8, 60, 9); solid(66, 8, 66, 9); solid(72, 8, 72, 9); // statue plinths
-  solid(81, 6, 83, 6); solid(88, 6, 90, 6);      // pergola tops
-  solid(96, 9, 96, 9); solid(97, 8, 97, 9); solid(98, 7, 110, 9); // stairs and landing
-  solid(111, 0, 111, 9);                         // end wall
-  solid(-1, 0, 0, 9);                            // world edge
-  return { W, H, m };
+  const W = LEVEL.w, H = LEVEL.h, m = [], mat = [];
+  for (let y = 0; y < H; y++) { m.push(new Array(W).fill(0)); mat.push(new Array(W).fill('.')); }
+  const solid = (x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m[y] && x >= 0 && x < W) { m[y][x] = 1; mat[y][x] = c; } };
+  const R = ROWS;
+  solid(0, R.lawn, 14, H - 1, 'a'); solid(15, R.lawn, 37, H - 1, 'g');
+  solid(20, 22, 21, 24, 'h'); solid(25, 22, 26, 24, 'h'); solid(30, 23, 30, 24, 'h');   // B: hedges
+  solid(35, R.terrace, 35, 23, 'h');                                                     // C: hedge wall, a gap at its root
+  solid(38, R.terrace, W - 1, H - 1, 's');                                               // the terrace
+  solid(41, 16, 41, 16, 'f'); solid(48, 16, 48, 16, 'f'); solid(43, 14, 46, 14, 'f');    // D: fountain rims, upper bowl
+  solid(52, 15, 52, 16, 'f');                                                            // the statue's plinth
+  solid(64, R.loggia, 71, 16, 's');                                                      // E/F: the loggia
+  solid(74, 11, W - 1, 16, 'w');                                                         // the house's base
+  solid(74, R.balcony, 78, R.balcony, 'b'); solid(81, R.balcony, 84, R.balcony, 'b'); solid(87, R.balcony, W - 1, R.balcony, 'b'); // G
+  return { W, H, m, mat };
 }
 
-// ------------------------------------------------------------------ small parts
+// ------------------------------------------------------------------ painting helpers
+// light as dithered rows: every other pixel row of the shape, nothing between (no alpha haze)
+export function ditherPoly(p, pts, c, odd) { p.spans(pts, (x, y, w) => { if ((y & 1) === (odd ? 1 : 0)) p.rect(x, y, w, 1, c); }); }
+// the same as a 50% checker: for light painted once into a level texture
+export function checkerPoly(p, pts, c) { p.spans(pts, (x, y, w) => { for (let xx = x + ((x + y) & 1); xx < x + w; xx += 2) p.px(xx, y, c); }); }
+export function ditherRect(p, x, y, w, h, c) { for (let yy = y; yy < y + h; yy++) for (let xx = x + ((yy + x) & 1); xx < x + w; xx += 2) p.px(xx, yy, c); }
 function glint(p, P, x, y) { p.px(x, y, P.glint); p.px(x - 1, y, P.goldHi); p.px(x + 1, y, P.goldHi); p.px(x, y - 1, P.goldHi); p.px(x, y + 1, P.goldHi); p.mark('glint', x, y); }
 function column(p, P, x, top, bottom, w) {
-  p.rect(x, top, w, bottom - top, P.col); p.rect(x + 1, top, 1, bottom - top, P.colHi);
-  for (let i = 3; i < w - 1; i += 3) p.rect(x + i, top, 1, bottom - top, P.colLo);
-  p.rect(x - 1, bottom - 3, w + 2, 3, P.colHi);
+  p.rect(x, top, w, bottom - top, P.col); p.rect(x + 1, top, 1, bottom - top, P.colHi); p.rect(x + w - 1, top, 1, bottom - top, P.colLo);
+  for (let i = 3; i < w - 2; i += 3) p.rect(x + i, top + 2, 1, bottom - top - 4, P.colLo);
+  p.rect(x - 1, bottom - 3, w + 2, 3, P.colHi); p.rect(x - 1, bottom - 1, w + 2, 1, P.colLo);
   p.rect(x - 2, top - 3, w + 4, 3, P.gold); p.rect(x - 1, top - 1, w + 2, 1, P.goldLo);
 }
-function chandelierInWindow(p, P, cx, cy) { p.rect(cx, cy - 6, 1, 4, P.goldLo); p.ellipse(cx, cy, 4, 1, P.gold); for (let i = -3; i <= 3; i += 3) p.px(cx + i, cy + 2, P.glint); p.mark('glint', cx, cy + 2); }
 function statue(p, P, cx, base) {
-  // a gold figure on a plinth top: arm raised, holding a star
-  p.rect(cx - 2, base - 14, 5, 10, P.gold); p.rect(cx - 1, base - 18, 3, 4, P.gold); p.rect(cx + 2, base - 22, 1, 9, P.gold);
-  p.rect(cx - 3, base - 4, 7, 4, P.goldLo); p.px(cx + 2, base - 23, P.glint); p.rect(cx - 1, base - 13, 1, 8, P.goldHi);
+  // a gold figure: arm raised, holding a star
+  p.rect(cx - 3, base - 15, 7, 1, '#0e0f12'); p.rect(cx - 3, base - 14, 6, 10, P.gold); p.rect(cx - 2, base - 19, 4, 5, P.gold); p.rect(cx + 2, base - 23, 1, 9, P.gold);
+  p.rect(cx - 4, base - 4, 9, 4, P.goldLo); p.rect(cx - 2, base - 13, 1, 8, P.goldHi); p.rect(cx - 1, base - 18, 1, 2, P.goldHi);
   glint(p, P, cx + 2, base - 24);
 }
-function hedgeBlock(p, P, x, y, w, h, seed) {
-  // clipped topiary in a gold planter, strung with fairy lights
-  const planter = 6, body = h - planter;
-  p.rect(x - 1, y + body, w + 2, planter, P.goldLo); p.rect(x - 1, y + body, w + 2, 1, P.gold); p.rect(x + 1, y + body + 2, w - 2, 1, P.gold);
-  const cx = x + w / 2, rx = Math.floor(w / 2);
-  p.rect(x, y + rx, w, body - rx, P.hedge); p.ellipse(cx - 0.5, y + rx, rx, rx, P.hedge);
-  p.ellipse(cx - 2, y + rx - 2, Math.max(2, rx - 4), Math.max(2, rx - 5), P.hedgeHi);
-  const r = rng(seed); for (let i = 0; i < w * body / 14; i++) { const px = x + 1 + r() * (w - 2), py = y + 3 + r() * (body - 4); p.px(px, py, r() < 0.6 ? P.hedgeHi : P.hedge); }
-  for (let i = 0; i < 5; i++) { const t = (i + 0.5) / 5, px = Math.round(x + 2 + t * (w - 4)), py = Math.round(y + rx + Math.sin(t * Math.PI) * 3 + (i % 2) * 2); p.px(px, py, P.lamp); p.mark('fairy', px, py); }
+function lampPost(p, P, x, top, bottom) {
+  p.rect(x - 1, top + 5, 3, bottom - top - 5, P.goldLo); p.rect(x, top + 5, 1, bottom - top - 5, P.gold);
+  p.rect(x - 3, bottom - 4, 7, 4, P.goldLo); p.rect(x - 3, bottom - 4, 7, 1, P.gold);
+  p.rect(x - 4, top - 1, 9, 7, '#0e0f12'); p.rect(x - 3, top, 7, 5, P.device); p.rect(x - 2, top + 1, 5, 3, P.lamp);
 }
-function lampPost(p, P, x, top, bottom) { p.rect(x - 1, top + 4, 3, bottom - top - 4, P.goldLo); p.rect(x, top + 4, 1, bottom - top - 4, P.gold); p.rect(x - 3, bottom - 3, 7, 3, P.goldLo); p.rect(x - 3, top, 7, 5, P.device); p.rect(x - 2, top + 1, 5, 3, P.lamp); }
+function window(p, P, x, y, w, h, lit, arch) {
+  p.rect(x - 1, y - 1, w + 2, h + 2, P.goldLo);
+  p.rect(x, y, w, h, lit ? P.win : P.winLo);
+  if (arch) { p.rect(x + 1, y - 3, w - 2, 2, P.goldLo); p.rect(x + 2, y - 2, w - 4, 2, lit ? P.win : P.winLo); }
+  p.rect(x + Math.floor(w / 2), y, 1, h, P.goldLo); p.rect(x, y + Math.floor(h / 3), w, 1, P.goldLo);
+  if (lit) { p.rect(x + 1, y + 1, 1, Math.floor(h / 3) - 1, P.winHi); }
+}
+
+// Solid tiles, painted by material: a light top edge where she can stand, a dark face, and an
+// ash0 outline on every edge that meets open air.
+function paintTiles(p, P, map) {
+  const O = '#0e0f12', open = (x, y) => y >= 0 && y < map.H && x >= 0 && x < map.W && !map.m[y][x];
+  for (let ty = 0; ty < map.H; ty++) for (let tx = 0; tx < map.W; tx++) {
+    if (!map.m[ty][tx]) continue;
+    const c = map.mat[ty][tx], x = tx * T, y = ty * T, up = open(tx, ty - 1), dn = open(tx, ty + 1), lf = open(tx - 1, ty), rt = open(tx + 1, ty), r = rng(tx * 131 + ty * 17);
+    if (c === 'a') { p.rect(x, y, T, T, P.ground); if (up) { p.rect(x, y, T, 2, P.groundTop); for (let i = 0; i < 3; i++) p.px(x + r() * T, y + 3 + r() * 8, P.rubbleHi); } else for (let i = 0; i < 2; i++) p.px(x + r() * T, y + r() * T, P.groundTop); }
+    else if (c === 'g') {
+      p.rect(x, y, T, T, P.hedge);
+      if (up) { p.rect(x, y, T, 1, P.hedgeHi); for (let i = 0; i < T; i += 3) p.px(x + i + (tx & 1), y - 1, P.hedgeHi); p.rect(x, y + 5, T, 5, P.path); p.rect(x, y + 5, T, 1, P.pathHi); for (let i = 0; i < 3; i++) p.px(x + r() * T, y + 6 + r() * 4, P.rubbleHi); }
+    } else if (c === 'h') {
+      p.rect(x, y, T, T, P.hedge);
+      for (let i = 0; i < 9; i++) p.px(x + r() * T, y + r() * T, r() < 0.55 ? P.hedgeHi : '#1b1c21');
+      if (up) { p.rect(x, y, T, 2, P.hedgeHi); p.rect(x, y, T, 1, P.goldLo); }
+      if (lf) p.rect(x, y, 1, T, O); if (rt) p.rect(x + T - 1, y, 1, T, O); if (dn) { p.rect(x, y + T - 1, T, 1, O); }
+    } else if (c === 'f') {
+      p.rect(x, y, T, T, P.col); p.rect(x, y + T - 4, T, 4, P.colLo); p.rect(x, y + 4, T, 1, P.colHi);
+      if (up) { p.rect(x, y, T, 2, P.gold); p.rect(x, y, T, 1, P.goldHi); }
+      if (lf) p.rect(x, y, 1, T, O); if (rt) p.rect(x + T - 1, y, 1, T, O); if (dn) p.rect(x, y + T - 1, T, 1, O);
+    } else if (c === 's' || c === 'w' || c === 'b') {
+      const base = c === 'w' ? P.wall : P.colLo, hi = c === 'w' ? P.wallHi : P.col, joint = c === 'w' ? P.wallLo : P.rubble;
+      p.rect(x, y, T, T, base);
+      // block courses: 8 px tall, joints staggered
+      for (let yy = 0; yy < T; yy += 8) { p.rect(x, y + yy, T, 1, joint); p.rect(x + (((ty * 2 + yy / 8) & 1) ? 0 : 8), y + yy, 1, 8, joint); p.rect(x + 1, y + yy + 1, T - 2, 1, hi); }
+      if (up) { p.rect(x, y, T, 2, c === 'w' ? P.wallHi : P.colHi); p.rect(x, y, T, 1, c === 'b' ? P.gold : P.colHi); }
+      if (lf) p.rect(x, y, 1, T, O); if (rt) p.rect(x + T - 1, y, 1, T, O); if (dn) p.rect(x, y + T - 1, T, 1, O);
+    }
+  }
+}
 
 // ------------------------------------------------------------------ sky and far layers
 export function paintSky(P, w) {
   const p = new Painter(w, VIEW_H);
   p.rect(0, 0, w, VIEW_H, P.skyTop);
-  p.rect(0, 52, w, 60, P.skyMid); p.rect(0, 112, w, VIEW_H - 112, P.skyLow);
-  const band = (y, a, b) => { if (a.startsWith('d:') || b.startsWith('d:')) return; p.rect(0, y - 2, w, 2, 'd:' + b + ':' + a + ':checker'); };
-  band(52, P.skyTop, P.skyMid); band(112, P.skyMid, P.skyLow);
-  const r = rng(7); for (let i = 0; i < w / 5; i++) p.px(r() * w, r() * 100, r() < 0.15 ? P.glint : P.star);
+  const r = rng(7); for (let i = 0; i < w / 6; i++) p.px(r() * w, r() * 120, r() < 0.12 ? P.glint : P.star);
   return p;
 }
 export function paintMoon(P) {
   const p = new Painter(32, 32);
-  p.circle(16, 16, 11, P.moon); p.circle(19, 13, 2, P.moonShade); p.circle(12, 19, 1, P.moonShade); p.circle(20, 20, 1, P.moonShade);
+  p.circle(16, 16, 12, '#0e0f12'); p.circle(16, 16, 11, P.moon); p.circle(19, 13, 2, P.moonShade); p.circle(12, 19, 1, P.moonShade); p.circle(20, 20, 1, P.moonShade);
   p.px(13, 21, P.lamp); p.px(14, 21, P.goldHi); // one lit window on the Moon
   return p;
 }
-// The dead city outside the walls: broken towers, a few fires.
+// The dead city outside the walls: broken towers, a few fires. Its ground line is at y 220.
+export const CITY_H = 240, CITY_GROUND = 220;
 export function paintCity(P, w) {
-  const p = new Painter(w, VIEW_H), r = rng(41);
+  const p = new Painter(w, CITY_H), r = rng(41), G = CITY_GROUND;
   let x = 0;
   while (x < w) {
-    const bw = 10 + Math.floor(r() * 26), bh = 30 + Math.floor(r() * 70), top = 150 - bh;
-    p.rect(x, top, bw, 150 - top, P.hill);
-    // broken tops: notches and leaning girders
-    for (let i = 0; i < bw; i += 2) if (r() < 0.45) p.rect(x + i, top, 2, 2 + Math.floor(r() * 8), P.skyLow.startsWith('d:') ? P.skyMid : P.skyLow);
+    const bw = 10 + Math.floor(r() * 26), bh = 30 + Math.floor(r() * 80), top = G - bh;
+    p.rect(x, top, bw, G - top, P.hill);
+    for (let i = 0; i < bw; i += 2) if (r() < 0.45) p.rect(x + i, top, 2, 2 + Math.floor(r() * 8), P.skyTop);
     if (r() < 0.4) p.line(x + bw - 2, top, x + bw + 4, top - 8 - r() * 8, P.hill);
-    // a few burning windows high in the wrecks
-    if (r() < 0.4) { const fx = x + 2 + Math.floor(r() * (bw - 4)), fy = top + 6 + Math.floor(r() * Math.max(4, bh - 20)); p.rect(fx, fy, 2, 2, P.lamp); p.mark('fire', fx + 1, fy + 1); }
+    if (r() < 0.4) { const fx = x + 2 + Math.floor(r() * (bw - 4)), fy = top + 6 + Math.floor(r() * Math.max(4, bh - 20)); p.rect(fx, fy, 2, 2, P.lamp); p.mark('fire', fx, fy); }
     x += bw + Math.floor(r() * 6);
   }
-  p.rect(0, 150, w, VIEW_H - 150, P.hill);
+  p.rect(0, G, w, CITY_H - G, P.hill);
   return p;
 }
 
 // ------------------------------------------------------------------ the level
-export function paintLevel(P) {
-  const W = LEVEL.w * TILE, p = new Painter(W, VIEW_H);
-  const G = GROUND;
+export function paintLevel(P, map) {
+  const W = LEVEL.w * T, H = LEVEL.h * T, p = new Painter(W, H), G = GROUND, TR = TERRACE, O = '#0e0f12';
 
-  // ---------------- outside the walls: ash and rubble ----------------
-  p.rect(0, G, 15 * TILE, VIEW_H - G, P.rubble); p.rect(0, G, 15 * TILE, 1, P.rubbleHi);
-  const r0 = rng(3); for (let i = 0; i < 70; i++) p.px(r0() * 15 * TILE, G + 2 + r0() * 16, r0() < 0.5 ? P.dust : P.rubbleHi);
-  // a dead tree and a burnt car
-  p.rect(40, G - 34, 3, 34, P.wood); p.line(41, G - 24, 30, G - 38, P.wood); p.line(42, G - 28, 54, G - 44, P.wood); p.line(41, G - 32, 46, G - 50, P.wood);
-  p.rect(120, G - 9, 34, 7, P.rubble); p.rect(126, G - 15, 20, 6, P.rubble); p.rect(129, G - 13, 6, 3, P.crack); p.rect(137, G - 13, 6, 3, P.crack);
-  p.circle(127, G - 2, 3, P.crack); p.circle(147, G - 2, 3, P.crack);
-  for (let i = 0; i < 5; i++) p.rect(170 + i * 9, G - 3 - (i % 3) * 2, 6, 3 + (i % 3) * 2, P.rubbleHi);
-
-  // ---------------- the gilded fence and the open gate ----------------
-  const fx0 = 14 * TILE, fx1 = 17 * TILE;
-  for (let x = fx0; x <= fx1; x += 6) { p.rect(x, G - 46, 2, 46, P.goldLo); p.rect(x, G - 46, 1, 46, P.gold); p.poly([[x - 1, G - 46], [x + 1, G - 52], [x + 3, G - 46]], P.gold); }
-  p.rect(fx0, G - 40, fx1 - fx0 + 2, 2, P.gold); p.rect(fx0, G - 12, fx1 - fx0 + 2, 2, P.gold);
-  p.rect(fx0 - 4, G - 58, 8, 58, P.col); p.rect(fx0 - 5, G - 60, 10, 3, P.gold); p.circle(fx0, G - 63, 3, P.gold); glint(p, P, fx0, G - 64);
-  // the gate leaf hangs open, swung back toward the house
-  p.poly([[fx1 + 4, G - 44], [fx1 + 20, G - 36], [fx1 + 20, G - 4], [fx1 + 4, G]], P.goldLo);
-  for (let i = 0; i < 4; i++) p.line(fx1 + 6 + i * 4, G - 42 + i * 2, fx1 + 6 + i * 4, G - 2, P.gold);
-
-  // ---------------- the facade behind the walk ----------------
-  const roof = 36;
-  // glass wing, tiles 17 to 38
-  const gx0 = 17 * TILE + 8, gx1 = 39 * TILE;
-  p.rect(gx0, roof + 10, gx1 - gx0, G - roof - 10, P.glass);
+  // ---------------- B: the orangery behind the garden (glass, gold frames, warm panes) ----------------
+  const ox0 = 16 * T, ox1 = 34 * T, oTop = 296;
+  p.rect(ox0, oTop, ox1 - ox0, G - oTop, P.glass);
   const rg = rng(91);
-  for (let y = roof + 12; y < G - 14; y += 14) for (let x = gx0 + 2; x < gx1 - 10; x += 12) { const v = rg(); p.rect(x, y, 10, 12, v < 0.3 ? P.glassLit : v < 0.42 ? P.win : P.glass); if (v < 0.12) p.mark('pane', x + 5, y + 6); }
-  for (let x = gx0; x <= gx1; x += 12) p.rect(x, roof + 10, 2, G - roof - 10, P.goldLo);
-  p.rect(gx0, roof + 8, gx1 - gx0, 3, P.gold); for (let x = gx0 + 4; x < gx1; x += 8) p.rect(x, roof + 2, 1, 6, P.gold); p.rect(gx0, roof + 2, gx1 - gx0, 1, P.gold);
-  // LED strip along the glass wing
-  for (let x = gx0; x < gx1; x += 3) p.px(x, roof + 12, P.glassLit);
-  // a service door in the base of the glass wing, with a small plaque
+  for (let y = oTop + 6; y < G - 12; y += 16) for (let x = ox0 + 4; x < ox1 - 10; x += 14) { const v = rg(); p.rect(x, y, 12, 14, v < 0.32 ? P.glassLit : P.glass); if (v < 0.32) p.rect(x, y, 12, 1, P.goldHi); }
+  for (let x = ox0; x <= ox1; x += 14) p.rect(x, oTop, 2, G - oTop, P.goldLo);
+  p.poly([[ox0 - 4, oTop], [(ox0 + ox1) / 2, oTop - 30], [ox1 + 4, oTop]], P.glass);
+  for (let i = 0; i < 9; i++) { const x = ox0 + 12 + i * 30; p.line(x, oTop - 1, (ox0 + ox1) / 2, oTop - 29, P.goldLo); }
+  p.rect(ox0 - 4, oTop - 2, ox1 - ox0 + 8, 3, P.gold); p.line(ox0 - 4, oTop - 1, (ox0 + ox1) / 2, oTop - 31, P.gold); p.line(ox1 + 4, oTop - 1, (ox0 + ox1) / 2, oTop - 31, P.gold);
+  glint(p, P, (ox0 + ox1) / 2, oTop - 33);
   const SD = LEVEL.shedDoor;
   p.rect(SD.x - 2, SD.y - 2, SD.w + 4, SD.h + 2, P.goldLo); p.rect(SD.x, SD.y, SD.w, SD.h, P.wallLo); p.rect(SD.x + 1, SD.y + 1, SD.w - 2, SD.h - 1, P.wall);
-  p.rect(SD.x + 2, SD.y + 4, SD.w - 4, 3, P.colLo); p.rect(SD.x + SD.w - 4, SD.y + 13, 2, 2, P.gold); p.glowRect(SD.x - 3, GROUND - 2, SD.w + 6, 2, P.lamp, 0.12);
+  p.rect(SD.x + 2, SD.y + 4, SD.w - 4, 3, P.colLo); p.rect(SD.x + SD.w - 4, SD.y + 13, 2, 2, P.gold);
 
-  // baroque wing, tiles 39 to 77, with a dome over its middle
-  const bx0 = 39 * TILE, bx1 = 77 * TILE;
-  p.rect(bx0, roof + 18, bx1 - bx0, G - roof - 18, P.wall); p.rect(bx0, roof + 18, bx1 - bx0, 2, P.wallHi);
-  for (let x = bx0 + 6; x < bx1; x += 26) {
-    p.rect(x, 74, 14, 34, P.goldLo); p.circle(x + 7, 74, 7, P.goldLo); p.rect(x + 2, 76, 10, 30, P.win); p.circle(x + 7, 75, 5, P.win);
-    p.rect(x + 6, 70, 2, 36, P.goldLo); p.rect(x + 2, 88, 10, 1, P.goldLo); chandelierInWindow(p, P, x + 7, 84);
-    p.glowRect(x - 2, 108, 18, 4, P.lamp, 0.12);
-  }
-  for (let x = bx0; x < bx1; x += 26) { p.rect(x, roof + 20, 4, G - roof - 20, P.wallHi); p.rect(x + 1, roof + 20, 1, G - roof - 20, P.wallLine); }
-  // balustrade with statues on the roofline
-  p.rect(bx0, roof + 14, bx1 - bx0, 4, P.colHi); for (let x = bx0 + 2; x < bx1; x += 5) p.rect(x, roof + 10, 2, 4, P.col); p.rect(bx0, roof + 9, bx1 - bx0, 1, P.colHi);
-  for (let x = bx0 + 10; x < bx1; x += 52) statue(p, P, x, roof + 9);
-  // the dome
-  const dc = 58 * TILE, dy = roof + 6;
-  p.rect(dc - 36, dy - 10, 72, 16, P.wallHi); for (let i = 0; i < 7; i++) p.rect(dc - 30 + i * 10, dy - 7, 4, 9, P.win);
-  p.rect(dc - 38, dy - 12, 76, 2, P.gold);
-  p.circle(dc, dy - 12, 30, P.gold); p.rect(dc - 31, dy - 12, 62, 31, P.wallHi); p.rect(dc - 38, dy - 12, 76, 2, P.gold);
-  [-20, -10, 0, 10, 20].forEach(o => { const top = Math.round(dy - 12 - Math.sqrt(Math.max(0, 900 - o * o))); p.rect(dc + o, top + 2, 1, dy - 14 - top, P.goldLo); });
-  p.rect(dc - 13, dy - 36, 4, 3, P.goldHi); p.rect(dc - 15, dy - 33, 3, 6, P.goldHi);
-  p.rect(dc - 4, dy - 54, 9, 12, P.gold); p.rect(dc - 2, dy - 52, 5, 7, P.win); p.circle(dc, dy - 57, 3, P.goldHi); p.rect(dc, dy - 66, 1, 7, P.gold); glint(p, P, dc, dy - 66);
-  // colonnade, tiles 77 to 94
-  const cx0 = 77 * TILE, cx1 = 94 * TILE;
-  p.rect(cx0, 64, cx1 - cx0, G - 64, P.wallLo); p.rect(cx0, 58, cx1 - cx0, 6, P.colHi); p.rect(cx0, 57, cx1 - cx0, 1, P.gold);
-  for (let x = cx0 + 6; x < cx1 - 6; x += 22) { column(p, P, x, 64, G, 8); p.rect(x + 12, 90, 4, 6, P.lamp); p.glowCircle(x + 14, 93, 8, P.lamp, 0.12); }
-  // temple front, tiles 94 to 111
-  const tx0 = 94 * TILE, tx1 = 111 * TILE + 8, tc = (tx0 + tx1) / 2;
-  p.rect(tx0, 40, tx1 - tx0, 72, P.wall); p.rect(tx0, 40, tx1 - tx0, 2, P.wallHi);
-  for (let i = 0; i < 6; i++) column(p, P, tx0 + 10 + i * 46, 44, 112, 12);
-  p.rect(tx0 - 6, 30, tx1 - tx0 + 12, 10, P.colHi); p.rect(tx0 - 6, 30, tx1 - tx0 + 12, 1, P.gold); p.rect(tx0 - 6, 39, tx1 - tx0 + 12, 1, P.gold);
-  for (let x = tx0 - 4; x < tx1 + 4; x += 6) p.rect(x, 34, 2, 2, P.gold);
-  p.poly([[tx0 - 10, 30], [tc, 2], [tx1 + 10, 30]], P.gold); p.poly([[tx0 - 4, 29], [tc, 6], [tx1 + 4, 29]], P.colHi);
-  p.circle(tc, 20, 6, P.gold); p.circle(tc, 20, 4, P.goldHi); glint(p, P, tc, 20);
-  // the door itself, lit from inside, with a warm wash on the landing
+  // ---------------- D: a screen wall behind the fountain terrace: arches, lit, columns in front ----------------
+  const dx0 = 38 * T, dx1 = 56 * T, dTop = 184;
+  p.rect(dx0, dTop, dx1 - dx0, TR - dTop, P.wall); p.rect(dx0, dTop, dx1 - dx0, 2, P.wallHi);
+  for (let x = dx0 + 10; x < dx1 - 20; x += 32) { window(p, P, x + 4, dTop + 22, 14, 34, true, true); }
+  p.rect(dx0 - 2, dTop - 8, dx1 - dx0 + 4, 8, P.colHi); p.rect(dx0 - 2, dTop - 8, dx1 - dx0 + 4, 1, P.gold); p.rect(dx0 - 2, dTop - 1, dx1 - dx0 + 4, 1, P.goldLo);
+  for (let x = dx0; x < dx1; x += 5) p.rect(x, dTop - 14, 2, 6, P.col); p.rect(dx0 - 2, dTop - 15, dx1 - dx0 + 4, 1, P.colHi);
+  for (let x = dx0 + 2; x < dx1; x += 32) column(p, P, x, dTop + 4, TR, 8);
+
+  // ---------------- E to G: the main house, bronze, three tall storeys, a dome and a temple front ----------------
+  const hx0 = 56 * T, hx1 = W, roof = 34;
+  p.rect(hx0, roof, hx1 - hx0, TR - roof, P.wall);
+  for (let x = hx0; x < hx1; x += 32) { p.rect(x + 13, roof + 6, 6, TR - roof - 6, P.wallHi); p.rect(x + 15, roof + 6, 1, TR - roof - 6, P.wallLine); }
+  // storey bands
+  [roof + 4, 104, 178].forEach(y => { p.rect(hx0, y, hx1 - hx0, 3, P.colHi); p.rect(hx0, y + 3, hx1 - hx0, 1, P.goldLo); });
+  // tall windows, a lit room here and there
+  const rw = rng(23);
+  for (let x = hx0 + 22; x < hx1 - 10; x += 32) { window(p, P, x, 48, 12, 44, rw() < 0.6, true); window(p, P, x, 120, 12, 44, rw() < 0.5, true); window(p, P, x, 196, 12, 56, rw() < 0.4, true); }
+  // roofline: balustrade and gold statues
+  p.rect(hx0, roof - 4, hx1 - hx0, 4, P.colHi); for (let x = hx0 + 2; x < hx1; x += 5) p.rect(x, roof - 10, 2, 6, P.col); p.rect(hx0, roof - 11, hx1 - hx0, 1, P.colHi);
+  for (let x = hx0 + 12; x < 84 * T; x += 48) statue(p, P, x, roof - 11);
+  // the dome over the middle
+  const dc = 66 * T, dy = roof - 11;
+  p.rect(dc - 34, dy - 10, 68, 10, P.wallHi); for (let i = 0; i < 7; i++) p.rect(dc - 29 + i * 9, dy - 8, 3, 6, P.win);
+  p.circle(dc, dy - 10, 27, O); p.circle(dc, dy - 10, 26, P.gold); p.rect(dc - 28, dy - 10, 56, 30, P.wallHi); p.rect(dc - 36, dy - 12, 72, 3, P.gold);
+  [-18, -9, 0, 9, 18].forEach(o => { const top = Math.round(dy - 10 - Math.sqrt(Math.max(0, 676 - o * o))); p.rect(dc + o, top + 2, 1, dy - 14 - top, P.goldLo); });
+  p.rect(dc - 12, dy - 30, 3, 6, P.goldHi);
+  // the temple front over the door: columns, a pediment, a gold sun
+  const tx0 = 86 * T, tx1 = W, tc = 96 * T + 10;
+  p.rect(tx0 - 6, 0, tx1 - tx0 + 6, BALCONY, P.wall);
+  p.poly([[tx0 - 8, 22], [tc, 0], [tx1 + 40, 22]], P.gold); p.poly([[tx0 - 2, 21], [tc, 3], [tx1 + 34, 21]], P.colHi);
+  p.rect(tx0 - 8, 22, tx1 - tx0 + 8, 6, P.colHi); p.rect(tx0 - 8, 22, tx1 - tx0 + 8, 1, P.gold); p.rect(tx0 - 8, 27, tx1 - tx0 + 8, 1, P.goldLo);
+  p.circle(tc, 14, 5, P.gold); p.circle(tc, 14, 3, P.goldHi); glint(p, P, tc, 14);
+  [88, 91, 94, 99].forEach(t => column(p, P, t * T, 31, BALCONY, 8));
+  // the door itself, lit from inside
   const D = LEVEL.door;
-  p.rect(D.x - 4, D.y - 8, D.w + 8, D.h + 8, P.goldLo); p.circle(D.x + D.w / 2, D.y - 1, D.w / 2 + 4, P.goldLo);
-  p.rect(D.x, D.y, D.w, D.h, P.winHi); p.circle(D.x + D.w / 2, D.y, D.w / 2, P.winHi); p.rect(D.x + D.w / 2, D.y - 4, 1, D.h + 4, P.goldLo);
-  p.glowRect(D.x - 20, 112, D.w + 40, 6, P.lamp, 0.2);
-  // lit windows either side of the door
-  [D.x - 52, D.x + 44].forEach(x => { p.rect(x, 62, 14, 26, P.goldLo); p.rect(x + 2, 64, 10, 22, P.win); chandelierInWindow(p, P, x + 7, 72); });
+  p.rect(D.x - 4, D.y - 6, D.w + 8, D.h + 6, P.goldLo); p.rect(D.x - 3, D.y - 5, D.w + 6, 1, P.gold);
+  p.rect(D.x, D.y, D.w, D.h, P.winHi); p.rect(D.x + D.w / 2, D.y, 1, D.h, P.goldLo);
+  p.rect(D.x + 3, D.y + 4, 5, 10, P.win); p.rect(D.x + D.w - 8, D.y + 4, 5, 10, P.win);
+  for (let x = 74 * T; x < W; x += 6) { if (Math.floor(x / T) >= 79 && Math.floor(x / T) <= 80) continue; if (Math.floor(x / T) >= 85 && Math.floor(x / T) <= 86) continue; p.rect(x + 1, BALCONY - 10, 3, 9, P.col); p.px(x + 2, BALCONY - 10, P.colHi); }
+  p.rect(74 * T, BALCONY - 12, 5 * T, 2, P.colHi); p.rect(81 * T, BALCONY - 12, 4 * T, 2, P.colHi); p.rect(87 * T, BALCONY - 12, 13 * T, 2, P.colHi);
+  // cradle rails on the house face
+  p.rect(72 * T + 1, 0, 1, TR, P.device); p.rect(74 * T - 2, 0, 1, TR, P.device);
+  p.rect(72 * T - 4, 0, 40, 4, P.device); p.rect(72 * T + 14, 4, 4, 3, P.device);
 
-  // uplights wash the facade from the ground, warm on stone, cold on glass
-  for (let x = gx0 + 18; x < gx1 - 10; x += 48) p.glowPoly([[x - 3, G], [x + 3, G], [x + 14, roof + 12], [x - 14, roof + 12]], P.glassLit, 0.07);
-  for (let x = bx0; x < bx1; x += 26) p.glowPoly([[x - 1, G], [x + 5, G], [x + 13, roof + 20], [x - 9, roof + 20]], P.lamp, 0.08);
-  for (let i = 0; i < 6; i++) { const x = tx0 + 16 + i * 46; p.glowPoly([[x - 3, 112], [x + 3, 112], [x + 12, 44], [x - 12, 44]], P.lamp, 0.09); }
-  for (let x = cx0 + 10; x < cx1 - 6; x += 22) p.glowPoly([[x - 2, G], [x + 2, G], [x + 8, 64], [x - 8, 64]], P.lamp, 0.07);
-  // ---------------- the grounds ----------------
-  // lawn, gravel path, edging
-  p.rect(15 * TILE, G, W - 15 * TILE, VIEW_H - G, P.ground); p.rect(15 * TILE, G, W - 15 * TILE, 2, P.groundTop);
-  for (let x = 15 * TILE; x < W; x += 4) p.px(x + 1, G + 1, P.hedgeHi);
-  for (let x = bx0 + 6; x < bx1; x += 26) p.glowRect(x - 3, G + 1, 20, 4, P.lamp, 0.1);
-  for (let x = gx0 + 2; x < gx1 - 10; x += 24) p.glowRect(x, G + 1, 14, 3, P.glassLit, 0.08);
-  p.rect(15 * TILE, G + 5, W - 15 * TILE, 5, P.path); p.rect(15 * TILE, G + 5, W - 15 * TILE, 1, P.pathHi);
-  // hedges (solid in the map)
-  hedgeBlock(p, P, 21 * TILE, 8 * TILE, 32, 32, 11); hedgeBlock(p, P, 27 * TILE - 2, 8 * TILE - 6, 20, 38, 12); hedgeBlock(p, P, 32 * TILE, 8 * TILE, 32, 32, 13);
-  // garden lamp post (searchlight 1)
-  lampPost(p, P, 37 * TILE + 8, 120, G);
-  // fountain: rim, water, floating upper bowl on a thin stem
-  const f0 = 43 * TILE, f1 = 52 * TILE;
-  p.rect(f0, 144, 16, 16, P.colLo); p.rect(f1 - 16, 144, 16, 16, P.colLo); p.rect(f0, 144, 16, 2, P.colHi); p.rect(f1 - 16, 144, 16, 2, P.colHi);
-  p.rect(f0 + 16, 150, f1 - f0 - 32, 10, P.glass); p.rect(f0 + 16, 150, f1 - f0 - 32, 1, P.glassLit);
-  p.rect(47 * TILE + 6, 128, 4, 22, P.colLo); p.rect(47 * TILE + 7, 128, 1, 22, P.colHi);
-  p.rect(45 * TILE, 112, 5 * TILE, 8, P.col); p.rect(45 * TILE, 112, 5 * TILE, 2, P.colHi); p.rect(45 * TILE + 2, 120, 5 * TILE - 4, 8, P.colLo); p.rect(45 * TILE + 6, 127, 5 * TILE - 12, 1, P.gold);
-  p.rect(45 * TILE + 3, 110, 5 * TILE - 6, 2, P.glassLit);
-  p.mark('fountain', 47 * TILE + 8, 110);
-  // statue plinths with gold figures
-  [60, 66, 72].forEach((t, i) => { const x = t * TILE; p.rect(x, 128, 16, 32, P.colLo); p.rect(x - 1, 126, 18, 3, P.colHi); p.rect(x + 2, 132, 1, 26, P.col); statue(p, P, x + 8, 126); if (i === 1) p.mark('statue', x + 8, 104); });
-  // wall searchlights (2 and 3) mounted on the facade
-  [63, 75].forEach(t => { const x = t * TILE + 8; p.rect(x - 4, 84, 9, 6, P.device); p.rect(x - 2, 90, 5, 3, P.device); p.rect(x - 3, 85, 7, 3, P.lamp); });
-  // pergolas (solid tops) on gold posts
-  [[81, 83], [88, 90]].forEach(([a, b]) => { const x0 = a * TILE, x1 = (b + 1) * TILE; p.rect(x0 - 2, 96, x1 - x0 + 4, 4, P.wood); p.rect(x0 - 2, 99, x1 - x0 + 4, 1, P.goldLo); for (let x = x0; x < x1; x += 4) p.rect(x, 100, 2, 10, P.wood); p.rect(x0 - 2, 109, x1 - x0 + 4, 3, P.wood); p.rect(x0 - 2, 109, x1 - x0 + 4, 1, P.woodHi); [x0 + 2, x1 - 4].forEach(px => p.rect(px, 112, 2, G - 112, P.goldLo)); for (let x = x0; x < x1; x += 5) { p.px(x + 2, 112, P.lamp); p.mark('fairy', x + 2, 112); } });
-  // reflecting pool in the foreground under the colonnade
-  const px0 = 78 * TILE, px1 = 94 * TILE;
-  p.rect(px0, 168, px1 - px0, 10, P.colLo); p.rect(px0 + 2, 170, px1 - px0 - 4, 7, P.glass); p.rect(px0, 168, px1 - px0, 1, P.colHi);
-  for (let x = px0 + 8; x < px1 - 8; x += 22) { p.rect(x, 171, 6, 1, P.colLo); p.rect(x + 1, 173, 4, 1, P.colLo); }
-  p.rect(px0 + 40, 175, 80, 1, P.gold);
-  // grand stairs with a red carpet, and the landing
-  for (let i = 0; i < 3; i++) { const x = (96 + i) * TILE, top = G - (i + 1) * 16; p.rect(x, top, (111 - 96 - i) * TILE, 16, i % 2 ? P.col : P.colLo); p.rect(x, top, (111 - 96 - i) * TILE, 2, P.colHi); }
-  p.rect(98 * TILE, 112, 13 * TILE, 4, P.colHi);
-  p.rect(101 * TILE + 4, 112, 2 * TILE, 48, P.fabric); p.rect(101 * TILE + 4, 112, 2, 48, P.fabricLo);
-  // stair searchlights (4 and 5) on gold brackets high on the temple
-  [[95 * TILE, 58], [110 * TILE + 8, 58]].forEach(([x, y]) => { p.rect(x - 4, y - 4, 9, 7, P.device); p.rect(x - 3, y - 3, 7, 4, P.lamp); p.rect(x - 1, y + 3, 3, 8, P.goldLo); });
+  // ---------------- A: outside the wall: a dead tree, the burnt car, rubble, the mailbox ----------------
+  p.rect(30, G - 40, 3, 40, P.wood); p.line(31, G - 28, 18, G - 44, P.wood); p.line(32, G - 32, 46, G - 52, P.wood); p.line(31, G - 36, 36, G - 58, P.wood);
+  p.rect(91, G - 10, 36, 10, O); p.rect(92, G - 9, 34, 7, P.rubble); p.rect(97, G - 16, 22, 7, O); p.rect(98, G - 15, 20, 6, P.rubble);
+  p.rect(101, G - 13, 6, 3, P.crack); p.rect(109, G - 13, 6, 3, P.crack); p.rect(92, G - 9, 34, 1, P.rubbleHi);
+  p.circle(99, G - 2, 3, P.crack); p.circle(119, G - 2, 3, P.crack);
+  for (let i = 0; i < 5; i++) p.rect(140 + i * 9, G - 3 - (i % 3) * 2, 6, 3 + (i % 3) * 2, P.rubbleHi);
+  const MB = LEVEL.mailbox;
+  p.rect(MB.x - 1, G - 18, 3, 18, P.device); p.rect(MB.x - 5, G - 25, 11, 8, O); p.rect(MB.x - 4, G - 24, 9, 6, P.rubbleHi); p.rect(MB.x - 4, G - 24, 9, 1, P.dust); p.rect(MB.x + 4, G - 28, 1, 5, P.dust);
+  // ---------------- the gilded fence and the open gate, with the intercom on its pier ----------------
+  const fx0 = 14 * T, fx1 = 16 * T;
+  for (let x = fx0 + 6; x <= fx1 + 6; x += 6) { p.rect(x, G - 46, 2, 46, P.goldLo); p.rect(x, G - 46, 1, 46, P.gold); p.poly([[x - 1, G - 46], [x + 1, G - 52], [x + 3, G - 46]], P.gold); }
+  p.rect(fx0 + 4, G - 40, fx1 - fx0 + 4, 2, P.gold); p.rect(fx0 + 4, G - 12, fx1 - fx0 + 4, 2, P.gold);
+  p.rect(fx0 - 4, G - 58, 9, 58, O); p.rect(fx0 - 3, G - 58, 7, 58, P.col); p.rect(fx0 - 2, G - 58, 1, 58, P.colHi); p.rect(fx0 - 5, G - 61, 11, 3, P.gold); p.circle(fx0, G - 64, 3, P.gold); glint(p, P, fx0, G - 65);
+  const IC = LEVEL.intercom; p.rect(IC.x - 2, IC.y - 1, 6, 9, O); p.rect(IC.x - 1, IC.y, 4, 7, P.device); p.px(IC.x, IC.y + 1, P.colHi); p.px(IC.x + 1, IC.y + 1, P.colHi); p.rect(IC.x, IC.y + 4, 2, 1, P.lamp);
+  // the gate leaf hangs open toward the house
+  p.poly([[fx1 + 10, G - 44], [fx1 + 26, G - 36], [fx1 + 26, G - 4], [fx1 + 10, G]], P.goldLo);
+  for (let i = 0; i < 4; i++) p.line(fx1 + 12 + i * 4, G - 42 + i * 2, fx1 + 12 + i * 4, G - 2, P.gold);
+
+  // ---------------- C: under the hedge wall, the stems it stands on ----------------
+  [35 * T + 3, 35 * T + 11].forEach(x => p.rect(x, 24 * T, 2, T, P.wood));
+  // B: the garden lamp on its tall post
+  lampPost(p, P, 34 * T + 8, 326, G);
+
+  // ---------------- the solid world ----------------
+  paintTiles(p, P, map);
+  // the loggia: an arcade with dark arches, gold keystones
+  const lx0 = 64 * T, lx1 = 72 * T;
+  for (let x = lx0 + 10; x < lx1 - 16; x += 38) { p.rect(x, LOGGIA + 22, 24, TR - LOGGIA - 22, O); p.circle(x + 12, LOGGIA + 22, 12, O); p.rect(x + 11, LOGGIA + 8, 3, 4, P.gold); }
+  // the house base under the balcony: rusticated, with deep windows; then the balcony's railing
+  for (let x = 75 * T; x < W - 10; x += 40) { p.rect(x + 8, 11 * T + 24, 14, 40, O); p.rect(x + 9, 11 * T + 25, 12, 1, P.goldLo); }
+  // fairy lights along the hedge tops
+  for (let tx = 15; tx < 36; tx++) for (let ty = 17; ty < 25; ty++) if (map.mat[ty][tx] === 'h' && !map.m[ty - 1][tx]) for (let i = 2; i < T; i += 5) { p.px(tx * T + i, ty * T + 4 + (i % 3), P.lamp); p.mark('fairy', tx * T + i, ty * T + 4 + (i % 3)); }
+  // D: the fountain: water, the bowl's stem, the bowl's gold lip
+  const F = LEVEL.fountain;
+  p.rect(F.x0 + T, TR - 5, F.x1 - F.x0 - 2 * T, 5, P.glass); p.rect(F.x0 + T, TR - 5, F.x1 - F.x0 - 2 * T, 1, P.glassLit);
+  p.rect(44 * T + 12, 15 * T, 8, TR - 5 - 15 * T, P.colLo); p.rect(44 * T + 13, 15 * T, 1, TR - 5 - 15 * T, P.colHi); p.rect(44 * T + 19, 15 * T, 1, TR - 5 - 15 * T, O);
+  p.rect(43 * T, 15 * T, 4 * T, 1, P.gold); p.rect(43 * T + 2, 14 * T - 2, 4 * T - 4, 2, P.glassLit);
+  p.mark('fountain', 45 * T, 14 * T - 2);
+  // the statue on its plinth (the plaque says 07)
+  statue(p, P, 52 * T + 8, 15 * T); p.rect(52 * T + 4, 15 * T + 6, 8, 5, P.goldLo); p.rect(52 * T + 5, 15 * T + 7, 2, 3, O); p.rect(52 * T + 9, 15 * T + 7, 2, 3, O); p.px(52 * T + 10, 15 * T + 8, P.goldLo);
+  // E: the terrace lamp on its bracket; G: the balcony lamps hang from the cornice
+  [[LEVEL.lights[1].x, LEVEL.lights[1].y], [LEVEL.lights[2].x, LEVEL.lights[2].y], [LEVEL.lights[3].x, LEVEL.lights[3].y]].forEach(([x, y]) => { p.rect(x - 5, y - 5, 11, 9, O); p.rect(x - 4, y - 4, 9, 7, P.device); p.rect(x - 3, y - 2, 7, 3, P.lamp); p.rect(x, y - 14, 1, 9, P.device); });
+  // terrace edge urns, wealth for its own sake
+  [40, 54, 62].forEach(t => { const x = t * T + 8; p.rect(x - 5, TR - 12, 11, 12, O); p.rect(x - 4, TR - 11, 9, 4, P.gold); p.rect(x - 2, TR - 7, 5, 6, P.goldLo); p.rect(x - 3, TR - 2, 7, 2, P.gold); p.px(x - 2, TR - 10, P.goldHi); });
   return p;
 }

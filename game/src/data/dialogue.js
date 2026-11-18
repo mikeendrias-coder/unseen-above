@@ -6,9 +6,9 @@ export const RIDGE = [
   { who: 'SISTER', text: 'Somebody does.' },
   { who: 'BROTHER', text: 'Not one broken window. Not one.', bro: { point: 1 } },
   { who: 'SISTER', text: "Places like that don't stay clean by accident.", sis: { face: -1 } },
-  { who: 'BROTHER', text: 'Places like that have food. Medicine. Maybe a filter that still works.', bro: { face: -1 } },
+  { who: 'BROTHER', text: 'Places like that have food. Medicine.', bro: { face: -1 } },
   { who: 'SISTER', text: "Then I'm coming with you." },
-  { who: 'BROTHER', text: "No. Watch the lights. If they turn toward me, you'll see it first.", bro: { face: -1 } },
+  { who: 'BROTHER', text: "No. Watch the lights. You'll see them turn.", bro: { face: -1 } },
   { who: 'SISTER', text: "And if you don't come back?", sis: { face: -1 } },
   { who: 'BROTHER', text: 'I always come back.', bro: { face: 1 } }
 ];
@@ -128,27 +128,30 @@ export const HALL_THINGS = {
 export const NOTICE = {
   grounds: {
     tree: ['A dead tree, grey to the roots.', 'Past the gate, the hedges are green.'],
-    car: ['A burnt car. The seats are ash.', 'Nobody drives anywhere now.'],
-    gate: ['The gate stands open. Not a speck of ash on it.', 'Out here, everything is grey. In there, nothing is.'],
-    hedge: ['The hedges are cut square.', 'Somebody still cuts them. She has never seen who.'],
-    fountain: ['The fountain runs. Clean water.', 'She has not seen clean water in a long time.'],
-    statue: ['A gold figure holding up a star.', 'The plaque under it says 07. They all do.'],
-    pergola: ['Fairy lights all along the pergola.', 'Every bulb works.'],
-    pool: ['A long pool. The house is upside down in it.', 'In the water, none of the windows are lit.']
+    car: ['A burnt car. The seats are ash.'],
+    mailbox: ['A mailbox. OCCUPANT, ESTATE 07.', 'Inside, a form. REQUEST: VOLUNTARY.', 'The signature line is blank.'],
+    footprints: ['Footprints in the ash. His.', 'They go straight to the gate.'],
+    footprints2: ['Footprints in the ash. His, and smaller ones.', 'The small ones are hers. Every take.'],
+    intercom: ['Please hold.', 'Your call is being recorded.'],
+    crowbar: ['His crowbar. He came this way.', 'Scratched on the handle: a tally. Eleven marks.'],
+    hedge: ['The hedges are cut square.', 'Somebody cuts them. She has never seen who.'],
+    orangery: ['A glass house full of orange trees.', 'The oranges are wax.'],
+    fountain: ['Gold koi, all turning at the same moment.', 'They run on a track.'],
+    statue: ['A gold figure holding up a star.', 'The plaque says 07. They all do.'],
+    crate: ['A crate stencilled ESTATE 07. Heavy.', 'Something to hide behind.'],
+    cradle: ['A window cleaner\'s cradle.', 'The glass up there is spotless.']
   },
   gallery: {
-    man: ['A man in gold, twice life size.', 'His eyes are painted to follow her.'],
-    family: ['A family portrait.', 'Through the window behind them, the Earth.'],
-    boy: ['A boy in a paper crown, holding a remote control.'],
-    cake: ['A girl with a cake shaped like the Moon.', 'Seven candles.'],
+    man: ['A man in gold. The eyes are painted red.', 'They move when she does.'],
     desk: ['A writing desk. The paper on it is blank.', 'The pen has never been used.'],
-    bust: ['A white bust. No name under it.'],
-    missing: ['A clean square on the wall where a portrait hung.', 'The nail is still there.'],
-    column: ['A column snapped in half.', 'Inside, it is foam.'],
-    fallen: ['A portrait face down on the floor.', 'She leaves it that way.'],
-    chandelier: ['A chandelier that came down long ago.', 'The crystals are plastic.'],
-    robot: ['A cleaning robot like the one in the hall.', 'Its screen still says PLEASE DO NOT.'],
-    camera: ['The broken camera keeps turning up to the hole in the roof.', 'Up there, the Moon.']
+    sheets: ['Dust sheets, heaped up.', 'Someone left them here to catch a fall.'],
+    chandelier: ['Chandeliers on long chains.', 'They swing on their own. Nobody pushed them.'],
+    missing: ['A clean square where a portrait hung.', 'The nail is still there.'],
+    polisher: ['A floor polisher. It stops for nobody.'],
+    camera: ['The broken camera keeps turning to the roof.', 'Up there, the Moon. One window lit.'],
+    lightswitch: ['The chandeliers go dark.', 'The red lights stay on.'],
+    drawer2: ['The glasses are back in the drawer.', 'Someone puts them back. Every take.'],
+    emitter: ['The laser port is still warm.', 'That sound again. Like a prize.']
   },
   eastwing: {
     body: ['An old body in a jacket like hers.', 'Nobody ever took it away.'],
