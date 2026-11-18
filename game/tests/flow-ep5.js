@@ -64,8 +64,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   for (let i = 0; i < 20 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(150); }
   await until(() => window.__game.scene.mode === 'last', null, 15000);
   ok('two clicks, the flash, then the last shot', true);
-  await until(() => !!window.__game.scene.endCard, null, 20000);
-  ok('it ends on the Moon on the old TV, then a small card: ' + await p.evaluate(() => JSON.stringify(window.__game.scene.endCard)), await p.evaluate(() => window.__game.scene.tvImg.visible && window.__game.scene.endCard.title === 'THE VEST' && window.__game.scene.endCard.seen === 1));
+  await until(() => !!window.__game.scene.ended && window.__game.scene.lastT > 4, null, 60000);
+  ok('it ends on the Moon on the old TV, and stays there: no end card, no hint (' + await p.evaluate(() => JSON.stringify(window.__game.scene.ended)) + ')', await p.evaluate(() => { const s = window.__game.scene; return s.tvImg.visible && s.ended.title === 'THE VEST' && !s.cardG && !(document.querySelector('#h-hint') || {}).textContent; }));
   ok('the ending is recorded as seen', await p.evaluate(() => window.__game.state.story.endings.vest === true));
   ok('the Moon episode is marked finished', await p.evaluate(() => window.__game.state.episode('ep5').done));
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');

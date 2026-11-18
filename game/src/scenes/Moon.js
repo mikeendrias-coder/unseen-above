@@ -5,14 +5,14 @@
 // boulevard shows her live. At the far end, a staff door: backstage (Hallway.js), where the
 // creator of the show waits. Past the fight, this scene again, in the playroom: two kids, a giant
 // screen, "Are you here for round two?", her reply, and one of five endings (data/endings.js).
-// Every ending ends on the old TV in a dark room on Earth, then a small card: its title and how
-// many of the five this browser has seen.
+// Every ending ends on the old TV in a dark room on Earth, and stays there: no end card (Michael's
+// call: "It ends with us watching the Moon."). The ending is recorded quietly (state.sawEnding),
+// and the title's Chapters list shows which of the five this browser has seen.
 import { Music } from '../core/music.js';
 import { hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
-import { pixText, textWidth } from '../art/pixfont.js';
 import { LOOKS } from '../art/palettes.js';
-import { TILE, GROUND, KX, CW, M, LEVEL, buildMap, paintLevel, paintSky, paintFar, paintMid, paintNpc, NPC_FRAMES, paintKid, KID_POSES, paintSister, paintRobot, paintLastRoom, drawTv, TVSCREEN, BOARD, drawBoard, drawFeedBox, drawEarth } from '../art/moon.js';
+import { TILE, GROUND, KX, CW, M, LEVEL, buildMap, paintLevel, paintSky, paintFar, paintMid, paintNpc, NPC_FRAMES, paintKid, KID_POSES, paintSister, paintRobot, paintLastRoom, drawTv, TVSCREEN, BOARD, drawBoard, drawFeedBox, drawEarth, feedHouse, feedGatePost, feedRect } from '../art/moon.js';
 import { goNext } from '../core/flow.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -21,7 +21,7 @@ import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
 import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, PLAYROOM_REPLY, PLAYROOM_EMPTY, PLAYROOM_ASK, MOON_LOOKS, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
-import { replies, emptyRoom, endingTitle, endingsSeen, ENDINGS, linkEnding } from '../data/endings.js';
+import { replies, emptyRoom, endingTitle, linkEnding } from '../data/endings.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
 import { reviewKeys } from '../core/review.js';
 import { fx } from '../core/fx.js';
@@ -29,9 +29,9 @@ import { cg } from '../ui/cg.js';
 
 const n = c => hexNum(c);
 const ROOM_TEXT = [
-  ['Eight channels from Earth: a house, a street, a field.', 'One of them is the hall you came through.'],
-  ['Channel seven: the bedroom. The door is open. He is still there.', 'Another channel: a ridge, two small figures, watching lights.'],
-  ['Channel seven again: the grounds. A girl is walking up to the house.', 'Two of them are asleep.']
+  ['Eight channels from Earth.', 'One is the house she came through.'],
+  ['Channel seven: the bedroom.', 'The door is open. He is still there.'],
+  ['Channel seven: a girl walks up to the house.', 'Two of them are asleep.']
 ];
 
 export class Moon extends SideEpisode {
@@ -75,13 +75,12 @@ export class Moon extends SideEpisode {
     this.lastImg = this.addParallax(this.add.image(0, 0, 'mn_last').setOrigin(0).setDepth(30).setVisible(false), 0);
     this.tvImg = this.addParallax(this.add.image(TVSCREEN.x, TVSCREEN.y, 'mn_tvlive').setOrigin(0).setDepth(31).setVisible(false), 0, TVSCREEN.x, TVSCREEN.y);
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
-    this.cardG = this.addParallax(this.add.graphics().setDepth(45), 0);
 
     this.mode = 'walk'; this.view = { x: 0 }; this.heard = new Set(); this.vest = 0;
     // Phaser keeps this scene object between visits: everything an ending sets starts over here,
     // so the playroom can be played again in the same sitting (Nov 18)
-    Object.assign(this, { endCard: null, sitting: false, bugOff: false, boomed: false, quiet: false, r2Took: false, r2Aim: false, r2T: 0,
-      choiceMade: false, camLight: false, endingId: null, lastKind: null, cardTime: 0, lastT: 0, cutT: 0, cutTo: null, vestT: 0, lookT: 0,
+    Object.assign(this, { ended: null, sitting: false, bugOff: false, boomed: false, quiet: false, r2Took: false, r2Aim: false, r2T: 0,
+      choiceMade: false, camLight: false, endingId: null, lastKind: null, lastT: 0, cutT: 0, cutTo: null, vestT: 0, lookT: 0,
       force: null, empty: false, cam: null, camThing: null, hiss: null, talking: false, lines: [], talkI: -1, after: null, walk: null,
       choices: [], pick: 0, chooseT: 0, slipRows: null, upWas: false, shutSound: false, filmed: false, headN: 0, robotSrc: null, slide: null, roomT: 0 });
     this.girl.setVisible(true);
@@ -202,7 +201,7 @@ export class Moon extends SideEpisode {
     if (this.mode === 'room') { this.kid.x = LEVEL.stand; return; }
     if (this.talking && this.talkI < this.lines.length - 1) { this.talkI = this.lines.length - 2; this.nextLine(); return; }
     if (this.mode === 'look') return this.turnCamera();
-    if (this.mode === 'last') this.lastT = Math.max(this.lastT, this.cardAt());
+    // the last shot holds: nothing to skip to, and nothing pops up over it
   }
   updateView(dt) {
     const S = display.S, cam = this.cameras.main;
@@ -276,7 +275,7 @@ export class Moon extends SideEpisode {
     this.mode = 'talk'; this.kid.vx = 0; this.kid.face = 1; this.nearThing = null; this.bubbles.prompt = null;
     this.beds.show.stop(0.3); Sound.tone(392, 0.5, 'sine', 0.02, 196);
     // nobody here: she sits on their couch alone, and the show repeats itself
-    if (this.empty) return this.talk(PLAYROOM_EMPTY, () => this.walkTo(KX + 187, () => this.sitDown(() => this.toLast('rerun', 'endall', 4))));
+    if (this.empty) return this.talk(PLAYROOM_EMPTY, () => this.walkTo(KX + 187, () => this.sitDown(() => this.toLast('rerun', 'endall'))));
     this.talk(PLAYROOM, () => this.startChoose());
   }
 
@@ -300,7 +299,7 @@ export class Moon extends SideEpisode {
     if (r.id === 'lights') this.talk(PLAYROOM_REPLY.lights, () => this.startVest());
     else if (r.id === 'yes') this.talk(PLAYROOM_REPLY.yes, () => this.walkTo(LEVEL.couch.x - 12, () => { this.mode = 'r2'; this.r2T = 0; }));
     else if (r.id === 'turn') this.talk(PLAYROOM_REPLY.turn, () => { this.mode = 'look'; this.lookT = 0; });
-    else this.walkTo(KX + 187, () => this.sitDown(() => this.talk(PLAYROOM_REPLY.sit, () => { this.mode = 'sat'; this.time.delayedCall(4200, () => this.toLast('couch', 'couch', 7)); })));
+    else this.walkTo(KX + 187, () => this.sitDown(() => this.talk(PLAYROOM_REPLY.sit, () => { this.mode = 'sat'; this.time.delayedCall(4200, () => this.toLast('couch', 'couch')); })));
   }
 
   // ------------------------------------------------------------------ the endings
@@ -323,49 +322,49 @@ export class Moon extends SideEpisode {
     if (this.mode !== 'look' || this.cam.turned) return;
     this.cam.turned = true; this.mode = 'lit'; this.camThing.off = true;
     Sound.noise(0.3, 0.04, 1200); Sound.tone(220, 0.2, 'triangle', 0.03, 330);
-    this.talk(PLAYROOM_REPLY.turned, () => this.time.delayedCall(1200, () => this.toLast('playroom', 'lookback', 7)));
+    this.talk(PLAYROOM_REPLY.turned, () => this.time.delayedCall(1200, () => this.toLast('playroom', 'lookback')));
   }
   // ROUND TWO: she takes the controller from the little one; the screen asks for a target
   updateR2(dt) {
     this.r2T += dt;
     if (this.r2T > 0.8 && !this.r2Took) { this.r2Took = true; Sound.tone(520, 0.08, 'triangle', 0.02); }
     if (this.r2T > 3.4 && !this.r2Aim) { this.r2Aim = true; Sound.charge(); }
-    if (this.r2T > 4.6) this.toLast('ridge', 'round2', 7);
+    if (this.r2T > 4.6) this.toLast('ridge', 'round2');
   }
   startVest() {
     this.mode = 'vest'; this.vestT = 0; overlay.clearCaption();
     // the flash: white, a sound too low to hear properly, then nothing
-    this.flashRect.setFillStyle(0xebe6d8).setAlpha(fx.reduced ? 0.55 : 1); fx.shake(this.cameras.main, 300, 0.01);
+    // (reduced flashing: one solid ash frame, about 120 ms, then black; never a see-through wash)
+    this.flashRect.setFillStyle(fx.reduced ? 0x8f8d87 : 0xebe6d8).setAlpha(1); fx.shake(this.cameras.main, 300, 0.01);
     Sound.tone(42, 2.6, 'sine', 0.12, 30); Sound.noise(2.2, 0.16, 300);
     Object.values(this.beds).forEach(b => b.stop(0.05)); Music.stop(0.05);
   }
   updateVest(dt) {
     this.vestT += dt;
-    if (this.vestT > 1.6) this.flashRect.setFillStyle(0x000000).setAlpha(1);
-    if (this.vestT > 3.2) this.showLast('moon', 'vest', 10);
+    if (this.vestT > (fx.reduced ? 0.12 : 1.6)) this.flashRect.setFillStyle(0x000000).setAlpha(1);
+    if (this.vestT > 3.2) this.showLast('moon', 'vest');
   }
   // a hard cut to black, then the old TV
-  toLast(kind, id, cardAt) {
+  toLast(kind, id) {
     if (this.mode === 'cut' || this.mode === 'last') return;
-    this.mode = 'cut'; this.cutT = 0; this.cutTo = [kind, id, cardAt];
+    this.mode = 'cut'; this.cutT = 0; this.cutTo = [kind, id];
     this.flashRect.setFillStyle(0x000000).setAlpha(1); overlay.clearCaption();
     Object.values(this.beds).forEach(b => b.stop(0.05)); Music.stop(0.05); Sound.noise(0.12, 0.05, 6000);
   }
   updateCut(dt) { this.cutT += dt; if (this.cutT > 0.7) this.showLast(...this.cutTo); }
-  showLast(kind, id, cardAt) {
-    this.mode = 'last'; this.lastT = 0; this.lastKind = kind; this.endingId = id; this.cardTime = cardAt;
+  showLast(kind, id) {
+    this.mode = 'last'; this.lastT = 0; this.lastKind = kind; this.endingId = id;
     this.lastImg.setVisible(true); this.tvImg.setVisible(true); this.flashRect.setFillStyle(0x000000).setAlpha(1); cg.hp(null);
     this.hiss = Sound.wind(0.02); state.finish(this.epId); state.sawEnding(id);
+    this.ended = { id, title: endingTitle(id) }; // recorded, never drawn
     window.__ending = id;
   }
-  cardAt() { return this.cardTime || 8; }
   updateLast(dt) {
     this.lastT += dt;
     this.flashRect.setAlpha(this.lastT < 0.9 ? 1 : this.lastT < 1.8 ? 0.5 : 0); // black, then the TV, in two steps
     if (this.lastKind === 'moon' && this.lastT > 2.4 && !this.boomed) { this.boomed = true; Sound.noise(0.9, 0.05, 2500); }
     if (this.lastKind === 'couch' && this.lastT > 5 && !this.bugOff) { this.bugOff = true; Sound.click(0.02); }
     if (this.lastT > 30 && this.hiss && !this.quiet) { this.quiet = true; this.hiss.set(0.0001, 8); }
-    if (this.lastT >= this.cardAt() && !this.endCard) this.endCard = { title: endingTitle(this.endingId), seen: endingsSeen(), of: ENDINGS.length };
   }
 
   // ------------------------------------------------------------------ drawing
@@ -408,7 +407,7 @@ export class Moon extends SideEpisode {
     this.drawThings();
     this.drawLocks([], 1);
     this.drawHud();
-    if (this.mode === 'last') this.drawLast(this.lastT); else this.cardG.clear();
+    if (this.mode === 'last') this.drawLast(this.lastT);
   }
 
   // the kids on their couch: a breath now and then, a cheer after a win, turning round to her
@@ -471,7 +470,7 @@ export class Moon extends SideEpisode {
     g.fillStyle(n('#1b1c21'), 1); g.fillRect(LV.x, LV.y, LV.w, LV.h); g.fillStyle(n('#45474d'), 1); g.fillRect(LV.x, LV.y + LV.h - 9, LV.w, 9); g.fillStyle(n(M.trim), 1); g.fillRect(LV.x + 8, LV.y + LV.h - 22, 12, 13); g.fillRect(LV.x + 44, LV.y + LV.h - 18, 8, 9);
     g.fillStyle(n(M.white), 1); g.fillRect(sx, LV.y + LV.h - 15, 2, 6); g.fillStyle(n(this.P.hair), 1); g.fillRect(sx, LV.y + LV.h - 16, 2, 1);
     if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(n(M.red), 1); g.fillRect(LV.x + 3, LV.y + 3, 3, 3); }
-    pixText(g, 'LIVE', LV.x + 8, LV.y + 2, 0xebe6d8); pixText(g, 'CH 07', LV.x + LV.w - 22, LV.y + 2, n(M.yellow));
+    ccText(g, 'LIVE', LV.x + 8, LV.y + 2, 0xebe6d8); ccText(g, 'CH 07', LV.x + LV.w - 4 - ccWidth('CH 07'), LV.y + 2, n(M.yellow));
     // water from the fountain, arcing down into the basin, a pixel at a time
     const F = LEVEL.fountain.x;
     for (let i = 0; i < 10; i++) { const u = ((t * 0.9 + i / 10) % 1), side = i % 2 ? 1 : -1, x = F + side * (2 + u * 22), y = GROUND - 48 + u * u * 34 - u * 6; g.fillStyle(n(u < 0.6 ? '#ebe6d8' : '#b8b2a3'), 1); g.fillRect(Math.round(x), Math.round(y), 1, 2); }
@@ -491,7 +490,7 @@ export class Moon extends SideEpisode {
     if (this.empty) {
       // a rerun of the grounds: the same girl, walking up to the same gate
       g.fillStyle(n('#1b1c21'), 1); g.fillRect(x, y, S.w, S.h); g.fillStyle(n('#2e3036'), 1); g.fillRect(x, y + 66, S.w, 30);
-      g.fillStyle(n('#3a2f1f'), 1); g.fillRect(x + 50, y + 22, 76, 44); g.fillStyle(n(M.trim), 1); for (let i = 0; i < 5; i++) g.fillRect(x + 56 + i * 14, y + 34, 5, 9);
+      const fr = feedRect(g); feedHouse(fr, x + 56, y + 66); feedGatePost(fr, x + 48, y + 66); feedGatePost(fr, x + 128, y + 66);
       const gx = x + 14 + Math.floor((t * 9) % 60); g.fillStyle(n('#8f8d87'), 1); g.fillRect(gx, y + 56, 3, 9); g.fillStyle(n('#1b1c21'), 1); g.fillRect(gx, y + 55, 3, 2);
       if (Math.floor(t * 1.5) % 2 === 0) { g.fillStyle(0xe3412b, 1); g.fillRect(x + 6, y + 6, 32, 11); ccText(g, 'RERUN', x + 8, y + 8, 0xebe6d8); }
       return;
@@ -500,7 +499,7 @@ export class Moon extends SideEpisode {
     if (sat) {
       // THE COUCH: Earth, turning, small fires on its night side
       drawEarth(g, x + 88, y + 44, 30, t);
-      ccText(g, 'TAKE 32', x + 6, y + S.h - 12, 0xebe6d8);
+      ccText(g, 'TAKE ' + (state.bodyCount() + 1), x + 6, y + S.h - 22, 0xebe6d8);
       ccText(g, 'CH 07', x + S.w - 34, y + 5, n(M.trim));
       return;
     }
@@ -515,17 +514,16 @@ export class Moon extends SideEpisode {
     drawFeedBox(g, fx2, fy, fw, fh, gx);
     if (this.mode === 'r2' && this.r2Aim && Math.floor(t * 8) % 2) { g.lineStyle(1, n('#ffb01f'), 1); g.strokeRect(Math.round(gx) - 3, fy + fh - 17, 8, 10); }
     ccText(g, 'SCORE ' + (this.mode === 'walk' ? 2000 : 2400), x + 8, y + S.h - 22, n(M.mint));
-    if (round2 && Math.floor(t * 2.5) % 2 === 0) { const s = 'ROUND 2 READY?', w = ccWidth(s); g.fillStyle(ink, 1); g.fillRect(x + S.w / 2 - w / 2 - 3, y + S.h - 12, w + 6, 10); ccText(g, s, x + S.w / 2 - w / 2, y + S.h - 11, n(M.yellow)); }
-    if (this.mode === 'room' && this.roomT < 2.2 && Math.floor(t * 8) % 2 === 0) ccText(g, '+400', bx + 64, by + 2, n(M.yellow));
+    // the show's top line, between LIVE and CH 07: clear of the kids' heads, inside the glass
+    const top = s => { const w = ccWidth(s), cx = x + 88; ccText(g, s, Math.round(cx - w / 2), y + 8, n(M.yellow)); };
+    if (round2 && Math.floor(t * 2.5) % 2 === 0) top('ROUND 2 READY?');
+    if (this.mode === 'room' && this.roomT < 2.2 && Math.floor(t * 8) % 2 === 0) top('+400');
   }
 
-  // the cracked glasses, quiet up here; and her reply slip in the playroom
+  // her reply slip in the playroom. (No glasses up here: she has none on the Moon, so no crack
+  // and no NO SIGNAL over the picture.)
   drawHud() {
     const g = this.hudG; g.clear();
-    if (this.mode === 'vest' || this.mode === 'last' || this.mode === 'cut') return;
-    g.lineStyle(1, 0xebe6d8, 1);
-    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineBetween(px, py, x, y); } });
-    if (this.clock < 3 && Math.floor(this.clock * 3) % 2 === 0) pixText(g, 'NO SIGNAL', 44, 8, n(this.P.overlay), 1, 1);
     if (this.mode === 'choose') this.drawSlip(g);
   }
   // A paper slip over the kids' screen: REPLY, ruled rows, the one picked inverted.
@@ -553,19 +551,12 @@ export class Moon extends SideEpisode {
     const kind = this.lastKind;
     drawTv(this.tvCtx, kind, { t, blast: kind === 'moon' ? t - 2.4 : 0, bug: !(kind === 'couch' && this.bugOff), bite: this.bite, pieces: this.pieces });
     this.tvTex.refresh();
-    // the card: the ending's title, and how many of the five this browser has seen
-    const g = this.cardG; g.clear();
-    if (!this.endCard) return;
-    const a = this.endCard.title, b = 'ENDINGS SEEN ' + this.endCard.seen + '/' + this.endCard.of, w = Math.max(ccWidth(a), ccWidth(b)) + 12, x = 160 - Math.round(w / 2), y = 156;
-    g.fillStyle(0xebe6d8, 1); g.fillRect(x, y, w, 21); g.fillStyle(0xb8b2a3, 1); g.fillRect(x + 2, y + 10, w - 4, 1);
-    ccText(g, a, 160 - Math.round(ccWidth(a) / 2), y + 2, 0x0e0f12);
-    ccText(g, b, 160 - Math.round(ccWidth(b) / 2), y + 12, 0x45474d);
   }
 
   hint() {
     if (this.mode === 'choose') return overlay.hint('W and S pick a reply. J says it.');
     if (this.mode === 'look') return overlay.hint('Their camera, by the window. J turns it around.');
-    if (this.mode === 'last' && this.endCard) return overlay.hint('P opens the menu.');
+    if (this.mode === 'last') return overlay.hint(''); // the last shot: nothing under the picture
     if (this.mode !== 'walk' || this.leaving) return overlay.hint('');
     const x = (this.kid.x + this.kid.w / 2) / TILE;
     if (x < 6) return overlay.hint('J looks at things and talks to things.');

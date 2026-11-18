@@ -8,6 +8,7 @@
 // outline (docs/ART_DIRECTION.md sections 2 and 4).
 import { Painter, rng } from './painter.js';
 import { pixText, textWidth } from './pixfont.js';
+import { ccText, ccWidth } from './ccfont.js';
 
 export const TILE = 16, GROUND = 160;
 const T = TILE, G = GROUND;
@@ -483,6 +484,46 @@ export function paintRobot(led, step) {
   return p;
 }
 
+// ------------------------------------------------------------------ the house, on the show's feeds
+// Episode 1's house, small: a bronze body with gold pilasters, a white temple front (columns,
+// a pediment with the gold sun), a white balustrade with gold finials, lit gold windows. Drawn
+// the same way on every feed (the kids' room, the playroom's rerun, the old TV, batch 4) so the
+// reveal points back at the place the class just saw. Unit design 64 x 39 px; u scales it by a
+// whole number. rect(x, y, w, h, color) is the target: a Painter, a Phaser Graphics or a 2D
+// canvas, through feedRect below. x0 is its left edge, g the ground it stands on.
+export const FEED_HOUSE = { w: 64, h: 39 };
+export function feedHouse(rect, x0, g, u = 1) {
+  const r = (x, y, w, h, c) => rect(x0 + x * u, g + y * u, w * u, h * u, c);
+  const bronze = '#3a2f1f', bronzeHi = '#54432a', bronzeLo = '#261f15', gold = '#d6a03c', goldHi = '#f2d58c', goldLo = '#8a5f1c', bone = '#ebe6d8', boneLo = '#b8b2a3', lit = '#f5ce77', ink = '#0e0f12';
+  // the roof: a white balustrade, gold finials at the corners
+  r(-1, -35, 66, 1, bone); for (let i = 1; i < 64; i += 3) r(i, -34, 1, 3, boneLo); r(-1, -31, 66, 1, bone);
+  r(0, -38, 1, 3, gold); r(63, -38, 1, 3, gold); r(0, -39, 1, 1, goldHi); r(63, -39, 1, 1, goldHi);
+  // the bronze body, a storey band
+  r(0, -30, 64, 30, bronze); r(0, -30, 64, 1, bronzeHi); r(0, -16, 64, 1, boneLo); r(0, -15, 64, 1, goldLo);
+  // gold pilasters on the wings, windows between them, some lit
+  [0, 9, 18, 44, 53, 62].forEach(px => { r(px, -30, 2, 30, gold); r(px + 1, -30, 1, 30, goldLo); });
+  [3, 12, 47, 56].forEach((wx, i) => [-27, -12].forEach((wy, j) => { const on = (i + j) % 3 !== 1; r(wx - 1, wy - 1, 5, 10, goldLo); r(wx, wy, 3, 8, on ? lit : ink); if (on) r(wx, wy, 1, 3, goldHi); }));
+  // the temple front: a dark porch, four white columns, the lit door
+  r(20, -26, 24, 26, bronzeLo); r(30, -12, 4, 12, goldHi); r(31, -11, 2, 11, lit);
+  [22, 26, 36, 40].forEach(cx => { r(cx, -26, 2, 26, bone); r(cx + 1, -26, 1, 26, boneLo); r(cx - 1, -1, 4, 1, bone); });
+  r(20, -28, 24, 2, bone); r(20, -28, 24, 1, gold);
+  // the pediment: white inside a gold edge, the gold sun in the middle
+  for (let k = 0; k < 9; k++) { const half = 13 - Math.round((k + 1) * 13 / 10), y = -29 - k; r(32 - half - 1, y, 2 * half + 2, 1, gold); if (half > 0) r(32 - half, y, 2 * half, 1, bone); }
+  r(31, -33, 3, 2, gold); r(32, -34, 1, 1, gold); r(32, -33, 1, 1, goldHi);
+}
+// a white gate post with a gold cap and finial, the pair at the gate in episode 1
+export function feedGatePost(rect, x, g, u = 1) {
+  const r = (a, b, w, h, c) => rect(x + a * u, g + b * u, w * u, h * u, c);
+  r(-2, -17, 5, 17, '#0e0f12'); r(-1, -16, 3, 16, '#ebe6d8'); r(1, -16, 1, 16, '#b8b2a3');
+  r(-2, -18, 5, 2, '#d6a03c'); r(-1, -20, 3, 2, '#d6a03c'); r(0, -21, 1, 1, '#f2d58c');
+}
+// rect targets: a Painter (p.rect), a Phaser Graphics, or a 2D canvas context
+export function feedRect(t) {
+  if (t && typeof t.rect === 'function' && t.ctx) return (x, y, w, h, c) => t.rect(x, y, w, h, c);
+  if (t && typeof t.fillStyle === 'function') return (x, y, w, h, c) => { t.fillStyle(parseInt(c.slice(1), 16), 1); t.fillRect(x, y, w, h); };
+  return (x, y, w, h, c) => { t.fillStyle = c; t.fillRect(x, y, w, h); };
+}
+
 // ------------------------------------------------------------------ the last shot
 // An old TV in a dark room on Earth. Every ending ends here; what the TV shows changes.
 export function paintLastRoom() {
@@ -559,9 +600,9 @@ export function drawTv(x, kind, o) {
       if (t > 1.2) { x.fillStyle = '#e3412b'; x.fillRect(6, 80, 34, 9); tvText(x, 'TAKE 1', 9, 82, '#ebe6d8'); }
     } else {
       x.fillStyle = '#2e3036'; x.fillRect(0, 70, TVW, 30); x.fillStyle = '#45474d'; x.fillRect(0, 70, TVW, 1);
-      x.fillStyle = '#3a2f1f'; x.fillRect(40, 34, 70, 36); x.fillStyle = '#54432a'; x.fillRect(40, 34, 70, 2);
-      x.fillStyle = '#d6a03c'; for (let i = 0; i < 5; i++) x.fillRect(46 + i * 13, 44, 5, 8); x.fillRect(70, 26, 10, 8);
-      x.fillStyle = '#261f15'; x.fillRect(0, 62, 34, 8); x.fillRect(116, 62, 30, 8);
+      const fr = feedRect(x); feedHouse(fr, 42, 70);
+      x.fillStyle = '#261f15'; x.fillRect(0, 62, 30, 8); x.fillRect(120, 62, 26, 8);
+      feedGatePost(fr, 34, 70); feedGatePost(fr, 114, 70);
       // the same girl walking up to the gate, again; it loops
       const gx = 10 + Math.floor((t * 9) % 60); x.fillStyle = '#0e0f12'; x.fillRect(gx - 1, 61, 5, 10); x.fillStyle = '#8f8d87'; x.fillRect(gx, 63, 3, 7); x.fillStyle = '#1b1c21'; x.fillRect(gx, 62, 3, 2);
       if (Math.floor(t * 1.5) % 2 === 0) { x.fillStyle = '#e3412b'; x.fillRect(6, 6, 40, 11); tvText(x, 'RERUN', 11, 8, '#ebe6d8'); }
@@ -590,5 +631,6 @@ export function drawTv(x, kind, o) {
     x.fillStyle = '#d6a03c'; x.fillRect(28, 66, 90, 18); x.fillStyle = '#8a5f1c'; x.fillRect(28, 78, 90, 6); x.fillRect(24, 62, 6, 22); x.fillRect(116, 62, 6, 22);
     figureBack(x, 54, 68, '#f2d58c', '#ebe6d8', true); figureBack(x, 73, 68, '#1b1c21', '#8f8d87', false); figureBack(x, 92, 68, '#d6a03c', '#ebe6d8', true);
   }
-  if (o.bug !== false) tvText(x, 'CH 07', TVW - 26, 4, '#d6a03c');
+  // the channel mark, in the caption face (the 3x5 H reads as an A at this size)
+  if (o.bug !== false) ccText(x, 'CH 07', TVW - 4 - ccWidth('CH 07'), 4, '#d6a03c');
 }
