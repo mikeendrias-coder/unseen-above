@@ -14,15 +14,15 @@ const path = require('path');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 const DIST = path.join(__dirname, '..', '..', 'dist');
 (async () => {
-  const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+  const b = await chromium.launch({ ignoreDefaultArgs: ['--mute-audio'], args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
   const ctx = await b.newContext({ viewport: { width: 1920, height: 1300 }, deviceScaleFactor: 1, acceptDownloads: true });
   const p = await ctx.newPage();
   const errs = [];
   p.on('pageerror', e => errs.push('pageerror: ' + e.message));
   p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
-  await p.goto(BASE + '/trailer.html?record');
+  await p.goto(BASE + '/trailer.html?record' + (process.env.UA_QUERY || ''));
   await p.waitForTimeout(800);
-  const length = await p.evaluate(() => window.__trailerInfo.length);
+  const length = process.env.UA_QUERY ? 40 : await p.evaluate(() => window.__trailerInfo.length);
   console.log('recording', length.toFixed(1), 's');
   const dl = p.waitForEvent('download', { timeout: (length + 90) * 1000 });
   await p.click('#tr-play');
@@ -35,7 +35,7 @@ const DIST = path.join(__dirname, '..', '..', 'dist');
   console.log('saved', webm, (fs.statSync(webm).size / 1e6).toFixed(1) + ' MB');
   await b.close();
   if (errs.length) console.log('page errors:\n' + errs.slice(0, 20).join('\n'));
-  const mp4 = path.join(DIST, 'trailer.mp4');
+  const mp4 = path.join(DIST, process.env.UA_QUERY ? 'trailer-test.mp4' : 'trailer.mp4');
   execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', webm, '-vf', 'fps=30,scale=1920:1080:flags=neighbor', '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-tune', 'animation', '-pix_fmt', 'yuv420p',
     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', mp4], { stdio: 'inherit' });
   fs.unlinkSync(webm);

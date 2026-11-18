@@ -49,7 +49,7 @@ async function watch(p, secs) {
     check(await p.evaluate(() => window.__trailerDone), 'it ends');
     check(await p.isVisible('#tr-end'), 'the end screen comes up');
   } else {
-    for (const [from, secs] of [['ridge', 8], ['climb', 6], ['form1', 6], ['fight', 9]]) {
+    for (const [from, secs] of [['ridge', 8], ['climb', 6], ['form1', 6], ['creator', 6]]) {
       const r = await open(b, `?from=${from}&only`);
       await r.p.click('#tr-play');
       const seen = await watch(r.p, secs);
