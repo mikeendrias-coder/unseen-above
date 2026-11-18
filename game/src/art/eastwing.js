@@ -26,7 +26,7 @@ export function buildMap() {
   fill(17, 4, 21, 4, 'K'); fill(17, 8, 21, 8, 'K'); fill(23, 6, 24, 6, 'K');
   fill(25, 3, 26, 3, 'T');
   put([[16, 10], [20, 10], [22, 2], [26, 9], [19, 6]], ',');
-  put([[16, 3]], 'b');
+  put([[16, 2]], 'b'); // clear of where the dumbwaiter comes out, so each has its own look
   // the way from the study to the ballroom
   fill(28, 6, 30, 7, '.');
   // D: the ballroom, four pillars, holes in the old floor
@@ -46,6 +46,12 @@ export function buildMap() {
 
 export const LEVEL = {
   start: [6, 24],
+  // the show's tape marks (checkpoints), tiles: the sensor corridor's mouth, the dumbwaiter hatch
+  // (out of every sensor's range), the way into the ballroom
+  marks: [[13, 22], [24, 13], [29, 6]],
+  // gold left out, tiles: the landing, in two sensors' range, in the study camera's sweep by the
+  // robot's loop, under the chandelier's eyes
+  gold: [[3, 21], [19, 22], [26, 17], [22, 4], [42, 7]],
   exit: [37, 1],
   moon: [{ x: 6 * T + 8, y: 24 * T + 8, r: 46 }, { x: 25 * T, y: 16 * T, r: 20 }],
   // motion sensors sit in the walls: they pulse, and anything moving in range trips them

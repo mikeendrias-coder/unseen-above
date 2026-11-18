@@ -38,8 +38,9 @@ const norm = s => String(s).replace(/\s+/g, ' ').trim();
           s.bubbles.clear('item');
           k.x = (t.x0 + t.x1) / 2 + dx - k.w / 2; k.y = Math.max(2, t.y0 - 30); k.h = 14; k.crouch = false; k.vx = 0; k.vy = 0; k.onGround = false;
         }, [i, dx]);
-        await p.waitForTimeout(450);
-        reached = await p.evaluate(i => { const s = window.__game.scene; return s.nearThing === s.things.filter(t => t.look && !t.body)[i]; }, i);
+        // she drops onto it; a slow first frame or two can make that take a while, so wait for
+        // the thing itself (up to 1.5 s) rather than a fixed time
+        reached = await p.waitForFunction(i => { const s = window.__game.scene; return s.nearThing === s.things.filter(t => t.look && !t.body)[i] && s.kid.onGround; }, i, { timeout: 1500, polling: 50 }).then(() => true, () => false);
         if (reached) break;
       }
       if (!reached) { bad.push(i + ' (out of reach)'); continue; }

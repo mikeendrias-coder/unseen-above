@@ -14,7 +14,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode, K } from '../core/side.js';
-import { Props, hardCone } from '../core/props.js';
+import { Props, Marks, Gold, hardCone } from '../core/props.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE, bodyLines } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
@@ -74,8 +74,16 @@ export class Gallery extends SideEpisode {
     const order = []; for (let i = 0; i < 10; i++) { let s = Math.random() < 0.5 ? 'low' : 'high'; if (i >= 2 && order[i - 1] === s && order[i - 2] === s) s = s === 'low' ? 'high' : 'low'; order.push(s); }
     this.laserDef = Object.assign({}, LEVEL.laser, { order, idle: LEVEL.laser.idle * (0.8 + Math.random() * 0.4), first: LEVEL.laser.first * (0.7 + Math.random() * 0.6) });
     this.addThings();
+    // the show's tape marks (checkpoints): a retry from one keeps the glasses if she had them
+    this.markG = this.add.graphics().setDepth(1.4);
+    this.tape = new Marks(this, LEVEL.marks.map(([x, y]) => ({ x, y })), { carry: () => ({ glasses: this.glasses }) });
+    this.gold = new Gold(this, LEVEL.gold.map(([x, y]) => ({ x, y })));
     this.drawBodies();
     this.spawn();
+    if (this.tape.from) {
+      this.safeT = 1; // a beat to get her bearings before a camera can lock on
+      if (this.tape.from.glasses) { const D = this.drawer; D.open = 1; D.opening = true; D.fly = 1; this.cabinetThing.off = true; this.glasses = true; this.gl.has = true; this.gl.on = true; }
+    }
     this.followGirl();
     const fromCut = !!(data && data.fromCut);
     this.cameras.main.fadeIn(fromCut ? 900 : 350);
@@ -160,9 +168,9 @@ export class Gallery extends SideEpisode {
       this.dyn.step(dt, () => this.moveKid(dt));
       if (this.dyn.riding) this.pitPeak = null;
       if (k.onGround) { if (inPit && wasAir && this.pitPeak != null) { const d = k.y - this.pitPeak; if (d >= K.fall1) this.hurt(d >= K.fall2 ? 2 : 1, 'fall'); } this.pitPeak = null; }
-      this.updateThings(); if (c.glasses()) this.gl.toggle();
+      this.updateThings(); this.tape.update(dt); if (c.glasses()) this.gl.toggle();
     } else { this.dyn.update(dt); if (this.dead && this.girl.visible) this.settle(dt); }
-    this.gl.update(dt);
+    this.gl.update(dt); this.gold.update(dt);
     this.updateDrawer(dt);
     this.updateDropper(dt);
     this.updateCameras(dt);
@@ -395,6 +403,7 @@ export class Gallery extends SideEpisode {
       const k = this.kid, left = Math.round(k.x + k.w / 2) - 5, y = Math.round(k.y + 3);
       eg.fillStyle(hexNum(P.overlay), 1); eg.fillRect(left + (this.girl.flipX ? 2 : 5), y, 3, 1);
     }
+    const mg = this.markG; mg.clear(); this.tape.draw(mg); this.gold.draw(mg);
     this.dyn.draw();
     this.drawProps();
     this.drawHud();
@@ -472,7 +481,8 @@ export class Gallery extends SideEpisode {
     this.gl.drawStatic(g, col);
     if (!this.gl.showing) return;
     this.hudT += 1 / 60;
-    const a = this.dead ? 0.3 : 1, s = 8, m = 5;
+    if (this.dead) return; // no see-through HUD while the strike plays: it just goes
+    const a = 1, s = 8, m = 5;
     if (this.hudT < 0.3 && Math.floor(this.hudT * 20) % 2) return;
     g.fillStyle(col, a);
     [[m, m, 1, 1], [320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });

@@ -2,7 +2,8 @@
 // the face of the house to the front door on the balcony. Rebuilt Nov 17 (final pass): a tall
 // level in seven short sections (art/estate.js lists them), physics props (core/props.js), the
 // house hurts her (falls, a crate), what watches her kills her (lamps, drones, the scan).
-// A death restarts the episode; the body stays where it fell, older on every take.
+// A death starts the next take at the last tape mark she reached (core/props.js Marks); out of
+// lives, the episode starts from the top. The body stays where it fell, older on every take.
 import { Music } from '../core/music.js';
 import { hexNum, Painter } from '../art/painter.js';
 import { makeSprites, girlFrame } from '../art/sprites.js';
@@ -13,7 +14,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, inPoly } from '../core/side.js';
-import { Props, hardCone } from '../core/props.js';
+import { Props, Marks, Gold, hardCone } from '../core/props.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
 import { SatelliteStrike } from '../art/strike.js';
@@ -97,9 +98,15 @@ export class Grounds extends SideEpisode {
     this.lights = LEVEL.lights.map(l => Object.assign({}, l, { lock: 0, cone: null, u: 0, hold: 0, cd: 0 }));
     this.drones = LEVEL.drones.map(d => Object.assign({}, d, { x: d.x0 + (d.x1 - d.x0) * 0.3, dir: 1, lock: 0, cone: null }));
     this.skipPoints = LEVEL.skip.map(([x]) => x * T);
+    // the show's tape marks: a death goes back to the last one she stood on (core/props.js)
+    this.markG = this.add.graphics().setDepth(1.3);
+    this.tape = new Marks(this, LEVEL.marks.map(([x, y]) => ({ x, y })));
+    this.gold = new Gold(this, LEVEL.gold.map(([x, y]) => ({ x, y })));
     this.drawBodies();
     this.drawFloor();
     this.spawn(data && data.fromIntro ? 1 * T : null);
+    // back at a mark: a beat to get her bearings before a light can lock on
+    if (this.tape.from) this.safeT = 1;
     this.followGirl();
     this.cameras.main.fadeIn(data && data.fromIntro ? 900 : 350);
     this.beds = { wind: Sound.wind(0.14), lounge: Sound.lounge(0.0001) };
@@ -171,8 +178,9 @@ export class Grounds extends SideEpisode {
     this.clock += dt; this.safeT = Math.max(0, (this.safeT || 0) - dt);
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
-    if (!this.dead && !this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); }
+    if (!this.dead && !this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); this.tape.update(dt); }
     else { this.dyn.update(dt); if (this.dead && this.girl.visible) this.settle(dt); }
+    this.gold.update(dt);
     this.updateScan(dt);
     this.updateLights(dt);
     this.updateDrones(dt);
@@ -338,6 +346,7 @@ export class Grounds extends SideEpisode {
     const lit = s => s.cone && hardCone(g, s.cone, s.lock > 0 ? C('red') : C('ash5'), v);
     this.lights.forEach(lit); this.drones.forEach(lit);
     this.drawLocks([...this.lights, ...this.drones]);
+    const mg = this.markG; mg.clear(); this.tape.draw(mg); this.gold.draw(mg);
     this.dyn.draw();
     this.drawScan();
     this.drawThings();
