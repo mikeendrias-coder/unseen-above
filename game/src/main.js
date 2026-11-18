@@ -25,11 +25,12 @@ import { Hallway } from './scenes/Hallway.js';
 
 // Which part to open: ?scene=grounds|gallery|satellite|kids (&batch=2 &skin=N), or a plain #name
 // (a shared link keeps only that): #opening, #grounds, #gallery, #fall, #eastwing, #bedroom,
-// #moon, #hallway, #batch1 to #batch4, #kids
+// #moon, #hallway, #playroom, #batch1 to #batch4, #kids
 function route() {
   const params = new URLSearchParams(location.search), hash = location.hash.replace('#', '');
   if (/^batch[1-4]$/.test(hash)) { params.set('scene', 'satellite'); params.set('batch', hash.slice(5)); }
   else if (['grounds', 'gallery', 'fall', 'eastwing', 'bedroom', 'moon', 'hallway', 'kids'].includes(hash)) params.set('scene', hash);
+  else if (hash === 'playroom') return { first: 'moon', firstData: { at: 'playroom' } };
   else if (hash === 'opening') params.set('scene', 'intro');
   const first = ['grounds', 'gallery', 'fall', 'eastwing', 'bedroom', 'moon', 'hallway', 'satellite', 'kids'].includes(params.get('scene')) ? params.get('scene') : 'intro';
   const batch = [1, 2, 3, 4].includes(Number(params.get('batch'))) ? Number(params.get('batch')) : 1;
@@ -146,7 +147,9 @@ const begin = entry => {
 const resume = () => { const st = saved(); begin(st ? { first: st.scene, firstData: Object.assign({}, st.data) } : null); };
 // Enter on the guide: Continue when there is a place to go back to
 const primary = () => (saved() ? resume() : begin(null));
-function guide() { syncGuide(); stopPicker = initPicker(primary); }
+// a chapter from the title screen's list: that part, now (the same as a jump link)
+const chapter = h => { location.hash = h; setTimeout(() => { if (!playing) begin(null); }, 0); };
+function guide() { syncGuide(); stopPicker = initPicker(primary, chapter); }
 
 if (go) {
   guide();

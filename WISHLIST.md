@@ -27,6 +27,8 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 ## 3. Story
 - `todo` **Multiple endings** (good, bad, others). Which one you get depends on which clues you found and interacted with, and on dialogue choices, maybe in the final cutscene. Current ending stays as one of them. Story calls stay Michael's. (Nov 17)
 
+- `done, check` **Get to any part, including after episode 5** (Michael, Nov 17: "I cannot skip to it"). Title menu has Chapters (every part, incl. the playroom, which never had a link); jump links under the game gained #playroom.
+
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).
 
