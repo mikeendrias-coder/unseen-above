@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="The paper behind the game Unseen Above. Michael Endrias, Introduction to Space Law.">
+<title>__TITLE_TEXT__</title>
+<style>
+  /* The paper page for Unseen Above. The game's one palette, Ash and Gold (src/art/palettes.js
+     ASH): a bone sheet of paperwork on an ash desk, ash ink, red only for the stamp. The caption
+     face (fonts/ch07-caption.ttf, the game's pixel letters) is for headings, labels and the stamp,
+     always at whole multiples of 10px so it stays sharp. Reading text is a book serif already on
+     the computer, so the page needs no network. No glows, no gradients. Built by paper/build.js. */
+  @font-face { font-family: "CH07 Caption"; src: url(__CCFONT__) format("truetype"); font-display: block; }
+  :root {
+    --ash0: #0e0f12; --ash1: #1b1c21; --ash2: #2e3036; --ash3: #45474d; --ash4: #6b6c70; --ash5: #8f8d87;
+    --bone: #ebe6d8; --boneLo: #b8b2a3; --red: #e3412b;
+    --pix: "CH07 Caption", ui-monospace, Menlo, Consolas, monospace;
+    --serif: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Cambria, Georgia, "Noto Serif", "DejaVu Serif", serif;
+    /* the caption face's sizes: label, heading, title */
+    --p1: 10px; --p2: 20px; --p3: 40px;
+    --gut: 16px;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--ash1); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ash1); color: var(--ash0); font: clamp(18px, 0.55vw + 12px, 24px)/1.6 var(--serif); padding: 0 max(var(--gut), env(safe-area-inset-right, 0px)) 48px max(var(--gut), env(safe-area-inset-left, 0px)); }
+  ::selection { background: var(--ash0); color: var(--bone); }
+  .px { font-family: var(--pix); -webkit-font-smoothing: none; font-smooth: never; font-weight: normal; letter-spacing: 0; }
+  a { color: inherit; }
+  a:focus { outline: none; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--ash0); outline-offset: 2px; }
+  .skip { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 6px 10px; background: var(--bone); color: var(--ash0); font: var(--p1)/1.4 var(--pix); text-decoration: none; }
+  .skip:focus { left: var(--gut); }
+
+  /* the strip across the top: the channel, and the way back to the game as one of its key caps */
+  .strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; max-width: 1240px; margin: 0 auto; padding: 14px 0 16px; color: var(--ash5); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .strip b { color: var(--bone); font-weight: normal; }
+  .strip i { color: var(--red); font-style: normal; }
+  .keycap { display: inline-block; padding: 6px 10px 5px; background: var(--boneLo); color: var(--ash0); border: 2px solid var(--ash0); box-shadow: 0 3px 0 var(--ash3), 0 3px 0 2px var(--ash0); font: var(--p1)/10px var(--pix); text-decoration: none; -webkit-font-smoothing: none; white-space: nowrap; }
+  .keycap:hover { background: var(--bone); }
+  .keycap:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--ash0); }
+  .keycap:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
+
+  /* the desk: the index on the left, the sheet on the right */
+  .desk { display: grid; grid-template-columns: 250px minmax(0, 860px); justify-content: center; align-items: start; gap: 28px; max-width: 1240px; margin: 0 auto; }
+
+  /* The index: a form of its own, sticky beside the sheet. On phones it is a bar along the top
+     that opens into the list. The row being read is inverted, with the game's pick mark. */
+  .index { position: sticky; top: 16px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow: auto; background: var(--bone); border: 2px solid var(--ash0); box-shadow: 0 0 0 2px var(--ash3); scrollbar-width: thin; }
+  .index summary { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 7px; background: var(--ash0); color: var(--bone); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; list-style: none; cursor: default; }
+  .index summary::-webkit-details-marker { display: none; }
+  .index summary::marker { content: ""; }
+  .index summary .now { display: none; }
+  .index summary .arrow { display: none; }
+  .index ol { margin: 0; padding: 0; list-style: none; }
+  .index li { border-bottom: 1px solid var(--boneLo); }
+  .index li:last-child { border-bottom: 0; }
+  .index a { position: relative; display: grid; grid-template-columns: 56px 1fr; gap: 6px; padding: 7px 10px 7px 18px; text-decoration: none; line-height: 1.3; }
+  .index .ttab { padding-top: 3px; color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; white-space: nowrap; }
+  .index .ttext { font-size: 15px; }
+  .index a:hover { background: var(--boneLo); }
+  .index a[aria-current="true"] { background: var(--ash0); color: var(--bone); }
+  .index a[aria-current="true"] .ttab { color: var(--boneLo); }
+  .index a[aria-current="true"]::before { content: ">"; position: absolute; left: 7px; top: 9px; font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .index .foot { padding: 10px; border-top: 2px solid var(--ash0); }
+
+  /* the sheet */
+  .sheet { min-width: 0; background: var(--bone); border: 2px solid var(--ash0); box-shadow: 0 0 0 2px var(--ash3); padding: 0 clamp(18px, 5vw, 64px) 40px; }
+  .cover { margin: 0 calc(-1 * clamp(18px, 5vw, 64px)); padding: 0 clamp(18px, 5vw, 64px) 22px; border-bottom: 4px double var(--ash0); }
+  .formrow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin: 0 calc(-1 * clamp(18px, 5vw, 64px)); padding: 9px clamp(18px, 5vw, 64px) 8px; background: var(--ash0); color: var(--boneLo); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .formrow b { color: var(--bone); font-weight: normal; }
+  .coverbody { position: relative; padding-top: 28px; }
+  h1 { margin: 0; padding-right: 150px; font-size: 1em; font-weight: normal; }
+  h1 .t1 { display: block; font: var(--p3)/1.1 var(--pix); -webkit-font-smoothing: none; text-transform: uppercase; letter-spacing: 0; }
+  h1 .t2 { display: block; max-width: 24em; margin-top: 16px; font: 600 1.6em/1.25 var(--serif); }
+  .stamp { position: absolute; right: 0; top: 30px; padding: 7px 10px 6px; border: 3px solid var(--red); outline: 2px solid var(--red); outline-offset: 3px; color: var(--red); font: var(--p2)/1 var(--pix); -webkit-font-smoothing: none; }
+  .stamp small { display: block; margin-top: 6px; font-size: var(--p1); text-align: center; }
+  /* the form's fields: label in caps on a ruled line, the entry beside it */
+  .fields { display: grid; grid-template-columns: repeat(4, minmax(0, auto)); gap: 0 20px; margin: 22px 0 0; }
+  .field { min-width: 0; padding: 6px 0 5px; border-bottom: 1px solid var(--ash4); }
+  .field.wide { grid-column: 1 / -1; }
+  .field dt { color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .field dd { margin: 2px 0 0; }
+
+  /* sections: a tab with the part, a heading in the caption face, ruled off */
+  .part { padding-top: 30px; }
+  .part + .part { margin-top: 18px; border-top: 2px solid var(--ash0); }
+  .sechead { margin-bottom: 14px; }
+  .tab { display: block; width: fit-content; margin-top: -32px; margin-bottom: 14px; padding: 6px 8px 5px; background: var(--ash0); color: var(--bone); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; vertical-align: top; }
+  .part h2 { margin: 0; scroll-margin-top: 64px; font: var(--p2)/1.5 var(--pix); -webkit-font-smoothing: none; }
+  .part h2 em { font-style: normal; text-decoration: underline; text-underline-offset: 4px; }
+  .prose { max-width: 66ch; }
+  .prose p { margin: 0 0 1em; }
+  .prose h3, .prose h4 { width: fit-content; margin: 1.6em 0 0.6em; padding-bottom: 4px; border-bottom: 2px solid var(--ash0); scroll-margin-top: 20px; font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; text-transform: uppercase; }
+  .prose h4 { border-bottom-width: 1px; color: var(--ash3); }
+  .prose ul, .prose ol { margin: 0 0 1em; padding-left: 1.4em; }
+  .prose li { margin-bottom: 0.3em; }
+  .prose blockquote { margin: 0 0 1em; padding: 2px 0 2px 1em; border-left: 4px solid var(--ash4); color: var(--ash2); }
+  .prose a { text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .prose a:hover { background: var(--boneLo); }
+  .prose hr { height: 0; margin: 1.6em 0; border: 0; border-top: 1px solid var(--ash4); }
+  .prose code { font: 0.85em ui-monospace, Menlo, Consolas, monospace; background: var(--boneLo); padding: 0 3px; }
+  .prose img { max-width: 100%; }
+  .prose table { border-collapse: collapse; margin: 0 0 1em; font-size: 0.9em; }
+  .prose th, .prose td { padding: 4px 10px; border-bottom: 1px solid var(--ash4); text-align: left; }
+  .prose th { font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; color: var(--ash3); }
+
+  /* the TL;DR: a slip on top of the sheet, bigger words, double ruled */
+  .tldr { margin: 30px 0 8px; padding: 0 22px 6px; border: 2px solid var(--ash0); outline: 1px solid var(--ash0); outline-offset: 3px; }
+  .tldr .tab { margin-top: -13px; margin-bottom: 12px; margin-left: -8px; }
+  .tldr h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tldr .sechead { margin: 0; }
+  .tldr .prose { max-width: none; font-size: 1.22em; line-height: 1.5; }
+  .tldr + .part { margin-top: 26px; }
+
+  /* placeholders Michael still has to write: a flat grey box */
+  mark.todo { background: var(--boneLo); color: var(--ash2); padding: 1px 5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+  /* note marks in the text, and the notes */
+  /* the mark rides above the line without pushing the lines apart */
+  .fnref { position: relative; top: -0.55em; line-height: 0; vertical-align: baseline; font-size: 1em; }
+  .fnref a { display: inline-block; min-width: 16px; margin-left: 2px; padding: 3px 3px 2px; background: var(--ash0); color: var(--bone); font: var(--p1)/1 var(--pix); -webkit-font-smoothing: none; text-align: center; text-decoration: none; vertical-align: baseline; scroll-margin-top: 30vh; }
+  .fnref a:hover { background: var(--ash3); }
+  .fnref a:target { outline: 3px solid var(--red); outline-offset: 2px; }
+  .fnlist { margin: 0; padding: 0; list-style: none; font-size: 0.86em; line-height: 1.55; }
+  .fnlist li { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 10px 8px 9px 0; border-bottom: 1px solid var(--ash4); scroll-margin-top: 30vh; }
+  .fnlist li:target { background: var(--boneLo); }
+  .fnnum { padding-top: 4px; color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; text-align: right; }
+  .fntext p { margin: 0 0 0.5em; }
+  .fntext p:last-child { margin: 0; }
+  .fnback { display: inline-block; margin-left: 4px; padding: 3px 5px 2px; border: 1px solid var(--ash0); font: var(--p1)/1 var(--pix); -webkit-font-smoothing: none; text-decoration: none; vertical-align: 2px; white-space: nowrap; }
+  .fnback:hover { background: var(--ash0); color: var(--bone); }
+
+  .eof { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin: 36px 0 0; padding-top: 14px; border-top: 4px double var(--ash0); color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+
+  /* Phones and narrow windows: the index becomes a bar along the top that opens into the list. */
+  @media (max-width: 999px) {
+    .desk { display: block; }
+    .index { top: 0; z-index: 10; margin: 0 calc(-1 * var(--gut)) 14px; max-height: none; overflow: visible; border-width: 0 0 2px; box-shadow: none; background: var(--ash0); }
+    .index summary { min-height: 44px; padding: 0 var(--gut); cursor: pointer; gap: 12px; }
+    .index summary .now { display: block; overflow: hidden; color: var(--boneLo); white-space: nowrap; text-overflow: ellipsis; text-align: right; }
+    .index summary .arrow { display: inline-block; margin-left: 6px; }
+    .index details[open] summary .arrow { transform: scaleY(-1); }
+    .index ol { position: absolute; left: 0; right: 0; top: 100%; max-height: 70vh; max-height: 70dvh; overflow: auto; padding: 0; background: var(--bone); border-bottom: 2px solid var(--ash0); }
+    .index a { padding: 10px var(--gut) 10px 28px; min-height: 44px; }
+    .index a[aria-current="true"]::before { left: 12px; top: 12px; }
+    .index .ttext { font-size: 16px; }
+    .index .foot { display: none; }
+    .part h2 { scroll-margin-top: 104px; }
+    .prose h3, .prose h4 { scroll-margin-top: 64px; }
+    .sheet { margin: 0 calc(-1 * var(--gut) + 6px); }
+  }
+  @media (max-width: 560px) {
+    :root { --p3: 30px; }
+    h1 { padding-right: 0; }
+    .stamp { position: static; display: inline-block; margin: 0 0 18px; }
+    .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tldr { padding: 0 14px 4px; }
+    .tldr .prose { font-size: 1.12em; }
+    h1 .t2 { font-size: 1.35em; }
+    .fnlist li { grid-template-columns: 26px 1fr; }
+  }
+  /* Projectors and big screens: the caption face steps up a whole size */
+  @media (min-width: 1600px) and (min-height: 820px) {
+    :root { --p1: 20px; --p2: 30px; --p3: 60px; }
+    .desk { grid-template-columns: 330px minmax(0, 1060px); max-width: 1500px; }
+    .strip { max-width: 1500px; }
+    .index a { grid-template-columns: 100px 1fr; gap: 10px; padding-left: 26px; }
+    .index .ttab { padding-top: 0; }
+    .index .ttext { font-size: 18px; }
+    .index a[aria-current="true"]::before { left: 8px; top: 8px; }
+    .tab { margin-top: -38px; }
+    .part h2 { scroll-margin-top: 84px; }
+    .tldr .tab { margin-top: -20px; }
+    h1 { padding-right: 230px; }
+    .fnlist li { grid-template-columns: 50px 1fr; }
+    .fnref a { min-width: 24px; }
+  }
+
+  @media print {
+    @page { margin: 0.8in 0.9in; }
+    html, body { background: #fff; }
+    body { padding: 0; font-size: 11.5pt; line-height: 1.5; }
+    .strip, .index, .skip, .eof .keycap, .fnback { display: none !important; }
+    .desk { display: block; max-width: none; }
+    .sheet { margin: 0; border: 0; box-shadow: none; padding: 0; background: #fff; }
+    .cover, .formrow { margin: 0; }
+    .formrow { padding: 0 0 6px; background: none; color: #000; border-bottom: 1px solid #000; }
+    .formrow b { color: #000; }
+    .coverbody { padding-top: 18px; }
+    .tab, .tldr .tab { margin: 0 0 8px; background: none; color: #000; border: 1px solid #000; }
+    .part { padding-top: 14px; }
+    .tldr { margin: 18px 0 0; padding: 12px 16px 2px; outline: 0; }
+    .tldr { break-inside: avoid; }
+    .part h2, .sechead { break-after: avoid; }
+    .sechead { break-inside: avoid; }
+    .prose p { orphans: 3; widows: 3; }
+    .prose { max-width: none; }
+    .fnref a { background: none; color: #000; padding: 0 1px; min-width: 0; }
+    .fnlist li { break-inside: avoid; }
+    mark.todo { background: #ddd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#paper">Skip to the paper</a>
+<div class="strip">
+  <span><b>UNSEEN ABOVE</b> · CH 07 · <i>●</i> THE PAPER BEHIND THE SHOW</span>
+  <a class="keycap" href="local.html" data-back>BACK TO THE GAME</a>
+</div>
+<div class="desk">
+  <nav class="index" aria-label="Contents">
+    <details id="toc" open>
+      <summary><span>INDEX</span><span class="now" aria-hidden="true"></span><span class="arrow" aria-hidden="true">▼</span></summary>
+      <ol>
+__TOC__
+      </ol>
+      <div class="foot"><a class="keycap" href="local.html" data-back>BACK TO THE GAME</a></div>
+    </details>
+  </nav>
+  <script>
+    // Phones get the index as a closed bar; wide windows keep it open beside the sheet.
+    (function () {
+      var d = document.getElementById('toc'), wide = window.matchMedia('(min-width: 1000px)');
+      function fit() { d.open = wide.matches; }
+      fit();
+      if (wide.addEventListener) wide.addEventListener('change', fit);
+      d.querySelector('summary').addEventListener('click', function (e) { if (wide.matches) e.preventDefault(); });
+    })();
+  </script>
+  <main id="paper" class="sheet">
+    <header class="cover">
+      <div class="formrow"><span><b>FORM UA-07</b> · PAPER</span><span>COMPANION TO THE GAME</span></div>
+      <div class="coverbody">
+        <div class="__STAMP_CLASS__" role="img" aria-label="Status: __STAMP__">__STAMP__</div>
+        <h1>__TITLE__</h1>
+        <dl class="fields">
+          <div class="field wide"><dt>BY</dt><dd>__BYLINE__</dd></div>
+          <div class="field"><dt>SECTIONS</dt><dd>__SECTIONS_N__</dd></div>
+          <div class="field"><dt>NOTES</dt><dd>__NOTES_N__</dd></div>
+          <div class="field"><dt>READING TIME</dt><dd>__MINUTES__ min</dd></div>
+          <div class="field"><dt>STATUS</dt><dd>__STAMP__</dd></div>
+        </dl>
+      </div>
+    </header>
+
+__BODY__
+
+    <footer class="eof"><span>END OF FILE · FORM UA-07</span><a class="keycap" href="local.html" data-back>BACK TO THE GAME</a></footer>
+  </main>
+</div>
+<script>
+  // The index marks the section being read, and on phones the bar names it and closes after a pick.
+  (function () {
+    var links = [].slice.call(document.querySelectorAll('.index a[data-for]'));
+    var heads = links.map(function (a) { return document.getElementById(a.getAttribute('data-for')); }).filter(Boolean);
+    var d = document.getElementById('toc'), now = d.querySelector('.now');
+    var wide = window.matchMedia('(min-width: 1000px)');
+    function mark() {
+      var line = window.innerHeight * 0.3, cur = heads[0], top;
+      for (var i = 0; i < heads.length; i++) if (heads[i].getBoundingClientRect().top <= line) cur = heads[i];
+      // at the very bottom the last section counts, unless the reader just jumped to one that is in view
+      var hit = location.hash && heads.indexOf(document.getElementById(location.hash.slice(1))) >= 0 ? document.getElementById(location.hash.slice(1)) : null;
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) cur = heads[heads.length - 1];
+      if (hit && (top = hit.getBoundingClientRect().top) >= 0 && top < window.innerHeight * 0.5) cur = hit;
+      links.forEach(function (a) {
+        var on = cur && a.getAttribute('data-for') === cur.id;
+        if (on) { a.setAttribute('aria-current', 'true'); now.textContent = a.querySelector('.ttab').textContent.trim() || a.querySelector('.ttext').textContent; }
+        else a.removeAttribute('aria-current');
+      });
+    }
+    var queued = false;
+    window.addEventListener('scroll', function () { if (!queued) { queued = true; requestAnimationFrame(function () { queued = false; mark(); }); } }, { passive: true });
+    window.addEventListener('resize', mark);
+    links.forEach(function (a) { a.addEventListener('click', function () { if (!wide.matches) d.open = false; }); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !wide.matches && d.open) { d.open = false; d.querySelector('summary').focus(); } });
+    mark();
+  })();
+</script>
+</body>
+</html>

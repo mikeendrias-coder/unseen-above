@@ -26,3 +26,5 @@ fs.writeFileSync(path.join(out, 'unseen-above.html'), page(PHASER_CDN));
 fs.writeFileSync(path.join(out, 'local.html'), skeleton(page('phaser.min.js')));
 fs.copyFileSync(path.join(__dirname, 'node_modules/phaser/dist/phaser.min.js'), path.join(out, 'phaser.min.js'));
 console.log('built', (bundle.length / 1024).toFixed(1) + ' KB bundle');
+// the paper page: paper/paper.md into dist/paper.html (paper/build.js)
+require('./paper/build.js')({ out });
