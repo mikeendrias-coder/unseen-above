@@ -72,11 +72,11 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.laser.fired); await p.evaluate(() => { window.__laserT = null; });
   await until(() => window.__game.scene.nearThing && window.__game.scene.nearThing.clue === 'laserTone'); await press('KeyJ'); await p.waitForTimeout(400);
   ok('the laser port is a clue once it has fired (laserTone)', await p.evaluate(() => window.__game.state.hasClue('laserTone')));
-  // a later take: the robot has laid her old bodies in a row by the front wall; the drawer is a clue
+  // a later take: the robot has laid her old bodies in a row on the atrium floor; the drawer is a clue
   await p.evaluate(() => { const st = window.__game.state, e = st.episode('ep2'); e.bodies = [{ x: 700, y: 336, take: 1, cause: 'stair camera' }, { x: 990, y: 208, take: 2, cause: 'laser' }, { x: 1300, y: 336, take: 3, cause: 'laser' }]; e.take = 4; window.__noDeath = false; window.__game.scene.scene.restart({}); });
   await until(() => window.__game.scene.clock > 0.5 && window.__game.scene.ep.take === 4);
   const row = await p.evaluate(() => window.__game.scene.bodyLayer.list.map(i => Math.round(i.x) + ':' + Math.round(i.y)).join(' '));
-  ok('the old bodies lie in a row, the newest where she fell: ' + row, /^34:336 52:336 1300:336$/.test(row));
+  ok('the old bodies lie in a row on the atrium floor, the newest where she fell: ' + row, /^852:336 834:336 1300:336$/.test(row));
   await shot('tidy');
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 14 * 16 + 4; s.kid.y = 322; });
   await until(() => window.__game.scene.nearThing === window.__game.scene.cabinetThing); await press('KeyJ');

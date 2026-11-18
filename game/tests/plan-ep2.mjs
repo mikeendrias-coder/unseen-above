@@ -75,7 +75,7 @@ const place = (p, x, feet) => p.evaluate(([x, feet]) => { const s = window.__gam
   await place(p, 61 * T, M);
   r = await run(`return {};`, 1.6);
   ok(`D: the boards give way (feet ${r.y})`, r.y === 16 * T);
-  r = await run(`if (!mem.a) { mem.a = t; return { jump: 1, hold: 1 }; } if (!mem.b && t - mem.a > 0.32) { mem.b = 1; return { jump: 1, hold: 1, r: 1 }; } if (k.onGround && k.y + k.h === 208) mem.stop = 1; return { r: mem.b, hold: 1 };`, 3);
+  r = await run(`if (!mem.a) { mem.a = t; return { jump: 1, hold: 1 }; } if (!mem.b && t - mem.a > 0.1 && k.vy > -40) { mem.b = 1; return { jump: 1, hold: 1, r: 1 }; } if (k.onGround && k.y + k.h === 208) mem.stop = 1; return { r: mem.b, hold: 1 };`, 3);
   ok(`D: out of the pocket with a double jump (feet ${r.y})`, r.y === M);
   // E: down the broken stair into the laser hall without a hurt
   await p.evaluate(() => { window.__noDeath = false; window.__game.scene.drop.phase = 'down'; });
@@ -84,8 +84,8 @@ const place = (p, x, feet) => p.evaluate(([x, feet]) => { const s = window.__gam
   ok(`E: down into the laser hall, no harm (feet ${r.y}, hp ${r.hp})`, r.y === G && r.hp === 3);
 
   // the house's damage (watchers still off)
-  await place(p, 54 * T + 2, M); await p.evaluate(() => { const s = window.__game.scene; s.polisher.x = 57 * 16; s.polisher.dir = -1; });
-  r = await run(`if (k.hp < 3) mem.stop = 1; return { r: k.x < 54 * 16 + 4 };`, 2.5);
+  await place(p, 56 * T, M); await p.evaluate(() => { const s = window.__game.scene; s.polisher.x = 58 * 16; s.polisher.dir = -1; });
+  r = await run(`if (k.hp < 3) mem.stop = 1; return {};`, 2.5);
   ok(`D: the polisher bumps her: hp ${r.hp}`, r.hp === 2);
   await place(p, 54 * T, M); await p.evaluate(() => { const s = window.__game.scene; s.polisher.x = 58 * 16; s.polisher.dir = -1; });
   r = await run(`const Q = s.polisher; if (k.onGround && Math.abs(Q.x - (k.x + 4)) < 30 && !mem.j) { mem.j = t; return { jump: 1, hold: 1, r: 1 }; } return { r: mem.j != null && t - mem.j < 0.6, hold: 1 };`, 2.5);
@@ -94,6 +94,8 @@ const place = (p, x, feet) => p.evaluate(([x, feet]) => { const s = window.__gam
   await place(p, 68 * T + 4, M);
   r = await run(`return {};`, 2);
   ok(`D: standing under the chandelier when it drops: hp ${r.hp}`, r.hp === 1);
+  // the chandeliers swing out of reach first, or she may catch one on the way down
+  await p.evaluate(() => window.__game.scene.swings.forEach(w => { w.ax = -999; }));
   await place(p, 36 * T + 4, M);
   r = await run(`if (!mem.a) { mem.a = 1; return { jump: 1, hold: 1, r: 1 }; } return { r: k.x < 42 * 16 };`, 3);
   ok(`C: a fall into the atrium lands on the dust sheets: hp ${r.hp} (no more than 2 lost), feet ${r.y}`, r.hp >= 1 && r.y === G && !r.dead);

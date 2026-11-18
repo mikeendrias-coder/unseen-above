@@ -20,7 +20,7 @@ import { NOTICE, bodyLines } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
 import { fx } from '../core/fx.js';
 
-const T = TILE, C = k => hexNum(ASH[k]);
+const T = TILE, C = k => hexNum(ASH[k]), SKIP_SAFE = 2;
 const rgb = c => { const n = hexNum(c); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const ROBOT_BEFORE = ['Welcome home. Please wipe your feet.', 'You are not on the guest list. Nobody is.', 'I have cleaned this floor 41,207 times.', 'Please do not touch the drawer.', 'I did not say anything about a drawer.', 'Mind the cameras. They are very shy.'];
 const ROBOT_AFTER = ['Those suit you.', 'The last one wore them too.', 'Please return them. Nobody does.', 'I will tidy up after you. I always do.'];
@@ -59,7 +59,7 @@ export class Gallery extends SideEpisode {
     this.glasses = false; this.hudT = 0; this.zapT = 2; this.lightsOff = false;
     this.gl = new Glasses({ has: false });
     this.skipPoints = LEVEL.skip.map(([x]) => x * T);
-    this.robot = { x: LEVEL.robot.x0 + 40, dir: 1 };
+    this.robot = { x: LEVEL.robot.x0 + 40, dir: 1 }; this.robotSrc = null;
     this.polisher = { x: LEVEL.polisher.x0, dir: 1 };
     this.drawer = { open: 0, opening: false, fly: -1 };
     this.drop = { phase: 'hang', t: 0, y: LEVEL.dropper.hang, sway: 0 };
@@ -124,20 +124,21 @@ export class Gallery extends SideEpisode {
     look('camera', 64 * T + 8, 67 * T + 8, M - 20, M, 150, N.camera, { clue: 'cameraMoon' });
     // the laser port, once it has fired at her: the sound it made
     this.emitterLook = look('emitter', 76 * T + 4, 78 * T - 4, G - 40, G, G - 34, N.emitter, { clue: 'laserTone' });
-    this.emitterLook.off = true;
+    this.things = this.things.filter(t => t !== this.emitterLook); // put out once the laser has fired
   }
 
   // ------------------------------------------------------------------ bodies: the robot tidies them
-  // Her bodies from takes before the last lie in a neat row by the front wall; the newest stays
-  // where she fell. Each one can still be looked at.
+  // Her bodies from takes before the last lie in a neat row on the atrium floor, along its far
+  // wall (out of the way of the hall's drawer, switch and doors); the newest stays where she
+  // fell. Each one can still be looked at. The row holds seven; older ones are gone.
   drawBodies() {
     this.bodyLayer.removeAll(true);
     this.things = this.things.filter(t => !t.body);
-    const last = this.ep.take - 1;
+    const last = this.ep.take - 1, older = this.ep.bodies.filter(b => b.take < last).slice(-7);
     let row = 0;
     this.tidied = false;
-    this.ep.bodies.slice(-14).forEach(b0 => {
-      const old = b0.take < last, b = old ? { x: 34 + (row++) * 18, y: GROUND, take: b0.take, cause: b0.cause } : b0;
+    this.ep.bodies.filter(b => b.take >= last || older.includes(b)).forEach(b0 => {
+      const old = b0.take < last, b = old ? { x: LEVEL.pit.x1 - 12 - (row++) * 18, y: GROUND, take: b0.take, cause: b0.cause } : b0;
       if (old) this.tidied = true;
       const age = Math.max(0, Math.min(3, this.ep.take - 1 - b0.take));
       this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1));
@@ -148,7 +149,7 @@ export class Gallery extends SideEpisode {
 
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl, k = this.kid;
-    this.clock += dt;
+    this.clock += dt; this.safeT = Math.max(0, (this.safeT || 0) - dt);
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) {
@@ -180,7 +181,8 @@ export class Gallery extends SideEpisode {
     this.drawer.opening = true; this.cabinetThing.off = true;
     Sound.noise(0.25, 0.05, 1200); Sound.tone(220, 0.12, 'triangle', 0.02, 180);
     // on a later take: the glasses are back in the drawer, as if she never took them
-    if (this.ep.take > 1) {
+    // (said once: the drawer opens every take, its lines do not)
+    if (this.ep.take > 1 && state.hear('look:ep2:drawer2')) {
       const src = { lines: NOTICE.gallery.drawer2 };
       this.time.delayedCall(350, () => { if (state.clue('drawer')) overlay.note('NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: LEVEL.cabinet.drawer.x + 8, y: GROUND - 16 })); });
     }
@@ -208,9 +210,8 @@ export class Gallery extends SideEpisode {
     this.lightsOff = !this.lightsOff;
     this.levelImg.setTexture(this.lightsOff ? 'gl_dark' : 'gl_level');
     Sound.tone(this.lightsOff ? 300 : 420, 0.04, 'square', 0.02); Sound.noise(0.05, 0.03, 3000);
-    if (this.lightsOff && !this.switchSaid) {
-      this.switchSaid = true;
-      const src = { lines: state.heard('look:ep2:switch') ? NOTICE.gallery.lightswitch.slice(-1) : NOTICE.gallery.lightswitch }; state.hear('look:ep2:switch');
+    if (this.lightsOff && state.hear('look:ep2:switch')) { // said the first time only, never on a retry
+      const src = { lines: NOTICE.gallery.lightswitch };
       this.bubbles.look('item', src, () => ({ x: LEVEL.lightSwitch.x, y: LEVEL.lightSwitch.y - 6 }));
     }
   }
@@ -253,7 +254,7 @@ export class Gallery extends SideEpisode {
       cm.angle = camAngle(cm, this.clock);
       if (Math.abs(cm.x - v.centerX) > 480) { cm.cone = null; cm.lock = 0; return; }
       cm.cone = this.cone(cm.x, cm.y, cm.angle, cm.half, cm.range);
-      this.watch(cm, dt, LEVEL.camLock);
+      if (this.safeT > 0) cm.lock = 0; else this.watch(cm, dt, LEVEL.camLock);
     });
     // the broken camera sparks now and then
     this.zapT -= dt;
@@ -272,7 +273,7 @@ export class Gallery extends SideEpisode {
     if (st.phase !== z.phase || st.n !== z.n) {
       if (st.phase === 'tell') { Sound.tone(1320, 0.05, 'square', 0.014); this.time.delayedCall(130, () => Sound.tone(st.shot === 'low' ? 990 : 1760, 0.06, 'square', 0.014)); }
       if (st.phase === 'charge') Sound.charge();
-      if (st.phase === 'fire') { Sound.tone(1500, 0.35, 'sawtooth', 0.03, 1200); Sound.noise(0.3, 0.05, 7000); if (!z.fired) { z.fired = true; this.emitterLook.off = false; } }
+      if (st.phase === 'fire') { Sound.tone(1500, 0.35, 'sawtooth', 0.03, 1200); Sound.noise(0.3, 0.05, 7000); if (!z.fired) { z.fired = true; this.things.push(this.emitterLook); } }
       z.phase = st.phase; z.n = st.n;
     }
     if (st.phase === 'fire' && !this.dead && !this.leaving && !window.__noDeath && k.x + k.w > L.x0 && k.x < L.x1) {
@@ -302,17 +303,20 @@ export class Gallery extends SideEpisode {
     Q.x += Q.dir * B.speed * dt; if (Q.x > B.x1) { Q.x = B.x1; Q.dir = -1; } if (Q.x < B.x0) { Q.x = B.x0; Q.dir = 1; }
     if (!this.dead && !this.leaving && k.inv <= 0 && k.x + k.w > Q.x - 7 && k.x < Q.x + 7 && k.y + k.h > MEZZ - 8 && k.y < MEZZ) {
       this.hurt(1, 'polisher');
-      if (!this.dead) { const s = k.x + k.w / 2 < Q.x ? -1 : 1; k.vx = s * 130; k.vy = -140; k.onGround = false; }
+      // the shove comes with the hurt: in story mode (nothing hurts her) it rolls past her
+      if (!this.dead && k.inv > 0) { const s = k.x + k.w / 2 < Q.x ? -1 : 1; k.vx = s * 130; k.vy = -140; k.onGround = false; }
     }
     this.polisherSprite.setTexture(Math.floor(this.clock * 12) % 2 ? 'polisher_a' : 'polisher_b').setPosition(Math.round(Q.x), MEZZ);
   }
   robotStyle() { return { ink: 0xebe6d8, pitch: 1180, leave: 64 }; }
   robotSay(text) { this.bubbles.say('robot', text, () => ({ x: this.robot.x, y: GROUND - 9 }), Object.assign(this.robotStyle(), { leave: 200 })); }
+  // On a retry the robot picks up at the first line she has not heard yet (all heard: its last).
   robotTalk() {
-    if (!this.robotSrc) this.robotSrc = { lines: () => this.glasses || this.drawer.opening ? ROBOT_AFTER : ROBOT_BEFORE, i: 0, loop: true, from: 1 };
-    const after2 = this.glasses || this.drawer.opening;
-    if (after2 && !this.robotSrc.after) { this.robotSrc.after = true; this.robotSrc.i = 0; this.robotSrc.from = 0; }
-    this.bubbles.press('robot', this.robotSrc, () => ({ x: this.robot.x, y: GROUND - 9 }), this.robotStyle());
+    const unheard = (list, tag) => { const i = list.findIndex((l, n) => !state.heard('ep2:robot:' + tag + n)); return i < 0 ? list.length - 1 : i; };
+    if (!this.robotSrc) this.robotSrc = { lines: () => this.glasses || this.drawer.opening ? ROBOT_AFTER : ROBOT_BEFORE, i: unheard(ROBOT_BEFORE, 'b'), loop: true, from: 1 };
+    const after2 = this.glasses || this.drawer.opening, src = this.robotSrc;
+    if (after2 && !src.after) { src.after = true; src.i = unheard(ROBOT_AFTER, 'a'); src.from = 0; }
+    if (this.bubbles.press('robot', src, () => ({ x: this.robot.x, y: GROUND - 9 }), this.robotStyle()) === 'line') state.hear('ep2:robot:' + (src.after ? 'a' : 'b') + (src.i - 1));
   }
 
   // ------------------------------------------------------------------ the door, story mode
@@ -334,6 +338,8 @@ export class Gallery extends SideEpisode {
     const k = this.kid; if (!k || this.dead || this.leaving) return;
     const at = LEVEL.skip.find(([x]) => x * T > k.x + 12); if (!at) return;
     k.x = at[0] * T; k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null; this.pitPeak = null;
+    // a beat to get her bearings: nothing locks on and nothing hurts her (she blinks) for 2 s
+    this.safeT = SKIP_SAFE; k.inv = Math.max(k.inv, SKIP_SAFE);
   }
   rescue() { this.skipAhead(); }
   drawGirl() {

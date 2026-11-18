@@ -30,7 +30,7 @@ export const LEVEL = {
   swings: [{ x: 41 * T, y: 16, len: 165, amp: 30, period: 3.0, phase: 0 }, { x: 50 * T + 6, y: 16, len: 165, amp: 30, period: 3.0, phase: 0.5 }],
   pit: { x0: 37 * T, x1: 54 * T },
   // D: a floor polisher on the upper floor, boards that give way, a chandelier that drops
-  polisher: { x0: 54 * T + 6, x1: 59 * T + 6, speed: 26 },
+  polisher: { x0: 56 * T + 6, x1: 59 * T + 6, speed: 26 },  // clear of the top of the atrium wall (N lands there)
   boards: [{ x: 60 * T, y: MEZZ, w: 32 }, { x: 62 * T, y: MEZZ, w: 32 }],
   dropper: { x: 69 * T + 8, hang: 150, warn: 0.45, footprint: 14 },
   props: [],
@@ -51,7 +51,9 @@ export const LEVEL = {
     first: 1.2, idle: 0.9, tell: 0.7, charge: 0.5, fire: 0.4
   },
   hole: { x0: 58 * T, x1: 63 * T },
-  skip: [[19, ROWS.floor], [33, ROWS.mezz], [55, ROWS.mezz], [64, ROWS.mezz], [77, ROWS.floor]]
+  // where N puts her in story mode: just short of each section's hazard
+  // (B: under the desk on the landing; D: on the far wall's top, then past the broken camera)
+  skip: [[19, ROWS.floor], [24, 18], [54, ROWS.mezz], [67, ROWS.mezz], [75, 18]]
 };
 
 // Where a camera points t seconds into the take. The broken one snaps to each aim, then holds.

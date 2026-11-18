@@ -19,7 +19,7 @@ import { NOTICE } from '../data/dialogue.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { fx } from '../core/fx.js';
 
-const T = TILE, C = k => hexNum(ASH[k]);
+const T = TILE, C = k => hexNum(ASH[k]), SKIP_SAFE = 2;
 // Drone show figures, as point lists in a 64 x 30 box.
 function outline(pts, n) {
   const segs = []; let total = 0;
@@ -122,8 +122,8 @@ export class Grounds extends SideEpisode {
     // a look says all of itself the first time; on a later take, only its last line
     const once = (key, lines) => { if (state.heard('look:ep1:' + key)) return lines.slice(-1); return lines; };
     const look = (key, x0, x1, y0, y1, py, lines, more) => this.addLook(Object.assign({ x0, x1, y0, y1, py, lines: once(key, lines), hearKey: 'look:ep1:' + key }, more));
-    this.crowbarSrc = { lines: once('crowbar', N.crowbar) };
-    this.things.push({ x0: CB.x - 9, x1: CB.x + 9, y0: G - 8, y1: G, label: 'J', look: true, use: () => { state.hear('look:ep1:crowbar'); this.bubbles.look('item', this.crowbarSrc, () => ({ x: CB.x, y: G - 8 })); } });
+    look('crowbar', CB.x - 9, CB.x + 9, G - 8, G, G - 8, N.crowbar, { px: CB.x });
+    look('gate', LEVEL.gateX - 4, LEVEL.gateX + 16, G - 40, G, G - 46, N.gate);
     this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: G, label: 'J', door: true, use: () => this.enterRoom('keeper') });
     // the intercom on the gate pier answers in the house's machine voice
     this.intercomSrc = { lines: N.intercom, loop: true, from: 1 };
@@ -168,7 +168,7 @@ export class Grounds extends SideEpisode {
 
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30), c = this.ctl;
-    this.clock += dt;
+    this.clock += dt; this.safeT = Math.max(0, (this.safeT || 0) - dt);
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); }
@@ -195,7 +195,7 @@ export class Grounds extends SideEpisode {
       if (Math.abs(l.x - v.centerX) > 520 || Math.abs(l.y - v.centerY) > 420) { l.cone = null; l.lock = 0; return; }
       l.cone = this.cone(l.x, l.y, l.angle, l.half, l.range);
       if (l.hold <= 0 && l.cd <= 0) { const b = bodies.find(b => b !== l.last && inPoly(l.cone, b.x, b.y - 3)); if (b) { l.hold = 0.7; l.cd = 2.6; l.last = b; } }
-      this.watch(l, dt);
+      if (this.safeT > 0) l.lock = 0; else this.watch(l, dt);
     });
   }
   updateDrones(dt) {
@@ -203,7 +203,7 @@ export class Grounds extends SideEpisode {
       if (d.lock === 0) { d.x += d.dir * d.speed * dt; if (d.x > d.x1) { d.x = d.x1; d.dir = -1; } if (d.x < d.x0) { d.x = d.x0; d.dir = 1; } }
       d.cy = d.y + (Math.floor(this.clock * 2 + i) % 2);
       d.cone = this.cone(d.x, d.cy + 5, 90, d.half, d.range);
-      this.watch(d, dt);
+      if (this.safeT > 0) d.lock = 0; else this.watch(d, dt);
       this.droneSprites[i].setPosition(Math.round(d.x), Math.round(d.cy)).setTexture(Math.floor(this.clock * 20) % 2 ? 'drone_a' : 'drone_b');
     });
   }
@@ -228,6 +228,12 @@ export class Grounds extends SideEpisode {
     const k = this.kid; if (!k || this.dead || this.leaving) return;
     const at = LEVEL.skip.find(([x]) => x * T > k.x + 12); if (!at) return;
     k.x = at[0] * T; k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null;
+    const cr = this.crate.r, cd = this.cradle.r;
+    if (at[2] === 'crate' && Math.abs(cr.y + cr.h - TERRACE) < 1 && cr.x > k.x) k.x = Math.round(cr.x) - k.w;
+    if (at[2] === 'cradle') { k.x = Math.round(cd.x + (cd.w - k.w) / 2); k.y = Math.round(cd.y) - k.h; k.peakY = k.y; }
+    // a beat to get her bearings: nothing locks on, nothing hurts her (she blinks), the scan holds
+    this.safeT = SKIP_SAFE; k.inv = Math.max(k.inv, SKIP_SAFE);
+    if (this.scan) this.scan.x = Math.min(this.scan.x, k.x - LEVEL.scan.behind * 1.6);
   }
   rescue() { this.skipAhead(); }
   drawGirl() {
@@ -244,14 +250,14 @@ export class Grounds extends SideEpisode {
     const S = LEVEL.scan, k = this.kid;
     if (!this.scan) {
       if (!this.dead && !this.leaving && k.x > S.trigger && k.y < S.below) {
-        this.scan = { x: k.x - S.behind, t: 0 };
+        this.scan = { x: k.x - S.behind * (this.safeT > 0 ? 1.6 : 1), t: 0 }; // farther back if N just put her here
         overlay.sfx('[ALARM]', 1600); Sound.tone(520, 0.5, 'sawtooth', 0.03, 1040);
         fx.flash(this.cameras.main, 120, 90, 20, 20);
       }
       return;
     }
     const sc = this.scan; sc.t += dt;
-    if (!this.dead && !this.leaving) sc.x += S.speed * dt;
+    if (!this.dead && !this.leaving && !(this.safeT > 0)) sc.x += S.speed * dt;
     if (Math.floor(sc.t * 2) !== Math.floor((sc.t - dt) * 2) && !this.leaving) Sound.tone(sc.t % 1 < 0.5 ? 880 : 660, 0.12, 'square', 0.012);
     if (!this.dead && !this.leaving && !window.__noDeath && k.x + k.w / 2 < sc.x + 3) { this.satX = sc.x; this.die({ id: 'scan', x: sc.x, y: 20 }); }
   }
@@ -265,7 +271,7 @@ export class Grounds extends SideEpisode {
     g.fillRect(x - 2, y0, 2, h);
     g.fillStyle(C('redHi'), 1); g.fillRect(x, y0, 1, h);
     for (let y = (t * 120) % 12; y < h; y += 12) { g.fillStyle(C('red'), 1); g.fillRect(x - 16, y0 + Math.round(y), 6, 1); }
-    if (!this.dead) SatelliteStrike.drawSat(this.fxG, this.P, x, v.y + 3, g, Math.floor(t * 10) % 2 ? 1 : 0.6);
+    if (!this.dead) SatelliteStrike.drawSat(this.fxG, this.P, x, v.y + 3, null, 0);
   }
 
   // ------------------------------------------------------------------ ambience: the spectacle

@@ -44,10 +44,12 @@ export const LEVEL = {
   // patrol drones with a light straight down
   drones: [
     { id: 'fountain drone', x0: 39 * T, x1: 55 * T, y: 168, speed: 30, half: 11, range: 130 },
-    { id: 'loggia drone', x0: 62 * T, x1: 77 * T, y: 30, speed: 34, half: 10, range: 240 }
+    { id: 'loggia drone', x0: 62 * T, x1: 73 * T, y: 30, speed: 34, half: 10, range: 240 }  // ends over the cradle: the balcony is the lamps' and the scan's
   ],
-  // where N puts her in story mode: the start of each section
-  skip: [[16, ROWS.lawn], [36, ROWS.lawn], [39, ROWS.terrace], [56, ROWS.terrace], [65, ROWS.loggia], [75, ROWS.balcony], [94, ROWS.balcony]]
+  // where N puts her in story mode: the start of each section, out of the light (E: flush with
+  // the crate, in its shadow, wherever it now stands; F: in the cradle, under its roof; the last:
+  // by the door, past the east lamp)
+  skip: [[16, ROWS.lawn], [36, ROWS.lawn], [39, ROWS.terrace], [56, ROWS.terrace, 'crate'], [65, ROWS.loggia, 'cradle'], [75, ROWS.balcony], [95, ROWS.balcony]]
 };
 
 // Materials: a ash ground, g lawn, h hedge, s pale stone, w house base, b balcony slab.
