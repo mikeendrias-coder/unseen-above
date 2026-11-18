@@ -33,7 +33,8 @@
      the TV's caption band, not a gap before the keys */
   #overlay::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--strip, 0px); background: #1b1c21; }
   #stage canvas { display: block; image-rendering: pixelated; outline: none; max-width: 100%; }
-  #overlay { position: absolute; top: 0; left: 50%; transform: translateX(-50%); pointer-events: none; overflow: hidden; }
+  /* over the game canvas even when Bright's filter gives the canvas its own layer */
+  #overlay { position: absolute; z-index: 2; top: 0; left: 50%; transform: translateX(-50%); pointer-events: none; overflow: hidden; }
   #cg { position: absolute; inset: 0; width: 100%; height: 100%; }
   #blackout { position: absolute; inset: 0; background: var(--ground); opacity: 0; transition: opacity 600ms; }
   #blackout.on { opacity: 1; }
@@ -45,7 +46,7 @@
   #tv { position: relative; width: calc(var(--u, 4px) * 320); height: calc(var(--u, 4px) * 180); max-width: 100%; background: var(--ground); }
   #tv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
   .tv-menu { position: absolute; right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); width: calc(var(--u, 4px) * 124); display: grid; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
-  .tv-menu button { position: relative; display: flex; justify-content: space-between; gap: calc(var(--u, 4px) * 6); padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 6) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; border-bottom: var(--u, 4px) solid var(--boneLo); color: var(--ash4); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; }
+  .tv-menu button { position: relative; display: flex; justify-content: space-between; gap: calc(var(--u, 4px) * 6); padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 6) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; border-bottom: var(--u, 4px) solid var(--boneLo); color: var(--ash4); font: calc(var(--u, 4px) * 10)/1 var(--pix); text-align: left; cursor: pointer; }
   .tv-menu button:last-child { border-bottom: 0; }
   .tv-menu button.main { color: var(--ground); }
   .tv-menu button[aria-pressed="true"] i { color: var(--ground); }
@@ -56,7 +57,7 @@
   .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
   .tv-menu button[aria-pressed="true"]:focus i { color: var(--ground); background: var(--ink); padding: 0 calc(var(--u, 4px) * 2); }
   /* the pick arrow: a 3 x 5 pixel step triangle (no fallback glyph) */
-  .tv-menu button:focus::before { content: ""; position: absolute; top: calc(var(--u, 4px) * 4); width: calc(var(--u, 4px) * 3); height: calc(var(--u, 4px) * 5); background: var(--ink); clip-path: polygon(0 0, 33.4% 0, 33.4% 20%, 66.7% 20%, 66.7% 40%, 100% 40%, 100% 60%, 66.7% 60%, 66.7% 80%, 33.4% 80%, 33.4% 100%, 0 100%); left: calc(var(--u, 4px) * 4); }
+  .tv-menu button:focus::before { content: ""; position: absolute; top: calc(var(--u, 4px) * 3); width: calc(var(--u, 4px) * 3); height: calc(var(--u, 4px) * 5); background: var(--ink); clip-path: polygon(0 0, 33.4% 0, 33.4% 20%, 66.7% 20%, 66.7% 40%, 100% 40%, 100% 60%, 66.7% 60%, 66.7% 80%, 33.4% 80%, 33.4% 100%, 0 100%); left: calc(var(--u, 4px) * 4); }
   /* the chapter list: every part of the show, the endings and give-up mode, three columns */
   .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: auto auto auto; justify-content: space-between; grid-template-rows: repeat(8, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
   /* rows with a number key are dark; the parts between them (no key) are grey, so 0 to 9 reads
@@ -69,6 +70,37 @@
   .tv-chapters button:disabled { color: var(--boneLo); background: transparent; cursor: default; }
   .tv-chapters button:focus { outline: none; color: var(--ink); background: var(--ground); }
   .tv-chapters button:focus::before { content: ""; position: absolute; top: calc(var(--u, 4px) * 4); width: calc(var(--u, 4px) * 3); height: calc(var(--u, 4px) * 5); background: var(--ink); clip-path: polygon(0 0, 33.4% 0, 33.4% 20%, 66.7% 20%, 66.7% 40%, 100% 40%, 100% 60%, 66.7% 60%, 66.7% 80%, 33.4% 80%, 33.4% 100%, 0 100%); left: calc(var(--u, 4px) * 3); }
+  /* the paper's credit, small, under "ch 07, tonight" (half the caption face's size, rounded to its
+     10px so it stays sharp); the chapter list covers that corner, so it hides while the list is up */
+  .tv-credit { position: absolute; left: calc(var(--u, 4px) * 22); top: calc(var(--u, 4px) * 77); margin: 0; font: 10px/1.2 var(--pix); font-size: max(10px, round(down, calc(var(--u, 4px) * 5), 10px)); color: var(--quiet); white-space: nowrap; pointer-events: none; }
+  /* each line on its own black box, as captions are, so the tree and the stars never run through it */
+  .tv-credit span { display: block; width: fit-content; padding: 0 calc(var(--u, 4px) * 2); background: var(--ground); }
+  .tv-credit b { font-weight: normal; color: var(--boneLo); }
+  #tv:has(#chapters:not([hidden])) .tv-credit { display: none; }
+  /* the same credit on every ending screen, under the form (ending/finale.js shows it) */
+  #endcredit { position: absolute; left: 0; right: 0; top: calc(var(--u, 4px) * 163); margin: 0; font: 10px/1.2 var(--pix); font-size: max(10px, round(down, calc(var(--u, 4px) * 7), 10px)); color: var(--quiet); text-align: center; white-space: nowrap; }
+  #endcredit b { font-weight: normal; color: var(--boneLo); }
+  #overlay:has(#panel.on) #endcredit { visibility: hidden; } /* the pause menu's form covers the picture */
+  /* Bright (ui/bright.js): the picture lifted for a washed-out projector */
+  body.bright #stage > canvas, body.bright #tv-canvas { filter: brightness(1.35) contrast(1.1); }
+  /* the ending screen is paper already: lifted, its ruled lines would wash out */
+  body.bright.paper-up #stage > canvas { filter: none; }
+  /* How the game argues (ui/about.js): one paper notice over the picture, in the caption face at
+     the picture's own pixel size, so it reads on a projector. Any key or a click puts it away. */
+  #about { position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 30; width: calc(var(--u, 4px) * 320); height: calc(var(--u, 4px) * 180); max-width: 100%; background: var(--ground); font: calc(var(--u, 4px) * 10)/calc(var(--u, 4px) * 9) var(--pix); outline: none; cursor: pointer; }
+  #about[hidden] { display: none; }
+  #about .paper { position: absolute; left: calc(var(--u, 4px) * 6); right: calc(var(--u, 4px) * 6); top: calc(var(--u, 4px) * 5); bottom: calc(var(--u, 4px) * 7); padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 6) 0; background: var(--ink); color: var(--ground); border: var(--u, 4px) solid var(--ground); box-shadow: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 3) 0 var(--ash2); }
+  #about .top { display: flex; justify-content: space-between; align-items: center; padding-bottom: calc(var(--u, 4px) * 3); border-bottom: var(--u, 4px) solid var(--ground); }
+  #about h2 { margin: 0; font: calc(var(--u, 4px) * 20)/calc(var(--u, 4px) * 15) var(--pix); }
+  #about .stamp { padding: calc(var(--u, 4px) * 2) calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 1); border: var(--u, 4px) solid var(--ground); line-height: calc(var(--u, 4px) * 8); }
+  #about dl { margin: 0; }
+  #about .row { display: grid; grid-template-columns: calc(var(--u, 4px) * 84) 1fr; gap: calc(var(--u, 4px) * 8); padding: calc(var(--u, 4px) * 2) 0 calc(var(--u, 4px) * 1); border-bottom: var(--u, 4px) solid var(--boneLo); }
+  #about dt { color: var(--ground); white-space: pre-line; }
+  #about dd { margin: 0; color: var(--ash2); }
+  #about .foot { margin: 0; padding-top: calc(var(--u, 4px) * 2); color: var(--ash4); }
+  #about .row:last-child { border-bottom: 0; }
+  #about dl { border-bottom: var(--u, 4px) solid var(--ground); }
+  #stage:fullscreen #about, #stage:-webkit-full-screen #about { top: var(--fs-pad, 0px); }
   .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); text-align: center; }
   .tv-note b { font-weight: normal; color: var(--ink); }
   .tv-note i { font-style: normal; }
@@ -125,6 +157,7 @@
   <div id="overlay" aria-live="polite">
     <div id="blackout"></div>
     <div id="ptag" hidden>PRESENTER</div>
+    <p id="endcredit" hidden>A companion to <b>Unseen Above: Space Law and the Power to See and Not Be Seen.</b><br>Michael Endrias. Intro to Space Law, Prof. Link.</p>
     <canvas id="cg" width="320" height="180" aria-hidden="true"></canvas>
     <div id="card" class="sr"><div class="card-top"></div><div class="card-title"></div></div>
     <div id="cc" class="sr"></div>
@@ -145,8 +178,11 @@
       <button id="opt-present" type="button" aria-pressed="false"><b>Presenter</b><i>off</i><span>For a class: immune mode, N skips anywhere, 0 to 9 jump to parts, H holds the picture, a refresh comes back here.</span></button>
       <button id="opt-full" type="button" aria-pressed="false" hidden><b>Full screen</b><i>off</i><span>U does it too.</span></button>
       <button id="opt-caps" type="button" aria-pressed="false" hidden><b>Big captions</b><i>off</i><span>Captions at double height, for a projector.</span></button>
+      <button id="opt-bright" type="button" aria-pressed="false"><b>Bright</b><i>off</i><span>Lifts dark scenes for a washed-out projector.</span></button>
       <button id="opt-chapters" type="button" aria-expanded="false" aria-controls="chapters"><b>Chapters</b><i>&gt;</i></button>
+      <button id="opt-about" type="button" aria-haspopup="dialog"><b>About</b><i>?</i><span>How the game argues. Any key goes back.</span></button>
     </div>
+    <p class="tv-credit"><span>A companion to <b>Unseen Above:</b></span><span><b>Space Law and the Power to See and Not Be Seen.</b></span><span>Michael Endrias. Intro to Space Law, Prof. Link.</span></p>
     <div id="chapters" class="tv-chapters" role="group" aria-label="Chapters" hidden></div>
   </div>
 </div>

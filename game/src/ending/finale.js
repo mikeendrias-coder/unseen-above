@@ -5,7 +5,8 @@
 //          Space, N or a click skips it. A and D, or a click on the set's knobs, change the
 //          channel even now; at the beat's climax the show takes the set back to channel 7.
 //   card   the ending screen, a paper form: the ending's name, its one line, ENDINGS FOUND n/5
-//          (found ones by name, the rest ----), and three buttons: TV AGAIN, CHAPTERS, TITLE.
+//          (found ones by name, the rest ----), and four buttons: TV AGAIN, CHAPTERS, ABOUT (how
+//          the game argues, ui/about.js), TITLE. Under the form, the paper's credit (#endcredit).
 //   tv     the TV again: the ending's feed loops on channel 7, and five more channels (other
 //          places on Earth the show watches; ending/channels.js). Enter goes back to the form.
 // The scene (Moon.js) owns the TV's canvas and texture and two screen-space Graphics: room (over
@@ -18,10 +19,14 @@ import { ccText, ccWidth, ccWrap } from '../art/ccfont.js';
 import { drawBeat, BEATS, BEAT_CC, OWN_NAME, vestRoom, LB } from './beats.js';
 import { CHANNELS, drawChannel, drawOsd, drawStatic } from './channels.js';
 import { TVSCREEN } from '../art/moon.js';
+import { openAbout } from '../ui/about.js';
 
 // the set's two knobs (paintLastRoom): the top one turns the channel up, the bottom one down
 export const KNOBS = [{ x: 239, y: 94, d: 1 }, { x: 239, y: 112, d: -1 }];
-export const CARD_BUTTONS = [{ id: 'tv', text: 'TV AGAIN' }, { id: 'chapters', text: 'CHAPTERS' }, { id: 'title', text: 'TITLE' }];
+export const CARD_BUTTONS = [{ id: 'tv', text: 'TV AGAIN' }, { id: 'chapters', text: 'CHAPTERS' }, { id: 'about', text: 'ABOUT' }, { id: 'title', text: 'TITLE' }];
+// the paper's credit under the form (template.html #endcredit), only while the form is up
+// (and body.paper-up, so Bright leaves the paper form as it is)
+const credit = on => { const c = document.getElementById('endcredit'); if (c && c.hidden === !!on) c.hidden = !on; document.body.classList.toggle('paper-up', !!on); };
 const INK = 0x0e0f12, PAPER = 0xebe6d8, RULE = 0xb8b2a3, DIM = 0x6b6c70, RED = 0xe3412b;
 
 // Off to the title screen, or to its Chapters list. main.js gives window.__unseen.toGuide; a
@@ -97,7 +102,8 @@ export class Finale {
     const b = CARD_BUTTONS[this.pick]; if (!b) return;
     Sound.tone(880, 0.06, 'square', 0.015);
     if (b.id === 'tv') this.toTv();
-    else { this.leaving = true; leave(b.id); }
+    else if (b.id === 'about') openAbout();
+    else { this.leaving = true; credit(false); leave(b.id); }
   }
 
   update(dt, c) {
@@ -215,6 +221,7 @@ export class Finale {
   // ------------------------------------------------------------------ drawing
   draw() {
     const x = this.ctx;
+    credit(this.phase === 'card' && !this.leaving);
     if (this.phase !== 'card') {
       const own = this.ch === 0;
       if (this.flipT > 0) drawStatic(x);
@@ -248,7 +255,8 @@ export class Finale {
   drawCard() {
     const g = this.card; g.clear();
     if (this.phase !== 'card') return;
-    const e = endingOf(this.id), W = 212, H = 156, X = 54, Y = 10;
+    // a little up from the middle, so the credit fits under it
+    const e = endingOf(this.id), W = 228, H = 156, X = 46, Y = 5;
     g.fillStyle(INK, 1); g.fillRect(-20, -20, 360, 220);
     g.fillStyle(0x2e3036, 1); g.fillRect(X + 3, Y + 3, W, H);
     g.fillStyle(PAPER, 1); g.fillRect(X, Y, W, H);
@@ -272,9 +280,10 @@ export class Finale {
       ccText(g, seen ? q.title : '----', rx + 8, ry, seen ? INK : DIM);
     });
     rule(Y + 118);
-    // the three buttons, the picked one inverted
-    const bw = Math.floor((W - 12 - 8) / 3), by = Y + 124, bh = 15;
-    this.rows = CARD_BUTTONS.map((b, i) => ({ x: X + 6 + i * (bw + 4), y: by, w: bw, h: bh }));
+    // the four buttons, each as wide as its word plus an equal share of the row, the picked one inverted
+    const by = Y + 124, bh = 15, gap = 4, n = CARD_BUTTONS.length, ws = CARD_BUTTONS.map(b => ccWidth(b.text));
+    const extra = Math.floor((W - 12 - gap * (n - 1) - ws.reduce((a, b) => a + b, 0)) / n);
+    let bx = X + 6; this.rows = ws.map(w => { const r = { x: bx, y: by, w: w + extra, h: bh }; bx += w + extra + gap; return r; });
     CARD_BUTTONS.forEach((b, i) => {
       const r = this.rows[i], on = i === this.pick;
       g.fillStyle(INK, 1); g.fillRect(r.x, r.y, r.w, r.h);
@@ -289,5 +298,5 @@ export class Finale {
     if (this.phase === 'tv') return 'A and D change the channel. Enter goes back.';
     return '';
   }
-  destroy() { this.stopBeds(); this.room.clear(); this.card.clear(); if (window.__finale === this) window.__finale = null; }
+  destroy() { credit(false); this.stopBeds(); this.room.clear(); this.card.clear(); if (window.__finale === this) window.__finale = null; }
 }
