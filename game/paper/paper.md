@@ -43,7 +43,7 @@ Michael Endrias · Intro to Space Law · Prof. A.J. Link · Fall 2026
 
 ## TL;DR
 
-Where space law governs what satellites collect, it protects the powerful from being seen, not people from being watched. Powerful states hold both halves of "the power to see and not be seen," and lend the second half to their friends; most sensed states, and the people below, hold neither. That is a choice, not a gap: Article VI of the Outer Space Treaty already requires states to supervise orbital data, and they can read it for people.
+Space law protects powerful states from being seen, not people from being watched. In 2026 the U.S. "asked" satellite companies to hide the Iran war: the public lost its view, the government kept its own, and the people photographed every day were never asked at all. That is a choice, not a gap. Article VI of the Outer Space Treaty already makes states supervise their satellite companies, and they can do it for people.
 
 ## Executive summary
 
