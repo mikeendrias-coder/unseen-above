@@ -87,6 +87,13 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const runAt = await p.evaluate(() => window.__game.scene.tileOf().x);
   ok('running into a sensor\'s range trips it and the strike comes (at tile x ' + runAt + ')', runAt <= 22);
   await until(() => window.__game.scene.ep.take === 3 && !window.__game.scene.dead && window.__game.scene.clock > 0.3);
+  // a step onto debris in a sensor's range: it tells first (blink, ticks), so stopping dead saves her
+  await p.evaluate(() => window.__game.scene.sensors.forEach(s => { s.window = 0; s.cool = 0; s.alarm = 0; s.burst = 0; }));
+  await put(15, 30); await p.evaluate(() => { window.__game.scene.kid.face = 'right'; });
+  await press('KeyD', 60);
+  await until(() => window.__game.scene.sensors.some(s => s.alarm > 0 || s.burst > 0), null, 3000);
+  await p.waitForTimeout(1200);
+  ok('debris under her: the sensor tells and pulses, and standing still she lives', await p.evaluate(() => !window.__game.scene.dead && window.__game.scene.ep.take === 3));
   // the gallery's lasers: each tells (blink and two ticks) before it fires
   const order = await p.evaluate(() => { const s = window.__game.scene, out = []; let prev = null; for (let t = 0; t < 2.4; t += 0.02) { window.__ewLaserT = t; s.updateLasers(0); const st = s.lasers[0].st; if (st !== prev) out.push(st); prev = st; } window.__ewLaserT = null; return out.join(' '); });
   ok('a laser goes dark, tells, then fires (' + order + ')', /tell on/.test(order) && !/off on/.test(order));
@@ -108,6 +115,14 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.down('KeyD'); await p.waitForTimeout(150); await p.keyboard.up('KeyD'); await p.waitForTimeout(300);
   ok('walking into the robot costs a heart (hp ' + bump + ' to ' + await p.evaluate(() => window.__game.scene.hp) + ')', await p.evaluate(b => window.__game.scene.hp === b - 1 && !window.__game.scene.dead, bump));
   await p.evaluate(() => { window.__game.scene.robot.mode = 'patrol'; });
+  // immunity never switches a hazard off: in immune mode (older builds also set __noDeath) the
+  // laser still fires through her and the shared death path takes over
+  await p.evaluate(() => { const s = window.__game.scene; window.__game.state.immune = true; window.__noDeath = true; const b = s.lasers[1]; window.__ewLaserT = b.phase + 2.4 - 0.85 + 0.3; s.placeTile(33, b.y + 1); });
+  await p.keyboard.down('KeyW'); const imm = await p.waitForFunction(() => window.__game.scene.dead, null, { timeout: 6000, polling: 50 }).then(() => true, () => false); await p.keyboard.up('KeyW');
+  ok('immune: a laser still hits her and she goes through the death path', imm);
+  await p.evaluate(() => { window.__ewLaserT = null; });
+  await until(() => !window.__game.scene.dead && window.__game.scene.clock > 0.3, null, 20000);
+  await p.evaluate(() => { window.__game.state.immune = false; window.__noDeath = false; });
   // the workshop: J at its door does nothing; W goes in
   await p.evaluate(() => { window.__noDeath = true; });
   await put(4, 26); await p.waitForTimeout(150);

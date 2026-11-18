@@ -216,7 +216,11 @@ export const NOTICE = {
     fire: ['A fire, still going. Nobody lives here.'],
     bust: ['The owner, in gold. The lasers guard him.'],
     piano: ['A grand piano under the ash. Locked.'],
-    full: ['Her pockets hold five. They are full.']
+    full: ['Her pockets hold five. They are full.'],
+    cot: ['Two cots, the blankets folded.', 'Someone still makes them up.'],
+    horse: ['A rocking horse. Still rocking.'],
+    fountain: ['A dry fountain. Coins in the ash.', 'Every one of them gold.'],
+    billiards: ['The score is still up.', 'Seven to nothing.']
   },
   bedroom: {
     piano: ['A grand piano. Nobody has played it.'],

@@ -10,7 +10,7 @@ import { hexNum, flat, Painter } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText } from '../art/pixfont.js';
 import { LOOKS, ASH } from '../art/palettes.js';
-import { T, W, H, LEVEL, buildMap, paintMap, isSolid, isOpaque, isWall, roomAt, nightCanvas } from '../art/eastwing.js';
+import { T, W, H, LEVEL, buildMap, paintMap, isSolid, isOpaque, isWall, isNoisy, roomAt, nightCanvas } from '../art/eastwing.js';
 import { Glasses } from '../core/glasses.js';
 import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle, darkFill, hardHoles, MAX_PEBBLES } from '../core/topdown.js';
 import { Marks, Gold } from '../core/props.js';
@@ -26,8 +26,12 @@ import { cg as CG } from '../ui/cg.js';
 // one line each, by room
 const HINTS = {
   landing: 'J at the heap fills her pockets, five at most. K throws.',
+  stair: '',
+  nursery: '',
   corridor: 'Sensors see movement and hear noise. Stop when they pulse.',
   alcove: '',
+  conservatory: 'Glass is loud. The robot in the library hears it.',
+  billiard: '',
   gallery: 'The lasers blink, then fire. Cross while they are dark.',
   hatch: 'A pebble down the dumbwaiter lands in the library.',
   library: 'The robot goes to any noise. Shelves block its view.',
@@ -48,6 +52,8 @@ export function laserPhase(L, row, t) {
   const off = L.period - L.tell - L.on, u = (((t - row.phase) % L.period) + L.period) % L.period;
   return u < off ? 'off' : u < off + L.tell ? 'tell' : 'on';
 }
+// a sensor that hears her tells this long, then pulses this long out of turn
+const SENSOR_TELL = 0.35, SENSOR_BURST = 0.45;
 let NIGHT_CV = null; // the night picture of the wing, made once (the map paints the same every time)
 
 export class EastWing extends TopDownEpisode {
@@ -61,7 +67,7 @@ export class EastWing extends TopDownEpisode {
       W, H, start: LEVEL.start,
       solid: (x, y) => { const c = m[y][x]; if (c === 'D') return !this.doorOpen; if (this.robot && Math.round(this.robot.x) === x && Math.round(this.robot.y) === y) return true; return isSolid(c); },
       opaque: (x, y) => { const c = m[y][x]; return c === 'D' ? !this.doorOpen : isOpaque(c); },
-      noisy: (x, y) => m[y][x] === ','
+      noisy: (x, y) => isNoisy(m[y][x])
     });
     const P = this.P;
     makeSprites(this, P); makeTopSprites(this, P); this.makeProps(P);
@@ -74,7 +80,7 @@ export class EastWing extends TopDownEpisode {
     this.chG = this.add.graphics().setDepth(6);
     this.hud = this.hudLayer(20);
     // the things in the wing
-    this.sensors = LEVEL.sensors.map(s => Object.assign({}, s, { cool: 0, flash: 0, top: !isWall(m[s.y - 1][s.x]) }));
+    this.sensors = LEVEL.sensors.map(s => Object.assign({}, s, { cool: 0, flash: 0, alarm: 0, burst: 0, top: !isWall(m[s.y - 1][s.x]) }));
     this.lasers = LEVEL.lasers.rows.map(r => Object.assign({}, r, { st: 'off' }));
     this.laserSrc = { id: 'laser', direct: true };
     const R = LEVEL.robot;
@@ -102,7 +108,11 @@ export class EastWing extends TopDownEpisode {
     this.addLook({ tx: 17, ty: 7, lines: N.books });
     this.addLook({ tx: 35, ty: 5, lines: N.desk, clue: 'routeMap' });
     this.addLook({ tx: 32, ty: 3, lines: N.fire });
-    this.addLook({ tx: 8, ty: 25, lines: N.calendar });
+    this.addLook({ tx: 7, ty: 25, lines: N.calendar });
+    this.addLook({ tx: 3, ty: 10, lines: N.cot });
+    this.addLook({ tx: 10, ty: 13, lines: N.horse });
+    this.addLook({ tx: 21, ty: 22, lines: N.fountain });
+    this.addLook({ tx: 40, ty: 23, lines: N.billiards });
     this.addLook({ tx: LEVEL.radio[0], ty: LEVEL.radio[1], lines: N.radio });
     this.addLook({ tx: 31, ty: 23, lines: N.bust });
     this.addLook({ tx: 45, ty: 16, lines: N.piano });
@@ -146,7 +156,7 @@ export class EastWing extends TopDownEpisode {
     this.clock += dt;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     this.reviewKeys();
-    if (this.dead) { if (c.advance() || c.restart() || c.throwP()) this.skipDeath(); }
+    if (this.dead) { if (c.advance() || c.restart()) this.skipDeath(); } // K only throws
     if (c.restart() && this.restartTake()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) {
@@ -177,7 +187,9 @@ export class EastWing extends TopDownEpisode {
     if (id === 'ballroom' || (o.x >= 38 && o.y <= 17)) return 6;
     if (id === 'study') return 5;
     if (id === 'library' || (o.x === 30 && o.y >= 13 && o.y <= 14)) return 4;
+    if (id === 'conservatory') return 3;
     if (id === 'gallery') return o.y <= 16 ? 3 : 2;
+    if (id === 'billiard') return 2;
     if (id === 'corridor' || id === 'alcove') return o.x >= 31 ? 2 : 1;
     return 0;
   }
@@ -213,17 +225,20 @@ export class EastWing extends TopDownEpisode {
       R.mode = 'investigate'; R.target = [x, y]; R.route = this.path([Math.round(R.x), Math.round(R.y)], [x, y]); R.wait = 0; R.stay = kind === 'dumbwaiter' ? 5 : 2.4;
       this.bubbles.say('robot', '?', () => ({ x: R.x * T + 8, y: R.y * T + 2 }), { ink: 0xf5ce77, pitch: 900, ms: 900 });
     }
-    // a sensor in range of a noise fires. Her own noise (running, debris underfoot) gives her away:
-    // that is the strike. (It used to put the sensor to sleep instead, so running past a sensor
-    // made it safe: one of the "lasers that did not trigger" in Michael's playtest.) A pebble
-    // trips it and it needs time to recharge; if it saw the pebble, the satellite shoots the pebble.
+    // a sensor in range of a noise answers it. Her own noise (running, debris underfoot) makes it
+    // tell (a fast blink, two high ticks, its reach lit red) and then pulse out of turn: if she is
+    // still moving then, it has her. Stopping dead on the tell saves her. (It used to put the
+    // sensor to sleep, so running past one made it safe; then, for a while, it killed her on the
+    // spot with no warning.) A pebble trips it and it needs time to recharge; if it saw the
+    // pebble, the satellite shoots the pebble.
     const mine = kind === 'run' || kind === 'debris';
     let seen = false;
     this.sensors.forEach(s => {
       if (s.cool > 0 || Math.hypot(s.x - x, s.y - y) > s.r + (mine ? 0 : 0.5)) return;
-      s.flash = 0.5; Sound.tone(1900, 0.08, 'square', 0.02);
-      if (mine) { if (!this.dead && !window.__noDeath) { this.sensorSrc.x = s.x * T + 8; this.die(this.sensorSrc); } }
-      else { s.cool = 3.2; seen = true; }
+      if (mine) {
+        if (this.dead || s.alarm > 0 || s.burst > 0) return;
+        s.alarm = SENSOR_TELL; Sound.tone(2100, 0.04, 'square', 0.02); this.time.delayedCall(110, () => Sound.tone(2600, 0.04, 'square', 0.02));
+      } else { s.flash = 0.5; Sound.tone(1900, 0.08, 'square', 0.02); s.cool = 3.2; s.alarm = 0; s.burst = 0; seen = true; }
     });
     if (kind === 'pebble') {
       const i = y * W + x;
@@ -236,10 +251,12 @@ export class EastWing extends TopDownEpisode {
     if (rm && rm.id === 'ballroom' && this.ch.phase === 'up') { this.ch.focus = Math.atan2(y + 0.5 - LEVEL.chandelier.y, x + 0.5 - LEVEL.chandelier.x) * 180 / Math.PI; this.ch.focusT = 1.4; }
   }
 
+  // pockets full: the same line at the heap and at a pebble on the floor
+  pocketsFull(tx, ty) { this.bubbles.look('item', this.fullSrc || (this.fullSrc = { lines: NOTICE.eastwing.full }), () => ({ x: tx * T + 8, y: ty * T - 4 })); }
   // the heap: J tops her up to five
   takePile() {
     const want = MAX_PEBBLES - this.pebbles;
-    if (want <= 0) { this.bubbles.look('item', this.fullSrc || (this.fullSrc = { lines: NOTICE.eastwing.full }), () => ({ x: this.pileThing.tx * T + 8, y: this.pileThing.ty * T - 4 })); Sound.tone(220, 0.06, 'triangle', 0.015); return; }
+    if (want <= 0) { this.pocketsFull(this.pileThing.tx, this.pileThing.ty); Sound.tone(220, 0.06, 'triangle', 0.015); return; }
     this.pebbles = MAX_PEBBLES;
     for (let i = 0; i < Math.min(3, want); i++) this.time.delayedCall(i * 70, () => Sound.tone(500 + i * 120, 0.06, 'triangle', 0.02));
     // the stones jump off the heap into her pocket
@@ -273,12 +290,14 @@ export class EastWing extends TopDownEpisode {
   }
 
   // ------------------------------------------------------------------ sensors, the radio, lasers, camera, robot
-  sensorOn(s) { return s.cool <= 0 && ((this.clock + s.phase * s.period) % s.period) < s.window; }
+  sensorOn(s) { return s.burst > 0 || (s.cool <= 0 && ((this.clock + s.phase * s.period) % s.period) < s.window); }
   updateSensors(dt) {
     const o = this.tileOf(), [rx, ry] = LEVEL.radio;
     let nearAny = false;
     this.sensors.forEach(s => {
       s.cool = Math.max(0, s.cool - dt); s.flash = Math.max(0, s.flash - dt);
+      s.burst = Math.max(0, s.burst - dt);
+      if (s.alarm > 0) { s.alarm -= dt; if (s.alarm <= 0) { s.alarm = 0; s.burst = SENSOR_BURST; s.flash = 0.5; Sound.tone(1900, 0.08, 'square', 0.02); } }
       const on = this.sensorOn(s), d = Math.hypot(o.x - s.x, o.y - s.y);
       if (d <= s.r + 2.5) nearAny = true;
       if (on && !s.was) {
@@ -289,7 +308,7 @@ export class EastWing extends TopDownEpisode {
         if (d <= s.r + 2.5 && !this.dead) { const rd = Math.hypot(o.x - rx, o.y - ry); Sound.tone(ladderHz(this.radio.step), 0.09, 'square', 0.006 + 0.012 * Math.max(0, 1 - rd / 16)); this.radio.step++; this.radio.lit = 0.25; }
       }
       s.was = on;
-      if (on && !this.dead && !window.__noDeath && this.kid.moving && d <= s.r) { this.sensorSrc.x = s.x * T + 8; this.die(this.sensorSrc); }
+      if (on && !this.dead && !this.shielded() && this.kid.moving && d <= s.r) { this.sensorSrc.x = s.x * T + 8; this.die(this.sensorSrc); }
     });
     if (!nearAny) this.radio.step = 0;
     this.radio.lit = Math.max(0, (this.radio.lit || 0) - dt);
@@ -307,7 +326,7 @@ export class EastWing extends TopDownEpisode {
         if (st === 'on') { Sound.tone(1500, 0.3, 'sawtooth', 0.022, 1200); Sound.noise(0.2, 0.035, 7000); }
       }
       b.st = st;
-      if (st === 'on' && !this.dead && !this.leaving && !window.__noDeath && k.x >= x0 && k.x <= x1 && Math.abs(k.y - by) <= 6) {
+      if (st === 'on' && !this.dead && !this.leaving && !this.shielded() && k.x >= x0 && k.x <= x1 && Math.abs(k.y - by) <= 6) {
         this.laserSrc.x = x1 - 2; this.laserSrc.y = by; this.die(this.laserSrc);
       }
     });
@@ -333,7 +352,7 @@ export class EastWing extends TopDownEpisode {
   // she walks into the robot, or it rolls into her: a shock off its shell, a heart, and she is
   // thrown back a tile. It does not see her for it (its lens looks past her feet).
   bumpRobot() {
-    if (this.dead || this.leaving || this.inv > 0 || window.__noDeath) return;
+    if (this.dead || this.leaving || this.inv > 0 || this.shielded()) return;
     const R = this.robot, k = this.kid;
     this.hp = Math.max(0, this.hp - 1); this.inv = 1; this.showHp();
     Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800); fx.shake(this.cameras.main, 120, 0.006);
@@ -405,7 +424,7 @@ export class EastWing extends TopDownEpisode {
         this.noise(Math.floor(C.x), Math.floor(C.y), 9, 'crash');
         this.dust = { t: 0, bits: Array.from({ length: 22 }, (_, i) => ({ a: i / 22 * Math.PI * 2 + Math.random() * 0.3, v: 30 + Math.random() * 40 })) };
         this.doorOpen = true; this.time.delayedCall(600, () => { Sound.chime(); overlay.sfx('[A DOOR UNLOCKS]', 2200); });
-        const k = this.kidPx(); if (!window.__noDeath && Math.hypot(k.x - C.x * T, k.y - C.y * T) < 26) this.die({ id: 'chandelier', direct: true });
+        const k = this.kidPx(); if (!this.shielded() && Math.hypot(k.x - C.x * T, k.y - C.y * T) < 26) this.die({ id: 'chandelier', direct: true });
       }
     }
   }
@@ -446,10 +465,13 @@ export class EastWing extends TopDownEpisode {
       if (s.lock > 0) tileDots(s.tiles, red, 2);
       else if (glassesOn) tileDots(s.tiles, red, 4);
     });
-    // sensors: through the glasses, the ground each one covers, dotted; solid while it pulses
-    if (glassesOn) this.sensors.forEach(s => {
-      const x = s.x * T + 8, y = s.y * T + 8, on = this.sensorOn(s);
-      pxCircle(g, x, y, s.r * T, on ? red : s.cool > 0 ? hexNum(P.wallLine) : hexNum(P.rubble), on ? 0 : 3);
+    // sensors: a pulse is a real light, a hard red ring on the floor at the edge of its reach,
+    // glasses or not; a tell (it heard her) blinks that ring. Between pulses only the glasses show
+    // the reach, dotted.
+    this.sensors.forEach(s => {
+      const x = s.x * T + 8, y = s.y * T + 8, on = this.sensorOn(s), tell = s.alarm > 0 && Math.floor(t * 16) % 2 === 0;
+      if (on || tell) pxCircle(g, x, y, s.r * T, red, on ? 0 : 2);
+      else if (glassesOn) pxCircle(g, x, y, s.r * T, s.cool > 0 ? hexNum(P.wallLine) : hexNum(P.rubble), 3);
       if (s.flash > 0) pxCircle(g, x, y, Math.round(((1 - s.flash * 2) * s.r * T + 4) / 3) * 3, bone, 2);
     });
     this.drawNoise(g, dt);
@@ -482,7 +504,8 @@ export class EastWing extends TopDownEpisode {
     this.sensors.forEach(s => {
       const on = this.sensorOn(s), sx = s.x * T, sy = s.y * T + (s.top ? 1 : 9);
       lg.fillStyle(ash0, 1); lg.fillRect(sx + 4, sy, 8, 7); lg.fillStyle(hexNum(P.device), 1); lg.fillRect(sx + 5, sy + 1, 6, 5);
-      lg.fillStyle(on || (blink && s.cool <= 0) ? red : hexNum(P.wallLine), 1); lg.fillRect(sx + 7, sy + 3, 2, 2);
+      const fast = s.alarm > 0 && Math.floor(t * 16) % 2 === 0;
+      lg.fillStyle(on || fast || (blink && s.cool <= 0 && !(s.alarm > 0)) ? red : hexNum(P.wallLine), 1); lg.fillRect(sx + 7, sy + 3, 2, 2);
       if (on) { lg.fillStyle(red, 1); lg.fillRect(sx + 6, sy + 2, 4, 1); lg.fillRect(sx + 6, sy + 5, 4, 1); }
       if (s.flash > 0.25) { lg.fillStyle(bone, 1); lg.fillRect(sx + 6, sy + 2, 4, 4); }
     });
@@ -551,8 +574,7 @@ export class EastWing extends TopDownEpisode {
       for (let i = 0; i < MAX_PEBBLES; i++) { const x = 126 + i * 5; g.fillStyle(0x0e0f12, 1); g.fillRect(x - 1, 166, 5, 6); g.fillStyle(i < this.pebbles ? 0xebe6d8 : 0x45474d, 1); g.fillRect(x, 167, 3, 3); }
     }
     if (!this.gl.on) return;
-    // the static is grey, not red: red lines across the view read as lasers (Michael's playtest)
-    this.gl.drawStatic(g, hexNum(ASH.ash4));
+    this.drawStatic(g);
     // the corner marks blink while the crack is new, then hold steady
     const show = this.glitchT >= 2 || Math.floor(this.glitchT * 8) % 3 !== 0, m = 5, s = 8;
     if (show) {
@@ -565,6 +587,26 @@ export class EastWing extends TopDownEpisode {
     pxLine(g, 13, 6, 15, 1, 0x6b6c70); pxLine(g, 24, 12, 22, 19, 0x6b6c70); pxLine(g, 31, 18, 37, 13, 0x6b6c70);
     const label = this.glitchT < 3 && Math.floor(this.glitchT * 10) % 4 === 0 ? 'V1EW' : 'VIEW'; if (Math.floor(this.clock * 3) % 5) pixText(g, label, 44, m + 3, col, 1, 1);
     if (show && overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, 1);
+  }
+
+  // The cracked glasses' static, drawn here and not by Glasses.drawStatic: its torn rows are
+  // dotted lines across the whole view, and here those read as the lasers' warning (a dotted line
+  // across a row). These tears are short, broken scratches that never span a room.
+  drawStatic(g) {
+    const gl = this.gl, lv = gl.level; if (lv <= 0) return;
+    const grey = hexNum(ASH.ash4), n = Math.round(20 + lv * 220);
+    for (let i = 0; i < n; i++) { g.fillStyle(Math.random() < 0.5 ? 0xebe6d8 : grey, 1); g.fillRect(Math.floor(Math.random() * 320), Math.floor(Math.random() * 180), 1, 1); }
+    const tears = Math.floor(lv * 6 + Math.random() * 2);
+    g.fillStyle(grey, 1);
+    for (let i = 0; i < tears; i++) {
+      let x = Math.floor(Math.random() * 300), y = Math.floor(Math.random() * 178);
+      const len = 4 + Math.floor(Math.random() * 14);
+      for (let k = 0; k < len; k++) { g.fillRect(x + k, y, 1, 1); if (Math.random() < 0.25) y += Math.random() < 0.5 ? 1 : -1; }
+    }
+    // a dropout: a few rows go dark (short bands, not lines across the view)
+    if (gl.out > 0) { g.fillStyle(0x0e0f12, 1); for (let i = 0; i < 6; i++) { const y = Math.floor(Math.random() * 180); g.fillRect(Math.floor(Math.random() * 200), y, 40 + Math.floor(Math.random() * 80), 2); } }
+    // running hot: a red edge blinks around the view before they cut out
+    if (gl.on && gl.heat > 0.72 && Math.floor(gl.t * (fx.reduced ? 2 : 5)) % 2 === 0) { g.fillStyle(0xe3412b, 1); g.fillRect(0, 0, 320, 2); g.fillRect(0, 178, 320, 2); g.fillRect(0, 2, 2, 176); g.fillRect(318, 2, 2, 176); }
   }
 
   hint() {
