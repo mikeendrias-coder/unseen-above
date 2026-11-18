@@ -16,10 +16,10 @@ import { overlay } from '../core/overlay.js';
 import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, inPoly, K } from '../core/side.js';
-import { goNext } from '../core/flow.js';
+import { goNext, prevChapter } from '../core/flow.js';
 import { BEDROOM, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
-import { reviewKeys, presenting } from '../core/review.js';
+import { reviewKeys, presenting, rewindTo } from '../core/review.js';
 import { fx } from '../core/fx.js';
 import { darkFill, hardHoles, holeShows, checker, pxCircle, cpuCanvas } from '../core/topdown.js';
 import { Marks, Gold, pushClear } from '../core/props.js';
@@ -204,6 +204,56 @@ export class Bedroom extends SideEpisode {
     if (this.mode === 'talk') { this.talkI = BEDROOM.length - 1; return this.nextLine(); }
     if (this.mode === 'dying') { this.dyingT = Math.max(this.dyingT, 5.5); return; }
     if (this.mode === 'after') this.openVoid();
+  }
+  // B, one stop back. The house: the skip point behind her; at the first, back to batch 3. Once the
+  // bag is pulled (the run, the walk in to him): back at the bag's tape mark with the floor whole,
+  // as a regeneration (nothing counted). The talk: this line again, or, pressed at its start, the
+  // line before; at the first line, back at the bedroom door. His death and after: his last line.
+  skipBack() {
+    const k = this.kid;
+    if (this.mode === 'house') {
+      if (this.leaving || this.dead) return;
+      if (this.bag.have) return this.backToBag();
+      const x = this.skipPoints.slice().reverse().find(p => p < k.x - 12);
+      if (x == null) { prevChapter(this); return; }
+      return this.placeAt(x);
+    }
+    if (this.mode === 'bedroom' || this.mode === 'arrive') {
+      const door = this.rerun ? LEVEL.brother.kneel - k.w / 2 : BX + 26;
+      if (k.x > door + 12) { k.x = door; k.vx = 0; k.vy = 0; k.y = GROUND - k.h; k.onGround = true; this.mode = 'bedroom'; return; }
+      return this.backToBag();
+    }
+    if (this.mode === 'talk') {
+      const to = rewindTo(this.talkI, this.clock - (this.lineAt || 0));
+      if (to < 0) return this.backToDoor();
+      this.talkI = to - 1; return this.nextLine();
+    }
+    if (this.mode === 'dying' || this.mode === 'after' || this.mode === 'void') this.backToTalk();
+  }
+  // the house again from the bag's tape mark (the last mark), the floor whole, the bag in place
+  backToBag() {
+    if (this.dead) return;
+    const list = this.tape.list, i = list.length - 1, m = list[i], cp = { x: m.x, y: m.y - K.hStand, i };
+    this.markCheckpoint(cp);
+    this.dead = true; this.leaving = true; overlay.clearCaption();
+    this.cameras.main.fadeOut(140, 0, 0, 0);
+    this.time.delayedCall(150, () => this.scene.restart({ retry: true, checkpoint: cp, regen: true }));
+  }
+  // the first line, B again: she stands at the bedroom door, nothing said yet
+  backToDoor() {
+    overlay.clearCaption();
+    const k = this.kid; this.mode = 'bedroom';
+    if (k.crouch) { k.y -= K.hStand - K.hCrouch; k.h = K.hStand; k.crouch = false; }
+    k.x = BX + 26; k.y = GROUND - k.h; k.vx = 0; k.vy = 0; k.face = 1; k.onGround = true;
+  }
+  // from his death (or the door after it): his last line again, alive
+  backToTalk() {
+    if (this.went) return;
+    if (this.fading) { this.cameras.main.resetFX(); this.fading = false; }
+    this.carded = false; this.broDead = false; this.bro.setTexture('bro_sit'); this.stay = 0; this.things = []; this.girl.setVisible(true);
+    this.beds.hum.set(0.012, 0.4); this.beds.wind.set(0.02, 0.4); this.beds.breath.slow(1); this.beds.breath.set(0.08, 0.6);
+    Music.play('bedroom', { fade: 0.5, fadeIn: 1 });
+    this.startTalk(BEDROOM.length - 1);
   }
   // the climb before the doors: the floor is solid there, so her own respawn spot finder must not
   // pick the top of the heap
@@ -465,14 +515,14 @@ export class Bedroom extends SideEpisode {
     if (this.mode === 'void') this.updateVoid(dt);
     if (this.mode === 'break') this.updateBreak(dt);
   }
-  startTalk() {
+  startTalk(from) {
     const k = this.kid;
     this.mode = 'talk'; k.vx = 0; k.face = 1;
     k.x = LEVEL.brother.kneel - k.w / 2; if (!k.crouch) { k.y += K.hStand - K.hCrouch; k.h = K.hCrouch; k.crouch = true; }
-    this.talkI = -1; this.nextLine();
+    this.talkI = (from || 0) - 1; this.nextLine();
   }
   nextLine() {
-    this.talkI++;
+    this.talkI++; this.lineAt = this.clock; // when this line began (B: this line again, or the one before)
     // after the break the scene runs again with nothing said: he just goes
     if (this.rerun) this.talkI = BEDROOM.length;
     if (this.talkI >= BEDROOM.length) return this.endTalk();

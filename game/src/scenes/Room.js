@@ -381,6 +381,7 @@ export class Room extends SideEpisode {
   }
 
   skipAhead() { this.leave(); }
+  skipBack() { this.leave(); } // B: back out to the episode she came from, as N does
   canRestart() { return false; } // a side room: the episode restarts from the episode
   leave() {
     if (this.leaving) return;

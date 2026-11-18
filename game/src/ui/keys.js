@@ -12,7 +12,7 @@
 // says "swing".
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
-import { stepMode, canSkip, setPresenter, presenting, MODE_WORD } from '../core/review.js';
+import { stepMode, canSkip, canBack, setPresenter, presenting, MODE_WORD } from '../core/review.js';
 import { overlay } from '../core/overlay.js';
 
 const KEYS = [
@@ -31,6 +31,7 @@ const KEYS = [
   { cap: 'P', key: 'p', code: 'KeyP', kc: 80, label: 'pause' },
   { cap: 'M', label: 'sound', sw: 'sound' },
   { cap: 'I', label: 'mode', sw: 'immune' },
+  { cap: 'B', key: 'b', code: 'KeyB', kc: 66, label: 'back', dyn: 'back' },
   { cap: 'N', key: 'n', code: 'KeyN', kc: 78, label: 'skip ahead', dyn: 'skip' },
   { cap: 'Flash', label: 'flashing', sw: 'flash' },
   { cap: 'CH', label: 'chapters', sw: 'chapters' },
@@ -48,7 +49,8 @@ function send(type, k) {
 const scene = () => window.__game && window.__game.scene;
 // Keys whose job depends on where she is: [label, usable now]. Esc skips the opening and the
 // kids' room and opens the menu everywhere else. N only skips in ENDLESS or IMMUNE, or when the
-// scene offers it (stuck, or a screen that allows it); otherwise its cap greys out.
+// scene offers it (stuck, or a screen that allows it); otherwise its cap greys out. B (back) is lit
+// exactly when N is, except where nothing lies behind (the start of the opening).
 const playing = () => { const st = document.getElementById('stage'); return !!(st && st.classList.contains('playing')); };
 const sat = () => { const sc = scene(); return playing() && sc && sc.sys && sc.sys.settings.key === 'satellite' ? sc : null; };
 const ring = () => { const sc = sat(); return !!(sc && sc.level && sc.level.id === 'ring'); };
@@ -72,7 +74,9 @@ const DYN = {
   space: () => sat() || top() ? ['', false] : ['jump', true],
   shift: () => sat() ? ['', false] : ['run', true],
   esc: () => { const sc = scene(), k = sc && sc.sys && sc.sys.settings.key; return [playing() && (k === 'intro' || k === 'kids') ? 'skip scene' : 'menu', true]; },
-  skip: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canSkip(sc); } catch (e) { /* not a scene yet */ } return ['skip ahead', on]; }
+  skip: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canSkip(sc); } catch (e) { /* not a scene yet */ } return ['skip ahead', on]; },
+  // B, N's opposite: lit wherever N is, unless there is nothing behind (the opening's start)
+  back: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canBack(sc); } catch (e) { /* not a scene yet */ } return ['back', on]; }
 };
 // others (the title screen) listen for changes made here
 const listeners = [];

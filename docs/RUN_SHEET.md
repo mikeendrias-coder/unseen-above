@@ -24,6 +24,7 @@ Talking points are yours: each stop has a blank line for them.
 | **0** to **9** | Jump to a part, with its title card: 0 opening, 1 ep 1, 2 satellite 1, 3 ep 2, 4 satellite 2, 5 ep 3, 6 ep 4, 7 kids' room, 8 Moon, 9 backstage |
 | **H** | Hold the picture to talk. No menu over it, sound ducks. H again goes on |
 | **N** | Skip ahead one section per press (or solves a satellite screen). An episode has 4 to 7 sections, so keep pressing. In presenter mode it always works |
+| **B** | Back, N's opposite (works wherever N does). In an episode: the section behind her; at the first one, the part before (from its start). A line or a beat (the opening, the bedroom talk, the kids' room, the playroom, an ending's last shot): that line again; pressed at its start, the one before. A satellite screen: the puzzle before, then the request form, then the part before. Never costs a life or a take |
 | **I** | The mode: NORMAL (5 lives), ENDLESS (she dies, lives never run out), IMMUNE (she comes back at the mark, nothing lost). The strip's right end says which |
 | **W** | Doors, every kind. J never opens a door |
 | **Backspace** | Start this take again |

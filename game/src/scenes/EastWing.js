@@ -17,7 +17,7 @@ import { Marks, Gold } from '../core/props.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
-import { goNext } from '../core/flow.js';
+import { goNext, prevChapter } from '../core/flow.js';
 import { showStatus } from '../core/death.js';
 import { NOTICE } from '../data/dialogue.js';
 import { fx } from '../core/fx.js';
@@ -56,6 +56,9 @@ export function laserPhase(L, row, t) {
 const SENSOR_TELL = 0.35, SENSOR_BURST = 0.45;
 let NIGHT_CV = null; // the night picture of the wing, made once (the map paints the same every time)
 let NIGHT_CPU = null; // its copy on a CPU canvas, for the dark layer (drawDark)
+
+// the stops N moves her through, in order (skipAhead), for B to walk back
+const BACK_STOPS = [[13, 31], [33, 28], [33, 14], [31, 6], [39, 8], [41, 8]];
 
 export class EastWing extends TopDownEpisode {
   constructor() { super('eastwing'); }
@@ -208,6 +211,17 @@ export class EastWing extends TopDownEpisode {
     const next = [[13, 31], [33, 28], [33, 14], [31, 6], [31, 6], [39, 8]][st];
     if (next[0] === o.x && next[1] === o.y) { const after = [[33, 28], [33, 14], [31, 6], [39, 8], [39, 8], [41, 8]][st]; this.placeTile(after[0], after[1]); }
     else this.placeTile(next[0], next[1]);
+  }
+  // B: back through the wing, stop by stop (N's stops, in order): from a stop to the one before;
+  // anywhere else to the last stop she has reached; before the first, back to the fall
+  skipBack() {
+    if (this.leaving || this.dead) return;
+    const o = this.tileOf(), st = this.stage(o), S = BACK_STOPS;
+    const on = S.findIndex(p => p[0] === o.x && p[1] === o.y);
+    let j = on >= 0 ? on - 1 : -1;
+    if (on < 0) for (let i = S.length - 1; i >= 0; i--) if (this.stage({ x: S[i][0], y: S[i][1] }) <= st) { j = i; break; }
+    if (j < 0) { prevChapter(this); return; }
+    this.placeTile(S[j][0], S[j][1]);
   }
   onArrive(x, y) {
     if (this.doorOpen && x === LEVEL.exit[0] && y === LEVEL.exit[1]) this.leave();

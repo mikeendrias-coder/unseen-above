@@ -38,3 +38,24 @@ export function goNext(scene, id) {
   if (results.endsEpisode(id)) results.report(scene, go); else go();
   return true;
 }
+
+// ---- Which step a scene is (presenter resume, B's previous chapter). A side room has none.
+const KEY_STEP = { intro: 'intro', grounds: 'ep1', gallery: 'ep2', fall: 'ep3', eastwing: 'ep3b', bedroom: 'ep4', kids: 'kids', hallway: 'ep5b' };
+export function stepOf(sc) {
+  if (!sc || !sc.sys || !sc.sys.settings) return null;
+  const key = sc.sys.settings.key, d = sc.sys.settings.data || {};
+  if (key === 'satellite') return 'batch' + (sc.batch || d.batch || 1);
+  if (key === 'moon') return d.at === 'playroom' ? 'ep5c' : 'ep5';
+  return KEY_STEP[key] || null;
+}
+// B at the start of a part: the part before it in STEPS, from its beginning, the way the number
+// keys and Chapters start one (main.js goStep, handed in with setJumper). The opening has none.
+let jumper = null;
+export function setJumper(fn) { jumper = fn; }
+export function prevStepOf(sc) { const i = STEPS.findIndex(s => s.id === stepOf(sc)); return i > 0 ? STEPS[i - 1] : null; }
+export function prevChapter(sc) {
+  const prev = prevStepOf(sc); if (!prev || !jumper) return false;
+  // after this frame: the jump stops every scene, this one included
+  setTimeout(() => jumper({ step: prev.id }), 0);
+  return true;
+}

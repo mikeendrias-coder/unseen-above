@@ -6,7 +6,7 @@ import { initPicker, HASH, DIGITS, SHORT } from './ui/vibe.js';
 import { initPause } from './ui/pause.js';
 import { initKeys, onKeysChange } from './ui/keys.js';
 import { cg } from './ui/cg.js';
-import { STEPS } from './core/flow.js';
+import { STEPS, stepOf, setJumper } from './core/flow.js';
 import { state } from './core/state.js';
 import { Music } from './core/music.js';
 import { stepMode, syncImmunity, setPresenter, presenting, MODE_WORD, MODE_HELP } from './core/review.js';
@@ -148,20 +148,14 @@ function goStep(pick) {
   if (e.card) { const [top, title] = e.card; setTimeout(() => { overlay.card(top, title, 3600, 'lower'); overlay.bug('CH 07', 3600); }, 700); }
   return true;
 }
+setJumper(goStep); // B at the start of a part goes to the part before it (core/flow.js prevChapter)
 const setHash = id => { try { if (HASH[id] && location.hash !== '#' + HASH[id]) history.replaceState(history.state, '', location.pathname + location.search + '#' + HASH[id]); } catch (e) { /* no address */ } };
 const clearHash = () => { try { if (location.hash) history.replaceState(history.state, '', location.pathname + location.search); } catch (e) { /* no address */ } };
 const stepOfHash = h => Object.keys(HASH).find(id => HASH[id] === String(h || '').replace('#', '')) || null;
 
 // ---- Presenter mode: where she is now, kept in the address and the save, so a refresh goes
 // straight back to the start of this part (not the title screen).
-const KEY_STEP = { intro: 'intro', grounds: 'ep1', gallery: 'ep2', fall: 'ep3', eastwing: 'ep3b', bedroom: 'ep4', kids: 'kids', hallway: 'ep5b' };
-function currentStep() {
-  const sc = window.__game && window.__game.scene; if (!sc || !sc.sys || !sc.sys.settings) return null;
-  const key = sc.sys.settings.key, d = sc.sys.settings.data || {};
-  if (key === 'satellite') return 'batch' + (sc.batch || d.batch || 1);
-  if (key === 'moon') return d.at === 'playroom' ? 'ep5c' : 'ep5';
-  return KEY_STEP[key] || null; // a side room keeps the episode it opens from
-}
+const currentStep = () => stepOf(window.__game && window.__game.scene);
 // and what was asked for there: an ending picked for the playroom, or give-up mode backstage
 function currentPick() {
   const id = currentStep(); if (!id) return null;

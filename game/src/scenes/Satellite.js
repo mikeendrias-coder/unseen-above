@@ -16,7 +16,7 @@ import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { overlay } from '../core/overlay.js';
 import { pixelZoom } from '../core/display.js';
-import { nextStep, goNext } from '../core/flow.js';
+import { nextStep, goNext, prevChapter } from '../core/flow.js';
 import { state } from '../core/state.js';
 import { LOOKS } from '../art/palettes.js';
 import { flat } from '../art/painter.js';
@@ -99,6 +99,7 @@ export class Satellite extends Phaser.Scene {
     this.drawStatic();
     // the request comes first, once per visit (a retry or a screen preview inside the batch skips it)
     const withForm = !this.embedded && !data.formDone && !(data.at > 0);
+    this.form = null; this.offerSkip = false; // the scene object is reused on a restart
     this.loadLevel(Math.min(data.at || 0, this.ids.length - 1), !!data.quiet || withForm);
     if (withForm) {
       this.form = new RequestForm(this, this.batch, this.skinN, this.K, () => this.formClosed());
@@ -267,6 +268,16 @@ export class Satellite extends Phaser.Scene {
   skipAhead() {
     if (this.form) { if (!this.form.ready()) return; if (!state.immune) { this.form.dismiss(); return; } }
     if (!this.ended && !this.solved) this.win();
+  }
+  // B: the puzzle before this one in the batch (batch 1: the globe, then the ring), then the request
+  // form, then the part before this batch. A puzzle already solved (its win, the death map, the end
+  // card) goes back to its own start. Nothing is stamped or scored by going back.
+  skipBack() {
+    if (this.embedded) return;
+    if (this.form) { prevChapter(this); return; }
+    const at = this.solved || this.ended ? this.levelIdx : this.levelIdx - 1;
+    this.scene.restart(at >= 0 ? { batch: this.batch, skin: this.skinN, quiet: true, preview: this.preview, at, formDone: true }
+      : { batch: this.batch, skin: this.skinN, preview: this.preview, at: 0 });
   }
   // Backspace, or the pause menu: this puzzle again from its start
   canRestart() { return !this.embedded && !this.ended; }

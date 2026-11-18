@@ -26,7 +26,7 @@ const CONTROLS = {
     '{J} uses, looks, talks. {K} throws, swings.',
     '{L} glasses. {Enter} skips a line.',
     '{Bksp} retries. {P} pauses. {M} sound.',
-    '{I} mode. {N} skips ahead.',
+    '{I} mode. {N} skips ahead. {B} back.',
     'Globe: {W} {A} {S} {D} or a drag turns it.'
   ]
 };

@@ -10,6 +10,7 @@ import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
+import { prevChapter } from './flow.js';
 import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint, tapeTake, hasTakes } from './death.js';
 import { juice } from './juice.js';
 import { results } from './results.js';
@@ -50,6 +51,13 @@ export class SideEpisode extends Phaser.Scene {
   skipAhead() {
     const k = this.kid, pts = this.skipPoints || []; if (!k || this.dead || this.leaving) return;
     const x = pts.find(p => p > k.x + 12); if (x == null) return;
+    this.placeAt(x);
+  }
+  // B: back to the skip point behind her; at the first one (or before it), the part before this one
+  skipBack() {
+    const k = this.kid, pts = this.skipPoints || []; if (!k || this.dead || this.leaving) return;
+    const x = pts.slice().reverse().find(p => p < k.x - 12);
+    if (x == null) { prevChapter(this); return; }
     this.placeAt(x);
   }
   // put her standing on the floor at x (the first floor found going down)

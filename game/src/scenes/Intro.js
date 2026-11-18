@@ -4,7 +4,7 @@
 // pass, and she follows him down. Then the gate (episode 1).
 import { Music } from '../core/music.js';
 import { goNext } from '../core/flow.js';
-import { reviewKeys } from '../core/review.js';
+import { reviewKeys, rewindTo, BACK_GRACE } from '../core/review.js';
 import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -89,6 +89,20 @@ export class Intro extends Phaser.Scene {
     this.T = T;
   }
   skipAhead() { this.finish(true); }
+  // B: this line or beat again, or, pressed at its start, the one before. The opening is the first
+  // part of the show, so at its very start B does nothing (and its key greys out).
+  beats() { const T = this.T; return [0].concat(T.lines.map(l => l.start), [T.goDown, T.drone, T.later, T.alone, T.follow]); }
+  backable() { return !this.done && this.t > BACK_GRACE; }
+  skipBack() {
+    if (this.done) return;
+    const B = this.beats(), i = B.reduce((n, b, j) => (this.t >= b ? j : n), 0), to = rewindTo(i, this.t - B[i]);
+    if (to < 0) return;
+    const t = B[to], T = this.T;
+    // the clock goes back; whatever it set off after that point can happen again
+    this.t = t; this.curLine = undefined; overlay.clearCaption();
+    this.windCap = t > 0.4; this.droneOn = t > T.drone; this.laterShown = t > T.later; this.aloneShown = t > T.alone; this.aloneCleared = t > T.aloneEnd;
+    if (this.fading) { this.fading = false; this.cameras.main.resetFX(); }
+  }
 
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 20), c = this.ctl, T = this.T;

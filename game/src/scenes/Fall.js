@@ -13,7 +13,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode, TILE } from '../core/side.js';
 import { Marks, Gold } from '../core/props.js';
-import { goNext } from '../core/flow.js';
+import { goNext, prevChapter } from '../core/flow.js';
 import { fx } from '../core/fx.js';
 
 // '#' rubble wall  '=' a broken floor  'x' a floor that crumbles under her  'R' the rotten floor
@@ -201,6 +201,13 @@ export class Fall extends SideEpisode {
     if (this.phase !== 'walk' || this.dead) return;
     const k = this.kid, s = SKIP.find(q => q.y > k.y + k.h + 2); if (!s) return;
     k.x = s.x; k.y = s.y - k.h; k.vx = 0; k.vy = 0; k.onGround = true; k.peakY = k.y;
+  }
+  // B: the floor above; from the first floor (or the top), back to batch 2. Not once she falls.
+  skipBack() {
+    if (this.phase !== 'walk' || this.dead || this.leaving) return;
+    const k = this.kid, s = SKIP.slice().reverse().find(q => q.y < k.y + k.h - 2);
+    if (!s) { prevChapter(this); return; }
+    k.x = s.x; k.y = s.y - k.h; k.vx = 0; k.vy = 0; k.onGround = true; k.peakY = k.y; this.takeoffY = null;
   }
 
   update(time, delta) {

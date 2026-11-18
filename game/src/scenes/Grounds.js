@@ -15,7 +15,7 @@ import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, inPoly } from '../core/side.js';
 import { Props, Marks, Gold, hardCone } from '../core/props.js';
-import { goNext } from '../core/flow.js';
+import { goNext, prevChapter } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { fx } from '../core/fx.js';
@@ -247,6 +247,18 @@ export class Grounds extends SideEpisode {
     const at = LEVEL.skip.find(([x]) => x * T > k.x + 12);
     // nothing left to skip to: she is at the door (the last point), so N takes her through it
     if (!at) { if (k.x > 93 * T && k.y + k.h <= BALCONY + 2) this.enterDoor(); return; }
+    this.skipTo(at);
+  }
+  // B: the skip point behind her (the same spots and the same safe beat as N); at the first one,
+  // back to the opening
+  skipBack() {
+    const k = this.kid; if (!k || this.dead || this.leaving) return;
+    const at = LEVEL.skip.slice().reverse().find(([x]) => x * T < k.x - 12);
+    if (!at) { prevChapter(this); return; }
+    this.skipTo(at);
+  }
+  skipTo(at) {
+    const k = this.kid;
     k.x = Math.round(at[0] * T); k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null;
     const cr = this.crate.r, cd = this.cradle.r;
     if (at[2] === 'crate' && Math.abs(cr.y + cr.h - TERRACE) < 1 && cr.x > k.x) k.x = Math.round(cr.x) - k.w;

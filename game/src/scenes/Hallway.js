@@ -22,7 +22,8 @@ import { overlay } from '../core/overlay.js';
 import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K, inPoly } from '../core/side.js';
-import { goNext } from '../core/flow.js';
+import { goNext, prevChapter } from '../core/flow.js';
+import { BACK_GRACE } from '../core/review.js';
 import { linkGiveUp } from '../data/endings.js';
 import { Glasses } from '../core/glasses.js';
 import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, HALL_GIVEUP, NOTICE, lineSeconds } from '../data/dialogue.js';
@@ -101,7 +102,8 @@ export class Hallway extends SideEpisode {
     const again = !data.fresh && at > 0 && performance.now() - at < 1500;
     const askGiveUp = !!data.giveUp || linkGiveUp();
     if (!again) {
-      ['creatorDeaths', 'gaveUp', 'spared', 'killedBroken'].forEach(k => state.storySet(k, k === 'creatorDeaths' ? 0 : false));
+      // B back out of the fight (data.back) keeps the story as it is; the lines play again
+      if (!data.back) ['creatorDeaths', 'gaveUp', 'spared', 'killedBroken'].forEach(k => state.storySet(k, k === 'creatorDeaths' ? 0 : false));
       const heard = Object.assign({}, state.story.heard); Object.keys(heard).forEach(k => { if (/^HALL_/.test(k)) delete heard[k]; }); state.storySet('heard', heard);
     }
     // give-up mode: six deaths in the fight already, or asked for (?giveup=1#hallway)
@@ -109,7 +111,7 @@ export class Hallway extends SideEpisode {
     const retry = this.retry = again || askGiveUp;
     this.giveUp = retry && state.story.creatorDeaths >= GIVE_UP_AT;
     this.shutterOpen = 0; this.shutterProp.solid = true; this.train = false;
-    this.spawn(retry ? 21 * T + 6 : null); this.kid.face = 1;
+    this.spawn(retry ? 21 * T + 6 : data.back || null); this.kid.face = 1;
     this.mode = 'walk'; this.heardIn = 0;
     this.input.on('pointerdown', () => { if (this.mode === 'fight' || this.mode === 'giveup') this.swing(); });
     this.cameras.main.fadeIn(retry ? 300 : 900);
@@ -620,6 +622,21 @@ export class Hallway extends SideEpisode {
     if (this.mode === 'yield') { this.queue = this.queue.filter(q => q.cb); this.lineT = 0.01; return; }
     if (this.mode === 'giveup') { this.shutterOpen = 1; this.shutterProp.solid = false; }
     if (this.mode === 'after' || this.mode === 'giveup') this.placeAt(LEVEL.door.x + 4);
+  }
+  // B: on the way in, the skip point behind her (at the first, back to the Moon). From the toss,
+  // the fight or after it: the scene again from the walk in (the point before the stage), the
+  // story kept. Give-up mode starts over; pressed at its start, back to the Moon.
+  skipBack() {
+    if (this.dead || this.leaving) return;
+    const k = this.kid;
+    if (this.mode === 'walk') { const x = this.skipPoints.slice().reverse().find(p => p < k.x - 12 && p < ARENA.x0); if (x == null) { prevChapter(this); return; } this.placeAt(x); return; }
+    if (this.mode === 'giveup') { if (this.clock > BACK_GRACE) this.restartBack({ giveUp: true }); else prevChapter(this); return; }
+    this.restartBack({ back: 15 * T });
+  }
+  restartBack(data) {
+    this.leaving = true; overlay.clearCaption();
+    this.cameras.main.fadeOut(140, 0, 0, 0);
+    this.time.delayedCall(150, () => this.scene.restart(data));
   }
   enterDoor() {
     if (this.leaving || (this.mode !== 'after' && this.mode !== 'giveup')) return;

@@ -15,7 +15,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode, K } from '../core/side.js';
 import { Props, Marks, Gold, hardCone, pushClear } from '../core/props.js';
-import { goNext } from '../core/flow.js';
+import { goNext, prevChapter } from '../core/flow.js';
 import { NOTICE, bodyLines } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
 import { fx } from '../core/fx.js';
@@ -370,6 +370,18 @@ export class Gallery extends SideEpisode {
     if (!this.glasses) this.giveGlasses();
     const at = LEVEL.skip.find(([x]) => x * T > k.x + 12);
     if (!at) { if (k.x > 84 * T && k.y + k.h > GROUND - 4) this.enterDoor(); return; }
+    this.skipTo(at);
+  }
+  // B: the skip point behind her (N's spots, N's safe beat); at the first one, back to batch 1.
+  // The glasses stay as they are: the drawer is behind the first point.
+  skipBack() {
+    const k = this.kid; if (!k || this.dead || this.leaving) return;
+    const at = LEVEL.skip.slice().reverse().find(([x]) => x * T < k.x - 12);
+    if (!at) { prevChapter(this); return; }
+    this.skipTo(at);
+  }
+  skipTo(at) {
+    const k = this.kid;
     k.x = Math.round(at[0] * T); k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null; this.pitPeak = null;
     // a beat to get her bearings: nothing locks on and nothing hurts her (she blinks) for 2 s
     this.safeT = SKIP_SAFE; k.inv = Math.max(k.inv, SKIP_SAFE);

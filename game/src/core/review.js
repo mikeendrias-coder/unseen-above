@@ -74,6 +74,21 @@ export function canSkip(scene) {
   if (!scene || !scene.skipAhead) return false;
   return state.mode !== 'normal' || presenting() || !!scene.offerSkip || (!!scene.epId && state.diedHere(scene.epId) >= STUCK_DEATHS);
 }
+// B (Nov 18, Michael: "a back button opposite of N to skip backwards"): one stop back, wherever
+// N works (canSkip). In an episode the skip point behind her (with N's safety window); at the
+// first one, the part before this one in STEPS, from its start (flow.js prevChapter). In a
+// cinematic the line or beat on screen again, or, pressed at its start (BACK_GRACE), the one
+// before. On a satellite screen the puzzle before (the ring, then the request form). The opening
+// has nothing before it. A scene opts in with skipBack(), and backable() when it can say there
+// is nowhere to go (the key under the game greys out). B never counts a take or a death and
+// leaves the story alone: it moves her, or starts a beat or a part again.
+export const BACK_GRACE = 1.2; // seconds into a line or beat: B before this goes one further back
+export function canBack(scene) {
+  if (!scene || !scene.skipBack || !canSkip(scene)) return false;
+  return !scene.backable || !!scene.backable();
+}
+// the line to go to: this one again, or (pressed at its start) the one before; -1 is before the first
+export const rewindTo = (i, elapsed) => (elapsed > BACK_GRACE ? i : i - 1);
 // is this an offer (stuck), rather than a mode that always has N
 export function offering(scene) { return state.mode === 'normal' && !presenting() && canSkip(scene); }
 // Call once per frame, before a scene's own input. Returns true if the scene was skipped ahead.
@@ -81,6 +96,7 @@ export function reviewKeys(scene) {
   const c = scene.ctl; if (!c) return false;
   if (c.immune()) stepMode(1);
   if (c.skipAhead() && canSkip(scene)) { scene.skipAhead(); Sound.tone(1200, 0.05, 'square', 0.015); return true; }
+  if (c.skipBack && c.skipBack() && canBack(scene)) { scene.skipBack(); Sound.tone(800, 0.05, 'square', 0.015); return true; }
   return false;
 }
 // after a restart: say the offer is there, once per take

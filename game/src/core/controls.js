@@ -1,6 +1,7 @@
 // Named actions, not keys. Layout (Michael, Nov 17): the left hand moves (A D, W up and doors,
 // S crouch, Space jump, Shift run); the right hand acts (J use, look and talk, K throw and swing,
-// L glasses, Backspace restart, Enter skip a line, P pause, M sound, I the mode). One key, one job
+// L glasses, Backspace restart, Enter skip a line, P pause, M sound, I the mode, N skip ahead,
+// B skip back). One key, one job
 // (Nov 18): doors open with W or Up only, never J (side.js, topdown.js). Arrows still move, and
 // the old E F G R keys still work, so nobody gets stuck.
 // One-shot actions come from keydown events, so a tap shorter than a
@@ -42,6 +43,7 @@ export function makeControls(scene) {
     glasses: () => take(KC.L, KC.G),
     immune: () => take(KC.I),
     skipAhead: () => take(KC.N),
+    skipBack: () => take(KC.B),
     skipLine: () => take(KC.ENTER),
     endFrame: () => pressed.clear()
   };

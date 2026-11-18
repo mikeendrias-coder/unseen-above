@@ -85,6 +85,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).
+- `done, check` (Nov 18, branch back-skip, not merged) **A back button opposite of N to skip backwards** (Michael, Nov 18). B, wherever N works: in an episode the skip point behind her (at the first, the part before); a line or beat in a cinematic again, or the one before when pressed at its start; on a satellite screen the puzzle before, then the request form, then the part before. Nothing counted. Key cap next to N, controls notice, run sheet. Test: tests/back.js.
 
 ## Bugs found
 - `todo` boss.js test fails: "I turns immunity on" (Nov 17 test run; the other 13 test files pass).

@@ -15,7 +15,7 @@ import { hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { LOOKS } from '../art/palettes.js';
 import { TILE, GROUND, KX, CW, M, LEVEL, buildMap, paintLevel, paintSky, paintFar, paintMid, paintNpc, NPC_FRAMES, paintKid, KID_POSES, paintSister, paintRobot, paintLastRoom, TVSCREEN, drawEarth, feedHouse, feedGatePost, feedRect } from '../art/moon.js';
-import { goNext } from '../core/flow.js';
+import { goNext, prevChapter } from '../core/flow.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
@@ -25,12 +25,14 @@ import { SideEpisode, K } from '../core/side.js';
 import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, PLAYROOM_REPLY, PLAYROOM_EMPTY, PLAYROOM_ASK, MOON_LOOKS, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { replies, emptyRoom, endingTitle, linkEnding } from '../data/endings.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
-import { reviewKeys } from '../core/review.js';
+import { reviewKeys, rewindTo, BACK_GRACE } from '../core/review.js';
 import { fx } from '../core/fx.js';
 import { cg } from '../ui/cg.js';
 import { ShowScreen } from '../ending/showscreen.js';
 import { Finale } from '../ending/finale.js';
 
+// the city's skip stops (N forward, B back), in tiles
+const CITY_STOPS = [10, 29, 50, 66, 82, 99];
 const n = c => hexNum(c);
 const ROOM_TEXT = [
   ['Eight channels from Earth.', 'One is the house she came through.'],
@@ -208,12 +210,46 @@ export class Moon extends SideEpisode {
   // review: N walks her down the corridor, into the playroom, through the talk
   canRestart() { return false; } // no takes up here: nothing hunts her
   skipAhead() {
-    if (this.mode === 'walk' && !this.leaving) { const x = [10, 29, 50, 66, 82, 99].map(v => v * TILE).find(p => p > this.kid.x + 12); if (x != null) { const k = this.kid; k.y = GROUND - k.h; k.vy = 0; k.x = this.clearX(x); return; } return this.enterDoor(); }
+    if (this.mode === 'walk' && !this.leaving) { const x = CITY_STOPS.map(v => v * TILE).find(p => p > this.kid.x + 12); if (x != null) { const k = this.kid; k.y = GROUND - k.h; k.vy = 0; k.x = this.clearX(x); return; } return this.enterDoor(); }
     if (this.mode === 'room') { this.kid.x = LEVEL.stand; return; }
     if (this.talking && this.talkI < this.lines.length - 1) { this.talkI = this.lines.length - 2; this.nextLine(); return; }
     if (this.mode === 'look') return this.turnCamera();
     // the last shot: N skips the final beat to the ending screen, as Enter does
     if (this.mode === 'last' && this.finale) this.finale.skip();
+  }
+  // B, one stop back. The city: the stop behind her; at the first, back to the kids' room. The
+  // playroom: walking in, back to its door, and from the door back to backstage. A line: this one
+  // again, or, pressed at its start, the one before; at a talk's first line (or anything else she
+  // does there), the playroom again from its door. Her reply slip: the question again. The last
+  // shot: its beat from the top; pressed at its start, the playroom again. Nothing in the save
+  // changes (an ending seen stays seen).
+  skipBack() {
+    const k = this.kid;
+    if (this.mode === 'walk') {
+      if (this.leaving) return;
+      const x = CITY_STOPS.map(v => v * TILE).reverse().find(p => p < k.x - 12);
+      if (x == null) { prevChapter(this); return; }
+      k.y = GROUND - k.h; k.vy = 0; k.vx = 0; k.x = this.clearX(x); return;
+    }
+    if (this.mode === 'room') { if (k.x > KX + 52) { k.x = KX + 40; k.vx = 0; return; } prevChapter(this); return; }
+    if (this.mode === 'last' && this.finale) {
+      const F = this.finale;
+      if (F.phase !== 'beat' || F.t > BACK_GRACE) { F.phase = 'gone'; this.showLast(this.lastKind, this.endingId); return; } // its old timers stand down
+      return this.restartRoom();
+    }
+    if (this.mode === 'choose') { this.talk(PLAYROOM, () => this.startChoose(), PLAYROOM.length - 1); return; }
+    if (this.talking) {
+      const to = rewindTo(this.talkI, this.clock - (this.lineAt || 0));
+      if (to >= 0) { this.talkI = to - 1; this.nextLine(); return; }
+    }
+    this.restartRoom();
+  }
+  restartRoom() {
+    if (this.leaving) return;
+    this.leaving = true; overlay.clearCaption();
+    const d = Object.assign({}, this.sys.settings.data, { at: 'playroom' });
+    this.cameras.main.fadeOut(140, 0, 0, 0);
+    this.time.delayedCall(150, () => this.scene.restart(d));
   }
   updateView(dt) {
     const S = display.S, cam = this.cameras.main;
@@ -269,12 +305,13 @@ export class Moon extends SideEpisode {
   }
 
   // ------------------------------------------------------------------ talk: lines in order, then a step
-  talk(lines, then) {
-    this.lines = lines.map(l => Object.assign({}, l)); this.talkI = -1; this.after = then; this.talking = true;
+  talk(lines, then, from) {
+    this.mode = this.mode === 'choose' ? 'talk' : this.mode;
+    this.lines = lines.map(l => Object.assign({}, l)); this.talkI = (from || 0) - 1; this.after = then; this.talking = true;
     this.nextLine();
   }
   nextLine() {
-    this.talkI++;
+    this.talkI++; this.lineAt = this.clock; // when this line began (B)
     if (this.talkI >= this.lines.length) { this.talking = false; overlay.clearCaption(); const f = this.after; this.after = null; if (f) f(); return; }
     const l = this.lines[this.talkI], i = this.talkI, lines = this.lines;
     this.talkT = typer.total(l.text, lineSeconds(l.text) + (l.who ? 0.5 : 0.9));

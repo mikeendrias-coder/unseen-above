@@ -20,12 +20,16 @@ import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
-import { goNext } from '../core/flow.js';
-import { reviewKeys } from '../core/review.js';
+import { goNext, prevChapter } from '../core/flow.js';
+import { reviewKeys, rewindTo } from '../core/review.js';
 import { fx } from '../core/fx.js';
 
 const T = { solve: 5.5, cut: 8.4, feed: 8.7, lockAt: 11.0, fire: 11.5, back: 14.6, turn: 16, round2: 17.5, black: 20.5, end: 21.5 };
 const n = c => hexNum(c);
+// the beats B steps back through: the game show, the feed from Earth, back in the room
+const BEATS = [0, T.cut, T.back];
+// every cue in script() and when it fires, so a beat can start with the earlier ones done
+const CUES = [['cc1', 0.6], ['cc1x', 4.6], ['lock0', T.solve - 1.1], ['solve', T.solve], ['cut', T.cut], ['ccx', T.feed + 0.9], ['lock', T.lockAt], ['fire', T.fire], ['back', T.back], ['round2', T.round2], ['round2x', T.round2 + 2.2], ['black', T.black], ['end', T.end]];
 const SCR = { x: MOON.screen.x - KX, y: MOON.screen.y, w: MOON.screen.w, h: MOON.screen.h };
 const KIDS = MOON.kids.map(k => ({ x: k.x - KX, bun: k.bun })), KY = MOON.couch.y + 4;
 // the feed from Earth: where things stand on the grounds
@@ -83,9 +87,16 @@ export class Kids extends Phaser.Scene {
     this.blackout = this.add.rectangle(160, 90, 400, 260, 0x000000).setDepth(60).setVisible(false);
 
     this.t = 0; this.fired = {}; this.solvedAt = null; this.over = false;
+    // B: a beat from its start (data.from): what came before it counts as done, unplayed
+    const from = (data && data.from) || 0;
+    if (from > 0) {
+      this.t = from; this.fired = Object.fromEntries(CUES.filter(([, at]) => at < from).map(([key]) => [key, true]));
+      if (from > T.solve) this.solvedAt = T.solve;
+    }
     // the feed's take: hers, counted the way the rest of the show counts (a body per take)
     this.take0 = state.bodyCount() + 1;
     this.beds = { show: Sound.show(0.045), hum: Sound.hum(0.0001) };
+    if (from > T.cut) { this.beds.show.stop(0.05); this.beds.hum.set(0.025, 0.5); } // the cut is behind this beat
     Music.stop(0.8);
     this.scale.on('rescale', this.place, this);
     this.events.once('shutdown', () => { this.scale.off('rescale', this.place, this); Object.values(this.beds).forEach(b => b.stop(0.3)); overlay.clearCaption(); });
@@ -98,6 +109,15 @@ export class Kids extends Phaser.Scene {
   // the 320 x 180 picture, scaled by whole numbers, centered the way the other pixel scenes are
   place() { const S = display.S, cam = this.cameras.main; cam.setZoom(pixelZoom()); cam.scrollX = -160 * (S - 1); cam.scrollY = -90 * (S - 1); }
 
+  // B: this beat again (the game show, the feed from Earth, back in the room), or, pressed at its
+  // start, the beat before; at the first, back to batch 4. A beat starts with the cues before it
+  // marked done, so nothing plays twice.
+  skipBack() {
+    const t = this.t, i = BEATS.reduce((n, b, j) => (t >= b ? j : n), 0);
+    const to = rewindTo(i, t - BEATS[i]);
+    if (to < 0) { prevChapter(this); return; }
+    this.scene.restart(Object.assign({}, this.sys.settings.data, { from: BEATS[to] }));
+  }
   skipAhead() { if (this.inFlow) { if (!goNext(this, 'kids')) this.scene.start('intro', {}); } else this.t = Math.max(this.t, T.black); }
   cue(key, at, fn) { if (this.t >= at && !this.fired[key]) { this.fired[key] = true; fn(); } }
 
