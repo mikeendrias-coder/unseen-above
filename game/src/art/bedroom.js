@@ -114,7 +114,8 @@ export function trail() {
 // He sits on the floor against the foot of the bed, facing left. One leg ends at the knee in a
 // dark wrap. Nothing gory: the wrap and a stain under it say it.
 export function paintBrother(P, dead, inhale) {
-  const p = new Painter(26, 22), x = 1, y = 22, sk = P.kid, sh = P.kidLo, b = inhale ? 1 : 0; // b: his chest up a pixel
+  // a row and a column spare at the top and left for his outline; his feet stay on the bottom row
+  const p = new Painter(26, 23), x = 1, y = 23, sk = P.kid, sh = P.kidLo, b = inhale ? 1 : 0; // b: his chest up a pixel
   // the long leg, out along the floor, and its boot
   p.rect(x + 2, y - 3, 13, 3, P.sibLo); p.rect(x, y - 6, 2, 6, P.device); p.px(x + 1, y - 7, P.device);
   // the other thigh, raised, ending in the wrap
@@ -131,7 +132,13 @@ export function paintBrother(P, dead, inhale) {
     // dropped forward
     p.rect(x + 13, y - 17, 5, 5, sk); p.rect(x + 13, y - 18, 6, 2, P.hair); p.rect(x + 17, y - 17, 2, 4, P.hair); p.px(x + 13, y - 14, sh);
   }
+  outline(p, P.crack);
   return p;
+}
+// a 1 px outline round everything painted (ART_DIRECTION 2: characters read against the dark)
+function outline(p, c) {
+  const d = p.ctx.getImageData(0, 0, p.w, p.h).data, on = (i, j) => i >= 0 && j >= 0 && i < p.w && j < p.h && d[(j * p.w + i) * 4 + 3] > 0;
+  for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) if (!on(i, j) && (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1))) p.px(i, j, c);
 }
 
 // ------------------------------------------------------------------ painting
@@ -343,34 +350,43 @@ export function paintLevel(P) {
   return p;
 }
 
-// The wardrobe off the hall (a side room): rails of her jacket, photos, a mirror with a light.
+// The wardrobe off the hall (a side room): one long rail of her jacket across the whole room,
+// photos, a mirror with a light. She comes in by a doorway on the right; its light is the room's.
 export function paintWardrobe(P) {
   const p = new Painter(320, 180), r = rng(12);
   p.rect(0, 0, 320, 180, P.wallLo);
   p.rect(0, 0, 320, 18, P.void); p.rect(0, 18, 320, 2, P.wood);
   for (let x = 0; x < 320; x += 20) p.rect(x, 20, 1, 140, P.wallLine);
   p.rect(0, G, 320, 20, P.wood); p.rect(0, G, 320, 1, P.woodHi); for (let x = 0; x < 320; x += 16) p.rect(x, G + 2, 1, 18, P.crack);
-  p.rect(18, G - 30, 16, 30, P.wall); p.rect(19, G - 29, 14, 29, P.wallHi); p.px(30, G - 15, P.gold);
-  // a rail of jackets, all hers
-  p.rect(56, 56, 118, 2, P.colLo); p.rect(56, 56, 2, 104, P.device); p.rect(172, 56, 2, 104, P.device);
-  for (let i = 0; i < 9; i++) {
-    const x = 62 + i * 12;
-    p.rect(x + 3, 58, 1, 3, P.colLo); p.poly([[x, 62], [x + 8, 62], [x + 9, 92], [x - 1, 92]], P.kid); p.rect(x + 3, 62, 2, 28, P.kidLo); p.px(x + 1, 74, P.kidLo);
-    p.rect(x, 92, 9, 1, P.kidLo); p.rect(x + 7, 66, 2, 3, P.colHi); // a tag
+  // the doorway on the right, open, the hall's light in it, and that light across the floor
+  const dx = 286;
+  p.rect(dx - 2, G - 32, 20, 32, P.crack); p.rect(dx - 1, G - 31, 18, 31, P.wood); p.rect(dx, G - 30, 16, 30, P.wallHi);
+  p.rect(dx, G - 30, 16, 1, P.wall); p.rect(dx + 15, G - 30, 1, 30, P.wall);
+  p.poly([[dx - 1, G + 1], [dx + 16, G + 1], [dx + 10, 180], [dx - 60, 180]], P.woodHi);
+  p.poly([[dx - 2, G - 30], [dx - 2, G], [dx - 30, G], [dx - 26, G - 22]], P.wall);
+  // one rail across the whole room, wall to wall, and her jacket on every hanger
+  p.rect(4, 34, 312, 2, P.colLo); p.rect(4, 34, 312, 1, P.col);
+  [4, 314].forEach(x => p.rect(x, 20, 2, 16, P.device));
+  for (let i = 0; i < 25; i++) {
+    const x = 9 + i * 11;
+    if (x > 244 && x < 262) continue; // the bulb and its cord hang here
+    p.rect(x + 3, 36, 1, 3, P.colLo); p.poly([[x, 39], [x + 8, 39], [x + 9, 66], [x - 1, 66]], P.kid); p.rect(x + 3, 39, 2, 25, P.kidLo); p.px(x + 1, 50, P.kidLo);
+    p.rect(x, 66, 9, 1, P.kidLo); p.rect(x + 7, 43, 2, 3, P.colHi); // a tag
+    p.rect(x - 1, 39, 1, 27, P.crack); // the next one overlaps it
   }
-  // shoes under the rail, worn down the same way
-  for (let i = 0; i < 8; i++) { const x = 62 + i * 13; p.rect(x, G - 3, 6, 3, P.kidLo); p.px(x, G - 1, P.crack); }
+  // shoes in a row under the rail, worn down the same way
+  for (let i = 0; i < 6; i++) { const x = 76 + i * 7; p.rect(x, G - 3, 5, 3, P.kidLo); p.px(x, G - 1, P.crack); }
   // a board of photos, all of her
-  p.rect(186, 40, 56, 48, P.woodHi); p.rect(188, 42, 52, 44, P.wood);
-  for (let i = 0; i < 6; i++) { const x = 192 + (i % 3) * 16, y = 46 + Math.floor(i / 3) * 20; p.rect(x, y, 12, 15, P.colHi); p.rect(x + 1, y + 1, 10, 9, P.skyLow); p.rect(x + 5, y + 3, 2, 2, P.kid); p.rect(x + 4, y + 5, 4, 5, P.kid); p.rect(x + 1, y + 11, 10, 1, P.hazard); p.px(x + 6, y, P.led); }
+  p.rect(116, 82, 52, 46, P.woodHi); p.rect(118, 84, 48, 42, P.wood);
+  for (let i = 0; i < 6; i++) { const x = 121 + (i % 3) * 15, y = 87 + Math.floor(i / 3) * 19; p.rect(x, y, 12, 15, P.colHi); p.rect(x + 1, y + 1, 10, 9, P.skyLow); p.rect(x + 5, y + 3, 2, 2, P.kid); p.rect(x + 4, y + 5, 4, 5, P.kid); p.rect(x + 1, y + 11, 10, 1, P.hazard); p.px(x + 6, y, P.led); }
   // a mirror ringed with bulbs, half of them dead, a red light behind the glass
-  p.rect(252, 46, 46, 62, P.goldLo); p.rect(256, 50, 38, 54, P.glass); p.line(258, 98, 270, 60, P.glassLit);
-  for (let i = 0; i < 6; i++) { p.circle(254 + i * 8, 44, 2, i % 2 ? P.lamp : P.device); p.circle(254 + i * 8, 110, 2, i % 3 ? P.device : P.lamp); }
-  p.mark('rec', 287, 56);
-  p.rect(248, 112, 54, 4, P.wood); p.rect(248, 112, 54, 1, P.woodHi); p.rect(252, 116, 4, 44, P.wood); p.rect(294, 116, 4, 44, P.wood);
-  p.rect(260, 106, 6, 6, P.colHi); p.rect(270, 108, 3, 4, P.fabric); p.rect(280, 107, 8, 5, P.col);
-  // one bulb on a cord (Room.js draws its light, and turns it off)
-  p.rect(150, 20, 1, 10, P.device); p.mark('bulb', 150, 32); p.mark('cord', 156, 30);
+  p.rect(186, 82, 46, 50, P.goldLo); p.rect(190, 86, 38, 42, P.glass); p.line(192, 124, 204, 92, P.glassLit);
+  for (let i = 0; i < 6; i++) { p.circle(188 + i * 8, 80, 2, i % 2 ? P.lamp : P.device); }
+  p.mark('rec', 221, 92);
+  p.rect(182, 134, 54, 4, P.wood); p.rect(182, 134, 54, 1, P.woodHi); p.rect(186, 138, 4, 22, P.wood); p.rect(228, 138, 4, 22, P.wood);
+  p.rect(194, 129, 6, 5, P.colHi); p.rect(204, 130, 3, 4, P.fabric); p.rect(214, 129, 8, 5, P.col);
+  // one bulb on a cord over the rail (Room.js draws it lit, and turns it off)
+  p.rect(250, 18, 1, 10, P.device); p.mark('bulb', 250, 30); p.mark('cord', 256, 28);
   r();
   return p;
 }

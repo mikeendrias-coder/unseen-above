@@ -100,16 +100,18 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     let dir = 1, jumpNow = false; const jp = s.__orig.jumpPressed;
     c.right = () => dir > 0; c.left = () => dir < 0; c.down = () => false; c.jumpHeld = () => true; c.jumpPressed = () => { const j = jumpNow; jumpNow = false; return j || jp(); };
     s.events.on('update', s.__auto = () => {
-      if (k.onGround && k.y + k.h <= 81) { dir = 0; return; }
+      if (k.onGround && (k.y + k.h <= 81 || k.x >= 84 * 16)) { dir = 0; k.vx = 0; return; } // on the heap, or over it
       if (k.onGround) { jumpNow = true; dir = 1; } else if (k.wall === 1) { jumpNow = true; dir = -1; } else if (k.wall === -1) { jumpNow = true; dir = 1; }
     });
   });
-  await until(() => { const k = window.__game.scene.kid; return k.onGround && k.y + k.h <= 81; }, null, 8000).catch(() => {});
-  ok('wall to wall, she climbs onto the heap (feet at y ' + await p.evaluate(() => Math.round(window.__game.scene.kid.y + window.__game.scene.kid.h)) + ')', await p.evaluate(() => { const k = window.__game.scene.kid; return k.onGround && k.y + k.h <= 81; }));
+  // with the heavy bag she may land on the one-tile heap top or clear it to the doors, by frame rate
+  const over = () => { const k = window.__game.scene.kid; return k.onGround && (k.y + k.h <= 81 || k.x >= 84 * 16); };
+  await until(over, null, 8000).catch(() => {});
+  ok('wall to wall, she climbs the heap (x ' + await p.evaluate(() => Math.round(window.__game.scene.kid.x)) + ', feet at y ' + await p.evaluate(() => Math.round(window.__game.scene.kid.y + window.__game.scene.kid.h)) + ')', await p.evaluate(over));
   await p.evaluate(() => { const s = window.__game.scene; s.events.off('update', s.__auto); Object.assign(s.ctl, s.__orig); });
 
   // the bedroom
-  await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene; s.kid.x = 85 * 16 + 8; s.kid.y = 146; s.kid.vx = 0; });
+  await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene; s.kid.x = 85 * 16 + 8; s.kid.y = 146; s.kid.vx = 0; s.kid.vy = 0; s.kid.onGround = true; });
   await p.keyboard.down('ArrowUp'); await p.waitForTimeout(150); await p.keyboard.up('ArrowUp');
   await until(() => window.__game.scene.mode === 'bedroom', null, 8000);
   ok('Up at the doors: the bedroom', true);
@@ -119,11 +121,15 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene; s.bag.have = true; s.kid.x = 85 * 16 + 8; s.kid.y = 146; s.enterDoor(); });
   await until(() => window.__game.scene.mode === 'bedroom', null, 8000);
   await p.waitForTimeout(800);
+  ok('inside, the hint says where to go (' + await p.evaluate(() => document.getElementById('h-hint').textContent) + ')', await p.evaluate(() => document.getElementById('h-hint').textContent === 'Go to him.'));
+  ok('inside, the room is drawn flat over the dark, he and she stand over it', await p.evaluate(() => { const s = window.__game.scene; return !!s.nightC && s.bro.depth > s.darkImg.depth && s.girl.depth > s.darkImg.depth; }));
   await p.keyboard.down('ArrowRight'); await until(() => window.__game.scene.mode === 'talk', null, 10000); await p.keyboard.up('ArrowRight');
   ok('she reaches him and they talk', await p.evaluate(() => document.getElementById('cc').textContent.length > 0));
+  ok('presenting, N does not cut his lines short', await p.evaluate(() => { const s = window.__game.scene, st = window.__game.state, was = st.settings.presenter, i = s.talkI; st.settings.presenter = true; s.skipAhead(); const kept = s.mode === 'talk' && s.talkI === i; st.settings.presenter = was; return kept; }));
   for (let i = 0; i < 20 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(120); }
   await until(() => window.__game.scene.mode === 'after', null, 15000);
   ok('after the last line he is gone (' + await p.evaluate(() => window.__game.scene.bro.texture.key) + ')', await p.evaluate(() => window.__game.scene.bro.texture.key === 'bro_dead'));
+  ok('after, the hint names both ways (' + await p.evaluate(() => document.getElementById('h-hint').textContent) + ')', await p.evaluate(() => /Hold J/.test(document.getElementById('h-hint').textContent)));
   // the false ending: she holds on to him (J) instead of going to the door
   await until(() => window.__game.scene.nearThing === window.__game.scene.broThing, null, 4000);
   await p.keyboard.down('KeyJ'); await p.waitForTimeout(600); await p.evaluate(() => { window.__game.scene.stay = 14; });

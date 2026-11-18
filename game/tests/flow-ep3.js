@@ -80,7 +80,11 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   }
   await until(() => window.__game.scene.doorOpen, null, 20000); ok('three chains: the chandelier falls and the door opens', true);
   await p.screenshot({ path: 'tests/out/e3-door.png' });
-  await put(37, 2); await press('ArrowUp', 300);
+  await put(37, 2); await p.waitForTimeout(150);
+  ok('under the open door, the hint says W (' + await p.evaluate(() => document.getElementById('h-hint').textContent) + ')', await p.evaluate(() => /W goes up/.test(document.getElementById('h-hint').textContent)));
+  // N there takes her through (review skip ahead), the same as W
+  await p.evaluate(() => window.__game.scene.skipAhead());
+  ok('N under the open door takes her through', await p.evaluate(() => window.__game.scene.leaving));
   await until(() => window.__game.scene.sys.settings.key === 'satellite' && window.__game.scene.batch === 3, null, 60000);
   ok('the door leads to satellite batch 3', true);
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
