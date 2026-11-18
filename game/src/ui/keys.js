@@ -4,7 +4,8 @@
 // running). Switches (immunity, sound, flashing, glasses) latch down while on and stay in step
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
 // Presenter tools (Nov 18): Pres is presenter mode, H holds the picture (ui/pause.js), U is full
-// screen (main.js). On a satellite screen W A S D say "turn": they turn the globe.
+// screen (main.js). On a satellite screen W A S D say "turn": they turn the globe. On its request
+// form W and S say "check", and the keys that do nothing there are blank and grey.
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
 import { setStory, canSkip, setPresenter, presenting } from '../core/review.js';
@@ -13,10 +14,10 @@ import { overlay } from '../core/overlay.js';
 const KEYS = [
   { cap: 'A', key: 'a', code: 'KeyA', kc: 65, label: 'left', hold: true, dyn: 'a' },
   { cap: 'D', key: 'd', code: 'KeyD', kc: 68, label: 'right', hold: true, dyn: 'd' },
-  { cap: 'Space', key: ' ', code: 'Space', kc: 32, label: 'jump', hold: true },
+  { cap: 'Space', key: ' ', code: 'Space', kc: 32, label: 'jump', hold: true, dyn: 'space' },
   { cap: 'S', key: 's', code: 'KeyS', kc: 83, label: 'crouch', hold: true, dyn: 's' },
   { cap: 'W', key: 'w', code: 'KeyW', kc: 87, label: 'door', dyn: 'w' },
-  { cap: 'Shift', key: 'Shift', code: 'ShiftLeft', kc: 16, label: 'run', hold: true },
+  { cap: 'Shift', key: 'Shift', code: 'ShiftLeft', kc: 16, label: 'run', hold: true, dyn: 'shift' },
   { cap: 'J', key: 'j', code: 'KeyJ', kc: 74, label: 'use', dyn: 'j' },
   { cap: 'K', key: 'k', code: 'KeyK', kc: 75, label: 'throw', dyn: 'k' },
   { cap: 'L', key: 'l', code: 'KeyL', kc: 76, label: 'glasses', sw: 'glasses', dyn: 'l' },
@@ -49,14 +50,19 @@ const sat = () => { const sc = scene(); return playing() && sc && sc.sys && sc.s
 const ring = () => { const sc = sat(); return !!(sc && sc.level && sc.level.id === 'ring'); };
 // while a satellite request form is up, J K L stamp and ask
 const form = () => { const sc = sat(); return !!(sc && sc.form); };
+// the form is stamped: J goes on (W S and L do nothing now)
+const stamped = () => { const sc = sat(); return !!(sc && sc.form && sc.form.stamp); };
+// on the form W and S check a field; A D and Space do nothing, and J K do nothing on a puzzle
 const DYN = {
-  j: () => [form() ? 'approve' : 'use', true],
-  k: () => [form() ? 'deny' : 'throw', true],
-  l: () => (form() ? ['ask who', true] : null), // otherwise the glasses switch speaks for L
-  a: () => [sat() ? 'turn' : 'left', true],
-  d: () => [sat() ? 'turn' : 'right', true],
-  w: () => [sat() ? 'turn' : 'door', !ring()],
-  s: () => [sat() ? 'turn' : 'crouch', !ring()],
+  j: () => form() ? [stamped() ? 'go on' : 'approve', true] : sat() ? ['', false] : ['use', true],
+  k: () => form() ? ['deny', !stamped()] : sat() ? ['', false] : ['throw', true],
+  l: () => (form() ? ['ask who', !stamped()] : null), // otherwise the glasses switch speaks for L
+  a: () => form() ? ['', false] : [sat() ? 'turn' : 'left', true],
+  d: () => form() ? ['', false] : [sat() ? 'turn' : 'right', true],
+  w: () => form() ? ['check', !stamped()] : [sat() ? 'turn' : 'door', !ring()],
+  s: () => form() ? ['check', !stamped()] : [sat() ? 'turn' : 'crouch', !ring()],
+  space: () => sat() ? ['', false] : ['jump', true],
+  shift: () => sat() ? ['', false] : ['run', true],
   esc: () => { const sc = scene(), k = sc && sc.sys && sc.sys.settings.key; return [playing() && (k === 'intro' || k === 'kids') ? 'skip scene' : 'menu', true]; },
   skip: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canSkip(sc); } catch (e) { /* not a scene yet */ } return ['skip ahead', on]; }
 };
@@ -127,7 +133,7 @@ export function initKeys() {
       if (!k.dyn) return;
       const r = DYN[k.dyn](); if (!r) return;
       const [word, on] = r;
-      if (lbl.textContent !== word) { lbl.textContent = word; b.setAttribute('aria-label', word + ', key ' + k.cap); }
+      if (lbl.textContent !== word) { lbl.textContent = word; b.setAttribute('aria-label', word ? word + ', key ' + k.cap : 'key ' + k.cap + ', not used here'); }
       b.classList.toggle('off', !on);
     });
   }

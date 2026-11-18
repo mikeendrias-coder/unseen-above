@@ -28,10 +28,10 @@ import LEVELS from '../data/globe-levels.json';
 const BATCHES = { 1: ['ring', 'g1'], 2: ['g2'], 3: ['g3'], 4: ['g4'] };
 // what each puzzle says: the lower third at its start, the goal on the screen, the page hint
 const TEXT = {
-  ring: { title: 'Turn the ring', goal: 'DOT TO THE LOCK', keys: 'A D OR DRAG', hint: 'A and D, the arrows, or a drag turn the ring. The dot rolls down. Bring it to the lock.' },
-  g1: { title: 'Turn the globe', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'W A S D, the arrows, or a drag turn the globe. The bead rolls down. Get it to the red target. Arrows in the grooves only let it through one way.' },
-  g2: { title: 'Two at once', goal: 'EACH BEAD TO ITS COLOR', keys: 'W A S D OR DRAG', hint: 'Two beads, two targets. Each bead goes to the target of its own color. A bead that gets home stays there.' },
-  g3: { title: 'The blur', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'The blur is a place nobody can see. The bead bounces off it. Be quick. The target moves if you are slow.' },
+  ring: { title: 'Turn the ring', goal: 'DOT TO THE LOCK', keys: 'A D OR DRAG', hint: 'A and D turn the ring until the dot drops into the lock.' },
+  g1: { title: 'Turn the globe', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'Turn the globe. Roll the bead to the red target. Arrows go one way.' },
+  g2: { title: 'Two at once', goal: 'EACH BEAD TO ITS COLOR', keys: 'W A S D OR DRAG', hint: 'Each bead to the target of its color.' },
+  g3: { title: 'The blur', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'Nobody may look into the blur. Be quick: the target moves.' },
   g4: { title: 'Find her', goal: 'ROLL TO THE GIRL', keys: 'W A S D OR DRAG', hint: 'Roll the bead to the girl in pink.' },
   show: { title: 'Find her', goal: 'ROLL TO THE GIRL', keys: '', hint: '' }
 };
@@ -313,6 +313,7 @@ export class Satellite extends Phaser.Scene {
       return;
     }
     this.ended = true;
+    overlay.hint(''); // the puzzle's hint is done with
     const next = this.batch + 1, step = 'batch' + this.batch;
     overlay.card('END OF BATCH ' + this.batch, 'Episode ' + next + ' is next', 3400);
     if (!this.preview && nextStep(this, step)) {
@@ -377,12 +378,13 @@ export class Satellite extends Phaser.Scene {
     if (this.skinN === 1) {
       tx((this.B.ring ? 'ORBIT' : 'GLOBE') + '.EXE  PID 4471', 8, 8);
       tx('TASK ' + task + '  ' + (this.B.ring ? 'RING ' : 'GRID ') + this.B.rows + 'x' + this.B.cols + (L.gates ? '  GATES ' + L.gates.length : ''), 8, 18, K.dim);
-      tx('CFG RES_LIMIT=0.4M', 8, 34, K.dim); tx('CFG PRIVACY=OUT_OF_SCOPE', 8, 42, K.dim); tx('REQ SRC=CONTRACT', 8, 50, K.dim);
-      for (let r = 0; r < 7; r++) { let line = ''; for (let b = 0; b < 6; b++) line += hex2(((r * 37 + b * 11 + Math.floor(t * 3)) * 2654435761 >>> 24) & 255) + ' '; tx(hex2(r * 16 + 0x40) + ': ' + line, 8, 64 + r * 8, r === Math.floor(t * 2) % 7 ? K.text : K.dim); }
+      // what to do sits high, so the batch card (lower left) only ever covers the hex dump
       const msg = this.solved ? '> LOCK ACQUIRED' : '> AWAITING LOCK';
-      tx(msg, 8, 126, this.solved ? K.accent : K.text);
-      if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(H(K.text), 1); g.fillRect(8 + textWidth(msg) + 2, 126, 3, 5); }
-      tx('GOAL: ' + T.goal, 8, 140); tx('KEYS: ' + T.keys, 8, 150, K.dim); tx('DIST ' + String(left).padStart(2, '0'), 8, 160, K.dim);
+      tx(msg, 8, 32, this.solved ? K.accent : K.text);
+      if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(H(K.text), 1); g.fillRect(8 + textWidth(msg) + 2, 32, 3, 5); }
+      tx('GOAL: ' + T.goal, 8, 44); tx('KEYS: ' + T.keys, 8, 54, K.dim); tx('DIST ' + String(left).padStart(2, '0'), 8, 64, K.dim);
+      tx('CFG RES_LIMIT=0.4M', 8, 78, K.dim); tx('CFG PRIVACY=OUT_OF_SCOPE', 8, 86, K.dim); tx('REQ SRC=CONTRACT', 8, 94, K.dim);
+      for (let r = 0; r < 7; r++) { let line = ''; for (let b = 0; b < 6; b++) line += hex2(((r * 37 + b * 11 + Math.floor(t * 3)) * 2654435761 >>> 24) & 255) + ' '; tx(hex2(r * 16 + 0x40) + ': ' + line, 8, 108 + r * 8, r === Math.floor(t * 2) % 7 ? K.text : K.dim); }
     } else if (this.skinN === 2) {
       tx('GROUND TRACK', 12, 10); for (let x = 0; x < 138; x++) { g.fillStyle(H(K.dotDone), 1); g.fillRect(12 + x, 40 + Math.round(16 * Math.sin(x / 22 + t * 0.3)), 1, 1); }
       const dx = (t * 20) % 138; g.fillStyle(H(K.accent), 1); g.fillRect(11 + dx, 39 + Math.round(16 * Math.sin(dx / 22 + t * 0.3)), 3, 3);
