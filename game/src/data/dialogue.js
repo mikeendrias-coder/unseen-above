@@ -41,20 +41,63 @@ export const MOON_OVERHEARD = [
 ];
 // DRAFT: the cleaning robot up here, the same model as the one in the gallery.
 export const MOON_ROBOT = ['Welcome home. Please wipe your feet.', 'You are early. Round two has not started.', 'The playroom is at the end. They are expecting a winner.'];
-// DRAFT, for Michael: the third dialogue scene, in the kids' playroom. (Nov 17: the look vote is
-// cut, so the two lines that named her look are redrafted; check them.)
+// The playroom (Nov 17, Claude's draft from Michael's lines). The opening is the same every time;
+// at "Are you here for round two?" she picks a reply (data/endings.js REPLIES), and the reply's
+// lines lead into its ending. Lines are short on purpose; none over about 50 characters.
 export const PLAYROOM = [
   { who: null, text: '[THE MUSIC STOPS]' },
   { who: 'KID', text: "You're the girl from channel seven." },
   { who: 'LITTLE KID', text: "She's smaller in real life." },
-  { who: 'KID', text: 'Are you here for round two?' },
-  { who: 'SISTER', text: 'Who picks the lights?' },
-  { who: 'LITTLE KID', text: 'We do. We pick everything.' },
-  { who: 'SISTER', text: 'My brother died under your lights.' },
-  { who: 'KID', text: 'He comes back. They always come back.' },
-  { who: 'SISTER', text: 'I know.' },
-  { who: null, text: '[CLICK. CLICK.]' }
+  { who: 'KID', text: 'Are you here for round two?' }
 ];
+// after each reply: what she says (if anything), and what they say back
+export const PLAYROOM_REPLY = {
+  // THE VEST (Michael's ending)
+  lights: [
+    { who: 'SISTER', text: 'Who picks the lights?' },
+    { who: 'LITTLE KID', text: 'We do. We pick everything.' },
+    { who: 'SISTER', text: 'My brother died under your lights.' },
+    { who: 'KID', text: 'He comes back. They always come back.' },
+    { who: 'SISTER', text: 'I know.' },
+    { who: null, text: '[CLICK. CLICK.]' }
+  ],
+  // ROUND TWO: she takes the controller
+  yes: [
+    { who: 'SISTER', text: 'Yes.' },
+    { who: 'KID', text: 'Good. You can aim this time.' },
+    { who: 'LITTLE KID', text: 'Pick a light. Any light.' },
+    { who: null, text: '[GAME SHOW JINGLE]' }
+  ],
+  // LOOK BACK: she turns their camera around (she has to walk to it; J)
+  turn: [
+    { who: 'SISTER', text: 'Turn it around.' },
+    { who: 'KID', text: 'Turn what around?' }
+  ],
+  turned: [
+    { who: null, text: '[A CAMERA LIGHT CLICKS ON]' },
+    { who: 'LITTLE KID', text: 'Turn it off. Turn it off!' },
+    { who: 'KID', text: 'Who is watching?' }
+  ],
+  // THE COUCH (secret): nothing is said by her at all
+  sit: [
+    { who: null, text: '[SHE SITS DOWN BETWEEN THEM]' },
+    { who: 'LITTLE KID', text: 'You can watch with us.' },
+    { who: 'KID', text: 'Shh. This part is good.' },
+    { who: null, text: '[THE SHOW GOES ON]' }
+  ]
+};
+// END IT ALL: the creator gave up and she beat them anyway. Nobody is in the playroom.
+export const PLAYROOM_EMPTY = [
+  { who: null, text: '[NOBODY HERE]' },
+  { who: null, text: '[THE SHOW REPEATS]' }
+];
+// the reply slip's heading
+export const PLAYROOM_ASK = 'REPLY';
+// DRAFT: looks in the city that count as clues
+export const MOON_LOOKS = {
+  lost: ['LOST AND FOUND. A tray of glasses.', 'Every pair is hers.'],
+  camera: ['Their camera, aimed out the window at Earth.', 'A red light. It is always on.']
+};
 
 // DRAFT, for Michael: the hallway behind the Moon city, where the creator of the show waits.
 // The creator built every set, trap and camera, resets the props between takes, and is owned
@@ -107,12 +150,20 @@ export const HALL_AGAIN = [
 ];
 // The creator yields. The red light on their headset goes out.
 export const HALL_YIELD = [
-  { who: 'CREATOR', text: 'They will cut me after this. Somebody else will put the glasses back.' },
+  { who: 'CREATOR', text: 'They will cut me after this.' },
+  { who: 'CREATOR', text: 'Somebody else will put the glasses back.' },
   { who: 'SISTER', text: 'Come with me.' },
   { who: 'CREATOR', text: 'There is nowhere to go. It is the Moon.' },
   { who: null, text: '[A CAMERA LIGHT CLICKS OFF]' },
-  { who: 'CREATOR', text: 'The playroom is through there. When they look at you, look back.' }
+  { who: 'CREATOR', text: 'When they look at you, look back.' }
 ];
+// Give-up mode (Michael's idea): after six deaths in the fight the creator drops the sword and
+// says only this, every few seconds. The repeat is the point; it is the one line that repeats.
+export const HALL_GIVEUP = {
+  drop: '[THE CREATOR DROPS THE SWORD]',
+  scream: 'End it all.',
+  down: '[THE HEADSET LIGHT GOES OUT]'
+};
 // Things in the hallway, with E.
 export const HALL_THINGS = {
   coats: ['Crew coats on a rail.', 'SEASON 41 on every back.'],

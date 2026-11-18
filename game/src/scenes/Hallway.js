@@ -2,17 +2,19 @@
 // built every set and trap she has been through, they reset the props between takes, and they
 // are owned like everyone else up here. The kids voted for a fight, so the creator tosses her a
 // sword. Three rounds, each with a trap from an episode (the grounds' searchlight, the gallery's
-// laser, the bedroom's flash cameras), and the creator talks the whole time. A hit only lands
-// when the creator is open. One hit from their sword ends her take; a retry restarts the fight,
-// and her bodies stay on the stage. When it is over the creator yields and she goes on to the
-// playroom. The dialogue is a DRAFT for Michael (data/dialogue.js); so is the staging.
+// laser, the bedroom's flash cameras). A hit only lands when the creator is open. Her HP is 3: a
+// cut costs one, the round's trap kills outright (what watches her kills her). The creator has
+// 9, on a paper slip at the top of the picture. Her deaths here are counted
+// (story.creatorDeaths): after six, the next take is give-up mode. The creator drops the sword,
+// stands in the middle of the stage and screams "End it all." and nothing else; each hit drains
+// one segment, slowly. Nine hits: story.killedBroken. Out the open shutter instead: spared. A
+// normal win (they yield) also spares them. Those flags pick the ending (data/endings.js).
 import { Music } from '../core/music.js';
 import { hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText } from '../art/pixfont.js';
-import { ccText, ccWidth, ccBox } from '../art/ccfont.js';
-import { TILE, GROUND, H, ARENA, LEVEL, buildMap, paintLevel, paintCreator, POSES } from '../art/hallway.js';
-import { M } from '../art/moon.js';
+import { ccText, ccWidth } from '../art/ccfont.js';
+import { TILE, GROUND, H, ARENA, LEVEL, buildMap, paintLevel, paintCreator, POSES, PixLayer } from '../art/hallway.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
@@ -20,13 +22,16 @@ import { display } from '../core/display.js';
 import { SideEpisode, K, inPoly } from '../core/side.js';
 import { goNext } from '../core/flow.js';
 import { Glasses } from '../core/glasses.js';
-import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, NOTICE, lineSeconds } from '../data/dialogue.js';
+import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, HALL_GIVEUP, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { fx } from '../core/fx.js';
 
 const T = TILE, G = GROUND, n = c => hexNum(c);
 const HP = 9, ROUND_AT = [9, 6, 3];                     // hits left when each round starts
 const TELL = [0.68, 0.6, 0.52];                         // how long the creator winds up, per round
 const BLADE = 15, ARM = 6;
+export const GIVE_UP_AT = 6;                          // her deaths in the fight before the creator gives up
+const SCREAM_EVERY = 4, DRAIN = 0.6;
+const THING_CLUE = { shelf: 'shelf', board: 'continuity' };
 
 export class Hallway extends SideEpisode {
   constructor() { super('hallway'); }
@@ -44,16 +49,14 @@ export class Hallway extends SideEpisode {
     this.crImg = this.add.image(0, G, 'cr_stand').setOrigin(0.5, 1).setDepth(3.6);
     this.commonLayers();
     this.armG = this.add.graphics().setDepth(4.6);        // both swords and the creator's arm
-    this.trapG = this.add.graphics().setDepth(5.2).setBlendMode(Phaser.BlendModes.ADD);
+    // light is hard pixels: the rigs' light as a checker on a layer of its own, solid beams on
+    // trapG, the tells the glasses show on tellG, and the dark of the last round as its own layer
+    this.lightL = new PixLayer(this, 'hw_light', 5.1);
+    this.trapG = this.add.graphics().setDepth(5.2);
     this.tellG = this.add.graphics().setDepth(5.3);
-    // the dark for the last round: a small canvas with holes cut where there is light
-    this.darkCanvas = document.createElement('canvas'); this.darkCanvas.width = 322; this.darkCanvas.height = 182;
-    if (this.textures.exists('hw_dark')) this.textures.remove('hw_dark');
-    this.darkTex = this.textures.addCanvas('hw_dark', this.darkCanvas);
-    this.darkImg = this.add.image(0, 0, 'hw_dark').setOrigin(0).setDepth(5.6).setVisible(false);
-    this.flashG = this.add.graphics().setDepth(5.7).setBlendMode(Phaser.BlendModes.ADD);
+    this.darkL = new PixLayer(this, 'hw_dark', 5.6);
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
-    this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 30, max: 90 }, angle: { min: 200, max: 340 }, gravityY: 300, lifespan: { min: 200, max: 450 }, tint: [0xebe6d8, n(H.work)], emitting: false, blendMode: 'ADD' }).setDepth(7);
+    this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 30, max: 90 }, angle: { min: 200, max: 340 }, gravityY: 300, lifespan: { min: 160, max: 320 }, tint: [0xebe6d8, n(H.work)], emitting: false }).setDepth(7);
 
     this.gl = new Glasses({ has: true, on: false, cracked: true });
     this.view = { x: 0 };
@@ -70,14 +73,14 @@ export class Hallway extends SideEpisode {
     this.skipPoints = [8 * T, 15 * T, 21 * T];
 
     // things to look at on the way in
-    LEVEL.things.forEach(th => { const it = {}; this.things.push({ x0: th.x0, x1: th.x1, y0: 60, y1: G, label: 'J', use: () => this.describe(HALL_THINGS[th.id], it, (th.x0 + th.x1) / 2, 60) }); });
+    LEVEL.things.forEach(th => { const it = {}; this.things.push({ x0: th.x0, x1: th.x1, y0: 60, y1: G, label: 'J', use: () => { this.noteClue(THING_CLUE[th.id]); this.describe(HALL_THINGS[th.id], it, (th.x0 + th.x1) / 2, 60); } }); });
     // the stage, to look at once the fight is over
     const N = NOTICE.hallway, D = LEVEL.desk, it = {};
     this.addLook({ x0: 20 * T + 6, x1: 23 * T + 2, y0: 100, py: 70, lines: N.gallery });
     this.addLook({ x0: 27 * T + 8, x1: 29 * T, y0: 100, py: 70, lines: N.gate });
     this.addLook({ x0: 37 * T + 8, x1: 39 * T + 12, y0: 100, py: 70, lines: N.door });
     LEVEL.crates.forEach(c => this.addLook({ x0: c.x - 2, x1: c.x + c.w + 2, y0: c.y - 6, py: c.y, lines: N.crate }));
-    this.things.push({ x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'J', look: true, use: () => this.describe(HALL_THINGS.console, it, D.x + D.w / 2, D.y - 17) });
+    this.things.push({ x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'J', look: true, use: () => { this.noteClue('console'); this.describe(HALL_THINGS.console, it, D.x + D.w / 2, D.y - 17); } });
     this.swordThing = { x0: 0, x1: 0, y0: G - 6, y1: G, label: 'J', off: true, use: () => this.pickUp() };
     this.things.push(this.swordThing);
     // in round two the desk is the laser's console: E fires one high shot across the stage
@@ -85,22 +88,32 @@ export class Hallway extends SideEpisode {
     this.things.push(this.consoleThing); this.consoleAt = 0;
 
     this.drawBodies();
-    const retry = this.retry = this.ep.take > 1 && !data.fresh;
+    // give-up mode: asked for (a chapter link), or six deaths in the fight already
+    if (data.giveUp && state.story.creatorDeaths < GIVE_UP_AT) state.storySet('creatorDeaths', GIVE_UP_AT);
+    const retry = this.retry = (this.ep.take > 1 || !!data.giveUp) && !data.fresh;
+    this.giveUp = retry && state.story.creatorDeaths >= GIVE_UP_AT;
     this.spawn(retry ? 21 * T + 6 : null); this.kid.face = 1;
     this.mode = 'walk'; this.heardIn = 0;
-    this.input.on('pointerdown', () => { if (this.mode === 'fight') this.swing(); });
+    this.input.on('pointerdown', () => { if (this.mode === 'fight' || this.mode === 'giveup') this.swing(); });
     this.cameras.main.fadeIn(retry ? 300 : 900);
     this.beds = { hum: Sound.hum(0.02), wind: Sound.wind(0.0001) };
     Music.play('backstage', { fadeIn: 2 });
     this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
-    if (retry) this.startToss(true);
+    if (this.giveUp) this.startGiveUp(); else if (retry) this.startToss(true);
     this.updateView(1);
     window.__game = { scene: this, state };
   }
 
   // things to look at: on the way in, and on the stage once the fight is over
   lookable() { return this.mode === 'walk' || this.mode === 'after'; }
-  doorReady() { return this.mode === 'after' && !this.dead && !this.leaving; }
+  doorReady() { return (this.mode === 'after' || this.mode === 'giveup') && !this.dead && !this.leaving; }
+  // a clue found in a look: noted once, with the count
+  noteClue(id) { if (id && state.clue(id)) overlay.note('NOTED (' + state.clueCount() + ')', 1600); }
+  // a death in the fight counts toward the creator giving up
+  die(src) {
+    if (!this.dead && (this.mode === 'fight' || this.mode === 'between')) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);
+    super.die(src);
+  }
 
   // ------------------------------------------------------------------ the loop
   update(time, delta) {
@@ -113,13 +126,14 @@ export class Hallway extends SideEpisode {
       // the fixed train of lines before the fight holds her where she stands until the sword lands
       if (this.train && !this.sword.floor && !this.sword.have) this.settle(dt); else { this.moveKid(dt); this.updateThings(); }
       if (c.glasses()) this.gl.toggle();
-      if (c.throwP() && this.mode === 'fight') this.swing();
+      if (c.throwP() && (this.mode === 'fight' || this.mode === 'giveup')) this.swing();
     } else if (this.dead && this.girl.visible) this.settle(dt);
     this.gl.update(dt);
     // Enter moves the captions on when nothing is at stake
-    if (c.skipLine() && this.lineT > 0 && this.mode !== 'fight') { this.lineT = 0; this.nextLine(); }
+    if (c.skipLine() && this.lineT > 0 && this.mode !== 'fight' && this.mode !== 'giveup') { this.lineT = 0; this.nextLine(); }
     this.updateLines(dt);
     if (this.mode === 'walk') this.walkIn();
+    if (this.mode === 'giveup') this.updateGiveUp(dt);
     this.updateSword(dt);
     this.updateCreator(dt);
     this.updateTraps(dt);
@@ -132,7 +146,7 @@ export class Hallway extends SideEpisode {
     const S = display.S, cam = this.cameras.main, k = this.kid, W = LEVEL.w * T;
     let want;
     if (this.mode === 'walk') want = Math.min(ARENA.x0, Math.max(0, k.x + k.w / 2 + 18 - 160));
-    else if (this.mode === 'after') want = Math.min(W - 320, Math.max(ARENA.x0, k.x + k.w / 2 + 18 - 160));
+    else if (this.mode === 'after' || (this.mode === 'giveup' && k.x > ARENA.x1 - 40)) want = Math.min(W - 320, Math.max(ARENA.x0, k.x + k.w / 2 + 18 - 160));
     else want = ARENA.x0;
     this.view.x += (want - this.view.x) * Math.min(1, dt * 8);
     cam.scrollX = Math.round(this.view.x) - 160 * (S - 1); cam.scrollY = -90 * (S - 1);
@@ -154,6 +168,7 @@ export class Hallway extends SideEpisode {
     if (!l) { this.lineT = 0; overlay.clearCaption(); return; }
     // a callback may start lines of its own; then those play, and this queue is done
     if (l.cb) { l.cb(); if (this.lineT <= 0) this.nextLine(); return; }
+    if (l.pause) { overlay.clearCaption(); this.lineT = l.pause; return; }
     const text = l.text.replace('{take}', this.ep.take);
     // a voice from off screen is captioned in italics
     const off = l.who === 'CREATOR' && (this.cr.x < this.view.x - 4 || this.cr.x > this.view.x + 324);
@@ -174,8 +189,8 @@ export class Hallway extends SideEpisode {
     Sound.tone(90, 0.35, 'sawtooth', 0.04, 60); Sound.noise(0.3, 0.06, 900);
     Music.play('boss', { fadeIn: 1.5 });
     const toss = { who: null, text: '[A SWORD CLATTERS]', on: () => this.throwSword() };
-    // the first two retries get one line; after that, silence (Nov 17: no repeats)
-    if (retry) this.say(this.ep.take <= 3 ? [HALL_AGAIN[(this.ep.take - 2) % HALL_AGAIN.length], toss] : [toss]);
+    // the first two retries get one line each, never twice; after that, silence (Nov 17)
+    if (retry) { const i = [0, 1].find(j => !state.heard('HALL_AGAIN' + j)); if (i != null) state.hear('HALL_AGAIN' + i); this.say(i != null ? [HALL_AGAIN[i], toss] : [toss]); }
     else { this.train = true; this.say(HALL_IN.concat(HALL_TOSS.slice(0, 3), [toss]), () => { this.train = false; }); }
     this.cr.st = 'talk'; this.cr.walkTo = 30 * T; if (retry) this.cr.x = 30 * T;
   }
@@ -191,7 +206,7 @@ export class Hallway extends SideEpisode {
     Sound.tone(660, 0.08, 'triangle', 0.03); this.time.delayedCall(70, () => Sound.tone(990, 0.12, 'triangle', 0.025));
     const shown = this.itemPanel('sword');
     // on a retry she has heard it: straight to the round
-    const go = () => (this.retry ? this.startRound(0) : this.say([HALL_TOSS[4]], () => this.startRound(0)));
+    const go = () => (this.mode === 'giveup' ? null : this.retry ? this.startRound(0) : this.say([HALL_TOSS[4]], () => this.startRound(0)));
     if (shown) this.time.delayedCall(50, go); else go();
   }
   startRound(i) {
@@ -202,10 +217,52 @@ export class Hallway extends SideEpisode {
     if (i === 2) this.lightsOff();
   }
 
+  // ------------------------------------------------------------------ give-up mode
+  // After six deaths in the fight: no toss of words, no rounds, no traps. The sword drops where
+  // she can reach it, the shutter rolls up, and the creator stands in the middle of the stage
+  // and screams the same three words every few seconds. They attack nobody.
+  startGiveUp() {
+    const c = this.cr;
+    this.mode = 'giveup'; this.gateProp.solid = true; this.shutterOpen = 0.01;
+    state.storySet('gaveUp', true);
+    Music.stop(1.5); Sound.noise(1.2, 0.05, 500); Sound.tone(110, 1.0, 'triangle', 0.03, 140);
+    Object.assign(c, { x: 30 * T, st: 'broken', pose: 'stand', face: -1, open: true, unarmed: true, drain: 0, screamT: 2.2, walkTo: null });
+    // the sword falls out of their hand and lands between them
+    this.sword.fly = { sx: c.x - 6, sy: G - 18, ex: Math.max(ARENA.x0 + 20, Math.min(c.x - 30, this.kid.x + this.kid.w / 2 + 30)), t: 0.2 };
+    this.say([{ who: null, text: HALL_GIVEUP.drop }]);
+  }
+  updateGiveUp(dt) {
+    const c = this.cr; if (c.st !== 'broken') return;
+    c.drain = Math.max(0, c.drain - dt);
+    c.screamT -= dt;
+    if (c.screamT <= 0) {
+      c.screamT = SCREAM_EVERY; c.scream = 0.9;
+      this.say([{ who: 'CREATOR', text: HALL_GIVEUP.scream }], null, false, true);
+      Sound.noise(0.5, 0.05, 1400); Sound.tone(180, 0.6, 'sawtooth', 0.03, 120);
+    }
+    c.scream = Math.max(0, (c.scream || 0) - dt);
+  }
+  // a hit on the creator who gave up: one segment drains, slowly; the next waits for it
+  hitBroken() {
+    const c = this.cr;
+    if (c.hp <= 0 || c.drain > 0) return this.parry(true);
+    c.hp--; c.drain = DRAIN; c.flash = 0.12; c.hurtT = 0.5;
+    Sound.tone(200, 0.2, 'sawtooth', 0.035, 100); Sound.noise(0.12, 0.06, 2200); fx.shake(this.cameras.main, 100, 0.005);
+    this.sparks.explode(6, c.x, G - 14);
+    if (c.hp <= 0) {
+      // nine: they go down, the light on the headset goes out, the show cuts away
+      c.st = 'down'; c.pose = 'kneel'; c.open = false;
+      state.storySet('killedBroken', true); state.storySet('spared', false);
+      this.time.delayedCall(900, () => { c.tally = false; Sound.click(0.03); });
+      this.say([{ who: null, text: HALL_GIVEUP.down }]);
+      state.finish(this.epId);
+    }
+  }
+
   // ------------------------------------------------------------------ her sword
   swing() {
     const s = this.sword;
-    if (!s.have || s.cool > 0 || this.dead || this.mode !== 'fight') return;
+    if (!s.have || s.cool > 0 || this.dead || (this.mode !== 'fight' && this.mode !== 'giveup')) return;
     s.swing = 0; s.cool = 0.36; s.hitThis = false;
     Sound.noise(0.09, 0.035, 2600); Sound.tone(520, 0.05, 'triangle', 0.012, 300);
   }
@@ -222,15 +279,17 @@ export class Hallway extends SideEpisode {
     if (s.swing > 0.04 && s.swing < 0.16 && !s.hitThis) {
       const k = this.kid, cx = k.x + k.w / 2, x0 = k.face > 0 ? cx : cx - 21, x1 = k.face > 0 ? cx + 21 : cx, y0 = k.y - 6, y1 = k.y + k.h;
       const c = this.cr, b = this.crBox();
-      if (x1 > b.x0 && x0 < b.x1 && y1 > b.y0 && y0 < b.y1 && c.st !== 'talk' && c.st !== 'yield') {
+      if (x1 > b.x0 && x0 < b.x1 && y1 > b.y0 && y0 < b.y1 && c.st !== 'talk' && c.st !== 'yield' && c.st !== 'down') {
         s.hitThis = true;
-        if (c.open && c.st !== 'hurt') this.hitCreator(); else this.parry();
+        if (c.st === 'broken') this.hitBroken();
+        else if (c.open && c.st !== 'hurt') this.hitCreator(); else this.parry();
       }
     }
   }
   crBox() { const c = this.cr, h = c.pose === 'kneel' ? 16 : c.pose === 'crouch' ? 20 : 24; return { x0: c.x - 5, x1: c.x + 5, y0: G - h, y1: G }; }
-  parry() {
+  parry(soft) {
     const k = this.kid, c = this.cr;
+    if (soft) { Sound.tone(900, 0.05, 'triangle', 0.015); return; }
     Sound.tone(1900, 0.07, 'square', 0.03, 1500); Sound.noise(0.06, 0.06, 7000);
     this.sparks.explode(6, c.x - c.face * -4, G - 14);
     k.vx = (k.x + k.w / 2 < c.x ? -1 : 1) * 120; this.sword.cool = 0.5;
@@ -242,18 +301,25 @@ export class Hallway extends SideEpisode {
     c.kx = (c.x < k.x + k.w / 2 ? -1 : 1) * 90;
     Sound.tone(220, 0.16, 'sawtooth', 0.04, 110); Sound.noise(0.12, 0.07, 2200); fx.shake(this.cameras.main, 120, 0.006);
     this.sparks.explode(10, c.x, G - 14);
-    const line = HALL_HIT[HP - c.hp - 1];
+    const hi = HP - c.hp - 1, line = HALL_HIT[hi] && state.hear('HALL_HIT' + hi) ? HALL_HIT[hi] : null;
     // the last hit stops everything at once: no more attacks, no traps, then the yield
-    if (c.hp <= 0) { this.mode = 'between'; c.st = 'between'; c.t = 99; this.endTraps(); this.say([line], () => this.yieldFight(), false, true); return; }
+    if (c.hp <= 0) { this.mode = 'between'; c.st = 'between'; c.t = 99; this.endTraps(); this.say(line ? [line] : [], () => this.yieldFight(), false, true); return; }
     const next = ROUND_AT.indexOf(c.hp);
-    if (next > 0) { c.st = 'between'; c.t = 99; this.mode = 'between'; this.say([line].concat(HALL_ROUND[next]), () => this.startRound(next), false, true); this.endTraps(); }
-    else this.say([line], null, false, true);
+    // each round's line is said once ever; a retry goes straight on after a short beat
+    const roundLines = next > 0 && state.hear('HALL_ROUND' + next) ? HALL_ROUND[next] : [];
+    if (next > 0) { c.st = 'between'; c.t = 99; this.mode = 'between'; this.say([line].concat(roundLines, roundLines.length || line ? [] : [{ who: null, text: '', pause: 1.2 }]), () => this.startRound(next), false, true); this.endTraps(); }
+    else if (line) this.say([line], null, false, true);
   }
 
   // ------------------------------------------------------------------ the creator
   updateCreator(dt) {
     const c = this.cr, k = this.kid, kc = k.x + k.w / 2, R = c.round;
     c.flash = Math.max(0, c.flash - dt);
+    if (c.st === 'broken' || c.st === 'down') {
+      c.hurtT = Math.max(0, (c.hurtT || 0) - dt);
+      if (c.st === 'broken') { c.pose = c.hurtT > 0 ? 'back' : c.scream > 0 ? (Math.floor(this.clock * 10) % 2 ? 'back' : 'stand') : 'stand'; c.face = kc < c.x ? -1 : 1; }
+      this.pushOut(); return this.placeCreator();
+    }
     if (c.st === 'wait' || c.st === 'talk' || c.st === 'yield') {
       if (c.st === 'talk' && c.walkTo != null && Math.abs(c.walkTo - c.x) > 1) { c.x += Math.sign(c.walkTo - c.x) * 40 * dt; c.face = Math.sign(c.walkTo - c.x) || -1; c.pose = Math.floor(this.clock * 6) % 2 ? 'a' : 'b'; c.walking = true; }
       else { if (c.walking) { c.walking = false; c.pose = 'stand'; } if (c.st !== 'yield') c.face = kc < c.x ? -1 : 1; }
@@ -492,7 +558,7 @@ export class Hallway extends SideEpisode {
   }
   endTraps() { this.laser.shots = []; this.laser.done = false; this.cams.forEach(cm => { cm.aim = null; cm.clicks = 0; cm.warn = false; cm.cone = null; }); }
   lightsOff() { this.dark = true; Sound.tone(80, 0.5, 'sawtooth', 0.04, 40); Sound.noise(0.2, 0.05, 1200); this.cams.forEach((cm, i) => { cm.next = 2.4 + i * 1.6; }); }
-  lightsOn() { this.dark = false; this.darkImg.setVisible(false); }
+  lightsOn() { this.dark = false; }
 
   // ------------------------------------------------------------------ review and the door
   skipAhead() {
@@ -502,11 +568,15 @@ export class Hallway extends SideEpisode {
     if (this.mode === 'toss') { if (this.sword.fly) { this.sword.fly.t = 1; return; } if (this.sword.floor) { k.x = this.sword.floor.x - 4; this.pickUp(); } else this.throwSword(); return; }
     if (this.mode === 'fight') { const c = this.cr; const to = ROUND_AT.find(v => v < c.hp); const n2 = c.hp - (to != null ? to : 0); for (let i = 0; i < n2 - 1; i++) c.hp--; c.open = true; c.st = 'recover'; this.hitCreator(); return; }
     if (this.mode === 'yield') { this.queue = this.queue.filter(q => q.cb); this.lineT = 0.01; return; }
-    if (this.mode === 'after') this.placeAt(LEVEL.door.x + 4);
+    if (this.mode === 'giveup') { this.shutterOpen = 1; this.shutterProp.solid = false; }
+    if (this.mode === 'after' || this.mode === 'giveup') this.placeAt(LEVEL.door.x + 4);
   }
   enterDoor() {
-    if (this.leaving || this.mode !== 'after') return;
+    if (this.leaving || (this.mode !== 'after' && this.mode !== 'giveup')) return;
+    if (this.mode === 'giveup' && this.shutterProp.solid) return;
     this.leaving = true;
+    // she leaves the creator alive (a yield, or walking past the one who gave up): spared
+    if (this.mode === 'after' || this.cr.hp > 0) { state.storySet('spared', true); state.storySet('killedBroken', false); state.finish(this.epId); }
     Sound.tone(660, 0.12, 'triangle', 0.03); Sound.tone(880, 0.16, 'triangle', 0.025);
     this.cameras.main.fadeOut(450, 255, 255, 255);
     this.time.delayedCall(480, () => { if (!goNext(this, 'ep5b')) this.scene.start('moon', { at: 'playroom' }); });
@@ -521,22 +591,23 @@ export class Hallway extends SideEpisode {
     if (this.gateProp.solid) { g.fillStyle(n(H.steelLo), 1); g.fillRect(LEVEL.gate.x, 34, LEVEL.gate.w, G - 34); g.fillStyle(n(H.tape), 1); for (let y = 40; y < G; y += 12) g.fillRect(LEVEL.gate.x, y, LEVEL.gate.w, 4); }
     const SH = LEVEL.shutter, up = this.shutterOpen || 0, sh = Math.round((G - 34) * (1 - up));
     g.fillStyle(n(H.steel), 1); g.fillRect(SH.x, 34, SH.w, sh); for (let y = 36; y < 34 + sh; y += 4) { g.fillStyle(n(H.steelLo), 1); g.fillRect(SH.x, y, SH.w, 1); }
-    // the console's screen glows; the satellite on it moves
-    const D = LEVEL.desk; g.fillStyle(n('#f5ce77'), 0.5 + 0.3 * Math.sin(t * 3)); g.fillRect(D.x + 9 + Math.round((t * 8) % 14), D.y - 6, 2, 1);
+    // the console's screen: a dot that walks across it, on and off
+    const D = LEVEL.desk; if (Math.floor(t * 3) % 3) { g.fillStyle(n(H.glow), 1); g.fillRect(D.x + 9 + Math.round((t * 8) % 14), D.y - 6, 2, 1); }
     // ON AIR, lit while the cameras roll
-    const onAir = this.mode === 'toss' || this.mode === 'fight' || this.mode === 'between' || (this.mode === 'yield' && this.cr.tally);
-    if (onAir) { g.fillStyle(n(H.red), 0.95); g.fillRect(30 * T - 13, 37, 34, 9); pixText(g, 'ON AIR', 30 * T - 10, 39, 0xebe6d8); }
+    const onAir = this.mode === 'toss' || this.mode === 'fight' || this.mode === 'between' || ((this.mode === 'yield' || this.mode === 'giveup') && this.cr.tally);
+    if (onAir) { g.fillStyle(n(H.red), 1); g.fillRect(30 * T - 13, 37, 34, 9); pixText(g, 'ON AIR', 30 * T - 10, 39, 0xebe6d8); }
     else pixText(g, 'ON AIR', 30 * T - 10, 39, n('#3a2f1f'));
     // the sword on the floor, or in the air
     const s = this.sword;
     if (s.floor) { g.fillStyle(n(H.blade), 1); g.fillRect(s.floor.x - 7, G - 2, 13, 1); g.fillStyle(n(H.bladeLo), 1); g.fillRect(s.floor.x - 7, G - 1, 13, 1); g.fillStyle(n(H.gold), 1); g.fillRect(s.floor.x + 6, G - 3, 1, 3); g.fillRect(s.floor.x + 7, G - 2, 3, 1); if (Math.floor(t * 3) % 3 === 0) { g.fillStyle(0xebe6d8, 1); g.fillRect(s.floor.x - 3, G - 3, 1, 1); } }
     const a = this.armG; a.clear();
     if (s.fly) {
-      const f = s.fly, u = Math.min(1, f.t / 0.7), x = f.sx + (f.ex - f.sx) * u, y = f.sy + (G - 2 - f.sy) * u - Math.sin(u * Math.PI) * 34, r = u * Math.PI * 5;
-      a.lineStyle(1, n(H.blade), 1); a.lineBetween(x - Math.cos(r) * 7, y - Math.sin(r) * 7, x + Math.cos(r) * 7, y + Math.sin(r) * 7);
+      const f = s.fly, u = Math.min(1, f.t / 0.7), x = f.sx + (f.ex - f.sx) * u, y = f.sy + (G - 2 - f.sy) * u - Math.sin(u * Math.PI) * 34, r = Math.round(u * 10) * Math.PI / 4;
+      a.lineStyle(1, n(H.blade), 1); a.lineBetween(Math.round(x - Math.cos(r) * 7), Math.round(y - Math.sin(r) * 7), Math.round(x + Math.cos(r) * 7), Math.round(y + Math.sin(r) * 7));
     }
-    // the creator's sword arm and blade
-    if (c.st !== 'yield' || c.pose !== 'kneel') {
+    // the creator's sword arm and blade (none once they have dropped it)
+    if (c.unarmed) { /* empty hands */ }
+    else if (c.st !== 'yield' || c.pose !== 'kneel') {
       const b = this.blade();
       a.lineStyle(2, n(H.coat), 1); a.lineBetween(b.sx, b.sy, b.hx, b.hy);
       a.fillStyle(n(H.skin), 1); a.fillRect(Math.round(b.hx) - 1, Math.round(b.hy) - 1, 2, 2);
@@ -547,17 +618,19 @@ export class Hallway extends SideEpisode {
     } else { a.fillStyle(n(H.blade), 1); a.fillRect(c.x + 4, G - 1, 14, 1); }
     // the red light on the creator's headset: on air
     { const hd = POSES[c.pose].head, lx = Math.round(c.face > 0 ? c.x - 7 + hd[0] : c.x - 7 + 13 - hd[0]), ly = G - 26 + hd[1] + 4;
-      if (c.tally) { a.fillStyle(n(H.red), 0.25); a.fillRect(lx - 1, ly - 1, 3, 3); a.fillStyle(0xebe6d8, 1); a.fillRect(lx, ly, 1, 1); } else { a.fillStyle(n(H.band), 1); a.fillRect(lx, ly, 1, 1); } }
-    // her sword: held up and forward, or mid swing with a trail
+      if (c.tally) { a.fillStyle(n(H.red), 1); a.fillRect(lx, ly, 1, 1); if (Math.floor(t * 2) % 2) a.fillRect(lx, ly - 1, 1, 1); } else { a.fillStyle(n(H.band), 1); a.fillRect(lx, ly, 1, 1); } }
+    // her sword: held up and forward, or mid swing with one trailing line
     if (s.have && this.girl.visible && !this.dead) {
       const cx = k.x + k.w / 2 + k.face * 2, cy = k.y + (k.crouch ? 4 : 7);
       const ang = s.swing >= 0 ? -120 + Math.min(1, s.swing / 0.14) * 150 : -50;
       const r = (k.face > 0 ? ang : 180 - ang) * Math.PI / 180, tx = cx + Math.cos(r) * 10, ty = cy + Math.sin(r) * 10;
+      if (s.swing >= 0 && s.swing < 0.18) { const aa = -120 + Math.min(1, Math.max(0, s.swing - 0.04) / 0.14) * 150, rr = (k.face > 0 ? aa : 180 - aa) * Math.PI / 180; a.lineStyle(1, n(H.bladeLo), 1); a.lineBetween(Math.round(cx + Math.cos(rr) * 6), Math.round(cy + Math.sin(rr) * 6), Math.round(cx + Math.cos(rr) * 11), Math.round(cy + Math.sin(rr) * 11)); }
       a.lineStyle(1, n(H.blade), 1); a.lineBetween(cx, cy, tx, ty);
       a.fillStyle(n(H.gold), 1); a.fillRect(Math.round(cx) - 1, Math.round(cy), 2, 1);
-      if (s.swing >= 0 && s.swing < 0.18) for (let i = 1; i <= 3; i++) { const aa = -120 + Math.min(1, Math.max(0, s.swing - i * 0.02) / 0.14) * 150, rr = (k.face > 0 ? aa : 180 - aa) * Math.PI / 180; a.lineStyle(1, 0xebe6d8, 0.5 / i); a.lineBetween(cx + Math.cos(rr) * 5, cy + Math.sin(rr) * 5, cx + Math.cos(rr) * 12, cy + Math.sin(rr) * 12); }
     }
+    this.lightL.begin(this.view.x);
     this.drawTraps(t);
+    this.lightL.end();
     this.drawDarkness();
     this.drawLock();
     this.drawHud();
@@ -565,31 +638,31 @@ export class Hallway extends SideEpisode {
   }
 
   drawTraps(t) {
-    const g = this.trapG, tg = this.tellG, c = this.cr; g.clear(); tg.clear();
-    const red = n(this.P.hazard), seeing = this.gl.showing;
-    // the searchlight: a real light, soft and layered, red as it locks
-    if (this.lamp.cone) this.drawCone(g, this.lamp, 0.1, H.work);
-    if (this.lamp.warm) { const LV = LEVEL.lamp; g.fillStyle(n(H.work), 0.5 + 0.4 * Math.sin(t * 30)); g.fillCircle(LV.x, LV.y + 3, 3); g.fillStyle(n(H.work), 0.15); g.fillCircle(LV.x, LV.y + 3, 8); }
-    // the laser: emitters glow, the glasses show which height, then the beam
+    const g = this.trapG, tg = this.tellG, L = this.lightL, c = this.cr; g.clear(); tg.clear();
+    const red = n(this.P.hazard), RED = this.P.hazard, seeing = this.gl.showing;
+    // the searchlight: a real light, a checker of warm light, red as it locks
+    if (this.lamp.cone) L.poly(this.lamp.cone, this.lamp.lock > 0 ? RED : H.work, 'checker');
+    if (this.lamp.warm && Math.floor(t * 12) % 2 === 0) { const LV = LEVEL.lamp; g.fillStyle(n(H.work), 1); g.fillRect(LV.x - 2, LV.y + 1, 5, 3); }
+    // the laser: emitters blink, the glasses show which height, then the beam
     const Z = this.laser, LZ = LEVEL.lasers;
     if (Z.shots.length) {
       const y = Z.shot === 'low' ? LZ.lo : LZ.hi, w = LZ.x1 - LZ.x0, f = Z.t;
-      if (f < 0.75 && Math.floor(f * 10) % 2 === 0) { g.fillStyle(red, 0.95); g.fillRect(LZ.x0 - 2, y - 1, 3, 3); g.fillRect(LZ.x1 - 1, y - 1, 3, 3); g.fillStyle(red, 0.35); g.fillRect(LZ.x0 + 1, y, 10, 1); g.fillRect(LZ.x1 - 11, y, 10, 1); }
-      if (f < 0.75 && seeing) { tg.fillStyle(n(this.P.overlay), 0.6); for (let x = LZ.x0 + Math.floor(t * 40) % 6; x < LZ.x1; x += 6) tg.fillRect(x, y, 3, 1); }
-      else if (f >= 0.75 && f < 1.2) { g.fillStyle(red, 0.06 + 0.3 * (f - 0.75) / 0.45); g.fillRect(LZ.x0, y - 1, w, 2); g.fillStyle(red, 0.9); g.fillRect(LZ.x0 - 2, y - 2, 3, 4); g.fillRect(LZ.x1 - 1, y - 2, 3, 4); }
-      else if (f >= 1.2 && f < 1.5) { const fl = 0.8 + 0.2 * Math.sin(t * 90); g.fillStyle(red, 0.28 * fl); g.fillRect(LZ.x0, y - 3, w, 6); g.fillStyle(red, 0.7); g.fillRect(LZ.x0, y - 1, w, 2); g.fillStyle(n(this.P.hazardCore), 1); g.fillRect(LZ.x0, y, w, 1); }
+      if (f < 0.75 && Math.floor(f * 10) % 2 === 0) { g.fillStyle(red, 1); g.fillRect(LZ.x0 - 2, y - 1, 3, 3); g.fillRect(LZ.x1 - 1, y - 1, 3, 3); g.fillRect(LZ.x0 + 1, y, 6, 1); g.fillRect(LZ.x1 - 7, y, 6, 1); }
+      if (f < 0.75 && seeing) { tg.fillStyle(n(this.P.overlay), 1); for (let x = LZ.x0 + Math.floor(t * 40) % 6; x < LZ.x1; x += 6) tg.fillRect(x, y, 2, 1); }
+      else if (f >= 0.75 && f < 1.2) { L.rect(LZ.x0, y, w, 1, RED, f < 0.97 ? 'q25' : 'checker'); g.fillStyle(red, 1); g.fillRect(LZ.x0 - 2, y - 2, 3, 4); g.fillRect(LZ.x1 - 1, y - 2, 3, 4); }
+      else if (f >= 1.2 && f < 1.5) { g.fillStyle(red, 1); g.fillRect(LZ.x0, y - 1, w, 3); g.fillStyle(n(this.P.hazardCore), 1); g.fillRect(LZ.x0, y, w, 1); }
     }
     // the creator's lunge, through the glasses: where the blade will pass
     if (seeing && (c.st === 'windHi' || c.st === 'windLo')) {
       const y = c.st === 'windHi' ? G - 12 : G - 3, x0 = c.face > 0 ? c.x + 6 : ARENA.x0 + 12, x1 = c.face > 0 ? ARENA.x1 - 12 : c.x - 6;
-      tg.fillStyle(n(this.P.overlay), 0.55); for (let x = x0 + Math.floor(t * 30) % 5; x < x1; x += 5) tg.fillRect(x, y, 2, 1);
+      tg.fillStyle(n(this.P.overlay), 1); for (let x = x0 + Math.floor(t * 30) % 5; x < x1; x += 5) tg.fillRect(x, y, 2, 1);
     }
     // the flash cameras: an LED, the cone the glasses see while they click, the flash itself
     if (this.cr.round === 2 && (this.mode === 'fight' || this.mode === 'between')) this.cams.forEach(cm => {
-      if (cm.cone && cm.warn && seeing) { const blink = Math.floor(t * 16) % 2 === 0; tg.fillStyle(red, blink ? 0.12 : 0.05); tg.fillPoints(cm.cone, true); }
+      if (cm.cone && cm.warn && seeing && Math.floor(t * 16) % 2 === 0) L.poly(cm.cone, RED, 'q25');
       const ledOn = cm.warn ? Math.floor(t * 16) % 2 === 0 : Math.floor(t * 1.5) % 2 === 0;
       if (ledOn) { tg.fillStyle(red, 1); tg.fillRect(cm.x - 3, cm.y - 2, 1, 1); }
-      if (cm.flash > 0 && cm.cone) { g.fillStyle(0xebe6d8, 0.5 * cm.flash * fx.level * (cm.lit == null ? 1 : cm.lit)); g.fillPoints(cm.cone, true); g.fillStyle(0xebe6d8, cm.flash); g.fillCircle(cm.x, cm.y + 2, 3); }
+      if (cm.flash > 0.45 && cm.cone) { L.poly(cm.cone, '#ebe6d8', (cm.lit == null ? 1 : cm.lit) * fx.level > 0.5 ? 'checker' : 'q25'); g.fillStyle(0xebe6d8, 1); g.fillRect(cm.x - 2, cm.y, 5, 4); }
     });
   }
   drawLock() {
@@ -597,31 +670,40 @@ export class Hallway extends SideEpisode {
     this.strikeFx.update(this.game.loop.delta / 1000);
     const L = this.lamp; if (L.lock > 0 && !this.dead) { const k = this.kid, r = 9 - Math.min(1, L.lock / LEVEL.lamp.lock) * 7, cx = k.x + k.w / 2, cy = k.y + k.h / 2; fx.lineStyle(1, n(this.P.hazard), 1); fx.strokeRect(Math.round(cx - 4 - r), Math.round(cy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); }
   }
+  // Lights off: solid dark with hard holes where there is light (her, the console, the creator).
+  // A flash lights the whole stage for its moment.
   drawDarkness() {
-    if (!this.dark) { this.darkImg.setVisible(false); return; }
-    const ctx = this.darkCanvas.getContext('2d'), vx = Math.round(this.view.x), k = this.kid, c = this.cr;
-    const flash = Math.max(0, ...this.cams.map(cm => cm.flash * (cm.lit == null ? 1 : cm.lit)));
-    ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, 322, 182);
-    ctx.fillStyle = `rgba(6,5,10,${0.9 - flash * 0.75 * fx.level})`; ctx.fillRect(0, 0, 322, 182);
-    ctx.globalCompositeOperation = 'destination-out';
-    const hole = (x, y, r, a) => { const gr = ctx.createRadialGradient(x - vx + 1, y + 1, r * 0.35, x - vx + 1, y + 1, r); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x - vx + 1, y + 1, r, 0, Math.PI * 2); ctx.fill(); };
-    if (this.girl.visible) hole(k.x + k.w / 2, k.y + 6, 34, 0.75);
-    hole(LEVEL.desk.x + 17, LEVEL.desk.y - 9, 22, 0.55);
-    hole(c.x, G - 20, 14, 0.35);
-    this.darkTex.refresh();
-    this.darkImg.setVisible(true).setPosition(vx - 1, -1);
+    const D = this.darkL, flash = Math.max(0, ...this.cams.map(cm => cm.flash * (cm.lit == null ? 1 : cm.lit) * fx.level));
+    D.begin(this.view.x);
+    if (this.dark && flash < 0.45) {
+      const k = this.kid, c = this.cr, holes = [{ x: LEVEL.desk.x + 17, y: LEVEL.desk.y - 9, r: 16 }, { x: c.x, y: G - 16, r: 9 }];
+      if (this.girl.visible) holes.push({ x: k.x + k.w / 2, y: k.y + 6, r: 24 });
+      D.dark('#0e0f12', holes);
+    }
+    D.end();
   }
-  // the glasses meter, and the creator's bar as a lower third at the top: a red tag, nine marks
+  // the creator's HP, as part of the show's paperwork: a slip at the top of the picture, a box
+  // for each of the nine. A box empties from the top when a hit drains it.
   drawHud() {
     const g = this.hudG, P = this.P, col = n(P.overlay); g.clear();
-    if (this.mode === 'walk' || this.done) { this.gl.drawMeter(g, 18, 166, col); return; }
     this.gl.drawMeter(g, 18, 166, col);
+    if (this.mode === 'walk' || this.done) return;
     if (this.gl.on) this.gl.drawStatic(g, col);
-    if (this.mode === 'fight' || this.mode === 'between' || this.mode === 'toss') {
-      const c = this.cr, tag = 'CREATOR', tw = ccWidth(tag) + 8, x = 160 - Math.round((tw + 9 * 6 + 6) / 2), y = 6;
-      ccBox(g, x, y, tw, 11, 0xe3412b, 1); ccText(g, tag, x + 4, y + 2, 0xebe6d8);
-      ccBox(g, x + tw, y, 9 * 6 + 6, 11, 0x000000, 0.85);
-      for (let i = 0; i < HP; i++) { g.fillStyle(0xebe6d8, i < c.hp ? (c.flash > 0 && i === c.hp ? 1 : 0.95) : 0.18); g.fillRect(x + tw + 4 + i * 6, y + 3, 4, 5); }
+    if (['fight', 'between', 'toss', 'giveup', 'yield'].includes(this.mode)) {
+      const c = this.cr, label = 'CREATOR', lw = ccWidth(label), w = 4 + lw + 6 + HP * 7 + 3, x = 6, y = 5, ink = 0x0e0f12; // top left: the TV's own tags sit top right
+      g.fillStyle(ink, 1); g.fillRect(x - 1, y - 1, w + 2, 13);
+      g.fillStyle(0xebe6d8, 1); g.fillRect(x, y, w, 11);
+      g.fillStyle(0xb8b2a3, 1); g.fillRect(x + 1, y + 10, w - 2, 1);
+      ccText(g, label, x + 4, y + 2, ink);
+      const drainU = c.drain > 0 ? c.drain / DRAIN : 0;
+      for (let i = 0; i < HP; i++) {
+        const bx = x + 4 + lw + 6 + i * 7, by = y + 2;
+        g.fillStyle(ink, 1); g.fillRect(bx, by, 5, 1); g.fillRect(bx, by + 6, 5, 1); g.fillRect(bx, by, 1, 7); g.fillRect(bx + 4, by, 1, 7);
+        // full, empty, or the one draining: its ink sinks a pixel row at a time
+        const fill = i < c.hp ? 5 : i === c.hp && drainU > 0 ? Math.ceil(5 * drainU) : 0;
+        if (fill > 0) g.fillRect(bx + 1, by + 6 - fill, 3, fill);
+        if (c.flash > 0 && i === c.hp) { g.fillStyle(0xe3412b, 1); g.fillRect(bx + 1, by + 1, 3, 5); g.fillStyle(ink, 1); }
+      }
     }
   }
 
@@ -629,7 +711,8 @@ export class Hallway extends SideEpisode {
     if (this.leaving || this.done) return;
     if (this.mode === 'walk') return overlay.hint(this.kid.x < 4 * T ? 'J looks at things.' : '');
     if (this.mode === 'toss') return overlay.hint(this.sword.floor ? 'The sword. J picks it up.' : '');
-    if (this.mode === 'fight') return overlay.hint(['K or a click swings. Hit when they are open: right after they attack. A high lunge, crouch. A low one, jump. Hide from the light behind a crate or under the desk. The light blinds them too.', 'The laser: a high beep and the top lights, crouch; a low one, jump. L shows it too. While they are out on the stage, J at the desk fires it at them.', 'Two clicks, then a flash: get under the desk or behind a crate. The flash blinds them too.'][this.cr.round]);
+    if (this.mode === 'fight') return overlay.hint(['K swings. Hit them right after they attack. High lunge: crouch. Low: jump. Hide from the light.', 'Laser: high beep, crouch. Low beep, jump. J at the desk fires it at them.', 'Two clicks, then a flash. Get under the desk or behind a crate.'][this.cr.round]);
+    if (this.mode === 'giveup') return overlay.hint(this.cr.hp > 0 ? 'They will not fight. K hits. The shutter is open.' : 'The playroom. W or J.');
     if (this.mode === 'after') return overlay.hint('The playroom. W or J.');
     overlay.hint('');
   }
