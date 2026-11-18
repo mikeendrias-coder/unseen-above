@@ -255,7 +255,7 @@ function serviceEnd(p, x0, x1, D, r) {
   p.rect(D.x - 4, D.y - 14, D.w + 8, 9, M.red); ptext(p, 'STAFF', D.x + 1, D.y - 12, M.white);
   p.rect(x1 - 24, 46, 6, 70, M.serviceLo); p.mark('steam', x1 - 21, 46);
   // lost and found: a hatch with a tray of glasses, all the same as hers
-  const L = LEVEL.lost; p.rect(L.x - 2, L.y - 12, L.w + 4, 9, M.serviceLo); ptext(p, 'LOST+FOUND', L.x - 1, L.y - 10, M.service);
+  const L = LEVEL.lost; p.rect(L.x - 7, L.y - 12, L.w + 14, 9, M.serviceLo); ptext(p, 'LOST+FOUND', L.x - 5, L.y - 10, '#b8b2a3');
   p.rect(L.x - 2, L.y - 2, L.w + 4, 22, M.serviceLo); p.rect(L.x, L.y, L.w, 18, '#2e3036'); p.rect(L.x - 3, L.y + 18, L.w + 6, 3, '#45474d'); p.rect(L.x - 3, L.y + 18, L.w + 6, 1, M.service);
   for (let i = 0; i < 4; i++) { const gx = L.x + 2 + i * 7; p.rect(gx, L.y + 16, 2, 1, M.red); p.rect(gx + 3, L.y + 16, 2, 1, M.red); p.px(gx + 2, L.y + 16, '#0e0f12'); }
 }
