@@ -117,6 +117,6 @@ export function makeSprites(scene, P) {
   drone('drone_a', true); drone('drone_b', false);
   // a gold glint: a hard plus, no scaling, no blending
   add('sparkle', 5, 5, p => { p.px(2, 0, ASH.goldHi); p.px(2, 4, ASH.goldHi); p.px(0, 2, ASH.goldHi); p.px(4, 2, ASH.goldHi); p.rect(1, 2, 3, 1, ASH.bone); p.rect(2, 1, 1, 3, ASH.bone); });
-  add('dot', 1, 1, p => p.px(0, 0, ASH.bone));
-  add('dot2', 2, 2, p => p.rect(0, 0, 2, 2, ASH.bone));
+  add('dot', 1, 1, p => p.px(0, 0, '#ffffff')); // white, so a tint lands exactly on a palette color
+  add('dot2', 2, 2, p => p.rect(0, 0, 2, 2, '#ffffff'));
 }

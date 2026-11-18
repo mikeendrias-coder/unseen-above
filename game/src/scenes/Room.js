@@ -208,7 +208,7 @@ export class Room extends SideEpisode {
     this.hum = Sound.hum(0.02); Music.level(0.45, 0.5);
     this.events.once('shutdown', () => { this.hum.stop(0.2); overlay.hint(''); });
     this.cameras.main.fadeIn(300);
-    overlay.hint('J looks at things. J at the door goes back.');
+    overlay.hint('J looks at things. W at the door goes back.');
     window.__game = { scene: this, state };
   }
 

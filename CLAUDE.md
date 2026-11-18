@@ -23,6 +23,11 @@
 - Satellite puzzle screens get less technical each batch: raw back end, ground station, flat map, kids' game show.
 - Ending (Michael's, kept): she passes adults watching Earth channels, reaches the kids' game room, and blows up the Moon with a hidden vest. It ends with us watching the Moon. No end card.
 
+## Final pass notes (Nov 18)
+- Endings: no end card on the last shot; endings seen are recorded for Chapters only (data/endings.js). The creator's line is now "picked a fight", not "voted".
+- Side rooms differ now (the wardrobe door is on the right). Ep4 inside the bedroom is drawn flat (nightRoom) with no vision circle.
+- Web font (fonts/ch07-caption.ttf): left side bearings follow each glyph's ink (tools/make-font.py), so narrow letters no longer gap.
+
 ## Where things are
 - PLAYABLE LINK (Nov 17, replaces itch.io as the main place): https://mikeendrias-coder.github.io/unseen-above/ (GitHub Pages; the repo is public). Publish with `npm run publish` in game/ (game/tools/publish.sh: builds, then force-pushes the page to the gh-pages branch). Run it after every change Michael should see. Automatic publishing on push (game/tools/pages-workflow.yml) needs a GitHub login with the workflow scope.
 - On Michael's PC: repo at ~/Developer/unseen-above. Playwright resolves with NODE_PATH=/home/michael/work/node_modules.

@@ -44,7 +44,7 @@ export class Bubbles {
     const narrate = !!opts.narrate;
     // narration has one place on screen: a new look replaces the last
     if (narrate) this.list.forEach((b, k) => { if (k !== key && b.narrate && !b.out) b.out = 0.01; });
-    const lines = ccWrap(text, opts.width || (narrate ? 46 : 24)), total = lines.join('').length;
+    const lines = ccWrap(text, opts.width || (narrate ? 40 : 24)), total = lines.join('').length;
     // a one-off line reads half again as long in presenter mode (spec A4.7); a talker waits for J
     const slow = state.settings.presenter && !opts.src ? 1.5 : 1;
     const b = { lines, at, opts, out: 0, hold: slow * (opts.hold != null ? opts.hold : opts.ms != null ? opts.ms : Math.min(3600, 1300 + total * 32)),

@@ -61,7 +61,14 @@ for n in order:
             pen.moveTo((left, bottom)); pen.lineTo((left, top)); pen.lineTo((right, top)); pen.lineTo((right, bottom)); pen.closePath()
     pens[n] = pen.glyph()
 fb.setupGlyf(pens)
-fb.setupHorizontalMetrics({n: (ADV * U, 0) for n in order})
+# the left side bearing must be where each glyph's ink starts: with 0 for all, some renderers slide
+# narrow glyphs (i, l, !, .) to the left edge of the cell and the text reads "Begi n" (Nov 18)
+def lsb(n):
+    rows = glyphs[n]
+    if not rows: return 0
+    cols = [i for r in rows for i, c in enumerate(r) if c == '#']
+    return min(cols) * U if cols else 0
+fb.setupHorizontalMetrics({n: (ADV * U, lsb(n)) for n in order})
 asc, desc = (CAP + 2) * U, -3 * U   # a pixel of air above the caps, room for descenders below
 fb.setupHorizontalHeader(ascent=asc, descent=desc)
 fb.setupNameTable({'familyName': 'CH07 Caption', 'styleName': 'Regular', 'uniqueFontIdentifier': 'CH07Caption-Regular', 'fullName': 'CH07 Caption', 'psName': 'CH07Caption-Regular', 'version': 'Version 1.0'})
