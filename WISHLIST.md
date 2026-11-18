@@ -74,6 +74,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **Lives vs HP is confusing.** Make the two readable at a glance and explained once.
 - `todo` **Some lasers in the top-down level do not trigger.** A laser hit should cost a life.
 - `todo` **East wing (top-down) looks unsatisfying:** a real pile of pebbles, carry at most five, dead ends, make it cooler like the side levels.
+- `todo` **The kids' screen in the final scene must show the actual game** (the globe puzzle with the girl as the target, in the game-show look), not the old grid puzzle (Michael, Nov 18).
 - `todo` **Episode 4 lags when the lasers or flashes fire** (Michael, Nov 18). Profile and fix.
 - `todo` **Satellite puzzles are too easy: make the target move** (Michael, Nov 18: "make them where the target is moving, at least; the last one was way too easy"). Every globe gets a moving target; batch 4 (the last) much harder.
 - `todo` **Key buttons under the game run off the left edge of the window, with a big empty gap above them** (docs/feedback/nov18-shed-keys.png).
