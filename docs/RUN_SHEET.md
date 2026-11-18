@@ -7,7 +7,7 @@ Talking points are yours: each stop has a blank line for them.
 
 - [ ] Copy `game/dist/local.html` and `game/dist/phaser.min.js` into one folder on the desktop, and the same two files onto a USB stick. Double-click `local.html`: it runs with no network.
 - [ ] Open it in Chrome on the presenting laptop. Use the local copy, not the web link, unless the network is good. (GitHub Pages can take 10 minutes to show a new build.)
-- [ ] On the title: **Presenter** on. That turns on immunity, turns flashing down, stops the shake, and sets the music to 2 of 5 and the effects to 4 of 5.
+- [ ] On the title: **Presenter** on. That sets the mode to IMMUNE (hazards still play out, then she comes back at the last tape mark with nothing lost), turns flashing down, stops the shake, and sets the music to 2 of 5 and the effects to 4 of 5.
 - [ ] On the title: **New game**, twice (it asks). This clears your rehearsal: lines you heard, how-to slips, bodies. Without it some lines stay silent in class.
 - [ ] Plug in the projector. Check where the sound goes (HDMI sound may go to a weak projector speaker). Bring a small speaker.
 - [ ] Press one key before you start talking: browsers start sound only after a key or a click.
@@ -24,7 +24,8 @@ Talking points are yours: each stop has a blank line for them.
 | **0** to **9** | Jump to a part, with its title card: 0 opening, 1 ep 1, 2 satellite 1, 3 ep 2, 4 satellite 2, 5 ep 3, 6 ep 4, 7 kids' room, 8 Moon, 9 backstage |
 | **H** | Hold the picture to talk. No menu over it, sound ducks. H again goes on |
 | **N** | Skip ahead one section per press (or solves a satellite screen). An episode has 4 to 7 sections, so keep pressing. In presenter mode it always works |
-| **I** | Immunity off and on. Off: she can die (the small tag under the lives reads CAN DIE) |
+| **I** | The mode: NORMAL (5 lives), ENDLESS (she dies, lives never run out), IMMUNE (she comes back at the mark, nothing lost). The strip's right end says which |
+| **W** | Doors, every kind. J never opens a door |
 | **Backspace** | Start this take again |
 | **Enter** | Next line (the bedroom, backstage and the playroom wait for it) |
 | **P** | Pause menu (presenter, big captions, music and effects levels, title screen) |
@@ -39,10 +40,10 @@ Endings and give-up mode: title screen, **Chapters**, right column. In presenter
 | Time | Stop | Key | What to show |
 |---|---|---|---|
 | 0:00 | Title and the opening | 0 | Let it play until the lock-on box finds her. Then **N**. |
-| 1:30 | Ep 1, the Grounds | 1 | Walk, look at one thing with **J**. **Die once on purpose:** **N** twice (she lands at the foot of the hedge wall, on a tape mark). **I** (the tag reads CAN DIE). Hold **A**: the garden lamp finds her. Her body stays; the next take starts here. **I** again. Then **N**, one section each: the 8th lands her at the door, the 9th goes in (or **W** there). Any key closes the END OF EPISODE report. |
+| 1:30 | Ep 1, the Grounds | 1 | Walk, look at one thing with **J**. **Die once on purpose:** **N** twice (she lands at the foot of the hedge wall, on a tape mark). **I** once: NORMAL (the right end of the strip, LIVES, reads 5). Hold **A**: the garden lamp finds her. Her body stays and LIVES drops to 4; the next take starts here. Then **I** twice: ENDLESS (an infinity sign), then IMMUNE again (LIVES reads IMMUNE). Check it says IMMUNE before you go on. Then **N**, one section each: the 8th lands her at the door, the 9th goes in (or **W** there). Any key closes the END OF EPISODE report. |
 | 4:30 | Satellite, batch 1 | 2 | A request form comes first: **J** stamps APPROVED. Do not press **N** on the form: it skips the ring too. The ring: **A** and **D** turn it, then **N**. The globe: **W A S D** or a drag, then **N**. |
-| 5:30 | Ep 2, the Gallery | 3 | She has no glasses yet. Walk right past the staff door (**J** near the start goes into the staff room), **Space** over the cleaning robot, **J** at the gold sideboard: the glasses (a notice pops up, any key). Then **L** takes them off and on. What watches her shows only with them on. **H** to hold while you explain. Rehearse this one. |
-| 7:30 | Ep 4, the Bedroom | 6 | Skipped on the way: batch 2, the fall and the east wing (one sentence: the glasses crack). **N** six times (a notice pops up at the bag: any key); **N** at the doors carries her in. In presenter mode **N** never skips his talk or his death. Walk to him. **Enter** for each line, 11 lines; never **N** here. After he dies, **J** at the door on the right, then any key. |
+| 5:30 | Ep 2, the Gallery | 3 | She has no glasses yet. Walk right past the staff door (**W** near the start goes into the staff room; **J** never opens a door), **Space** over the cleaning robot, **J** at the gold sideboard: the glasses (a notice pops up, any key). Then **L** takes them off and on. What watches her shows only with them on. **H** to hold while you explain. Rehearse this one. |
+| 7:30 | Ep 4, the Bedroom | 6 | Skipped on the way: batch 2, the fall and the east wing (one sentence: the glasses crack). **N** six times (a notice pops up at the bag: any key); **N** at the doors carries her in. In presenter mode **N** never skips his talk or his death. Walk to him. **Enter** for each line, 11 lines; never **N** here. After he dies, **W** at the door on the right, then any key. |
 | 10:30 | The kids' room | 7 | The reveal: the satellite game is a kids' show on the Moon. |
 | 11:30 | Ep 5, the Moon | 8 | Walk right, **Space** over benches and people. Two overheard lines play over the lounges. **N** at the staff door goes backstage. |
 | 13:30 | Backstage | 9 | The lines into the fight (always the same). Fight one round. **N** ends a round; **Enter** on the creator's line, then **N** again. After the yield lines (**Enter** each): **N**, then **W** at the pink door, any key on the report. |

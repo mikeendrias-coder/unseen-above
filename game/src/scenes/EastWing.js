@@ -79,7 +79,7 @@ export class EastWing extends TopDownEpisode {
     this.pileThing = { tx: 9, ty: 21, use: () => this.takePile() };
     this.things.push(this.pileThing);
     C.chains.forEach(([px, py], i) => this.things.push({ tx: px, ty: py, reach: 2, hold: true, chain: i, label: 'J' }));
-    this.things.push({ tx: 4, ty: 18, label: 'J', use: () => this.enterRoom('workshop') }); // optional
+    this.things.push({ tx: 4, ty: 18, label: 'W', door: true, use: () => this.enterRoom('workshop') }); // optional; a door: W, never J
     // the dumbwaiter: J drops a pebble in
     const DW = LEVEL.dumbwaiter;
     this.dumbThing = { tx: DW.hatch[0], ty: DW.hatch[1], label: 'J', use: () => this.dropPebble() };
@@ -131,7 +131,7 @@ export class EastWing extends TopDownEpisode {
     this.clock += dt;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     this.reviewKeys();
-    if (this.dead) { if (c.advance() || c.restart() || c.throwP()) this.skipDeath(); c.look(); }
+    if (this.dead) { if (c.advance() || c.restart()) this.skipDeath(); c.throwP(); c.look(); } // K only throws
     else if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return; }
     if (c.restart() && this.restartTake()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
@@ -264,12 +264,12 @@ export class EastWing extends TopDownEpisode {
     while (cur && !(cur[0] === from[0] && cur[1] === from[1])) { out.unshift(cur); cur = prev.get(key(...cur)); }
     return out;
   }
-  showHp() { CG.hp(state.immune ? null : this.hp, 3); }
+  showHp() { CG.hp(this.hp, 3); } // every mode (IMMUNE too: at 0 she regenerates at the mark)
   // she walks into the robot, or it rolls into her: a shock off its shell, a heart, and she is
   // thrown back a tile. It does not see her for it (its lens looks past her feet).
   onBump(x, y) { const R = this.robot; if (Math.round(R.x) === x && Math.round(R.y) === y) this.bumpRobot(); }
   bumpRobot() {
-    if (this.dead || this.leaving || this.inv > 0 || state.immune || window.__noDeath) return;
+    if (this.dead || this.leaving || this.inv > 0 || window.__noDeath) return;
     const R = this.robot, k = this.kid;
     this.hp = Math.max(0, this.hp - 1); this.inv = 1; this.showHp();
     Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800); fx.shake(this.cameras.main, 120, 0.006);

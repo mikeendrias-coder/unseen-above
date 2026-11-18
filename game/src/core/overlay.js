@@ -91,7 +91,8 @@ export const overlay = {
     setTimeout(() => { if (!done) { window.addEventListener('keydown', close, true); window.addEventListener('pointerdown', close, true); } }, 600);
     overlay.closePanel = () => close();
   },
-  immune(on) { cg.immune(on); say('immune', null, on); },
+  // the mode tag (core/review.js): on for ENDLESS and IMMUNE, word is the mode
+  immune(on, word) { cg.immune(on, word); say('immune', word ? (word === 'IMMUNE' ? 'Immune: she comes back at the mark. N skips ahead.' : word === 'ENDLESS' ? 'Endless: lives never run out. N skips ahead.' : 'Normal.') : null, on); },
   // the hint line under the game. While a blocking line waits for a press and the scene has no
   // hint of its own, it says which keys move the line on (ui/typer.js cue).
   hint(text) { sceneHint = text || ''; showHint(); },

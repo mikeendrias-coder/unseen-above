@@ -9,7 +9,7 @@ import { cg } from './ui/cg.js';
 import { STEPS } from './core/flow.js';
 import { state } from './core/state.js';
 import { Music } from './core/music.js';
-import { setStory, syncImmunity, setPresenter, presenting } from './core/review.js';
+import { stepMode, syncImmunity, setPresenter, presenting, MODE_WORD, MODE_HELP } from './core/review.js';
 import { newGame } from './data/endings.js';
 import { itemPanel } from './core/panels.js';
 import { Grounds } from './scenes/Grounds.js';
@@ -281,7 +281,10 @@ function syncGuide() {
   if (cont) { cont.hidden = !st; const at = cont.querySelector('i'); if (at && st) at.textContent = SHORT[st.id] || st.label; cont.setAttribute('aria-label', st ? 'Continue: ' + st.label : 'Continue'); }
   if (go) { go.classList.toggle('second', !!st); go.firstChild.textContent = st ? 'From the start' : 'Begin'; }
   if (optNew) { optNew.hidden = !(remembered() || presenting()); if (!armed) optNew.querySelector('i').textContent = ''; }
-  sw(optStory, state.immune, state.immune ? 'on' : 'off');
+  sw(optStory, state.mode !== 'normal', MODE_WORD[state.mode]);
+  // what the mode means, in plain sight under the picture (ENDLESS with the strip's infinity sign)
+  const mn = document.getElementById('mode-note');
+  if (mn) { const w = mn.querySelector('b'); w.textContent = 'Mode ' + MODE_WORD[state.mode]; w.classList.toggle('inf', state.mode === 'endless'); mn.querySelector('i').textContent = ': ' + MODE_HELP[state.mode] + ' I cycles it.'; }
   sw(optFlash, !!state.settings.reduceFlash, state.settings.reduceFlash ? 'reduced' : 'full');
   sw(optPresent, presenting(), presenting() ? 'on' : 'off');
   // full screen and big captions are presenter tools: on the title only while presenting (U and
@@ -321,7 +324,7 @@ if (go) {
   guide();
   go.addEventListener('click', () => begin(null));
   if (cont) cont.addEventListener('click', resume);
-  if (optStory) optStory.addEventListener('click', () => { setStory(!state.immune); syncGuide(); });
+  if (optStory) optStory.addEventListener('click', () => { stepMode(1); syncGuide(); if (window.__keys) window.__keys.sync(); });
   if (optFlash) optFlash.addEventListener('click', () => { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); syncGuide(); });
   if (optPresent) optPresent.addEventListener('click', () => { setPresenter(!presenting()); guide(); if (optPresent) optPresent.focus({ preventScroll: true }); });
   if (optFull) optFull.addEventListener('click', () => { optFull.querySelector('i').textContent = ''; toggleFull(); syncGuide(); });
@@ -336,10 +339,10 @@ if (go) {
   });
   // the key buttons under the picture change the same settings: the title menu follows them
   onKeysChange(() => { if (!playing) syncGuide(); });
-  // I on the title screen turns immunity on or off, as it does in the show
+  // I on the title screen cycles the mode, as it does in the show
   window.addEventListener('keydown', e => {
     if (playing || e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e.key !== 'i' && e.key !== 'I')) return;
-    e.preventDefault(); setStory(!state.immune); syncGuide();
+    e.preventDefault(); stepMode(1); syncGuide();
     if (window.__keys) window.__keys.sync();
   });
   // a jump link starts that part with its title card (clicked again, it starts that part again)

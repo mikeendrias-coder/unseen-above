@@ -1,5 +1,6 @@
-// Core and UI fixes from the final checks (Nov 18): L toggles the glasses, side-room doors take
-// W (J only when nothing else is in reach), exit doors show a W key over her head, the key bar
+// Core and UI fixes from the final checks (Nov 18): L toggles the glasses, doors take W only
+// (never J: Michael's playtest, Nov 18), exit doors show a W key over her head, the key bar fits
+// the window in two rows right under the strip, the strip shows HP hearts and a LIVES number, the key bar
 // follows the part (east wing, the fight, a satellite screen), a # link wins over Continue on the
 // title, #kids flows on, Chapters opened with the mouse picks Opening, the clue note names its
 // group, and no key cap over a death. Screenshots at 1x in tests/out/coreui-*.png.
@@ -71,12 +72,16 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.waitForTimeout(400);
   ok('the shed door shows a W key (' + [...new Set(await S(() => window.__prompts))].join(',') + ')', await S(() => window.__prompts.includes('W')));
   await shot('shed-door');
+  await p.keyboard.press('KeyJ'); await p.waitForTimeout(500);
+  ok('J at the shed door does not open it', await S(() => !window.__unseen.game.scene.isActive('room')));
   await p.keyboard.press('KeyW');
   await until(() => window.__unseen.game.scene.isActive('room'), null, 5000).catch(() => null);
   ok('W at the shed door goes in', await S(() => window.__unseen.game.scene.isActive('room')));
   await p.waitForTimeout(500);
   await S(() => { const s = window.__unseen.game.scene.getScene('room'); s.placeAt(20); });
   await p.waitForTimeout(300);
+  await p.keyboard.press('KeyJ'); await p.waitForTimeout(500);
+  ok('J at the room door does not leave; the set says W (' + await S(() => document.getElementById('note').textContent) + ')', await S(() => window.__unseen.game.scene.isActive('room') && /W opens doors/.test(document.getElementById('note').textContent)));
   await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW'); // a held press, as a player does
   await until(() => window.__game.scene.sys.settings.key === 'grounds' && !window.__unseen.game.scene.isActive('room'), null, 5000).catch(() => null);
   ok('W at the room door goes back out', await S(() => !window.__unseen.game.scene.isActive('room')));
@@ -84,6 +89,12 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await S(() => { const s = window.__game.scene; s.bubbles.showPrompt = s.bubbles.constructor.prototype.showPrompt.bind(s.bubbles); s.bubbles.showPrompt2 = s.bubbles.constructor.prototype.showPrompt2.bind(s.bubbles); s.placeAt(s.level.door.x + 4); });
   await p.waitForTimeout(400);
   await shot('exit-door');
+  await p.keyboard.press('KeyJ'); await p.waitForTimeout(600);
+  ok('J at the way out does not go through', await S(() => window.__game.scene.sys.settings.key === 'grounds' && !window.__game.scene.leaving));
+  // the strip: HP hearts at the left, LIVES and a number at the right
+  const st = await S(() => window.__unseen.cg.status);
+  ok(`the strip reads HP ${st.hp && st.hp.n}/${st.hp && st.hp.max} and LIVES ${st.lives && st.lives.n} (${st.lives && st.lives.kind})`, st.hp && st.hp.n === 3 && st.lives && st.lives.n === 5 && st.lives.kind === 'normal');
+  await p.screenshot({ path: 'tests/out/coreui-strip.png', clip: { x: 0, y: 600, width: 1280, height: 260 } });
   await S(() => { const s = window.__game.scene, d = s.things.find(t => t.door); s.placeAt(Math.round((d.x0 + d.x1) / 2 - 4)); });
   await p.waitForTimeout(300);
   const promptDead = await S(() => new Promise(res => { const s = window.__game.scene; s.die({ id: 'test', direct: true }); setTimeout(() => res(s.bubbles.prompt), 60); }));
@@ -104,6 +115,17 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const sat = await labels();
   ok(`satellite keys: W ${sat.W}, A ${sat.A}, Space ${sat.Space}, Shift ${sat.Shift}`, (sat.W === 'check' || sat.W === 'field' || /turn/.test(sat.W)) && /\(off\)/.test(sat.Space) && /\(off\)/.test(sat.Shift));
   await shot('keys-sat');
+
+  // ---- the key bar fits the window at any width (two rows that wrap, never past the left edge)
+  // and sits right under the caption strip
+  for (const [w, h] of [[1624, 1044], [1100, 760], [700, 620], [420, 760]]) {
+    await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(700);
+    const L = await S(() => { const ks = [...document.querySelectorAll('#keybar .key')].map(k => k.getBoundingClientRect()), ov = document.getElementById('overlay').getBoundingClientRect(), bar = document.getElementById('keybar').getBoundingClientRect();
+      return { minL: Math.min(...ks.map(r => r.left)), maxR: Math.max(...ks.map(r => r.right)), gap: Math.round(bar.top - ov.bottom), rows: new Set(ks.map(r => Math.round(r.top))).size, sw: document.documentElement.scrollWidth, iw: innerWidth }; });
+    ok(`at ${w} px the keys fit (${Math.round(L.minL)} to ${Math.round(L.maxR)} of ${L.iw}, ${L.rows} rows, ${L.gap} px under the strip, page ${L.sw} wide)`, L.minL >= 0 && L.maxR <= L.iw && L.gap <= 30 && L.sw <= L.iw && (w < 900 || L.rows === 2));
+    await p.screenshot({ path: 'tests/out/coreui-keys-' + w + '.png' });
+  }
+  await p.setViewportSize({ width: 1280, height: 860 }); await p.waitForTimeout(500);
 
   // ---- paperwork: a notice slip and the report, at 1x
   await S(() => window.__unseen.goStep({ step: 'ep2' }));

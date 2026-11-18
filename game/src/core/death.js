@@ -6,24 +6,31 @@
 //     taped to the floor where she starts (juice.tape). The first death of each episode visit
 //     still plays the whole strike, so a new danger reads; later ones play it short. Space,
 //     Enter or J cuts any strike but the very first one short; the body still lands.
-//   - Lives: 5 per episode visit, shown at the right end of the caption strip as LIVES pips
-//     (the TAKE n tape is the show's own count of every take, a different thing). A death goes
-//     back to the visit's last checkpoint, if the episode set one (setCheckpoint); losing the
-//     last life clears it, so she starts again from the episode's start with 5. Bodies stay.
-//     Never further back than the episode's start. Story mode (immunity) hides HP and lives;
-//     satellite screens, side rooms and the Moon city have neither.
+//   - Lives: 5 per episode visit, a number at the right end of the caption strip (the TAKE n
+//     tape is the show's own count of every take, a different thing). A death goes back to the
+//     visit's last checkpoint, if the episode set one (setCheckpoint); losing the last life
+//     clears it, so she starts again from the episode's start with 5. Bodies stay. Never further
+//     back than the episode's start. Satellite screens, side rooms and the Moon city have none.
+//   - Modes (Nov 18, core/review.js): ENDLESS never uses a life up (the readout is an infinity
+//     sign). IMMUNE: the hazard plays out in full (no short strike), then she regenerates at the
+//     last checkpoint: no life, no take, no body (state.addBody does nothing), no death on the
+//     record. Every scene's death goes through die() and here, so whatever a death resets in a
+//     scene (the chandelier, the collapse, the fight) resets the same way; nothing is frozen.
+//   - The first time in a run she loses HP, and the first time she loses a life, one line in the
+//     strip says what they are (explain).
 //   - What got her is captioned once per cause, never again on a retry.
 //   - Every take reports to the show's record (results.js): the broadcast bar, the report.
 // A scene learns why it started from its data: { retry: true } after a death or a restart by
-// choice, plus { checkpoint } when one is set, and { outOfTakes: true } after the last life.
-// A start without retry is a new visit. Out of lives is still a retry, so entry cards, cut
-// scene captions and first lines do not replay.
+// choice, plus { checkpoint } when one is set, { outOfTakes: true } after the last life, and
+// { regen: true } after an immune death. A start without retry is a new visit. Out of lives is
+// still a retry, so entry cards, cut scene captions and first lines do not replay.
 import { state } from './state.js';
 import { overlay } from './overlay.js';
 import { deathLine } from '../data/dialogue.js';
 import { cg } from '../ui/cg.js';
 import { results } from './results.js';
 import { juice } from './juice.js';
+import { Sound } from './sound.js';
 
 export const TAKES = 5;
 // ms of wall clock from the body landing to the cut, after the first death. The hit-stop on the
@@ -41,6 +48,8 @@ export const hasTakes = scene => !!scene.epId && !NO_TAKES.includes(keyOf(scene)
 export function startTakes(scene) {
   const id = scene.epId; if (!id) return;
   const data = (scene.sys.settings && scene.sys.settings.data) || {};
+  // back from an immune death: said on the set, with a rising pair of notes
+  if (data.regen) { overlay.note('Back at the mark', 1400); Sound.tone(520, 0.06, 'triangle', 0.02); setTimeout(() => Sound.tone(780, 0.08, 'triangle', 0.02), 90); }
   const fresh = !data.retry || !visits[id];
   if (fresh) visits[id] = { left: TAKES, checkpoint: null };
   else if (data.outOfTakes) { visits[id].left = TAKES; visits[id].checkpoint = null; }
@@ -66,6 +75,9 @@ export function startTakes(scene) {
 export function tapeTake(scene) {
   juice.prime(scene); // her squash and stretch frames, ready before the first landing
   const n = scene.ep && scene.ep.take, k = scene.kid; if (!k || !(n > 1) || !hasTakes(scene)) return;
+  // back from an immune death (or an immune retry): the same take goes on, so no new tape
+  const data = (scene.sys && scene.sys.settings && scene.sys.settings.data) || {};
+  if (data.regen) return;
   if (scene.__tape && scene.__tape.take === n && (scene.__tape.pending || (scene.__tape.g && scene.__tape.g.scene))) return; // already down
   // the glasses' readout sits in the lower left of the view: juice.tape keeps the tape readable
   const meter = !!(scene.gl && scene.gl.has), cp = checkpointOf(scene), mark = cp && cp.i != null;
@@ -80,26 +92,59 @@ export function retryData(scene) { const v = scene.epId && visits[scene.epId]; r
 export const checkpointOf = scene => { const d = scene.sys && scene.sys.settings && scene.sys.settings.data; return (d && d.retry && d.checkpoint) || null; };
 export const takesLeft = scene => (scene.epId && visits[scene.epId] ? visits[scene.epId].left : TAKES);
 
-// HP at the left end of the strip and lives at the right: hidden in story mode, and both hidden
-// where nothing can kill her (the Moon city, side rooms)
+// HP at the left end of the strip and lives at the right, in every mode (ENDLESS shows an
+// infinity sign, IMMUNE says so); both hidden where nothing can kill her (the Moon city, side rooms)
 export function showStatus(scene, hp, maxHp) {
-  const hide = state.immune || !hasTakes(scene);
+  const hide = !hasTakes(scene);
   if (hp !== undefined) cg.hp(hide || hp == null ? null : hp, maxHp);
-  cg.lives(hide ? null : takesLeft(scene), TAKES);
+  cg.lives(hide ? null : takesLeft(scene), TAKES, state.mode);
 }
 
-// after immunity changes: show or hide HP and takes for whatever scene is up
+// One line in the strip the first time in a run (state.newRun forgets it) and mode she loses HP,
+// and the first time she loses a life. Each fits the strip on one line (40 columns) and says what is true
+// in the mode she is in. It waits for the strip to be free (a death line, a look, a talk) for up
+// to 3 s (LIVES 8 s), and is dropped if she dies or the take restarts first (an HP line read over full hearts
+// would teach the wrong thing); it comes the next time instead. The LIVES line waits out the
+// restart and shows on the new take.
+const EXPLAIN = {
+  hp: { normal: 'HP: hits. Lights and lasers take a life.', endless: 'HP: hits. Lights and lasers take a life.', immune: 'HP: hits. Lights and lasers reset you.' },
+  lives: { normal: 'LIVES: you go back to the tape mark.', endless: 'LIVES: endless. Back to the tape mark.' }
+};
+export const explainText = (kind, mode) => { const e = EXPLAIN[kind]; return e ? e[mode || state.mode] || null : null; };
+const waiting = {};
+export function explain(kind) {
+  const key = 'explain:' + kind + ':' + state.mode, text0 = explainText(kind);
+  if (!text0 || waiting[kind] || state.heard(key)) return;
+  const sc0 = window.__game && window.__game.scene, take0 = sc0 && sc0.sys && sc0.sys.settings.data;
+  waiting[kind] = true;
+  const t0 = performance.now();
+  const go = () => {
+    const sc = window.__game && window.__game.scene, text = explainText(kind);
+    // gone stale: too long, another scene, a new take, or (for HP) she is dying now
+    if (!text || performance.now() - t0 > (kind === 'hp' ? 3000 : 8000) || !sc || !sc.epId || sc !== sc0 || (kind === 'hp' && (sc.dead || (sc.sys && sc.sys.settings.data) !== take0))) { waiting[kind] = false; return; }
+    const busy = sc.dead || (overlay.line && !overlay.line.dead) || overlay.describing() || cg.pageUp || window.__paused || (kind === 'lives' && waiting.hp);
+    if (busy) { setTimeout(go, 200); return; }
+    waiting[kind] = false;
+    overlay.caption(null, text, { ms: 4200, instant: true, key });
+  };
+  setTimeout(go, kind === 'lives' ? 450 : 120);
+}
+// HP going down anywhere (side.js hurt, or a scene's own HP like the east wing's) teaches HP once
+cg.onHpDrop = () => explain('hp');
+
+// after the mode changes: the readouts follow it for whatever scene is up
 export function refreshStatus(scene) {
-  const k = scene.kid, hp = k && typeof k.hp === 'number' ? k.hp : null;
-  if (scene.epId) showStatus(scene, hp, scene.hpMax || 3);
+  // a scene that keeps its own HP (the east wing: showHp) redraws it; the others keep it on the kid
+  const k = scene.kid, hp = k && typeof k.hp === 'number' ? k.hp : undefined;
+  if (scene.epId) { showStatus(scene, hp, scene.hpMax || 3); if (scene.showHp) scene.showHp(); }
 }
 
 // The next take: back to the visit's checkpoint (or its start), or, out of lives, the episode
 // from its start with 5 again.
 // fadeMs 0: a cut, no fade (every take after the very first death).
 function nextTake(scene, fadeMs) {
-  const v = visits[scene.epId], out = hasTakes(scene) && v && v.left <= 0;
-  const go = () => scene.scene.restart(out ? { retry: true, outOfTakes: true } : retryData(scene));
+  const v = visits[scene.epId], regen = !!(scene.death && scene.death.regen), out = !regen && state.mode === 'normal' && hasTakes(scene) && v && v.left <= 0;
+  const go = () => scene.scene.restart(out ? { retry: true, outOfTakes: true } : Object.assign(retryData(scene), regen ? { regen: true } : {}));
   if (!out && !fadeMs) { cuts[scene.epId] = true; go(); return; }
   scene.cameras.main.fadeOut(fadeMs || 140, 0, 0, 0);
   if (!out) { scene.time.delayedCall(fadeMs + 10, go); return; }
@@ -111,12 +156,15 @@ function nextTake(scene, fadeMs) {
 // impact(quiet): hide her and leave the body (quiet: no burst, flash or sound).
 // fire(onImpact, { short }): start the strike; returns its length in seconds.
 export function beginDeath(scene, src, impact, fire) {
-  const fast = state.bodyCount() > 0, firstHere = results.deathsHere(scene.epId) === 0;
-  const d = scene.death = { impacted: false, skipping: false, skippable: fast, fast };
+  // IMMUNE: the whole hazard plays (never the short strike), then she regenerates; nothing counts
+  const regen = state.mode === 'immune';
+  const fast = !regen && state.bodyCount() > 0, firstHere = regen || results.deathsHere(scene.epId) === 0;
+  const d = scene.death = { impacted: false, skipping: false, skippable: fast || regen, fast, regen };
   scene.nearThing = null; if (scene.bubbles) scene.bubbles.prompt = null; // no J key over the strike
-  results.died(scene);
-  // a life used up (not in story mode, where nothing kills her anyway)
-  if (hasTakes(scene) && visits[scene.epId]) { visits[scene.epId].left = Math.max(0, visits[scene.epId].left - 1); scene.takesLeft = visits[scene.epId].left; showStatus(scene); }
+  if (!regen) results.died(scene);
+  // a life used up (NORMAL only: ENDLESS never runs out, IMMUNE loses nothing)
+  if (state.mode === 'normal' && hasTakes(scene) && visits[scene.epId]) { visits[scene.epId].left = Math.max(0, visits[scene.epId].left - 1); scene.takesLeft = visits[scene.epId].left; showStatus(scene); }
+  if (!regen && hasTakes(scene)) { waiting.hp = false; explain('lives'); }
   d.hit = quiet => {
     if (d.impacted) return; d.impacted = true; impact(!!quiet);
     // the strike lands: a hit-stop and a 2 px kick (not when a key cut it short)
@@ -134,8 +182,8 @@ export function beginDeath(scene, src, impact, fire) {
   };
   const line = deathLine(src && src.id, src && src.direct);
   if (state.hear('death:' + line)) overlay.sfx(line, 2400);
-  if (scene.epId) state.died(scene.epId);
-  let after = 0.4;
+  if (scene.epId && !regen) state.died(scene.epId);
+  let after = regen ? 0.8 : 0.4; // immune: a hit with no strike (a laser, the chandelier) is held a moment so it reads
   if (src && src.direct) d.hit(false); else after = fire(() => d.hit(false), { short: fast && !firstHere });
   if (!fast) {
     d.fade = scene.time.delayedCall((after + 0.12) * 1000, () => { d.skipping = true; nextTake(scene, 260); });

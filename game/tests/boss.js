@@ -80,8 +80,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('the creator starts the take with: "' + await p.evaluate(() => document.getElementById('cc').textContent) + '"', await p.evaluate(() => /Again|Take/.test(document.getElementById('cc').textContent)));
 
   // review mode through the rest: immunity, N to the end of each round, then out
-  await p.keyboard.press('KeyI');
-  ok('I turns immunity on', await until(() => window.__noDeath === true, null, 3000).then(() => true, () => false));
+  await p.keyboard.press('KeyI'); await p.waitForTimeout(100); await p.keyboard.press('KeyI'); // NORMAL, ENDLESS, IMMUNE
+  ok('I twice: IMMUNE mode', await until(() => window.__game.state.mode === 'immune', null, 3000).then(() => true, () => false));
   await until(() => !!window.__game.scene.sword.floor, null, 30000);
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = s.sword.floor.x - 4; s.pickUp(); });
   await until(() => window.__game.scene.mode === 'fight', null, 20000);

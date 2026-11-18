@@ -560,7 +560,7 @@ export class Moon extends SideEpisode {
     if (this.mode !== 'walk' || this.leaving) return overlay.hint('');
     const x = (this.kid.x + this.kid.w / 2) / TILE;
     if (x < 6) return overlay.hint('J looks at things and talks to things.');
-    if (x > 96 && x < 101) return overlay.hint('A staff door. W or J.');
+    if (x > 96 && x < 101) return overlay.hint('A staff door. W opens it.');
     return overlay.hint('');
   }
 }

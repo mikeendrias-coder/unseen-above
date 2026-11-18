@@ -11,10 +11,17 @@ const calm = (() => { try { return window.matchMedia('(prefers-reduced-motion: r
 const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm, presenter: false, bigCaptions: false });
 // story: what she found and did, for the endings (Nov 17). heard: lines already spoken, never replayed.
 const freshStory = () => ({ clues: {}, heard: {}, choice: null, creatorDeaths: 0, gaveUp: false, spared: false, killedBroken: false, endings: {} });
-const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false, panels: {}, immune: false, settings: defaults(), reached: null, resume: null, story: freshStory() });
+// mode (Nov 18): how deaths cost her. 'normal': 5 lives, out of lives restarts the episode.
+// 'endless': she dies as usual (bodies, takes) but lives never run out. 'immune': hazards play out
+// in full, then she is back at the last mark with nothing lost (no life, no take, no body).
+export const MODES = ['normal', 'endless', 'immune'];
+const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false, panels: {}, mode: 'normal', settings: defaults(), reached: null, resume: null, story: freshStory() });
 let mem = fresh();
-try { const raw = window.localStorage.getItem(KEY); if (raw) mem = Object.assign(fresh(), JSON.parse(raw)); } catch (e) { /* private window or blocked storage: keep it in memory */ }
+try { const raw = window.localStorage.getItem(KEY); if (raw) { const got = JSON.parse(raw); mem = Object.assign(fresh(), got); if (got && got.mode == null) mem.mode = got.immune ? 'immune' : 'normal'; } } catch (e) { /* private window or blocked storage: keep it in memory */ }
 if (!LOOK_KEYS.includes(mem.look)) mem.look = 'A';
+// saves from before the modes kept one switch, immune (read above)
+if (!MODES.includes(mem.mode)) mem.mode = 'normal';
+delete mem.immune;
 mem.settings = Object.assign(defaults(), mem.settings || {});
 mem.story = Object.assign(freshStory(), mem.story || {});
 
@@ -30,15 +37,21 @@ export const state = {
     return mem.episodes[id];
   },
   // A death leaves a body; the next attempt is the next take.
-  addBody(id, x, y, cause) { const e = state.episode(id); e.bodies.push({ x: Math.round(x), y: Math.round(y), take: e.take, cause }); if (e.bodies.length > 40) e.bodies.shift(); e.take++; save(); },
+  // (immune: she regenerates, so no body and no take)
+  addBody(id, x, y, cause) { if (mem.mode === 'immune') return; const e = state.episode(id); e.bodies.push({ x: Math.round(x), y: Math.round(y), take: e.take, cause }); if (e.bodies.length > 40) e.bodies.shift(); e.take++; save(); },
   bodyCount() { return Object.values(mem.episodes).reduce((n, e) => n + (e.bodies ? e.bodies.length : 0), 0); },
   finish(id) { state.episode(id).done = true; save(); },
   // instruction panels show once
   seenPanel(k) { return !!(mem.panels && mem.panels[k]); },
   markPanel(k) { if (!mem.panels) mem.panels = {}; mem.panels[k] = true; save(); },
-  // immunity, for reviewing the game: nothing kills her, N skips ahead
-  get immune() { return !!mem.immune; },
-  set immune(v) { mem.immune = !!v; save(); },
+  // the mode (MODES above); core/review.js setMode changes it with the tags and the sound
+  get mode() { return mem.mode; },
+  setMode(m) { if (MODES.includes(m)) { mem.mode = m; save(); } return mem.mode; },
+  // immune mode (the satellite screens and the endings read it as story mode). Setting it false
+  // only leaves immune mode, so endless stays endless.
+  get immune() { return mem.mode === 'immune'; },
+  set immune(v) { if (v) mem.mode = 'immune'; else if (mem.mode === 'immune') mem.mode = 'normal'; save(); },
+  get endless() { return mem.mode === 'endless'; },
   get seenIntro() { return mem.seenIntro; },
   set seenIntro(v) { mem.seenIntro = !!v; save(); },
   // settings, saved as they change
@@ -79,5 +92,5 @@ export const state = {
   // and the how-to notices seen are forgotten, so a rehearsal on this computer never leaves the
   // class run silent. Continue keeps them; clues, bodies, endings and settings stay.
   newRun() { mem.story.heard = {}; mem.panels = {}; save(); },
-  resetAll() { mem = fresh(); save(); }
+  resetAll() { const m = mem.mode; mem = fresh(); mem.mode = m; save(); }
 };

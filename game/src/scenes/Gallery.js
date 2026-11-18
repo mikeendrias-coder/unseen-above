@@ -507,7 +507,7 @@ export class Gallery extends SideEpisode {
   hint() {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
-    if (this.atDoor()) return overlay.hint('W or J at the door.');
+    if (this.atDoor()) return overlay.hint('W at the door.');
     if (x > 73) return overlay.hint('Low beam: jump it. Two beams: crouch. Door at the end.');
     if (!this.glasses && x < 20) return overlay.hint('A and D move. Space jumps. J uses things and talks.');
     if (!this.glasses) return overlay.hint('Something here is watching you. You cannot see it yet.');

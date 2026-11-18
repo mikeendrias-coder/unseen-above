@@ -126,9 +126,10 @@ export class Hallway extends SideEpisode {
   doorReady() { return (this.mode === 'after' || this.mode === 'giveup') && !this.dead && !this.leaving; }
   // a clue found in a look: noted once, with the count
   noteClue(id) { if (id && state.clue(id)) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600); }
-  // a death in the fight counts toward the creator giving up
+  // a death in the fight counts toward the creator giving up (not in IMMUNE: a regeneration
+  // counts nothing, so fumbles in class never switch the fight to give-up mode)
   die(src) {
-    if (!this.dead && (this.mode === 'fight' || this.mode === 'between')) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);
+    if (!this.dead && state.mode !== 'immune' && (this.mode === 'fight' || this.mode === 'between')) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);
     super.die(src);
   }
   // a take thrown away in the middle of the fight (Backspace) counts as a death too; this is also
@@ -762,7 +763,7 @@ export class Hallway extends SideEpisode {
     if (this.mode === 'toss') return overlay.hint(this.sword.floor ? 'The sword. J picks it up.' : '');
     if (this.mode === 'fight') return overlay.hint(['K swings. Hit them right after they attack. High lunge: crouch. Low: jump. Hide from the light.', 'Laser: high beep, crouch. Low beep, jump. J at the desk fires it at them.', 'Two clicks, then a flash. Get under the desk or behind a crate.'][this.cr.round]);
     // the way out: the pink door is off screen past the stage until she nears it
-    const near = Math.abs(this.kid.x + this.kid.w / 2 - (LEVEL.door.x + LEVEL.door.w / 2)) < 60, out = near ? 'The playroom. W or J.' : 'The pink door, past the stage.';
+    const near = Math.abs(this.kid.x + this.kid.w / 2 - (LEVEL.door.x + LEVEL.door.w / 2)) < 60, out = near ? 'The playroom. W opens the door.' : 'The pink door, past the stage.';
     if (this.mode === 'giveup') return overlay.hint(this.cr.hp > 0 ? 'They will not fight. K hits. The shutter is open.' : out);
     if (this.mode === 'after') return overlay.hint(out);
     overlay.hint('');

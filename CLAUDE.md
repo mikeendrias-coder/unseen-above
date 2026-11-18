@@ -27,6 +27,7 @@
 - Endings: no end card on the last shot; endings seen are recorded for Chapters only (data/endings.js). The creator's line is now "picked a fight", not "voted".
 - Side rooms differ now (the wardrobe door is on the right). Ep4 inside the bedroom is drawn flat (nightRoom) with no vision circle.
 - Web font (fonts/ch07-caption.ttf): left side bearings follow each glyph's ink (tools/make-font.py), so narrow letters no longer gap.
+- Modes (Nov 18 playtest; replaces immunity as story mode): state.mode is normal, endless or immune (core/review.js setMode, cycleMode; I, the title's Mode row, the pause menu's MODE row). IMMUNE never sets window.__noDeath (only tests do): hazards play out and death.js regenerates her at the last checkpoint (data.regen) with no life, take or body. ENDLESS: lives never drop. Doors open with W or Up only, never J (side.js, topdown.js; mark a door thing door: true). The strip shows HP hearts and a LIVES number, infinity or IMMUNE; death.js explain() says what each is once per run.
 
 ## Where things are
 - PLAYABLE LINK (Nov 17, replaces itch.io as the main place): https://mikeendrias-coder.github.io/unseen-above/ (GitHub Pages; the repo is public). Publish with `npm run publish` in game/ (game/tools/publish.sh: builds, then force-pushes the page to the gh-pages branch). Run it after every change Michael should see. Automatic publishing on push (game/tools/pages-workflow.yml) needs a GitHub login with the workflow scope.
