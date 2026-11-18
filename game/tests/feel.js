@@ -53,6 +53,7 @@ const SHOTS = process.env.SHOTS || '';
   // timed in game terms (a busy machine stretches wall-clock time): a cut, not a fade, set for
   // under 0.3 s after the body lands; the wall-clock time is printed
   ok(`after that the next take cuts in (no fade), ${second.delay} ms after the body lands (${second.ms} ms here)`, second.delay != null && second.delay <= 300 && !second.faded && second.ms < 2500);
+  await p.waitForTimeout(200);
   const tape = await S(() => { const s = window.__game.scene, t = s.__tape; return t ? { take: t.take, x: t.x + t.w / 2, kx: s.kid.x + s.kid.w / 2, y: t.y, ky: s.kid.y + s.kid.h } : null; });
   ok(`the take is taped to the floor where she starts (TAKE ${tape && tape.take})`, tape && tape.take === second.take && Math.abs(tape.x - tape.kx) <= 1 && tape.y > tape.ky);
   ok('no TAKE card over the picture', await S(() => !/TAKE/.test(document.querySelector('#card .card-top').textContent) || !document.getElementById('card').classList.contains('on')));
@@ -108,7 +109,7 @@ const SHOTS = process.env.SHOTS || '';
     const f = () => {
       if (!tLand && s.death && s.death.impacted) tLand = performance.now();
       if (!delay && s.death && s.death.restart) delay = s.death.restart.delay;
-      if (tLand && !s.dead && s.kid && s.sys.settings.status === 5 && s.clock > 0) return res({ ms: Math.round(performance.now() - tLand), tape: s.__tape ? s.__tape.take : null, take: s.ep.take, delay });
+      if (tLand && !s.dead && s.kid && s.sys.settings.status === 5 && s.clock > 0.1 && s.__tape && s.__tape.g) return res({ ms: Math.round(performance.now() - tLand), tape: s.__tape.take, take: s.ep.take, delay });
       requestAnimationFrame(f);
     }; f();
   }));

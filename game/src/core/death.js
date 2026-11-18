@@ -60,8 +60,9 @@ export function startTakes(scene) {
 export function tapeTake(scene) {
   juice.prime(scene); // her squash and stretch frames, ready before the first landing
   const n = scene.ep && scene.ep.take, k = scene.kid; if (!k || !(n > 1) || !hasTakes(scene)) return;
-  if (scene.__tape && scene.__tape.g && scene.__tape.g.scene && scene.__tape.take === n) return; // already down
-  if (k.x != null) juice.tape(scene, n, { x: k.x + k.w / 2, y: k.y + k.h });
+  if (scene.__tape && scene.__tape.take === n && (scene.__tape.pending || (scene.__tape.g && scene.__tape.g.scene))) return; // already down
+  // the glasses' readout sits in the lower left of the view: the tape keeps clear of it
+  if (k.x != null) juice.tape(scene, n, { x: k.x + k.w / 2, y: k.y + k.h, clear: scene.gl && scene.gl.has ? 64 : 0 });
   else if (scene.kidPx) { const c = scene.kidPx(); juice.tape(scene, n, { x: c.x, y: c.y + 4, topDown: true }); }
 }
 // An episode marks a checkpoint (any data it wants back, for example { x: 412 }). Deaths in this

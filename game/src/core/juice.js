@@ -121,19 +121,30 @@ export const juice = {
   // The take, taped to the floor where it starts: a strip of bone tape with the number inked
   // on, lying on the floor's front edge under her feet. side: { x, y } her feet; top-down: the
   // tile she starts on. Made once per take; it stays for the take, like set dressing.
+  // at.clear: keep the tape this many px right of the view's left edge (the glasses' readout).
+  // It is laid once the scene has placed its camera (two frames in), so the view is known.
   tape(scene, take, at) {
-    if (!take || take < 2 || !at) return null;
+    if (!take || take < 2 || !at) return;
     const s = 'TAKE ' + take, w = ccWidth(s) + 6, h = 9;
-    const x = Math.round(at.x - w / 2), y = Math.round(at.y + (at.topDown ? -4 : 2));
-    const g = scene.add.graphics().setDepth(at.topDown ? 1.95 : 1.9);
-    g.fillStyle(hex(ASH.ash0), 1); g.fillRect(x - 1, y - 1, w + 2, h + 2);   // its shadow edge
-    g.fillStyle(hex(ASH.boneLo), 1); g.fillRect(x, y, w, h);                 // the tape
-    g.fillStyle(hex(ASH.bone), 1); g.fillRect(x, y, w, 1);                   // its lit top edge
-    g.fillStyle(hex(ASH.ash5), 1); g.fillRect(x + w - 2, y + h - 1, 2, 1); g.fillRect(x, y + h - 1, 1, 1); // torn ends
-    ccText(g, s, x + 3, y + 1, ASH.ash0);
-    Sound.clack();
-    scene.__tape = { x, y, w, h, take, g };
-    return g;
+    let frames = 0;
+    const lay = () => {
+      if (++frames < 2) return;
+      scene.events.off('postupdate', lay);
+      const v = scene.cameras.main.worldView;
+      let x = Math.round(at.x - w / 2); const y = Math.round(at.y + 2); // just below her feet
+      if (at.clear && x - v.x < at.clear && x + w > v.x) x = Math.round(v.x + at.clear);
+      const g = scene.add.graphics().setDepth(at.topDown ? 1.95 : 1.9);
+      g.fillStyle(hex(ASH.ash0), 1); g.fillRect(x - 1, y - 1, w + 2, h + 2);   // its shadow edge
+      g.fillStyle(hex(ASH.boneLo), 1); g.fillRect(x, y, w, h);                 // the tape
+      g.fillStyle(hex(ASH.bone), 1); g.fillRect(x, y, w, 1);                   // its lit top edge
+      g.fillStyle(hex(ASH.ash5), 1); g.fillRect(x + w - 2, y + h - 1, 2, 1); g.fillRect(x, y + h - 1, 1, 1); // torn ends
+      ccText(g, s, x + 3, y + 1, ASH.ash0);
+      Sound.clack();
+      scene.__tape = { x, y, w, h, take, g };
+    };
+    scene.__tape = { take, pending: true };
+    scene.events.on('postupdate', lay);
+    scene.events.once('shutdown', () => scene.events.off('postupdate', lay));
   }
 };
 // tests read these (tests/feel.js)
