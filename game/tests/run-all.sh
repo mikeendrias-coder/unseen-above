@@ -13,7 +13,7 @@ one() {
 }
 export -f one
 start=$(date +%s)
-printf '%s\n' pause.js flow.js ep2-extras.js flow-ep3.js flow-ep4.js flow-ep5.js boss.js boss-end.js looks.js rooms.js kids-flow.js handoff-34.js smoke.js review.js mech.js endings.js sat-play.js typer.js presenter.js feel.js coreui.js back.js \
+printf '%s\n' pause.js flow.js ep2-extras.js flow-ep3.js flow-ep4.js flow-ep5.js boss.js boss-end.js looks.js rooms.js kids-flow.js handoff-34.js smoke.js review.js mech.js endings.js sat-play.js typer.js presenter.js feel.js coreui.js back.js final-polish.js \
   | xargs -P "$JOBS" -I{} bash -c 'one "$@"' _ {} "$out"
 # a test that failed under the parallel load gets one retry on its own (timing-heavy tests can
 # miss a deadline when six browsers share the machine); a real failure fails twice

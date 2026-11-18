@@ -14,11 +14,12 @@ import { state, MODES } from './state.js';
 import { overlay } from './overlay.js';
 import { Sound } from './sound.js';
 import { refreshStatus } from './death.js';
+import { setBright } from '../ui/bright.js';
 
 export const STUCK_DEATHS = 3;
 // Presenter mode (Nov 18, for the class walkthrough): one switch (title, key cap, pause menu, or
 // ?present in the link). It turns the IMMUNE mode on, turns flashing down and the shake off, sets the
-// music to 2 and the effects to 4 of 5 (the research's levels: he talks over it, the effects carry
+// Bright on (ui/bright.js), the music to 2 and the effects to 4 of 5 (the research's levels: he talks over it, the effects carry
 // the story), lets N skip ahead everywhere (in any mode), drops the
 // "Stuck?" offers, and swaps the mode tag over the picture for a quiet PRESENTER tag in the
 // caption strip. Turning it off puts those settings back (the mode too). The typer reads state.settings.presenter.
@@ -37,11 +38,12 @@ export function setPresenter(on) {
   if (on !== presenting()) {
     if (on) {
       const s = state.settings;
-      state.set('presenterPrev', { mode: state.mode, reduceFlash: !!s.reduceFlash, shake: s.shake !== false, music: s.music, sfx: s.sfx });
+      state.set('presenterPrev', { mode: state.mode, reduceFlash: !!s.reduceFlash, shake: s.shake !== false, music: s.music, sfx: s.sfx, bright: !!s.bright });
       state.set('presenter', true);
       state.set('reduceFlash', true); state.set('shake', false);
       if (s.music > PRESENT_MUSIC) { state.set('music', PRESENT_MUSIC); Sound.volume('music', PRESENT_MUSIC); }
       if (s.sfx > PRESENT_SFX) { state.set('sfx', PRESENT_SFX); Sound.volume('sfx', PRESENT_SFX); }
+      setBright(true); // a classroom projector washes the dark scenes out
       setMode('immune');
     } else {
       const p = state.settings.presenterPrev || {};
@@ -50,6 +52,7 @@ export function setPresenter(on) {
       if (p.shake != null) state.set('shake', p.shake);
       if (p.music != null) { state.set('music', p.music); Sound.volume('music', p.music); }
       if (p.sfx != null) { state.set('sfx', p.sfx); Sound.volume('sfx', p.sfx); }
+      if (p.bright != null) setBright(p.bright);
       setMode(MODES.includes(p.mode) ? p.mode : p.immune ? 'immune' : 'normal');
     }
   }

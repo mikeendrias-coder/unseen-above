@@ -25,7 +25,7 @@ export const LEVEL = {
   lightSwitch: { x: 11 * T + 8, y: GROUND - 26 },
   portrait: { x: 2 * T + 4, y: GROUND - 60, w: 28, h: 36 },  // the man in gold, eyes that follow
   hallLamps: [{ x: 6 * T + 8, y: 196 }, { x: 17 * T + 8, y: 196 }],  // the chandeliers the switch turns off
-  robot: { x0: 3 * T, x1: 13 * T, speed: 16 },
+  robot: { x0: 3 * T, x1: 11 * T + 8, speed: 16 },  // turns 40 px short of the sideboard: the floor in front of the drawer stays clear
   // C: two chandeliers she rides over the atrium (anchor, chain length, swing)
   swings: [{ x: 41 * T, y: 16, len: 165, amp: 30, period: 3.0, phase: 0 }, { x: 50 * T + 6, y: 16, len: 165, amp: 30, period: 3.0, phase: 0.5 }],
   pit: { x0: 37 * T, x1: 54 * T },

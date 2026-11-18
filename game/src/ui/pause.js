@@ -9,6 +9,7 @@ import { cg, TV } from './cg.js';
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
 import { canSkip, cycleMode, setPresenter, presenting, MODE_WORD, MODE_HELP } from '../core/review.js';
+import { bright, setBright } from './bright.js';
 
 // where she is, for the band
 const PLACE = {
@@ -78,6 +79,7 @@ export function initPause(game, hooks) {
     R.push({ id: 'shake', label: 'SCREEN SHAKE', value: state.settings.shake ? 'ON' : 'OFF', adjust: true, help: 'Off: the picture holds still.' });
     R.push({ id: 'controls', label: 'CONTROLS', help: 'Every key on one notice.' });
     R.push({ id: 'presenter', label: 'PRESENTER', value: presenting() ? 'ON' : 'OFF', adjust: true, help: 'For a class: immune, N skips, calm.' });
+    R.push({ id: 'bright', label: 'BRIGHT', value: bright() ? 'ON' : 'OFF', adjust: true, help: 'Lifts dark scenes for a projector.' });
     if (cg.canBigCaptions) R.push({ id: 'caps', label: 'BIG CAPTIONS', value: state.settings.bigCaptions ? 'ON' : 'OFF', adjust: true, help: 'Captions at double height.' });
     R.push({ id: 'guide', label: 'TITLE SCREEN', help: 'Back to the start. Your place is kept.' });
     return R;
@@ -140,6 +142,7 @@ export function initPause(game, hooks) {
     else if (r.id === 'flash') state.set('reduceFlash', !state.settings.reduceFlash);
     else if (r.id === 'shake') state.set('shake', !state.settings.shake);
     else if (r.id === 'presenter') setPresenter(!presenting());
+    else if (r.id === 'bright') setBright(!bright());
     else if (r.id === 'caps') { state.set('bigCaptions', !state.settings.bigCaptions); window.dispatchEvent(new Event('resize')); } // the strip's height (core/display.js) may change
     if (r.id !== 'sfx') Sound.tone(r.id === 'music' ? 600 : 740, 0.05, 'triangle', 0.02);
     show(); return true;

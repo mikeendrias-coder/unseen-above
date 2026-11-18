@@ -8,7 +8,8 @@ const KEY = 'unseen-above-v1';
 const calm = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
 // presenter: Michael's switch for the class walkthrough (ui and review.js read it; the typer reads
 // state.settings.presenter too). bigCaptions: the caption strip at double height (ui/cg.js).
-const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm, presenter: false, bigCaptions: false });
+// bright: the picture lifted for a washed-out projector (ui/bright.js).
+const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm, presenter: false, bigCaptions: false, bright: false });
 // story: what she found and did, for the endings (Nov 17). heard: lines already spoken, never replayed.
 const freshStory = () => ({ clues: {}, heard: {}, choice: null, creatorDeaths: 0, gaveUp: false, spared: false, killedBroken: false, endings: {} });
 // mode (Nov 18): how deaths cost her. 'normal': 5 lives, out of lives restarts the episode.
@@ -22,7 +23,9 @@ if (!LOOK_KEYS.includes(mem.look)) mem.look = 'A';
 // saves from before the modes kept one switch, immune (read above)
 if (!MODES.includes(mem.mode)) mem.mode = 'normal';
 delete mem.immune;
+const hadBright = !!(mem.settings && 'bright' in mem.settings);
 mem.settings = Object.assign(defaults(), mem.settings || {});
+if (!hadBright && mem.settings.presenter) mem.settings.bright = true; // a presenter save from before the Bright switch
 mem.story = Object.assign(freshStory(), mem.story || {});
 
 const session = {};

@@ -153,6 +153,8 @@ export class SideEpisode extends Phaser.Scene {
     // things to use come before things to look at, side-room doors last; then the nearest
     const rank = t => (t.door ? 2 : t.look ? 1 : 0);
     this.nearThing = near.sort((a, b) => rank(a) - rank(b) || Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
+    // a scene can insist on one thing in reach (the gallery's drawer while she has no glasses)
+    if (this.pinThing) { const pin = this.pinThing(near); if (pin) this.nearThing = pin; }
     // One key, one job (Michael, Nov 18): J uses things, looks and talks, and never opens a door.
     // W (or Up) goes through doors, every kind: side-room doors here, the way out in moveKid. W
     // counts once per press, and not at all if it was already held when the scene began (no

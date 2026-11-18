@@ -5,6 +5,7 @@
 // running). I is the mode: it cycles NORMAL, ENDLESS, IMMUNE and says which under it in capitals
 // (ENDLESS with an infinity sign; latched down unless NORMAL). Switches (sound, flashing, glasses) latch down while on and stay in step
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
+// Bright (Nov 18) lifts the picture for a washed-out projector (ui/bright.js).
 // Presenter tools (Nov 18): Pres is presenter mode, H holds the picture (ui/pause.js), U is full
 // screen (main.js). On a satellite screen W A S D say "turn": they turn the globe. On its request
 // form W and S say "check", and the keys that do nothing there are blank and grey. In the
@@ -14,6 +15,7 @@ import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
 import { stepMode, canSkip, canBack, setPresenter, presenting, MODE_WORD } from '../core/review.js';
 import { overlay } from '../core/overlay.js';
+import { bright, setBright } from './bright.js';
 
 const KEYS = [
   { cap: 'A', key: 'a', code: 'KeyA', kc: 65, label: 'left', hold: true, dyn: 'a' },
@@ -34,6 +36,7 @@ const KEYS = [
   { cap: 'B', key: 'b', code: 'KeyB', kc: 66, label: 'back', dyn: 'back' },
   { cap: 'N', key: 'n', code: 'KeyN', kc: 78, label: 'skip ahead', dyn: 'skip' },
   { cap: 'Flash', label: 'flashing', sw: 'flash' },
+  { cap: 'Bright', label: 'bright', sw: 'bright' },
   { cap: 'CH', label: 'chapters', sw: 'chapters' },
   { cap: 'Pres', label: 'presenter', sw: 'presenter' },
   { cap: 'H', key: 'h', code: 'KeyH', kc: 72, label: 'hold', sw: 'hold', send: true },
@@ -88,6 +91,7 @@ const SWITCH = {
   immune: () => [state.mode !== 'normal', MODE_WORD[state.mode]], // ENDLESS gets an infinity sign after it (.inf)
   sound: () => [!Sound.muted, Sound.muted ? 'sound off' : 'sound on'],
   flash: () => [!!state.settings.reduceFlash, state.settings.reduceFlash ? 'flash reduced' : 'flash full'],
+  bright: () => [bright(), bright() ? 'bright on' : 'bright'],
   glasses: () => { const g = glasses(); return [!!(g && g.on), g ? (g.on ? 'glasses on' : 'glasses') : 'glasses'] },
   chapters: () => { const n = document.getElementById('jump'); return [!!(n && !n.hidden), 'chapters']; },
   presenter: () => [presenting(), presenting() ? 'presenter on' : 'presenter'],
@@ -130,6 +134,7 @@ export function initKeys() {
     if (k.sw === 'immune') stepMode(1);
     else if (k.sw === 'sound') { Sound.ensure(); overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000); }
     else if (k.sw === 'flash') { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); overlay.note(r ? 'Flashing reduced' : 'Flashing full', 1400); }
+    else if (k.sw === 'bright') overlay.note(setBright(!bright()) ? 'Bright on' : 'Bright off', 1400);
     else if (k.sw === 'chapters') { const n = document.getElementById('jump'); if (n) { n.hidden = !n.hidden; window.dispatchEvent(new Event('resize')); } }
     else if (k.sw === 'presenter') { setPresenter(!presenting()); overlay.note(presenting() ? 'Presenter on' : 'Presenter off', 1600); }
     else if (k.send) { send('keydown', k); setTimeout(() => send('keyup', k), 90); }

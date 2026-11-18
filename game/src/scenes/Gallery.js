@@ -309,11 +309,24 @@ export class Gallery extends SideEpisode {
     }
   }
 
+  // Near the sideboard with no glasses yet, J always opens the drawer (Nov 18, before class: the
+  // robot, the light switch or a gold thing nearby could take the key instead). Her reach is a
+  // little wider than the sideboard, so standing at its edge counts.
+  pinThing() {
+    if (this.glasses || this.drawer.opening || this.cabinetThing.off) return null;
+    const CB = LEVEL.cabinet, k = this.kid, cx = k.x + k.w / 2;
+    if (this.dead || cx < CB.x0 - 10 || cx > CB.x1 + 10 || k.y + k.h < GROUND - 30) return null;
+    return this.cabinetThing;
+  }
+
   // ------------------------------------------------------------------ the robots
   updateRobot(dt) {
     const R = this.robot, B = LEVEL.robot, k = this.kid, talking = this.bubbles.busy('robot');
     const near = !this.dead && Math.abs(R.x - (k.x + k.w / 2)) < 22 && k.y + k.h > GROUND - 24;
-    if (!near && !talking) {
+    // it never parks in front of the sideboard (its beat ends 40 px short, LEVEL.robot.x1):
+    // put past that, it rolls back, even while she stands close or it talks
+    if (R.x > B.x1) { R.dir = -1; R.x = Math.max(B.x1, R.x - B.speed * 1.5 * dt); }
+    else if (!near && !talking) {
       const nx = R.x + R.dir * B.speed * dt;
       // it will not drive into her; it waits, then turns around
       if (Math.abs(nx - (k.x + k.w / 2)) < 10 && k.y + k.h > GROUND - 8) R.dir = -R.dir; else R.x = nx;

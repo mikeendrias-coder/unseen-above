@@ -1,4 +1,7 @@
 // Boot: size the canvas to a whole-number pixel scale, then start with the opening.
+// ui/about.js first: while its notice is up it takes every key before anything below does.
+import { openAbout } from './ui/about.js';
+import { bright, setBright, syncBright } from './ui/bright.js';
 import { measure, applyCss, display } from './core/display.js';
 import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
@@ -90,7 +93,7 @@ function start(entry) {
       fsFit();
     }, 150);
   });
-  window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state, cg, goStep, toggleFull, toGuide }; // toGuide: the ending screen's TITLE and CHAPTERS (ending/finale.js)
+  window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state, cg, goStep, toggleFull, toGuide, openAbout }; // toGuide: the ending screen's TITLE and CHAPTERS (ending/finale.js)
 }
 function stopAll() {
   game.scene.getScenes(false).forEach(sc => { const s = sc.sys; if (s.isActive() || s.isPaused() || s.isSleeping()) game.scene.stop(s.settings.key); });
@@ -249,8 +252,10 @@ const go = document.getElementById('start'), tv = document.getElementById('tv'),
 const optStory = document.getElementById('opt-story'), optFlash = document.getElementById('opt-flash');
 const optNew = document.getElementById('opt-new'), optPresent = document.getElementById('opt-present');
 const optFull = document.getElementById('opt-full'), optCaps = document.getElementById('opt-caps');
+const optBright = document.getElementById('opt-bright'), optAbout = document.getElementById('opt-about');
 let stopPicker = () => {};
 initKeys();
+syncBright();
 // saved volumes, before any sound is made
 Sound.volume('music', state.settings.music); Sound.volume('sfx', state.settings.sfx);
 // ?present in the link turns presenter mode on (?present=0 off); the address is then cleaned up
@@ -288,6 +293,7 @@ function syncGuide() {
   if (optCaps) optCaps.hidden = !presenting() || !cg.canBigCaptions;
   if (optFull && optFull.querySelector('i').textContent !== 'blocked') sw(optFull, fsOn(), fsOn() ? 'on' : 'off');
   sw(optCaps, !!state.settings.bigCaptions, state.settings.bigCaptions ? 'on' : 'off');
+  sw(optBright, bright(), bright() ? 'on' : 'off');
 }
 const begin = entry => {
   if (playing) return;
@@ -322,6 +328,9 @@ if (go) {
   if (optFlash) optFlash.addEventListener('click', () => { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); syncGuide(); });
   if (optPresent) optPresent.addEventListener('click', () => { setPresenter(!presenting()); guide(); if (optPresent) optPresent.focus({ preventScroll: true }); });
   if (optFull) optFull.addEventListener('click', () => { optFull.querySelector('i').textContent = ''; toggleFull(); syncGuide(); });
+  if (optBright) optBright.addEventListener('click', () => { setBright(!bright()); syncGuide(); if (window.__keys) window.__keys.sync(); });
+  // About: the one-page notice on how the game argues (ui/about.js); any key goes back
+  if (optAbout) optAbout.addEventListener('click', () => openAbout());
   if (optCaps) optCaps.addEventListener('click', () => { state.set('bigCaptions', !state.settings.bigCaptions); syncGuide(); window.dispatchEvent(new Event('resize')); });
   // New game: the first click asks, a second within four seconds clears her run (story, takes,
   // bodies, lines heard, how-to slips seen; the look, settings and switches stay)

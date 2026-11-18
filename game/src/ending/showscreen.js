@@ -183,8 +183,15 @@ export function drawShow(ctx, w, h, o) {
   }
   // the channel, top right, on a dark box
   R(w - 38, 5, 33, 11, ink0); ccText(ctx, 'CH 07', w - 36, 7, SHOW.yellow);
-  // a line across the top (ROUND 2 READY?), on a dark band between LIVE and the channel
-  if (o.top) { const tw = ccWidth(o.top) + 8, tx = Math.round(w / 2 - tw / 2); R(tx + 6, 5, tw, 11, ink0); ccText(ctx, o.top, tx + 10, 7, SHOW.yellow); }
+  // a line across the top (ROUND 2 READY?), on a dark band centered in the gap between LIVE
+  // (ends at x 34) and the channel's box (from w - 38), with clear space on both sides; a line too
+  // long for the gap drops under the channel box instead of running into it
+  if (o.top) {
+    const tw = ccWidth(o.top) + 8, g0 = 34 + 4, g1 = w - 38 - 4;
+    let tx = Math.round((g0 + g1) / 2 - tw / 2), ty = 5;
+    if (tw > g1 - g0) { tx = Math.max(g0, w - 5 - tw); ty = 19; }
+    R(tx, ty, tw, 11, ink0); ccText(ctx, o.top, tx + 4, ty + 2, SHOW.yellow);
+  }
   // her turn: PLAYER 2 under the score
   if (o.r2) { R(6, 84, ccWidth('PLAYER 2') + 4, 10, SHOW.amber); ccText(ctx, 'PLAYER 2', 8, 85, ink0); }
   // the first frame of a win: white
