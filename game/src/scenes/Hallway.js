@@ -231,6 +231,8 @@ export class Hallway extends SideEpisode {
     this.cr.st = 'talk'; this.cr.walkTo = 30 * T; if (retry) this.cr.x = 30 * T;
   }
   throwSword() {
+    if (this.sword.have || this.sword.floor || this.sword.fly) return; // one sword, thrown once
+    this.queue.forEach(q => { if (q.text === '[A SWORD CLATTERS]') q.on = null; }); // thrown already: the caption alone
     const c = this.cr, k = this.kid, to = Math.max(ARENA.x0 + 20, Math.min(ARENA.x1 - 20, k.x + k.w / 2 + 26));
     this.sword.fly = { sx: c.x - 6, sy: G - 18, ex: to, t: 0 };
     this.cr.pose = 'lean'; this.time.delayedCall(500, () => { if (this.cr.st === 'talk') this.cr.pose = 'stand'; });
@@ -242,7 +244,9 @@ export class Hallway extends SideEpisode {
     Sound.tone(660, 0.08, 'triangle', 0.03); this.time.delayedCall(70, () => Sound.tone(990, 0.12, 'triangle', 0.025));
     const shown = this.itemPanel('sword');
     // on a retry she has heard it: straight to the round
-    const go = () => (this.mode === 'giveup' ? null : this.retry ? this.startRound(0) : this.say([HALL_TOSS[4]], () => this.startRound(0)));
+    // the first time, the train ends on "Hold it up." and round one's set line (HALL_ROUND[0])
+    const go = () => (this.mode === 'giveup' ? null : this.retry ? this.startRound(0)
+      : this.say([HALL_TOSS[4], keyed(HALL_ROUND[0][0], 'HALL_ROUND0')], () => { this.train = false; this.startRound(0); }));
     if (shown) this.time.delayedCall(50, go); else go();
   }
   startRound(i) {
@@ -602,7 +606,15 @@ export class Hallway extends SideEpisode {
     if (this.dead || this.leaving) return;
     const k = this.kid;
     if (this.mode === 'walk') { const x = this.skipPoints.find(p => p > k.x + 12); if (x != null) this.placeAt(x); return; }
-    if (this.mode === 'toss') { if (this.sword.fly) { this.sword.fly.t = 1; return; } if (this.sword.floor) { k.x = this.sword.floor.x - 4; this.pickUp(); } else this.throwSword(); return; }
+    if (this.mode === 'toss') {
+      // the train is fixed: N says its next line, and only throws the sword once the train has
+      // reached [A SWORD CLATTERS]; with the sword in hand, N moves on through her last lines
+      const lineUp = this.lineT > 0 || this.queue.some(q => !q.cb);
+      if (this.sword.have || (this.train && this.queue.some(q => q.on))) { if (lineUp) { this.lineT = 0; this.nextLine(); } return; }
+      if (this.sword.fly) { this.sword.fly.t = 1; return; }
+      if (this.sword.floor) { k.x = this.sword.floor.x - 4; this.pickUp(); } else this.throwSword();
+      return;
+    }
     if (this.mode === 'fight') { const c = this.cr; const to = ROUND_AT.find(v => v < c.hp); const n2 = c.hp - (to != null ? to : 0); for (let i = 0; i < n2 - 1; i++) c.hp--; c.open = true; c.st = 'recover'; this.hitCreator(); return; }
     if (this.mode === 'yield') { this.queue = this.queue.filter(q => q.cb); this.lineT = 0.01; return; }
     if (this.mode === 'giveup') { this.shutterOpen = 1; this.shutterProp.solid = false; }
@@ -749,8 +761,10 @@ export class Hallway extends SideEpisode {
     if (this.mode === 'walk') return overlay.hint(this.kid.x < 4 * T ? 'J looks at things.' : '');
     if (this.mode === 'toss') return overlay.hint(this.sword.floor ? 'The sword. J picks it up.' : '');
     if (this.mode === 'fight') return overlay.hint(['K swings. Hit them right after they attack. High lunge: crouch. Low: jump. Hide from the light.', 'Laser: high beep, crouch. Low beep, jump. J at the desk fires it at them.', 'Two clicks, then a flash. Get under the desk or behind a crate.'][this.cr.round]);
-    if (this.mode === 'giveup') return overlay.hint(this.cr.hp > 0 ? 'They will not fight. K hits. The shutter is open.' : 'The playroom. W or J.');
-    if (this.mode === 'after') return overlay.hint('The playroom. W or J.');
+    // the way out: the pink door is off screen past the stage until she nears it
+    const near = Math.abs(this.kid.x + this.kid.w / 2 - (LEVEL.door.x + LEVEL.door.w / 2)) < 60, out = near ? 'The playroom. W or J.' : 'The pink door, past the stage.';
+    if (this.mode === 'giveup') return overlay.hint(this.cr.hp > 0 ? 'They will not fight. K hits. The shutter is open.' : out);
+    if (this.mode === 'after') return overlay.hint(out);
     overlay.hint('');
   }
 }

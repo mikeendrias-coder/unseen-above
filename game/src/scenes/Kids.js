@@ -11,7 +11,7 @@ import { LOOKS } from '../art/palettes.js';
 import { Painter, hexNum, rng } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
-import { LEVEL as MOON, KX, paintPlayroom, paintKid, KID_POSES, BOARD, drawBoard, drawFeedBox } from '../art/moon.js';
+import { LEVEL as MOON, KX, paintPlayroom, paintKid, KID_POSES, BOARD, drawBoard, drawFeedBox, feedHouse, feedGatePost, feedRect } from '../art/moon.js';
 import { PixLayer } from '../art/hallway.js';
 import { pixelZoom, display } from '../core/display.js';
 import { SatelliteStrike } from '../art/strike.js';
@@ -28,23 +28,22 @@ const n = c => hexNum(c);
 const SCR = { x: MOON.screen.x - KX, y: MOON.screen.y, w: MOON.screen.w, h: MOON.screen.h };
 const KIDS = MOON.kids.map(k => ({ x: k.x - KX, bun: k.bun })), KY = MOON.couch.y + 4;
 // the feed from Earth: where things stand on the grounds
-const F = { ground: 152, lamp: { x: 34, y: 58 }, girl0: 92, girl1: 150, hedge: 168, gate: 236 };
+const F = { ground: 152, lamp: { x: 34, y: 58 }, girl0: 92, girl1: 150, hedge: 168, gate: 112 }; // she walks in through the gate
 
-// The grounds at night, full frame, as the show's camera sees them: ash sky, the house in
-// bronze with lit gold windows, the gold gate, a hedge, a searchlight on a pole.
+// The grounds at night, full frame, as the show's camera sees them: ash sky, episode 1's house
+// (art/moon.js feedHouse, twice size), the white gate posts with gold caps, a hedge, a searchlight.
 function paintFeed() {
   const p = new Painter(320, 180), r = rng(13), G = F.ground;
   p.rect(0, 0, 320, 180, '#1b1c21');
   for (let i = 0; i < 60; i++) p.px(Math.floor(r() * 320), Math.floor(r() * 90), i % 7 ? '#45474d' : '#8f8d87');
   p.circle(276, 30, 9, '#b8b2a3'); p.circle(273, 28, 6, '#ebe6d8'); p.px(279, 26, '#f5ce77'); // the Moon, its one lit window
-  // the house, far back
-  p.rect(176, 70, 140, G - 70, '#261f15'); p.rect(176, 70, 140, 2, '#3a2f1f'); p.poly([[176, 70], [246, 44], [316, 70]], '#3a2f1f'); p.rect(240, 52, 12, 6, '#d6a03c');
-  for (let j = 0; j < 3; j++) for (let i = 0; i < 6; i++) { const wx = 184 + i * 22, wy = 80 + j * 22; p.rect(wx, wy, 9, 13, '#0e0f12'); p.rect(wx + 1, wy + 1, 7, 11, (i + j) % 3 ? '#d6a03c' : '#8a5f1c'); p.rect(wx + 4, wy + 1, 1, 11, '#3a2f1f'); }
+  // the house, far back: episode 1's, the same drawing every feed uses
+  const fr = feedRect(p); feedHouse(fr, 184, G, 2);
   // the ground: grey ash out here
   p.rect(0, G, 320, 180 - G, '#2e3036'); p.rect(0, G, 320, 1, '#45474d'); for (let i = 0; i < 30; i++) p.rect(Math.floor(r() * 320), G + 3 + Math.floor(r() * 24), 2 + Math.floor(r() * 4), 1, '#1b1c21');
-  // the gate, gold, open
-  [F.gate, F.gate + 30].forEach(x => { p.rect(x, G - 46, 5, 46, '#8a5f1c'); p.rect(x + 1, G - 46, 3, 46, '#d6a03c'); p.rect(x - 1, G - 50, 7, 4, '#f2d58c'); });
-  for (let y = G - 40; y < G; y += 6) p.rect(F.gate + 5, y, 6, 1, '#d6a03c');
+  // the gate: white posts with gold caps, a gold leaf hanging open
+  for (let y = G - 28; y < G; y += 6) p.rect(F.gate + 5, y, 6, 1, '#d6a03c');
+  [F.gate, F.gate + 30].forEach(x => feedGatePost(fr, x, G, 2));
   // a hedge, cut square, bronze-green, low enough to hide behind crouched
   p.rect(F.hedge, G - 12, 50, 12, '#261f15'); p.rect(F.hedge, G - 12, 50, 2, '#3a2f1f'); for (let x = F.hedge + 3; x < F.hedge + 48; x += 6) p.px(x, G - 8, '#3a2f1f');
   // the searchlight: a pole and a head
@@ -82,6 +81,8 @@ export class Kids extends Phaser.Scene {
     this.blackout = this.add.rectangle(160, 90, 400, 260, 0x000000).setDepth(60).setVisible(false);
 
     this.t = 0; this.fired = {}; this.solvedAt = null; this.over = false;
+    // the feed's take: hers, counted the way the rest of the show counts (a body per take)
+    this.take0 = state.bodyCount() + 1;
     this.beds = { show: Sound.show(0.045), hum: Sound.hum(0.0001) };
     Music.stop(0.8);
     this.scale.on('rescale', this.place, this);
@@ -151,14 +152,14 @@ export class Kids extends Phaser.Scene {
     if (t < T.back) return;
     // back in the room: the feed, small, on the giant screen; the next take walks in
     g.fillStyle(n('#1b1c21'), 1); g.fillRect(x, y, w, h); g.fillStyle(n('#2e3036'), 1); g.fillRect(x, y + 72, w, h - 72); g.fillStyle(n('#45474d'), 1); g.fillRect(x, y + 72, w, 1);
-    g.fillStyle(n('#261f15'), 1); g.fillRect(x + 96, y + 30, w - 96, 42); for (let i = 0; i < 4; i++) { g.fillStyle(n((i % 2) ? '#8a5f1c' : '#d6a03c'), 1); g.fillRect(x + 104 + i * 18, y + 38, 6, 9); }
+    const fr = feedRect(g); feedHouse(fr, x + 104, y + 72); feedGatePost(fr, x + 100, y + 72); feedGatePost(fr, x + 172, y + 72);
     g.fillStyle(n('#261f15'), 1); g.fillRect(x + 72, y + 64, 26, 8);
     // the body where she fell, and the next one walking in from the left, crouching at the hedge
     g.fillStyle(n('#b8b2a3'), 1); g.fillRect(x + 52, y + 70, 9, 2); g.fillStyle(n('#1b1c21'), 1); g.fillRect(x + 50, y + 70, 2, 2);
     const u = Math.min(1, Math.max(0, (t - T.back - 0.4) / 2.6)), gx = Math.round(x + 4 + u * 62), crouch = u >= 1;
     g.fillStyle(n('#ebe6d8'), 1); g.fillRect(gx, y + (crouch ? 66 : 63), 3, crouch ? 6 : 9); g.fillStyle(n('#1b1c21'), 1); g.fillRect(gx, y + (crouch ? 65 : 62), 3, 2);
     g.fillStyle(0xe3412b, 1); if (Math.floor(t * 2) % 2 === 0) g.fillRect(x + 6, y + 7, 3, 3); ccText(g, 'LIVE', x + 12, y + 5, 0xebe6d8); ccText(g, 'CH 07', x + w - 34, y + 5, n('#d6a03c'));
-    ccText(g, 'TAKE 32', x + 6, y + h - 12, 0xebe6d8);
+    ccText(g, 'TAKE ' + (this.take0 + 1), x + 6, y + h - 22, 0xebe6d8);
     if (t >= T.round2) {
       // the show comes back over the feed: ROUND 2, READY?
       const on = Math.floor(t * 4) % 2, a = 'ROUND 2', b = 'READY?', bw = 100;
@@ -227,7 +228,7 @@ export class Kids extends Phaser.Scene {
     // the broadcast's marks: LIVE, the channel, the take
     if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(n(P.hazard), 1); g.fillRect(6, 7, 3, 3); }
     ccText(g, 'LIVE', 12, 5, 0xebe6d8); ccText(g, 'CH 07', 320 - 6 - ccWidth('CH 07'), 5, n('#d6a03c'));
-    ccText(g, 'TAKE ' + (this.hitAt == null || t < this.hitAt + 1.2 ? 31 : 32), 6, 168, 0xebe6d8);
+    ccText(g, 'TAKE ' + (this.hitAt == null || t < this.hitAt + 1.2 ? this.take0 : this.take0 + 1), 6, 168, 0xebe6d8);
   }
   // the cut: a few frames of static, hard square noise in four greys
   drawStatic(t) {
