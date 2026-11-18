@@ -212,7 +212,11 @@ export const NOTICE = {
     calendar: ['A calendar. Every day on it is the 7th.'],
     radio: ['A radio, tuned to the sensors.', 'Near one, it plays the satellite tune.'],
     hatch: ['The dumbwaiter comes out here.'],
-    dumbwaiter: ['A dumbwaiter. It goes to the study.', 'A pebble in it would rattle there.']
+    dumbwaiter: ['A dumbwaiter. It goes to the library.', 'A pebble in it would rattle there.'],
+    fire: ['A fire, still going. Nobody lives here.'],
+    bust: ['The owner, in gold. The lasers guard him.'],
+    piano: ['A grand piano under the ash. Locked.'],
+    full: ['Her pockets hold five. They are full.']
   },
   bedroom: {
     piano: ['A grand piano. Nobody has played it.'],

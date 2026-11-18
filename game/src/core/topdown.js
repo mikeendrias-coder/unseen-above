@@ -20,6 +20,8 @@ import { cg } from '../ui/cg.js';
 
 export const T = 16;
 export const LOCK_TD = 0.5;
+// she carries five pebbles at most (Michael, Nov 18 playtest)
+export const MAX_PEBBLES = 5;
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 // the girl from above: hair, face or back, a scarf band, coat, feet (8 x 11)
@@ -200,6 +202,7 @@ export class TopDownEpisode extends Phaser.Scene {
   }
 
   pickPebble(fp) {
+    if (this.pebbles >= MAX_PEBBLES) { Sound.tone(220, 0.06, 'triangle', 0.015); return; } // pockets full: it stays
     this.floorPebbles = this.floorPebbles.filter(q => q !== fp); fp.thing.off = true;
     this.pebbles++; Sound.tone(500, 0.06, 'triangle', 0.02);
   }

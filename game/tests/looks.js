@@ -73,7 +73,7 @@ const norm = s => String(s).replace(/\s+/g, ' ').trim();
       await p.waitForTimeout(250);
       const reached = await p.evaluate(i => { const s = window.__game.scene; return s.nearThing === s.things.filter(t => t.look && !t.body)[i]; }, i);
       if (!reached) { const near = await p.evaluate(() => { const t = window.__game.scene.nearThing; return t ? (t.look ? 'a look' : 'something to use') : 'nothing'; }); bad.push(i + ' (nearest is ' + near + ')'); continue; }
-      await p.keyboard.press('KeyE'); await p.waitForTimeout(200);
+      await p.keyboard.press('KeyJ'); // J looks (E still works quietly) await p.waitForTimeout(200);
       const want = await p.evaluate(i => window.__game.scene.things.filter(t => t.look && !t.body)[i].src.lines[0], i);
       const got = await ccText(p);
       if (norm(got) === norm(want)) good++; else bad.push(i + ' want "' + want + '" got "' + got + '"');
