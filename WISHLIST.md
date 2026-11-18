@@ -75,6 +75,8 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **Some lasers in the top-down level do not trigger.** A laser hit should cost a life.
 - `todo` **East wing (top-down) looks unsatisfying:** a real pile of pebbles, carry at most five, dead ends, make it cooler like the side levels.
 - `todo` **The kids' screen in the final scene must show the actual game** (the globe puzzle with the girl as the target, in the game-show look), not the old grid puzzle (Michael, Nov 18).
+- `todo` **Physics and interactivity for furniture** (Michael, Nov 18): tables and the like should react (push, knock, climb), especially in the closed side rooms; the side rooms need more in them.
+- `todo` **Build out the endings** (Michael, Nov 18, about LOOK BACK, docs/feedback/nov18-lookback-ending.png): the last shot just sits there, nothing happens, nothing to skip, no ending screen. Every ending plays a real final beat and ends on an ending screen (ending name, endings seen n/5, back to title). LOOK BACK: the kids dance, funny and crying at once; then their own camera turns on them, their screen goes red, two clicks, cut. (Michael also floated a kid being shot or shooting themselves as a joke; Claude declined that beat and offered the camera-turn instead.)
 - `todo` **Episode 4 lags when the lasers or flashes fire** (Michael, Nov 18). Profile and fix.
 - `todo` **Satellite puzzles are too easy: make the target move** (Michael, Nov 18: "make them where the target is moving, at least; the last one was way too easy"). Every globe gets a moving target; batch 4 (the last) much harder.
 - `todo` **Key buttons under the game run off the left edge of the window, with a big empty gap above them** (docs/feedback/nov18-shed-keys.png).
