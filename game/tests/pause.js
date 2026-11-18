@@ -1,5 +1,5 @@
 // The first group of comforts: the pause menu (P, Esc, clicking away), its settings, the controls
-// page, the channel guide and Continue, story mode on the guide, the caption that names what
+// page, the title screen and Continue, story mode on the guide, the caption that names what
 // killed her, skipping the strike after the first death, and the offer to skip ahead when stuck.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
@@ -19,10 +19,10 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   // the guide: no Continue yet; the two switches
   ok('a first visit has no Continue', await S(() => document.getElementById('continue').hidden));
   await p.click('#opt-flash');
-  ok('the guide switch reduces flashing and stops the shake', await S(() => { const s = JSON.parse(localStorage.getItem('unseen-above-v1')).settings; return s.reduceFlash === true && s.shake === false && document.querySelector('#opt-flash i').textContent === 'REDUCED'; }));
+  ok('the guide switch reduces flashing and stops the shake', await S(() => { const s = JSON.parse(localStorage.getItem('unseen-above-v1')).settings; return s.reduceFlash === true && s.shake === false && document.querySelector('#opt-flash i').textContent === 'reduced'; }));
   await p.click('#opt-flash');
   await p.click('#opt-story');
-  ok('the guide switch turns story mode on', await S(() => JSON.parse(localStorage.getItem('unseen-above-v1')).immune === true && document.querySelector('#opt-story i').textContent === 'ON'));
+  ok('the guide switch turns story mode on', await S(() => JSON.parse(localStorage.getItem('unseen-above-v1')).immune === true && document.querySelector('#opt-story i').textContent === 'on'));
   await p.click('#opt-story');
   await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'grounds' && window.__game.scene.clock > 0.5);
@@ -32,7 +32,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__paused === true, null, 3000);
   const c0 = await S(() => window.__game.scene.clock); await p.waitForTimeout(600); const c1 = await S(() => window.__game.scene.clock);
   ok('P opens page 100 and the episode waits (clock ' + c0.toFixed(2) + ' then ' + c1.toFixed(2) + ')', c0 === c1 && (await panel()).includes('Paused') && await S(() => window.__game.scene.sys.isPaused()));
-  ok('the menu lists: ' + (await panel()).slice(0, 160), /resume/.test(await panel()) && /restart this episode/.test(await panel()) && /story mode: off/.test(await panel()) && /channel guide/.test(await panel()));
+  ok('the menu lists: ' + (await panel()).slice(0, 160), /resume/.test(await panel()) && /restart this episode/.test(await panel()) && /story mode: off/.test(await panel()) && /title screen/.test(await panel()));
   await p.keyboard.press('ArrowDown');
   ok('Down moves to the next row', (await panel()).includes('> restart this episode'));
   // to MUSIC, then Left lowers it
@@ -108,14 +108,14 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.press('KeyP');
   await until(() => window.__paused === true, null, 3000);
   for (let i = 0; i < 12; i++) await p.keyboard.press('ArrowDown');
-  // the last row is CHANNEL GUIDE; down wraps, so go up one from RESUME
+  // the last row is TITLE SCREEN; down wraps, so go up one from RESUME
   await p.keyboard.press('Home');
   let at = await panel(); let guard = 0;
-  while (!at.includes('> channel guide') && guard++ < 14) { await p.keyboard.press('ArrowDown'); at = await panel(); }
+  while (!at.includes('> title screen') && guard++ < 14) { await p.keyboard.press('ArrowDown'); at = await panel(); }
   await p.keyboard.press('Enter');
   await until(() => !document.getElementById('tv').hidden, null, 3000);
   const cont = await S(() => ({ hidden: document.getElementById('continue').hidden, label: document.getElementById('continue').innerText.replace(/\s+/g, ' '), start: document.getElementById('start').innerText.split('\n')[0] }));
-  ok('CHANNEL GUIDE brings the guide back, with Continue (' + cont.label + ') and ' + cont.start, !cont.hidden && /Episode 2/.test(cont.label) && /FROM THE START/.test(cont.start));
+  ok('TITLE SCREEN brings the title back, with Continue (' + cont.label + ') and ' + cont.start, !cont.hidden && /Episode 2/.test(cont.label) && /From the start/.test(cont.start));
   await p.screenshot({ path: 'tests/out/pause-guide.png' });
   await p.click('#continue');
   await until(() => window.__game.scene.sys.settings.key === 'gallery' && window.__game.scene.clock > 0.3, null, 20000);

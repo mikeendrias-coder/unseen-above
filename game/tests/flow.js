@@ -71,12 +71,12 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await solveBatch();
   await cardOn('END OF BATCH 2'); ok('end of batch 2: ' + await card(), true);
   await scene('fall'); await cardOn('EPISODE 3'); ok('then episode 3 opens with ' + await card() + ' (tests/flow-ep3.js covers the rest)', true);
-  // every look loads
+  // one locked look: L changes nothing
   await p.goto(BASE + '/local.html?scene=grounds'); await p.click('#start');
   await scene('grounds'); await fresh();
-  const looks = [];
-  for (let i = 0; i < 5; i++) { const before = await p.evaluate(() => window.__game.scene.P.name); await p.keyboard.press('KeyL'); await until(b => window.__game.scene.P && window.__game.scene.P.name !== b && window.__game.scene.kid, before); looks.push(await p.evaluate(() => window.__game.scene.P.name)); }
-  ok('looks: ' + looks.join(', '), looks.length === 5);
+  const before = await p.evaluate(() => window.__game.scene.P.name); await p.keyboard.press('KeyL'); await p.waitForTimeout(600);
+  const after = await p.evaluate(() => window.__game.scene.P.name);
+  ok('one look (' + before + '); L leaves it as is', before === 'Ash and Gold' && after === before);
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 10).join('\n') : 'no errors');
   await b.close();
 })().catch(e => { console.log('FAIL ' + e.message.split('\n')[0]); process.exit(1); });

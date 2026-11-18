@@ -48,7 +48,7 @@ export function initPause(game, hooks) {
     R.push({ id: 'flash', label: 'FLASHING', value: state.settings.reduceFlash ? 'REDUCED' : 'FULL', adjust: true, help: 'Reduced: dim, slow, fewer flashes.' });
     R.push({ id: 'shake', label: 'SCREEN SHAKE', value: state.settings.shake ? 'ON' : 'OFF', adjust: true, help: 'Off: the picture holds still.' });
     R.push({ id: 'controls', label: 'CONTROLS', help: 'Every key, on one page.' });
-    R.push({ id: 'guide', label: 'CHANNEL GUIDE', help: 'Back to the start. Your place is kept.' });
+    R.push({ id: 'guide', label: 'TITLE SCREEN', help: 'Back to the start. Your place is kept.' });
     return R;
   }
   // draw it, and say it for screen readers (and tests)
