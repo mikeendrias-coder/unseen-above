@@ -169,7 +169,7 @@ export class Props {
       }
       p.fy += st; dy -= st;
     }
-    if (landed) { if (!p.grounded && p.vy > 160) { Sound.noise(0.2, 0.06, 600); s.cameras.main.shake(80, 0.004); } p.vy = 0; p.grounded = true; p.fy = Math.round(p.fy); }
+    if (landed) { if (!p.grounded && p.vy > 160) { Sound.noise(0.2, 0.06, 600); } p.vy = 0; p.grounded = true; p.fy = Math.round(p.fy); }
     else p.grounded = false;
     r.y = Math.round(p.fy);
   }

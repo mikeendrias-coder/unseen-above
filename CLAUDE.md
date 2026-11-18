@@ -18,7 +18,7 @@
 - Setting: a dead, ash-covered world; a perfectly untouched, over-the-top luxury mansion that decays the deeper you go; a bedroom at the center with a mismatched closet/bathroom door that opens onto a void.
 - Characters: an older brother and his younger sister (the player). The brother goes in for supplies; she follows. She finds him dying in the bedroom.
 - Restarts are canon: each death leaves a body that stays and looks older with every attempt. The player is one of many clones.
-- No checkpoints inside a stage. Each stage is an episode; a retry restarts that stage.
+- Checkpoints (Nov 18): a death starts the next take at the last tape mark she reached (core/props.js Marks, scene.markCheckpoint). Running out of lives (5 takes) restarts the episode from the top.
 - The watchers are rich people on the Moon. The game is an interactive TV show for their kids; whether the player is the kids or the characters stays blurred.
 - Satellite puzzle screens get less technical each batch: raw back end, ground station, flat map, kids' game show.
 - Ending (Michael's, kept): she passes adults watching Earth channels, reaches the kids' game room, and blows up the Moon with a hidden vest. It ends with us watching the Moon. No end card.

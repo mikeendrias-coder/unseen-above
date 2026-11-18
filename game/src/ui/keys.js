@@ -17,9 +17,9 @@ const KEYS = [
   { cap: 'S', key: 's', code: 'KeyS', kc: 83, label: 'crouch', hold: true, dyn: 's' },
   { cap: 'W', key: 'w', code: 'KeyW', kc: 87, label: 'door', dyn: 'w' },
   { cap: 'Shift', key: 'Shift', code: 'ShiftLeft', kc: 16, label: 'run', hold: true },
-  { cap: 'J', key: 'j', code: 'KeyJ', kc: 74, label: 'use' },
-  { cap: 'K', key: 'k', code: 'KeyK', kc: 75, label: 'throw' },
-  { cap: 'L', key: 'l', code: 'KeyL', kc: 76, label: 'glasses', sw: 'glasses' },
+  { cap: 'J', key: 'j', code: 'KeyJ', kc: 74, label: 'use', dyn: 'j' },
+  { cap: 'K', key: 'k', code: 'KeyK', kc: 75, label: 'throw', dyn: 'k' },
+  { cap: 'L', key: 'l', code: 'KeyL', kc: 76, label: 'glasses', sw: 'glasses', dyn: 'l' },
   { cap: 'Enter', key: 'Enter', code: 'Enter', kc: 13, label: 'skip line' },
   { cap: 'Bksp', key: 'Backspace', code: 'Backspace', kc: 8, label: 'retry' },
   { cap: 'Esc', key: 'Escape', code: 'Escape', kc: 27, label: 'menu', dyn: 'esc' },
@@ -47,7 +47,12 @@ const scene = () => window.__game && window.__game.scene;
 const playing = () => { const st = document.getElementById('stage'); return !!(st && st.classList.contains('playing')); };
 const sat = () => { const sc = scene(); return playing() && sc && sc.sys && sc.sys.settings.key === 'satellite' ? sc : null; };
 const ring = () => { const sc = sat(); return !!(sc && sc.level && sc.level.id === 'ring'); };
+// while a satellite request form is up, J K L stamp and ask
+const form = () => { const sc = sat(); return !!(sc && sc.form); };
 const DYN = {
+  j: () => [form() ? 'approve' : 'use', true],
+  k: () => [form() ? 'deny' : 'throw', true],
+  l: () => (form() ? ['ask who', true] : null), // otherwise the glasses switch speaks for L
   a: () => [sat() ? 'turn' : 'left', true],
   d: () => [sat() ? 'turn' : 'right', true],
   w: () => [sat() ? 'turn' : 'door', !ring()],
@@ -120,7 +125,8 @@ export function initKeys() {
     });
     els.forEach(({ k, b, lbl }) => {
       if (!k.dyn) return;
-      const [word, on] = DYN[k.dyn]();
+      const r = DYN[k.dyn](); if (!r) return;
+      const [word, on] = r;
       if (lbl.textContent !== word) { lbl.textContent = word; b.setAttribute('aria-label', word + ', key ' + k.cap); }
       b.classList.toggle('off', !on);
     });
