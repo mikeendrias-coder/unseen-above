@@ -61,6 +61,11 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **Instructions under the game become key buttons:** keys drawn like keyboard keys, what they do written under each, clickable, and toggles show on or off.
 - `doing` Movement done Nov 17 (double jump, wall slide and wall jump, fall damage by distance, 3 HP, sword costs HP). Fixed train of lines before the fight; dialogue cuts.
 
+- `todo` **Dialogue types out letter by letter, Pokemon style, and is snappy:** a press (J, Enter, Space or a click) finishes the line at once, the next press goes to the next line. Every dialogue and narration line. Michael suggested an existing asset for this (for example a Phaser text-typing plugin); our captions are drawn in our own pixel font, so we build it into ui/cg.js unless a library fits.
+- `todo` **Easy and snappy to play through; everything makes sense** for the class walkthrough tomorrow night.
+- `todo` **More features** from the referenced games (Jump King, Geometry Dash, Jetpack Joyride, Papers, Please) and for the presentation day itself (research agents, Nov 17).
+- `todo` **Final checks include an aesthetics cohesion pass** (everything in the one look).
+
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).
 
