@@ -24,7 +24,7 @@
 - Ending (Michael's, kept): she passes adults watching Earth channels, reaches the kids' game room, and blows up the Moon with a hidden vest. It ends with us watching the Moon. No end card.
 
 ## Where things are
-- PLAYABLE LINK (Nov 17, replaces itch.io as the main place): https://mikeendrias-coder.github.io/unseen-above/ (GitHub Pages; the repo is public). Every push to dev or main rebuilds it (.github/workflows/pages.yml).
+- PLAYABLE LINK (Nov 17, replaces itch.io as the main place): https://mikeendrias-coder.github.io/unseen-above/ (GitHub Pages; the repo is public). Publish with `npm run publish` in game/ (game/tools/publish.sh: builds, then force-pushes the page to the gh-pages branch). Run it after every change Michael should see. Automatic publishing on push (game/tools/pages-workflow.yml) needs a GitHub login with the workflow scope.
 - On Michael's PC: repo at ~/Developer/unseen-above. Playwright resolves with NODE_PATH=/home/michael/work/node_modules.
 - Working build (Artifact, republished from the scratchpad copy of game/dist/unseen-above.html): https://claude.ai/artifact/UrA74gTXSbyzUrJ1iJMEvZ
 - Research and plan doc (Claude Doc): https://claude.ai/artifact/CNSz6vg5W587eqPS5Fhi3E

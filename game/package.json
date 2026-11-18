@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "description": "Companion game for the paper Unseen Above (working title). Phaser 4.",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "publish": "bash tools/publish.sh"
   },
   "devDependencies": {
     "esbuild": "^0.25.12",
