@@ -33,21 +33,21 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 ### Controls
 - `done, check` **WASD to move, Space to jump, everything else on the right side of the keyboard**, so she can do several things at once besides jumping. Nov 17: A D move, W doors, S crouch, Space jump (only), Shift run; J use/talk, K throw/swing, L glasses, Backspace restart, Enter skip, P pause, M sound. Arrows and the old E F G R still work quietly. Every on-screen key name updated.
 ### Levels and movement
-- `todo` **Build out levels: more interactive stages, more competitive** (harder, more to do).
-- `todo` **New sprites.**
-- `todo` **Double jump and wall jumps.** Make movement "much better and cooler".
-- `todo` **Physics that make it more entertaining** (things that move, fall, swing, push).
-- `todo` **Fall damage.**
-- `todo` **HP bars** (her, and the boss). Decide with Michael how HP fits with lives and instant restarts.
-- `todo` **Scale:** ceilings can stay high with lots of wall decoration, but most things themselves should be normal size next to her, so the space makes sense.
+- `done, check` (Nov 18 round 1: episodes 1 to 4 rebuilt vertical and harder) **Build out levels: more interactive stages, more competitive** (harder, more to do).
+- `done, check` (Nov 18: outlined girl with new frames; Moon people and kids remade) **New sprites.**
+- `done, check` **Double jump and wall jumps.** Make movement "much better and cooler".
+- `done, check` (core/props.js: crates, moving platforms, crumbling slabs, chandelier/rope) **Physics that make it more entertaining** (things that move, fall, swing, push).
+- `done, check` **Fall damage.**
+- `done, check` (her 3 HP pips; creator 9-segment bar) **HP bars** (her, and the boss). Decide with Michael how HP fits with lives and instant restarts.
+- `done, check` **Scale:** ceilings can stay high with lots of wall decoration, but most things themselves should be normal size next to her, so the space makes sense.
 ### Satellite puzzles
 - `done, check` (Nov 18: ring tutorial + one globe maze per batch: gates, two beads, blur zone and drifting target, game-show Earth; solver-checked) **One complex 3D puzzle instead of many small ones.** First time: a tutorial version, then the real one. After that, each batch is one complex 3D puzzle with similar dynamics and gimmicks. Example: a 3D maze on a circle (a ring or sphere) that you must turn to complete.
 ### Dialogue
-- `todo` **Briefer dialogue.**
-- `todo` **No repeated dialogue on reruns** (lines already heard do not play again on a retry).
-- `todo` **A forced dialogue train going into the boss fight** that is the same every time (no variation).
+- `done, check` **Briefer dialogue.**
+- `done, check` **No repeated dialogue on reruns** (lines already heard do not play again on a retry).
+- `done, check` **A forced dialogue train going into the boss fight** that is the same every time (no variation).
 ### Endings
-- `todo` **Boss mercy ending:** if you die to the creator enough times, the creator gives up: stands there screaming "end it all" and does nothing while you slowly deplete their HP. (Michael also floated the creator killing themself; building the give-up version first, his call.) Part of the multiple endings.
+- `done, check` (give-up mode at 6 deaths) **Boss mercy ending:** if you die to the creator enough times, the creator gives up: stands there screaming "end it all" and does nothing while you slowly deplete their HP. (Michael also floated the creator killing themself; building the give-up version first, his call.) Part of the multiple endings.
 ### Creative pass
 - `done, check` **A dedicated agent thinks through the plot and new elements** that fit the aesthetic, do not extend runtime, and add story, feeling, and more things to do and interact with, based on games in this genre (deep research). Output for Michael to pick from; story calls stay his. Written Nov 17: research/design_pass_nov17.md.
 
@@ -55,10 +55,10 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - Claude makes all decisions from Michael's preferences. No deploying or publishing (no `npm run publish`, no push) until Michael says. Quick tests only, or tests in a side agent.
 - `todo` **Look less generated, more like a real pixel game** in Ash and Gold. References Michael named: **Jump King** (character size, scale, jump dynamics), **Geometry Dash / Jetpack Joyride** (pace, restarts), **Papers, Please** (black and white, monotonous, bureaucratic tone). See docs/ART_DIRECTION.md.
 - `todo` **Go to a final design: build out every level** and everything on this list.
-- `todo` **Endings crafted by Claude**, including a **secret ending** where she does not blow herself up (for example she sits on the couch with the kids).
-- `todo` **Remake the Moon city people and the kids** (they looked weird): big, clear pixel characters, not the smooth animated style of the old opening.
-- `todo` **Immunity mode** stays easy to reach for the class walkthrough.
-- `todo` **Instructions under the game become key buttons:** keys drawn like keyboard keys, what they do written under each, clickable, and toggles show on or off.
+- `done, check` (THE VEST, END IT ALL, ROUND TWO, LOOK BACK, secret THE COUCH, false ending WE'LL BE RIGHT BACK; data/endings.js) **Endings crafted by Claude**, including a **secret ending** where she does not blow herself up (for example she sits on the couch with the kids).
+- `done, check` **Remake the Moon city people and the kids** (they looked weird): big, clear pixel characters, not the smooth animated style of the old opening.
+- `done, check` **Immunity mode** stays easy to reach for the class walkthrough.
+- `done, check` (ui/keys.js) **Instructions under the game become key buttons:** keys drawn like keyboard keys, what they do written under each, clickable, and toggles show on or off.
 - `doing` Movement done Nov 17 (double jump, wall slide and wall jump, fall damage by distance, 3 HP, sword costs HP). Fixed train of lines before the fight; dialogue cuts.
 
 - `todo` **Dialogue types out letter by letter, Pokemon style, and is snappy:** a press (J, Enter, Space or a click) finishes the line at once, the next press goes to the next line. Every dialogue and narration line. Michael suggested an existing asset for this (for example a Phaser text-typing plugin); our captions are drawn in our own pixel font, so we build it into ui/cg.js unless a library fits.
