@@ -328,6 +328,7 @@
     mark.todo { background: #ddd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     a { text-decoration: none; }
   }
+  main a { overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -401,7 +402,7 @@ __BODY__
     var queued = false;
     window.addEventListener('scroll', function () { if (!queued) { queued = true; requestAnimationFrame(function () { queued = false; mark(); }); } }, { passive: true });
     window.addEventListener('resize', mark);
-    links.forEach(function (a) { a.addEventListener('click', function () { if (!wide.matches) d.open = false; }); });
+    links.forEach(function (a) { a.addEventListener('click', function (e) { if (wide.matches) return; var t = document.getElementById(a.getAttribute('data-for')); d.open = false; if (!t) return; e.preventDefault(); requestAnimationFrame(function () { t.scrollIntoView(); if (location.hash !== '#' + t.id) history.pushState(null, '', '#' + t.id); }); }); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !wide.matches && d.open) { d.open = false; d.querySelector('summary').focus(); } });
     mark();
   })();

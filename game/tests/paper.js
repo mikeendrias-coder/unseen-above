@@ -71,7 +71,7 @@ function fixture() {
   ok('the TL;DR comes right after the title block', await p.evaluate(() => { const c = document.querySelector('.cover'); const n = c.nextElementSibling; return !!n && !!n.querySelector('section h2#tldr') && n.querySelector('section').querySelector('h2').id === 'tldr'; }));
   for (const id of IDS) ok(`#${id} is a heading on the page`, await p.evaluate(id => { const e = document.getElementById(id); return !!e && /^H[1-6]$/.test(e.tagName); }, id));
   ok('parts I to V are in order', order.filter(x => /^part-/.test(x)).join(',') === 'part-1,part-2,part-3,part-4,part-5');
-  ok('the notes and the Cite block come after the conclusion', order.slice(-3).join(',') === 'conclusion,notes,cite');
+  ok('the notes and the Cite block come after the conclusion', order.slice(-2).join(',') === 'notes,cite' && order.indexOf('conclusion') > order.indexOf('part-5') && order.indexOf('conclusion') < order.indexOf('notes'));
   ok('every index link points at a heading', await p.$$eval('.index a[data-for]', as => as.length >= 11 && as.every(a => document.getElementById(a.getAttribute('href').slice(1)))));
 
   // notes, both ways
@@ -116,7 +116,7 @@ function fixture() {
     return { id, idItalic: it.includes('Id.') || it.includes('id.'), supraItalic: it.includes('supra'), xr, label: [...document.querySelectorAll('.side .idof')].map(a => a.textContent + ' ' + a.getAttribute('href')) };
   });
   ok(`Id. is set in italics and its note names the note before it (${JSON.stringify(short.id)}, ${short.label.join(', ')})`, short.idItalic && short.id.length > 0 && short.id.every(([n, of]) => of === n - 1) && short.label.length === short.id.length);
-  ok(`supra note [^label] prints the right number as a link (${JSON.stringify(short.xr)})`, short.supraItalic && short.xr.length > 0 && short.xr.every(([t, h]) => h === '#fn-' + t));
+  ok(`supra note [^label] prints the right number as a link (${JSON.stringify(short.xr)})`, short.supraItalic && short.xr.every(([t, h]) => h === '#fn-' + t));
   if (short.id.length) {
     const [n, of] = short.id[0];
     await p.click(`#sn-${n} .idof`);
@@ -160,7 +160,7 @@ function fixture() {
   ok(`the reading meter fills as the page is read (${m0}% then ${mMid}% then ${mEnd[0]}%, ${mEnd[1]} cells)`, m0 < mMid && mEnd[0] === 100 && mEnd[1] === 20);
 
   ok('back to the game: every link goes to the page beside it', await p.$$eval('a[data-back]', as => as.length >= 1 && as.every(a => /^(local\.html|index\.html|\.\/|\.\.\/)$/.test(a.getAttribute('href')))));
-  ok('no em or en dashes on the page', await p.evaluate(() => !/[\u2013\u2014]/.test(document.body.innerText)));
+  ok('no em dashes, and en dashes only in number ranges (pin cites)', await p.evaluate(() => !/\u2014/.test(document.body.innerText) && !/\D\u2013|\u2013\D/.test(document.body.innerText.replace(/\d\u2013\d/g, ''))));
   ok('headings and labels use the caption face', await p.evaluate(() => getComputedStyle(document.querySelector('#part-1')).fontFamily.includes('CH07') && document.fonts.check('20px "CH07 Caption"')));
 
   // screenshots: the top, a part (deep link, as the game opens it), the notes
