@@ -2,7 +2,7 @@
 // body stays, and the take restarts.
 //   - Instant takes (Nov 18, research/features_nov17.md item 1; Geometry Dash feel). Her first
 //     death in the whole game is watched in full and fades out. After that there is no fade and
-//     no card: the next take cuts in TAKE_AFTER s after the body lands, and the take number is
+//     no card: the next take cuts in TAKE_AFTER ms after the body lands, and the take number is
 //     taped to the floor where she starts (juice.tape). The first death of each episode visit
 //     still plays the whole strike, so a new danger reads; later ones play it short. Space,
 //     Enter or J cuts any strike but the very first one short; the body still lands.
@@ -26,7 +26,9 @@ import { results } from './results.js';
 import { juice } from './juice.js';
 
 export const TAKES = 5;
-const TAKE_AFTER = 0.22; // seconds from the body landing to the next take, after the first death
+// ms of wall clock from the body landing to the cut, after the first death. The hit-stop on the
+// strike (70 ms) is inside it, so the next take is up well under half a second after the body lands.
+const TAKE_AFTER = 150;
 // scenes with no takes: nothing up there hunts her (the city, the playroom) or it is a side room
 const NO_TAKES = ['moon', 'room'];
 const visits = {}; // per episode id, this page visit only: { left, data }
@@ -45,7 +47,9 @@ export function startTakes(scene) {
   scene.takesLeft = visits[id].left;
   // the broadcast bar runs in side episodes with takes (not the fight's arena, which has the
   // creator's HP; not the top-down east wing)
-  results.begin(scene, fresh, hasTakes(scene) && !!scene.map && keyOf(scene) !== 'hallway');
+  // (the record's visit: a restart the episode does itself, like the bedroom's false ending,
+  // stays inside the visit)
+  results.begin(scene, fresh && !data.rerun, hasTakes(scene) && !!scene.map && keyOf(scene) !== 'hallway', data);
   // once the scene is built: a take that follows a death cuts straight in (the scene's own fade
   // in is dropped), and the take goes on the floor (every scene, the fight included)
   const cut = !fresh && cuts[id]; delete cuts[id];
@@ -56,14 +60,17 @@ export function startTakes(scene) {
   });
 }
 // The take, taped to the floor where it starts (from the second take on). Side: her feet;
-// top-down: under her start tile. Scenes call this through takeNote.
+// top-down: under her start tile. Scenes call this through takeNote. A take that starts on a
+// crew mark (a checkpoint with a section number, props.js Marks on r2-scenes) gets one strip:
+// the mark, then TAKE n end to end after it, never two tapes on one spot.
 export function tapeTake(scene) {
   juice.prime(scene); // her squash and stretch frames, ready before the first landing
   const n = scene.ep && scene.ep.take, k = scene.kid; if (!k || !(n > 1) || !hasTakes(scene)) return;
   if (scene.__tape && scene.__tape.take === n && (scene.__tape.pending || (scene.__tape.g && scene.__tape.g.scene))) return; // already down
-  // the glasses' readout sits in the lower left of the view: the tape keeps clear of it
-  if (k.x != null) juice.tape(scene, n, { x: k.x + k.w / 2, y: k.y + k.h, clear: scene.gl && scene.gl.has ? 64 : 0 });
-  else if (scene.kidPx) { const c = scene.kidPx(); juice.tape(scene, n, { x: c.x, y: c.y + 4, topDown: true }); }
+  // the glasses' readout sits in the lower left of the view: juice.tape keeps the tape readable
+  const meter = !!(scene.gl && scene.gl.has), cp = checkpointOf(scene), mark = cp && cp.i != null;
+  if (k.x != null) juice.tape(scene, n, { x: k.x + k.w / 2, y: k.y + k.h, meter, after: mark && cp.x != null ? Math.round(cp.x) + 10 : null });
+  else if (scene.kidPx) { const c = scene.kidPx(); juice.tape(scene, n, { x: c.x, y: c.y + 4, topDown: true, meter, after: mark && cp.tx != null ? cp.tx * 16 + 15 : null }); }
 }
 // An episode marks a checkpoint (any data it wants back, for example { x: 412 }). Deaths in this
 // visit restart with data.checkpoint set to it; losing the last life clears it.
@@ -113,7 +120,16 @@ export function beginDeath(scene, src, impact, fire) {
     if (d.impacted) return; d.impacted = true; impact(!!quiet);
     // the strike lands: a hit-stop and a 2 px kick (not when a key cut it short)
     if (!quiet) juice.hit(scene, 2, 70);
-    if (d.fast && !d.skipping) d.restart = scene.time.delayedCall(TAKE_AFTER * 1000, () => { d.skipping = true; nextTake(scene, 0); });
+    // wall clock, not the scene's (the hit-stop holds the scene's clock)
+    if (d.fast && !d.skipping) {
+      const cut = () => {
+        if (scene.death !== d || d.skipping || !scene.sys) return;
+        // the pause menu or a panel is up: the cut waits for it
+        if (!scene.sys.isActive()) { if (scene.sys.isPaused() || scene.sys.isSleeping()) d.restart = setTimeout(cut, 50); return; }
+        d.skipping = true; nextTake(scene, 0);
+      };
+      d.restart = setTimeout(cut, TAKE_AFTER);
+    }
   };
   const line = deathLine(src && src.id, src && src.direct);
   if (state.hear('death:' + line)) overlay.sfx(line, 2400);
@@ -131,7 +147,7 @@ export function skipDeath(scene) {
   d.skipping = true;
   d.hit(true);
   if (d.fade) d.fade.remove(false);
-  if (d.restart) d.restart.remove(false);
+  if (d.restart) clearTimeout(d.restart);
   nextTake(scene, 0);
   return true;
 }

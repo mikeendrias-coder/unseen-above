@@ -1,6 +1,7 @@
 // The order of the whole game, in one place. A scene that finishes calls goNext(this, its step
 // id); the next step starts if its scene is built. Parts not built yet end the build politely.
 import { state } from './state.js';
+import { results } from './results.js';
 
 export const STEPS = [
   { id: 'intro', scene: 'intro', data: {}, label: 'The opening' },
@@ -28,10 +29,12 @@ export function nextStep(scene, id) {
 }
 
 // Start the step after this one. Returns false when the next part is not built yet.
+// The end of an episode shows its report first (core/results.js), then starts the next step.
 export function goNext(scene, id) {
   const next = nextStep(scene, id);
   if (!next) return false;
   state.reach(next.id); // for Continue on the channel guide
-  scene.scene.start(next.scene, Object.assign({}, next.data));
+  const go = () => scene.scene.start(next.scene, Object.assign({}, next.data));
+  if (results.endsEpisode(id)) results.report(scene, go); else go();
   return true;
 }
