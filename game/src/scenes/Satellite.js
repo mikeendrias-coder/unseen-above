@@ -31,7 +31,7 @@ const TEXT = {
   ring: { title: 'Turn the ring', goal: 'DOT TO THE LOCK', keys: 'A D OR DRAG', hint: 'A and D, the arrows, or a drag turn the ring. The dot rolls down. Bring it to the lock.' },
   g1: { title: 'Turn the globe', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'W A S D, the arrows, or a drag turn the globe. The bead rolls down. Get it to the red target. Arrows in the grooves only let it through one way.' },
   g2: { title: 'Two at once', goal: 'EACH BEAD TO ITS COLOR', keys: 'W A S D OR DRAG', hint: 'Two beads, two targets. Each bead goes to the target of its own color. A bead that gets home stays there.' },
-  g3: { title: 'The blur', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'The blur is a place nobody can see. The bead bounces off it. Be quick. The target moves if you are slow.' },
+  g3: { title: 'The blur', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'Nobody may look into the blur. The bead bounces off it. Be quick. The target moves if you are slow.' },
   g4: { title: 'Find her', goal: 'ROLL TO THE GIRL', keys: 'W A S D OR DRAG', hint: 'Roll the bead to the girl in pink.' },
   show: { title: 'Find her', goal: 'ROLL TO THE GIRL', keys: '', hint: '' }
 };

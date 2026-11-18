@@ -29,9 +29,9 @@ import { cg } from '../ui/cg.js';
 
 const n = c => hexNum(c);
 const ROOM_TEXT = [
-  ['Eight channels from Earth: a house, a street, a field.', 'One of them is the hall you came through.'],
-  ['Channel seven: the bedroom. The door is open. He is still there.', 'Another channel: a ridge, two small figures, watching lights.'],
-  ['Channel seven again: the grounds. A girl is walking up to the house.', 'Two of them are asleep.']
+  ['Eight channels from Earth.', 'A house, a street, a field.', 'One is the hall you came through.'],
+  ['Channel seven: the bedroom.', 'The door is open. He is still there.', 'A ridge. Two figures, watching lights.'],
+  ['Channel seven again: the grounds.', 'A girl is walking up to the house.', 'Two of them are asleep.']
 ];
 
 export class Moon extends SideEpisode {
@@ -177,7 +177,7 @@ export class Moon extends SideEpisode {
   npcTalk(Nn) {
     // the one who says "My son aims on Tuesdays" (their second line) gives a clue
     Nn.presses = (Nn.presses || 0) + 1;
-    if (Nn.i === 3 && Nn.presses === 2 && state.clue('tuesday')) overlay.note('NOTED (' + state.clueCount() + ')', 1600);
+    if (Nn.i === 3 && Nn.presses === 2 && state.clue('tuesday')) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600);
     this.bubbles.press('npc' + Nn.i, Nn.src, () => ({ x: Nn.x, y: GROUND - 28 }), { ink: 0xebe6d8, pitch: 560 + Nn.i * 90, leave: 64 });
   }
   npcSay(Nn, text) { this.bubbles.say('npc' + Nn.i, text, () => ({ x: Nn.x, y: GROUND - 28 }), { ink: 0xebe6d8, pitch: 700 + Nn.i * 90, leave: 64, hold: 900 }); }

@@ -145,7 +145,7 @@ const ROOMS = {
     paint: paintWardrobe, bg: 'wallLo',
     items: [
       { x0: 56, x1: 174, y: 54, text: ['Jackets on a rail. Her jacket, in her size.', 'Every one has the same tear in the left sleeve.'] },
-      { x0: 186, x1: 242, y: 38, text: ['Photos pinned in a row, all of her, in that jacket.', 'Each one is stamped CONTINUITY.'] },
+      { x0: 186, x1: 242, y: 38, text: ['Photos of her in a row, all in that jacket.', 'Each one is stamped CONTINUITY.'] },
       { x0: 250, x1: 300, y: 42, text: ['A mirror ringed with bulbs.'] },
       { x0: 60, x1: 168, y: 146, text: ['Small shoes in a row, worn down at the same heel.'] }
     ],

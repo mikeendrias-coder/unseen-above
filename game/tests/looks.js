@@ -111,7 +111,7 @@ const norm = s => String(s).replace(/\s+/g, ' ').trim();
     await wait(0.4);
     const said = await p.evaluate(() => { const s = window.__game.scene, b = s.bubbles.list.get('npc2'); return b ? b.lines.join(' ') : null; });
     const x1 = await p.evaluate(() => window.__game.scene.npcs[2].x);
-    ok('E: they say "' + said + '" and stop to say it', !!said && /working/.test(said) && Math.abs(x1 - x0) < 0.5);
+    ok('E: they say "' + said + '" and stop to say it', !!said && /blur/.test(said) && Math.abs(x1 - x0) < 0.5);
     await p.screenshot({ path: OUT + 'looks-city-talk.png' });
     // walking into someone: they push back with a word, and she does not pass through
     await p.evaluate(() => { const s = window.__game.scene; s.bubbles.clear('npc2'); const N = s.npcs[1]; N.x = 32 * 16 + 4; N.bumpT = -99; const k = s.kid; k.x = 30 * 16 + 14; k.y = 146; k.vx = 0; k.vy = 0; });

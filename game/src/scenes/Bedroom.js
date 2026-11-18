@@ -313,7 +313,7 @@ export class Bedroom extends SideEpisode {
     if (!held) { B.letGo = true; this.time.delayedCall(800, () => this.bringDown()); }
   }
   readNote() {
-    if (state.clue('bagNote')) overlay.note('NOTED (' + state.clueCount() + ')', 1600);
+    if (state.clue('bagNote')) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600);
     this.bubbles.look('item', { lines: NOTICE.bedroom.bagNote }, () => ({ x: LEVEL.bag.x + 2, y: GROUND - 14 }));
     Sound.tone(520, 0.3, 'sine', 0.015);
   }

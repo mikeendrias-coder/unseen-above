@@ -193,7 +193,7 @@ export class Gallery extends SideEpisode {
     // (said once: the drawer opens every take, its lines do not)
     if (this.ep.take > 1 && !state.heard('look:ep2:drawer2')) {
       const src = { lines: NOTICE.gallery.drawer2, key: 'look:ep2:drawer2' };
-      this.time.delayedCall(350, () => { if (state.clue('drawer')) overlay.note('NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: LEVEL.cabinet.drawer.x + 8, y: GROUND - 16 })); });
+      this.time.delayedCall(350, () => { if (state.clue('drawer')) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: LEVEL.cabinet.drawer.x + 8, y: GROUND - 16 })); });
     }
     const R = this.robot; if (Math.abs(R.x - this.kid.x) < 200 && !state.heard('ep2:sawthat')) this.time.delayedCall(500, () => this.robotSay('I saw that.', 'ep2:sawthat'));
   }
