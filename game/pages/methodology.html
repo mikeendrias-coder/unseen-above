@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unseen Above: how it was made</title>
+<style>
+  @font-face { font-family: "CH07 Caption"; src: url(__CCFONT__) format("truetype"); font-display: block; }
+  :root {
+    --ash0: #0e0f12; --ash1: #1b1c21; --ash3: #45474d; --ash5: #8f8d87; --bone: #ebe6d8; --boneLo: #b8b2a3;
+    --pix: "CH07 Caption", ui-monospace, Menlo, Consolas, monospace;
+    --serif: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Cambria, Georgia, "Noto Serif", serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--ash1); }
+  body { margin: 0; padding: 16px 16px 48px; color: var(--ash0); font: clamp(17px, 0.4vw + 13px, 20px)/1.55 var(--serif); -webkit-text-size-adjust: 100%; }
+  ::selection { background: var(--ash0); color: var(--bone); }
+  .px { font-family: var(--pix); -webkit-font-smoothing: none; font-weight: normal; }
+  nav { display: flex; flex-wrap: wrap; gap: 10px; max-width: 760px; margin: 0 auto 14px; }
+  .keycap { display: inline-block; padding: 6px 10px 5px; background: var(--boneLo); color: var(--ash0); border: 2px solid var(--ash0); box-shadow: 0 3px 0 var(--ash3), 0 3px 0 2px var(--ash0); font: 10px/10px var(--pix); -webkit-font-smoothing: none; text-decoration: none; }
+  .keycap:hover { background: var(--bone); }
+  .keycap:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--ash0); }
+  .keycap:focus-visible, a:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 32px; background: var(--bone); border: 2px solid var(--ash0); box-shadow: 0 0 0 2px var(--ash3); }
+  h1 { margin: 0 0 4px; font: 20px/1.4 var(--pix); -webkit-font-smoothing: none; text-transform: uppercase; }
+  .sub { margin: 0 0 8px; color: var(--ash3); font: 10px/1.5 var(--pix); -webkit-font-smoothing: none; text-transform: uppercase; }
+  h2 { width: fit-content; margin: 28px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--ash0); font: 10px/1.4 var(--pix); -webkit-font-smoothing: none; text-transform: uppercase; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { padding: 8px 0 8px 18px; border-bottom: 1px solid var(--boneLo); position: relative; }
+  li::before { content: ""; position: absolute; left: 2px; top: 0.75em; width: 6px; height: 6px; background: var(--ash0); }
+  li:last-child { border-bottom: 0; }
+  b { font-weight: 700; }
+  code { font: 0.85em/1 ui-monospace, Menlo, Consolas, monospace; background: var(--boneLo); padding: 1px 4px; }
+  a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 2px; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<nav><a class="keycap" href="../../">BACK TO THE GAME</a><a class="keycap" href="../../paper/">THE PAPER</a></nav>
+<main>
+  <h1>Unseen Above</h1>
+  <p class="sub">The tools behind the game</p>
+
+  <h2>The game itself</h2>
+  <ul>
+    <li><b>Phaser 4.2.1:</b> the free, open-source game engine.</li>
+    <li><b>JavaScript, HTML5 Canvas and CSS:</b> all the code, drawing and page layout. There are no image files; every sprite and room is drawn by code.</li>
+    <li><b>Web Audio API:</b> the browser’s built-in sound system. It generates all the music and sound effects live.</li>
+    <li><b>localStorage:</b> saves progress, settings and endings in the player’s browser.</li>
+    <li><b>The CH07 Caption pixel font:</b> hand-made, built into a real font file with Python and fontTools.</li>
+  </ul>
+
+  <h2>Building it</h2>
+  <ul>
+    <li><b>Node.js and npm:</b> run the build and manage packages.</li>
+    <li><b>esbuild:</b> bundles the code into a single page.</li>
+    <li><b>marked 18.1.2:</b> turns the paper’s Markdown into the paper page.</li>
+    <li><b>Python:</b> font building, the old itch.io packager, and conversion scripts (like turning your inline citations into footnotes).</li>
+  </ul>
+
+  <h2>Testing and checking</h2>
+  <ul>
+    <li><b>Playwright with headless Chromium:</b> plays the game automatically. It runs the 25 test scripts, takes screenshots, and simulates players (the boss bot, the critics).</li>
+    <li><b>Chrome DevTools Protocol profiler:</b> found the frame-rate spikes in the east wing and episode 4.</li>
+    <li><b>Pillow (Python imaging):</b> contact sheets of screenshots.</li>
+    <li><b>The solver:</b> written in-house. It proves every globe puzzle can be finished with no dead ends.</li>
+  </ul>
+
+  <h2>Video</h2>
+  <ul>
+    <li><b>MediaRecorder and canvas capture:</b> recorded the trailer with its live game audio.</li>
+    <li><b>ffmpeg and ffprobe:</b> video encoding, checks and frame grabs.</li>
+  </ul>
+
+  <h2>Code, hosting and files</h2>
+  <ul>
+    <li><b>Git and GitHub:</b> the code is in the public repo <a href="https://github.com/mikeendrias-coder/unseen-above/tree/dev"><code>mikeendrias-coder/unseen-above</code></a>, on the <code>dev</code> branch.</li>
+    <li><b>GitHub Pages:</b> hosts the game, paper and trailer at <a href="https://mikeendrias-coder.github.io/unseen-above/">mikeendrias-coder.github.io/unseen-above</a>.</li>
+    <li><b>gh (GitHub CLI):</b> pushing and setting up Pages.</li>
+    <li><b>Syncthing:</b> the <code>~/Sync</code> folder holding the offline copy.</li>
+  </ul>
+</main>
+</body>
+</html>

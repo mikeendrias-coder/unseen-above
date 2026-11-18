@@ -16,6 +16,9 @@ cp dist/phaser.min.js "$site/phaser.min.js"
 sed 's|href="local.html" data-back|href="./" data-back|g' dist/paper.html > "$site/paper.html"
 mkdir -p "$site/paper"
 sed 's|href="local.html" data-back|href="../" data-back|g' dist/paper.html > "$site/paper/index.html"
+# the tools page (pages/methodology.html, the pixel font inlined) at /game/methodology/
+mkdir -p "$site/game/methodology"
+node -e 'const fs=require("fs");const f="data:font/ttf;base64,"+fs.readFileSync("fonts/ch07-caption.ttf").toString("base64");fs.writeFileSync(process.argv[1],fs.readFileSync("pages/methodology.html","utf8").replace("__CCFONT__",()=>f))' "$site/game/methodology/index.html"
 # the trailer (src/trailer): the page at /trailer.html, and its recording (src/trailer/record-run.js)
 # beside it when there is one small enough for Pages (under 90 MB)
 cp dist/trailer.html "$site/trailer.html"
