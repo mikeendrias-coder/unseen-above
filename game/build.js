@@ -9,9 +9,12 @@ const PHASER_CDN = 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js
 const out = path.join(__dirname, 'dist');
 fs.mkdirSync(out, { recursive: true });
 
+// the paper's Parts for the books in the game (paper/parts.js reads paper/paper.md)
+const PARTS = require('./paper/parts.js')();
 const result = esbuild.buildSync({
   entryPoints: [path.join(__dirname, 'src/main.js')],
   bundle: true, format: 'iife', target: ['es2020'], write: false, legalComments: 'none',
+  define: { __PAPER_PARTS__: JSON.stringify(PARTS) },
   banner: { js: '/* Unseen Above (working title). Source: github.com/mikeendrias-coder/unseen-above */' }
 });
 const bundle = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');

@@ -21,12 +21,14 @@
     --pix: "CH07 Caption", ui-monospace, Menlo, Consolas, monospace;
     color-scheme: dark;
   }
-  body { background: var(--ground); color: var(--ink); font: 10px/1.6 var(--pix); -webkit-font-smoothing: none; font-smooth: never; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 10px 14px; }
-  #chrome-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; max-width: 1940px; margin: 0 auto 8px; }
-  h1 { margin: 0; font: 20px/1.2 var(--pix); }
+  body { background: var(--ground); color: var(--ink); font: 10px/1.6 var(--pix); -webkit-font-smoothing: none; font-smooth: never; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 4px; margin: 0; }
+  /* the header: one slim line, so the picture gets the height (core/display.js fits the picture
+     into what is left) */
+  #chrome-top { display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: baseline; gap: 16px; height: 14px; overflow: hidden; white-space: nowrap; margin: 0 auto 4px; }
+  h1 { margin: 0; font: 10px/14px var(--pix); flex: none; }
   h1 span { color: var(--red); }
-  .tag { color: var(--quiet); }
-  #stage { position: relative; display: flex; justify-content: center; max-width: 1940px; margin: 0 auto; min-height: 180px; }
+  .tag { color: var(--quiet); line-height: 14px; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #stage { position: relative; display: flex; justify-content: center; margin: 0 auto; min-height: 180px; }
   /* while the game is on, room under the picture for the caption strip */
   #stage.playing { padding-bottom: var(--strip, 120px); }
   /* the strip is part of the set: a flat ash1 band under the picture, so an empty strip reads as
@@ -97,7 +99,11 @@
   #about .row { display: grid; grid-template-columns: calc(var(--u, 4px) * 84) 1fr; gap: calc(var(--u, 4px) * 8); padding: calc(var(--u, 4px) * 2) 0 calc(var(--u, 4px) * 1); border-bottom: var(--u, 4px) solid var(--boneLo); }
   #about dt { color: var(--ground); white-space: pre-line; }
   #about dd { margin: 0; color: var(--ash2); }
-  #about .foot { margin: 0; padding-top: calc(var(--u, 4px) * 2); color: var(--ash4); }
+  #about .foot { display: flex; justify-content: space-between; align-items: center; margin: 0; padding-top: calc(var(--u, 4px) * 2); color: var(--ash4); }
+  /* the paper itself, from the foot: an inked label with its key cap, the height of a line */
+  #about .read { display: flex; align-items: center; gap: calc(var(--u, 4px) * 3); padding: 0 calc(var(--u, 4px) * 3) 0 calc(var(--u, 4px) * 1); background: var(--ground); color: var(--ink); border: 0; font: inherit; line-height: calc(var(--u, 4px) * 9); cursor: pointer; }
+  #about .read .k { padding: 0 calc(var(--u, 4px) * 2); background: var(--boneLo); color: var(--ground); line-height: calc(var(--u, 4px) * 7); }
+  #about .read:hover, #about .read:focus-visible { outline: none; background: var(--ash3); }
   #about .row:last-child { border-bottom: 0; }
   #about dl { border-bottom: var(--u, 4px) solid var(--ground); }
   #stage:fullscreen #about, #stage:-webkit-full-screen #about { top: var(--fs-pad, 0px); }
@@ -106,8 +112,17 @@
   .tv-note i { font-style: normal; }
 
   #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--ink); color: var(--ground); border: 0; font: 20px/1 var(--pix); cursor: pointer; }
-  #chrome-bottom { max-width: 1940px; margin: 4px auto 0; }
-  #h-hint { min-height: 1.6em; margin: 0 0 2px; color: var(--quiet); text-align: center; }
+  #chrome-bottom { max-width: 1940px; margin: 2px auto 0; }
+  /* the hint line, with the keys toggle at its right end: the key bar folds away (saved; folded
+     by default in full screen), so the picture can take that room too (core/display.js) */
+  #hintrow { position: relative; min-height: 16px; padding: 0 64px; }
+  #h-hint { min-height: 16px; margin: 0; line-height: 16px; color: var(--quiet); text-align: center; }
+  #keys-toggle { position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: 4px; height: 16px; padding: 0 2px 0 6px; background: none; border: 0; color: var(--quiet); font: 10px/16px var(--pix); cursor: pointer; }
+  #keys-toggle:hover, #keys-toggle:focus-visible { outline: none; color: var(--ink); }
+  /* its arrow: a 5 x 3 pixel step triangle, down while folded (more below), up while open */
+  #keys-toggle::after { content: ""; width: 5px; height: 3px; background: currentColor; clip-path: polygon(0 0, 100% 0, 100% 33.4%, 80% 33.4%, 80% 66.7%, 60% 66.7%, 60% 100%, 40% 100%, 40% 66.7%, 20% 66.7%, 20% 33.4%, 0 33.4%); }
+  #keys-toggle[aria-expanded="true"]::after { transform: scaleY(-1); }
+  #chrome-bottom.folded #keybar { display: none; }
   /* The keys under the game: key caps with what they do under them. Hard edges, palette only.
      Two rows (what she does, then the show's controls), each wrapping inside the window, never
      past its left edge ("safe" keeps an overflowing row on screen), right under the strip. */
@@ -141,7 +156,11 @@
   #freeze::before, #freeze::after { content: ""; position: absolute; top: 0; width: calc(var(--u, 4px) * 2); height: calc(var(--u, 4px) * 8); background: var(--ink); box-shadow: 0 0 0 var(--u, 4px) var(--ground); }
   #freeze::before { left: 0; } #freeze::after { right: 0; }
   /* Full screen (U, the key below, or the title): only the stage, the page around it hidden. */
-  body.fs #chrome-top, body.fs #chrome-bottom { display: none; }
+  body.fs #chrome-top, body.fs #tv-note, body.fs #jump { display: none; }
+  /* in full screen the hint and the keys come inside the stage (main.js moves them), at its foot;
+     folded there, only the keys toggle shows, in the corner */
+  #stage > #chrome-bottom { position: absolute; left: 0; right: 0; bottom: 2px; margin: 0; max-width: none; padding: 0 16px; }
+  #stage > #chrome-bottom.folded #h-hint { visibility: hidden; }
   #stage:fullscreen { max-width: none; margin: 0; background: var(--ground); padding-top: var(--fs-pad, 0px); box-sizing: border-box; }
   #stage:fullscreen #overlay { top: var(--fs-pad, 0px); }
   #stage:-webkit-full-screen { max-width: none; margin: 0; background: var(--ground); padding-top: var(--fs-pad, 0px); box-sizing: border-box; }
@@ -181,6 +200,7 @@
       <button id="opt-bright" type="button" aria-pressed="false"><b>Bright</b><i>off</i><span>Lifts dark scenes for a washed-out projector.</span></button>
       <button id="opt-chapters" type="button" aria-expanded="false" aria-controls="chapters"><b>Chapters</b><i>&gt;</i></button>
       <button id="opt-about" type="button" aria-haspopup="dialog"><b>About</b><i>?</i><span>How the game argues. Any key goes back.</span></button>
+      <button id="opt-paper" type="button"><b>Paper</b><i>&gt;</i><span>The paper, in a new tab.</span></button>
     </div>
     <p class="tv-credit"><span>A companion to <b>Unseen Above:</b></span><span><b>Space Law and the Power to See and Not Be Seen.</b></span><span>Michael Endrias. Intro to Space Law, Prof. Link.</span></p>
     <div id="chapters" class="tv-chapters" role="group" aria-label="Chapters" hidden></div>
@@ -188,7 +208,7 @@
 </div>
 <footer id="chrome-bottom">
   <p class="tv-note" id="tv-note"><b>Flashing lights.</b> The Flash key below turns them down. Best with a keyboard.<br><span id="mode-note" aria-hidden="true"><b>Mode NORMAL</b><i>: 5 lives, then the episode restarts. I cycles it.</i></span></p>
-  <p id="h-hint"></p>
+  <div id="hintrow"><p id="h-hint"></p><button id="keys-toggle" type="button" aria-expanded="true" aria-controls="keybar">keys</button></div>
   <div id="keybar" class="keybar" role="group" aria-label="Keys. Click one to press it."></div>
   <nav id="jump" class="jump" aria-label="Chapters" hidden>
     <a href="#opening">opening</a>

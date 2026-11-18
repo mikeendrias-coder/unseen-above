@@ -5,8 +5,9 @@
 //          Space, N or a click skips it. A and D, or a click on the set's knobs, change the
 //          channel even now; at the beat's climax the show takes the set back to channel 7.
 //   card   the ending screen, a paper form: the ending's name, its one line, ENDINGS FOUND n/5
-//          (found ones by name, the rest ----), and four buttons: TV AGAIN, CHAPTERS, ABOUT (how
-//          the game argues, ui/about.js), TITLE. Under the form, the paper's credit (#endcredit).
+//          (found ones by name, the rest ----), BOOKS n/5 (the paper's books, core/books.js), and
+//          five buttons: TV AGAIN, CHAPTERS, ABOUT (how the game argues, ui/about.js), PAPER (the
+//          paper, paper.html, in a new tab), TITLE. Under the form, the paper's credit (#endcredit).
 //   tv     the TV again: the ending's feed loops on channel 7, and five more channels (other
 //          places on Earth the show watches; ending/channels.js). Enter goes back to the form.
 // The scene (Moon.js) owns the TV's canvas and texture and two screen-space Graphics: room (over
@@ -20,10 +21,12 @@ import { drawBeat, BEATS, BEAT_CC, OWN_NAME, vestRoom, LB } from './beats.js';
 import { CHANNELS, drawChannel, drawOsd, drawStatic } from './channels.js';
 import { TVSCREEN } from '../art/moon.js';
 import { openAbout } from '../ui/about.js';
+import { booksFound, BOOK_COUNT } from '../core/books.js';
+import { openPaper } from '../core/paper.js';
 
 // the set's two knobs (paintLastRoom): the top one turns the channel up, the bottom one down
 export const KNOBS = [{ x: 239, y: 94, d: 1 }, { x: 239, y: 112, d: -1 }];
-export const CARD_BUTTONS = [{ id: 'tv', text: 'TV AGAIN' }, { id: 'chapters', text: 'CHAPTERS' }, { id: 'about', text: 'ABOUT' }, { id: 'title', text: 'TITLE' }];
+export const CARD_BUTTONS = [{ id: 'tv', text: 'TV AGAIN' }, { id: 'chapters', text: 'CHAPTERS' }, { id: 'about', text: 'ABOUT' }, { id: 'paper', text: 'PAPER' }, { id: 'title', text: 'TITLE' }];
 // the paper's credit under the form (template.html #endcredit), only while the form is up
 // (and body.paper-up, so Bright leaves the paper form as it is)
 const credit = on => { const c = document.getElementById('endcredit'); if (c && c.hidden === !!on) c.hidden = !on; document.body.classList.toggle('paper-up', !!on); };
@@ -103,6 +106,7 @@ export class Finale {
     Sound.tone(880, 0.06, 'square', 0.015);
     if (b.id === 'tv') this.toTv();
     else if (b.id === 'about') openAbout();
+    else if (b.id === 'paper') openPaper();
     else { this.leaving = true; credit(false); leave(b.id); }
   }
 
@@ -256,7 +260,7 @@ export class Finale {
     const g = this.card; g.clear();
     if (this.phase !== 'card') return;
     // a little up from the middle, so the credit fits under it
-    const e = endingOf(this.id), W = 228, H = 156, X = 46, Y = 5;
+    const e = endingOf(this.id), W = 252, H = 156, X = 34, Y = 5; // wide enough for five buttons with room in each
     g.fillStyle(INK, 1); g.fillRect(-20, -20, 360, 220);
     g.fillStyle(0x2e3036, 1); g.fillRect(X + 3, Y + 3, W, H);
     g.fillStyle(PAPER, 1); g.fillRect(X, Y, W, H);
@@ -273,6 +277,9 @@ export class Finale {
     rule(Y + 70);
     const found = ENDINGS.filter(q => state.story.endings[q.id]).length;
     ccText(g, 'ENDINGS FOUND', X + 6, Y + 75, DIM); ccText(g, found + '/' + ENDINGS.length, X + 6 + ccWidth('ENDINGS FOUND') + 6, Y + 75, INK);
+    // the paper's books found in the episodes (core/books.js), on the same line at the right
+    const bk = Math.min(BOOK_COUNT, booksFound()) + '/' + BOOK_COUNT, bkx = X + W - 6 - ccWidth(bk);
+    ccText(g, bk, bkx, Y + 75, INK); ccText(g, 'BOOKS', bkx - 6 - ccWidth('BOOKS'), Y + 75, DIM);
     ENDINGS.forEach((q, i) => {
       const seen = !!state.story.endings[q.id], here = q.id === this.id, col = i < 3 ? 0 : 1, row = i < 3 ? i : i - 3;
       const rx = X + 6 + col * 104, ry = Y + 86 + row * 10;
@@ -280,7 +287,7 @@ export class Finale {
       ccText(g, seen ? q.title : '----', rx + 8, ry, seen ? INK : DIM);
     });
     rule(Y + 118);
-    // the four buttons, each as wide as its word plus an equal share of the row, the picked one inverted
+    // the buttons, each as wide as its word plus an equal share of the row, the picked one inverted
     const by = Y + 124, bh = 15, gap = 4, n = CARD_BUTTONS.length, ws = CARD_BUTTONS.map(b => ccWidth(b.text));
     const extra = Math.floor((W - 12 - gap * (n - 1) - ws.reduce((a, b) => a + b, 0)) / n);
     let bx = X + 6; this.rows = ws.map(w => { const r = { x: bx, y: by, w: w + extra, h: bh }; bx += w + extra + gap; return r; });

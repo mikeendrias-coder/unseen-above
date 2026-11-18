@@ -20,6 +20,7 @@ import { overlay } from '../core/overlay.js';
 import { goNext, prevChapter } from '../core/flow.js';
 import { showStatus } from '../core/death.js';
 import { NOTICE } from '../data/dialogue.js';
+import { addBook } from '../core/books.js';
 import { fx } from '../core/fx.js';
 import { cg as CG } from '../ui/cg.js';
 
@@ -121,6 +122,9 @@ export class EastWing extends TopDownEpisode {
     this.addLook({ tx: 31, ty: 23, lines: N.bust });
     this.addLook({ tx: 45, ty: 16, lines: N.piano });
     this.addLook({ tx: DW.out[0], ty: DW.out[1] - 1, lines: N.hatch });
+    // the book (Part III): at the landing's west wall, the other way from the corridor; its
+    // glint shows over the dark
+    addBook(this, 3, { tx: 2, ty: 29 }, { depth: 1.8, glintDepth: 5.6 });
     this.radio = { step: 0, near: false };
     this.cutChains = new Set();
     this.lights = [];

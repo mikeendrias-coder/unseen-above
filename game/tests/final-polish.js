@@ -92,7 +92,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const card = await S(() => { const r = window.__finale.rows; return { bottom: 5 + 156, btn: r.map(q => [q.x, q.w]) }; });
   ok('the ending screen shows the credit under the form (' + Math.round((ec.top - cv.top) / uu) + ' to ' + Math.round((ec.bottom - cv.top) / uu) + ' of 180), inside the picture', await S(() => !document.getElementById('endcredit').hidden) && ec.top - cv.top >= card.bottom * uu && ec.bottom <= cv.bottom + 1 && ec.left >= cv.left && ec.right <= cv.right);
   ok('it is one block wide enough for the paper\'s full title (' + Math.round(await S(() => { const c = document.getElementById('endcredit'), r = document.createRange(); r.selectNodeContents(c); return r.getBoundingClientRect().width; })) + ' px of ' + Math.round(cv.w) + ')', await S(() => { const c = document.getElementById('endcredit'), r = document.createRange(); r.selectNodeContents(c); const q = r.getBoundingClientRect(), k = document.querySelector('#stage > canvas').getBoundingClientRect(); return q.left >= k.left && q.right <= k.right; }));
-  ok('four buttons that do not touch: TV AGAIN, CHAPTERS, ABOUT, TITLE ' + JSON.stringify(card.btn), card.btn.length === 4 && card.btn.every((q, i) => i === 0 || q[0] >= card.btn[i - 1][0] + card.btn[i - 1][1] + 2));
+  ok('five buttons that do not touch: TV AGAIN, CHAPTERS, ABOUT, PAPER, TITLE ' + JSON.stringify(card.btn), card.btn.length === 5 && card.btn.every((q, i) => i === 0 || q[0] >= card.btn[i - 1][0] + card.btn[i - 1][1] + 2));
   await shot('ending');
   await p.keyboard.press('KeyD'); await p.keyboard.press('KeyD'); await p.keyboard.press('Enter');
   await until(() => !document.getElementById('about').hidden, null, 3000);

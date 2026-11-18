@@ -6,6 +6,8 @@
 // (ENDLESS with an infinity sign; latched down unless NORMAL). Switches (sound, flashing, glasses) latch down while on and stay in step
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
 // Bright (Nov 18) lifts the picture for a washed-out projector (ui/bright.js).
+// The bar folds away with the keys toggle at the end of the hint line (Nov 18; saved, folded by
+// default in full screen), so the picture can take that room (core/display.js).
 // Presenter tools (Nov 18): Pres is presenter mode, H holds the picture (ui/pause.js), U is full
 // screen (main.js). On a satellite screen W A S D say "turn": they turn the globe. On its request
 // form W and S say "check", and the keys that do nothing there are blank and grey. In the
@@ -163,5 +165,26 @@ export function initKeys() {
   }
   sync();
   setInterval(sync, 250); // the keyboard and the menus change these too
-  window.__keys = { sync };
+  // the keys toggle at the end of the hint line: the bar folds away (saved, one setting for the
+  // window and one for full screen, where it starts folded), and the picture takes the room
+  const tog = document.getElementById('keys-toggle');
+  if (tog) {
+    tog.addEventListener('mousedown', ev => ev.preventDefault()); // the game keeps the keyboard
+    tog.addEventListener('click', () => {
+      state.set(fullNow() ? 'keysFoldedFs' : 'keysFolded', !keysFolded());
+      syncFold();
+      window.dispatchEvent(new Event('resize'));
+    });
+  }
+  syncFold();
+  window.__keys = { sync, fold: syncFold };
+}
+const fullNow = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+export const keysFolded = () => (fullNow() ? state.settings.keysFoldedFs !== false : !!state.settings.keysFolded);
+// show the bar folded or not, as saved for where it is now (main.js calls this on full screen)
+export function syncFold() {
+  const foot = document.getElementById('chrome-bottom'), tog = document.getElementById('keys-toggle');
+  const f = keysFolded();
+  if (foot) foot.classList.toggle('folded', f);
+  if (tog) { tog.setAttribute('aria-expanded', f ? 'false' : 'true'); tog.textContent = 'keys'; tog.setAttribute('aria-label', f ? 'Show the keys' : 'Fold the keys away'); }
 }

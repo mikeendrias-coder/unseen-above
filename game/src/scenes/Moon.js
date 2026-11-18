@@ -22,6 +22,7 @@ import { overlay } from '../core/overlay.js';
 import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
+import { addBook } from '../core/books.js';
 import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, PLAYROOM_REPLY, PLAYROOM_EMPTY, PLAYROOM_ASK, MOON_LOOKS, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { replies, emptyRoom, endingTitle, linkEnding } from '../data/endings.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
@@ -113,6 +114,8 @@ export class Moon extends SideEpisode {
     const VW = LEVEL.viewer, LV = LEVEL.live, liveLine = { n: 0 };
     this.things.push({ x0: VW.x - 8, x1: VW.x + 10, y0: 120, y1: GROUND, label: 'J', use: () => this.describe(['Earth, on its dark side.', 'Small fires everywhere.'], holeLine, VW.x, GROUND - 40) });
     this.things.push({ x0: LV.x, x1: LV.x + LV.w, y0: 120, y1: GROUND, label: 'J', use: () => this.describe(['Channel seven, live.', 'A girl on a street on the Moon.'], liveLine, LV.x + LV.w / 2, LV.y + LV.h + 4) });
+    // the book (Part V): on the plinth behind the door she came out of, behind where she starts
+    addBook(this, 5, { x: 17, y: LEVEL.start.y + 14 - 4 }, { reach: 5 });
     const LF = LEVEL.lost; this.addLook({ x0: LF.x - 4, x1: LF.x + LF.w + 4, y0: GROUND - 40, py: LF.y - 14, lines: MOON_LOOKS.lost, clue: 'lostGlasses' });
 
     // the street furniture is solid: benches, planters, the fountain's rim, basin and tiers

@@ -43,6 +43,10 @@ Playroom reply to ending: **Who picks the lights?** gives THE VEST. **Yes.** giv
 
 Endings and give-up mode: title screen, **Chapters**, right column. In presenter mode all five endings are open there.
 
+The paper's books: one in each episode (1, 3, 5, 6, 8), a small book on the floor with a glint, a step behind where she starts (walk left; in the east wing, at the landing's west wall). **J** on it opens that Part's EXHIBIT slip; **R** opens that Part of the paper in a new tab (the game pauses when its tab loses focus: **P** to go on), **J** closes. The ending screen counts BOOKS n/5. The paper itself: **Paper** on the title, **PAPER** on the ending screen, or **R** on How the game argues. The paper's excerpts come from paper.md when the game is built: run `npm run build` after editing it.
+
+The picture fills the window now. The small **keys** toggle at the right end of the hint line folds the key bar away for more picture (in full screen it starts folded).
+
 ## The route
 
 | Time | Stop | Key | What to show |

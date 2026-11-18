@@ -17,6 +17,7 @@ import { SideEpisode, K } from '../core/side.js';
 import { Props, Marks, Gold, hardCone, pushClear } from '../core/props.js';
 import { goNext, prevChapter } from '../core/flow.js';
 import { NOTICE, bodyLines } from '../data/dialogue.js';
+import { addBook } from '../core/books.js';
 import { Glasses } from '../core/glasses.js';
 import { fx } from '../core/fx.js';
 
@@ -147,6 +148,8 @@ export class Gallery extends SideEpisode {
     // the laser port, once it has fired at her: the sound it made
     this.emitterLook = look('emitter', 76 * T + 4, 78 * T - 4, G - 40, G, G - 34, N.emitter, { clue: 'laserTone' });
     this.things = this.things.filter(t => t !== this.emitterLook); // put out once the laser has fired
+    // the book (Part II): at the foot of the door she came in by, behind where she starts
+    addBook(this, 2, { x: 21, y: G }, { reach: 5 });
   }
 
   // ------------------------------------------------------------------ bodies: the robot tidies them

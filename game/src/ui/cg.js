@@ -227,6 +227,7 @@ function pageLayout(p) {
 }
 function drawPage(t) {
   const p = S.page; if (!p) return;
+  if (p.kind === 'exhibit') return drawExhibit(t, p);
   const L = p.layout || (p.layout = pageLayout(p)), x = Math.round(160 - L.w / 2), y = Math.max(4, Math.round((H - L.h) / 2));
   dim(0, 0, W, H);
   paper(x, y, L.w, L.h);
@@ -243,6 +244,59 @@ function drawPage(t) {
   // the stamp lands a beat after the slip, in the footer row beside ANY KEY (clear of the text
   // and the rules)
   if (age > 0.3) { const s = p.stamp || 'CH 07', sw = ccWidth(s) + 8; stamp(s, x + L.w - PAD - sw + 2, yy + 2, { fill: PAPER }); }
+}
+
+// ------------------------------------------------------------------ a book: the exhibit slip
+// A Part of the paper, found in an episode (core/books.js): EXHIBIT and the Part, the Part's
+// title, its first paragraph (grey and italic while it is still a placeholder), the how-to line on
+// the first book only, and two buttons with their keys: READ PART n (the paper, in a new tab) and
+// CLOSE. The picked button is inked in. p.hit holds the buttons for the mouse.
+const EX_W = 268, EX_COLS = Math.floor((EX_W - PAD * 2) / ADV), EX_MAX = 5, EX_ROW = 10;
+const hardBreak = s => String(s).replace(new RegExp('\\S{' + (EX_COLS + 1) + ',}', 'g'), w => w.match(new RegExp('.{1,' + EX_COLS + '}', 'g')).join(' '));
+// at most max lines; a cut ends on a whole word and an ellipsis
+function clip(lines, max) {
+  if (lines.length <= max) return lines;
+  const out = lines.slice(0, max); let last = out[max - 1];
+  while (last.length > EX_COLS - 1) last = last.replace(/\s*\S+$/, '');
+  out[max - 1] = last.replace(/[\s,.;:]+$/, '') + '…';
+  return out;
+}
+function exhibitLayout(p) {
+  const title = clip(ccWrap(hardBreak(p.title), EX_COLS), 2);
+  const text = clip(ccWrap(hardBreak(p.text), EX_COLS), EX_MAX);
+  const h = 3 + 10 + 4 + 18 + 5 + title.length * EX_ROW + 3 + text.length * EX_ROW + (p.howto ? EX_ROW + 2 : 0) + 4 + 4 + 15 + 5;
+  return { w: EX_W, h, title, text };
+}
+function drawExhibit(t, p) {
+  const L = p.layout || (p.layout = exhibitLayout(p)), x = Math.round(160 - L.w / 2), y = Math.max(2, Math.round((H - L.h) / 2));
+  dim(0, 0, W, H);
+  paper(x, y, L.w, L.h);
+  let yy = y + 3;
+  ccText(ctx, 'EXHIBIT', x + PAD, yy, INK_LO);
+  const no = 'BOOK ' + p.n + ' OF ' + (p.of || 5); ccText(ctx, no, x + L.w - PAD - ccWidth(no), yy, INK_LO);
+  yy += 10; rule(x + 4, yy, L.w - 8, INK); yy += 4;
+  ccText(ctx, 'PART ' + p.roman, x + PAD, yy, INK, { sx: 2, sy: 2 });
+  if (t - p.t0 > 0.3) { const s = p.stamp || 'ENTERED', sw = ccWidth(s) + 8; stamp(s, x + L.w - PAD - sw, yy + 1, { fill: PAPER }); }
+  yy += 18; rule(x + 4, yy, L.w - 8, RULE); yy += 5;
+  L.title.forEach(s => { ccText(ctx, s, x + PAD, yy, INK); yy += EX_ROW; });
+  yy += 3;
+  L.text.forEach(s => { ccText(ctx, s, x + PAD, yy, p.placeholder ? INK_LO : ASH.ash2, { italic: !!p.placeholder }); yy += EX_ROW; });
+  if (p.howto) { yy += 2; ccText(ctx, 'One book hides in every episode.', x + PAD, yy, INK_LO, { italic: true }); yy += EX_ROW; }
+  yy += 4; rule(x + 4, yy, L.w - 8, PAPER_LO); yy += 4;
+  // the buttons: READ PART n takes the room CLOSE does not need
+  const labels = [['R', 'READ PART ' + p.roman], ['J', 'CLOSE']], gap = 6, bh = 15;
+  const cw = labels.map(([k, s]) => capW(k) + 4 + ccWidth(s) + 10);
+  const closeW = cw[1], readW = L.w - PAD * 2 - gap - closeW;
+  const boxes = [{ id: 'read', x: x + PAD, y: yy, w: readW, h: bh }, { id: 'close', x: x + PAD + readW + gap, y: yy, w: closeW, h: bh }];
+  boxes.forEach((b, i) => {
+    const on = i === (p.pick || 0), [k, s] = labels[i];
+    ccBox(ctx, b.x, b.y, b.w, b.h, INK);
+    if (!on) ccBox(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, PAPER);
+    const inner = capW(k) + 4 + ccWidth(s), bx = Math.round(b.x + b.w / 2 - inner / 2);
+    keyCap(k, bx, b.y + 2);
+    ccText(ctx, s, bx + capW(k) + 4, b.y + 4, on ? PAPER : INK);
+  });
+  p.hit = boxes; p.box = { x, y, w: L.w, h: L.h };
 }
 
 // ------------------------------------------------------------------ the pause menu
@@ -323,6 +377,16 @@ export const cg = {
   // a notice: { num, title, lines, stamp } (lines may mark keys as {L})
   page(spec) { S.page = Object.assign({ t0: now(), closeAt: 0, num: 701 }, spec); delete S.page.layout; kick(); },
   closePage() { if (S.page && !S.page.closeAt) S.page.closeAt = now(); },
+  // what a book's slip has at this point of the pixel grid: 'read', 'close', 'slip' (the paper
+  // around them) or null (off the slip)
+  pageHit(x, y) {
+    const p = S.page; if (!p || p.closeAt || !p.box) return null;
+    const inside = r => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+    const b = (p.hit || []).find(inside); if (b) return b.id;
+    return inside(p.box) ? 'slip' : null;
+  },
+  // the slip's spec while it is up (core/books.js changes its pick), for tests too
+  get pageSpec() { return S.page && !S.page.closeAt ? S.page : null; },
   get pageUp() { return !!S.page && !S.page.closeAt; },
   menu(spec) { S.menu = spec; kick(); },
   get menuUp() { return !!S.menu; },

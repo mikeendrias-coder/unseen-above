@@ -9,7 +9,9 @@ const calm = (() => { try { return window.matchMedia('(prefers-reduced-motion: r
 // presenter: Michael's switch for the class walkthrough (ui and review.js read it; the typer reads
 // state.settings.presenter too). bigCaptions: the caption strip at double height (ui/cg.js).
 // bright: the picture lifted for a washed-out projector (ui/bright.js).
-const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm, presenter: false, bigCaptions: false, bright: false });
+// keysFolded / keysFoldedFs: the key bar under the game folded away, in the window and in full
+// screen (ui/keys.js; folded by default in full screen).
+const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm, presenter: false, bigCaptions: false, bright: false, keysFolded: false, keysFoldedFs: true });
 // story: what she found and did, for the endings (Nov 17). heard: lines already spoken, never replayed.
 const freshStory = () => ({ clues: {}, heard: {}, choice: null, creatorDeaths: 0, gaveUp: false, spared: false, killedBroken: false, endings: {} });
 // mode (Nov 18): how deaths cost her. 'normal': 5 lives, out of lives restarts the episode.

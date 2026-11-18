@@ -1,4 +1,4 @@
-// Boot: size the canvas to a whole-number pixel scale, then start with the opening.
+// Boot: size the picture to the window (core/display.js), then start with the opening.
 // ui/about.js first: while its notice is up it takes every key before anything below does.
 import { openAbout } from './ui/about.js';
 import { bright, setBright, syncBright } from './ui/bright.js';
@@ -7,7 +7,8 @@ import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
 import { initPicker, HASH, DIGITS, SHORT } from './ui/vibe.js';
 import { initPause } from './ui/pause.js';
-import { initKeys, onKeysChange } from './ui/keys.js';
+import { initKeys, onKeysChange, syncFold } from './ui/keys.js';
+import { openPaper } from './core/paper.js';
 import { cg } from './ui/cg.js';
 import { STEPS, stepOf, setJumper } from './core/flow.js';
 import { state } from './core/state.js';
@@ -91,6 +92,9 @@ function start(entry) {
       applyCss(game);
       game.scale.emit('rescale');
       fsFit();
+      // a layout that moves the canvas a moment later (the jump links, the keys folding) still
+      // maps the mouse right
+      setTimeout(() => game.scale.refresh(), 60);
     }, 150);
   });
   window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state, cg, goStep, toggleFull, toGuide, openAbout }; // toGuide: the ending screen's TITLE and CHAPTERS (ending/finale.js)
@@ -206,19 +210,31 @@ function fsRefused() {
   if (playing) overlay.note('Full screen blocked. F11 works too', 2600);
   else if (optFull) optFull.querySelector('i').textContent = 'blocked';
 }
-// in full screen the picture (and the strip under it) sits in the middle of the screen
+// in full screen the picture (and the strip under it) sits in the middle of the screen, above
+// the keys when they are unfolded
+const footEl = () => document.getElementById('chrome-bottom');
 function fsFit() {
   const st = stageEl(); if (!st) return;
   const on = fsOn();
   document.body.classList.toggle('fs', on);
-  if (!on) { st.style.removeProperty('--fs-pad'); return; }
+  if (!on) { st.style.removeProperty('--fs-pad'); if (game) game.scale.refresh(); return; }
   setTimeout(() => {
     const box = playing ? document.getElementById('overlay') : tv;
-    const h = box ? box.offsetHeight : 0;
-    st.style.setProperty('--fs-pad', Math.max(0, Math.floor((window.innerHeight - h) / 2)) + 'px');
+    const h = box ? box.offsetHeight : 0, foot = footEl();
+    const keys = foot && st.contains(foot) && !foot.classList.contains('folded') ? foot.offsetHeight + 4 : 0;
+    st.style.setProperty('--fs-pad', Math.max(0, Math.floor((window.innerHeight - keys - h) / 2)) + 'px');
+    if (game) game.scale.refresh(); // the canvas moved: the mouse maps through its new place
   }, 220);
 }
-const onFs = () => { fsFit(); window.dispatchEvent(new Event('resize')); if (!playing) syncGuide(); if (window.__keys) window.__keys.sync(); };
+// The hint and the keys go inside the stage in full screen (only the stage shows there), and back
+// under it after; the keys fold as saved for each.
+function placeKeys() {
+  const st = stageEl(), foot = footEl(); if (!st || !foot) return;
+  if (fsOn()) { if (foot.parentNode !== st) st.appendChild(foot); }
+  else if (foot.parentNode === st) st.after(foot);
+  syncFold();
+}
+const onFs = () => { placeKeys(); fsFit(); window.dispatchEvent(new Event('resize')); if (!playing) syncGuide(); if (window.__keys) window.__keys.sync(); };
 document.addEventListener('fullscreenchange', onFs);
 document.addEventListener('webkitfullscreenchange', onFs);
 
@@ -253,6 +269,7 @@ const optStory = document.getElementById('opt-story'), optFlash = document.getEl
 const optNew = document.getElementById('opt-new'), optPresent = document.getElementById('opt-present');
 const optFull = document.getElementById('opt-full'), optCaps = document.getElementById('opt-caps');
 const optBright = document.getElementById('opt-bright'), optAbout = document.getElementById('opt-about');
+const optPaper = document.getElementById('opt-paper');
 let stopPicker = () => {};
 initKeys();
 syncBright();
@@ -331,6 +348,8 @@ if (go) {
   if (optBright) optBright.addEventListener('click', () => { setBright(!bright()); syncGuide(); if (window.__keys) window.__keys.sync(); });
   // About: the one-page notice on how the game argues (ui/about.js); any key goes back
   if (optAbout) optAbout.addEventListener('click', () => openAbout());
+  // Paper: the paper itself (paper.html, beside the game), in a new tab
+  if (optPaper) optPaper.addEventListener('click', () => openPaper());
   if (optCaps) optCaps.addEventListener('click', () => { state.set('bigCaptions', !state.settings.bigCaptions); syncGuide(); window.dispatchEvent(new Event('resize')); });
   // New game: the first click asks, a second within four seconds clears her run (story, takes,
   // bodies, lines heard, how-to slips seen; the look, settings and switches stay)

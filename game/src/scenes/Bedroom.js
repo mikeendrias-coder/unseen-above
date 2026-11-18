@@ -18,6 +18,7 @@ import { display } from '../core/display.js';
 import { SideEpisode, inPoly, K } from '../core/side.js';
 import { goNext, prevChapter } from '../core/flow.js';
 import { BEDROOM, NOTICE, lineSeconds } from '../data/dialogue.js';
+import { addBook } from '../core/books.js';
 import { Glasses } from '../core/glasses.js';
 import { reviewKeys, presenting, rewindTo } from '../core/review.js';
 import { fx } from '../core/fx.js';
@@ -131,6 +132,8 @@ export class Bedroom extends SideEpisode {
     look(PH.x - 2, PH.x + PH.span + 2, PH.y - 4, N.photos, 96);
     look(HW.x - 4, HW.x + HW.w + 4, HW.y + HW.h + 2, N.window, 100);
     look(RQ.x - 8, RQ.x + 20, RQ.y - 2, N.request, 96, 'request4');
+    // the book (Part IV): against the wall behind where she starts; its glint shows in the dark
+    addBook(this, 4, { x: 21, y: LEVEL.start.y + 14 }, { reach: 5, glintDepth: 6.5 });
     // the show's tape marks (checkpoints): under the dining table, under the long table, by the
     // bag. A death in the run goes back to the bag, and the floor is whole again.
     this.tape = new Marks(this, LEVEL.marks.map(x => ({ x, y: GROUND })));
