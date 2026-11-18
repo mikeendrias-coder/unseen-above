@@ -15,7 +15,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **Kids' room cinematic** is still the old smooth high-res style (scenes/Kids.js, art/cinema.js). Rewrite in pixels next.
 - `done, check` **Cut the look vote on the Moon** (Michael, Nov 17). Vote board gone; the third planter is a planter. DRAFT lines redone, for Michael to check: playroom LITTLE KID "We do. We pick everything." / SISTER "My brother died under your lights."; a city person now says "It is only television, dear." The creator's "The kids voted for a fight tonight." stays (a different vote).
 - `todo` **Satellite screens keep their four-step change** (terminal, ground station, flat map, game show), redrawn in the chosen look's grid and type. (Nov 17)
-- `todo` **Captions get their own space.** A reserved strip outside the play area; captions never sit on top of the game. (Nov 17)
+- `done, check` **Captions get their own space.** A reserved strip outside the play area; captions never sit on top of the game. (Nov 17; Michael flagged it again on the backstage fight.) Done Nov 17: a 30-pixel strip under the picture (core/display.js STRIP) holds captions and narration, up to three lines. Speech over heads, title cards and how-to pages stay on the picture.
 
 ## 2. Harder, more interesting levels (after the look is set)
 - `todo` **Real platforming.** Levels are flat and too easy. Wants jumping around, wall jumps, different heights, platforms. Everything should make sense in the space. (Nov 17)

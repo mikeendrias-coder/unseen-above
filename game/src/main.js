@@ -40,6 +40,7 @@ function route() {
 let game = null, pause = null, playing = false;
 // the game's picture and its overlay, hidden while the channel guide is up
 function showGame(on) {
+  const st = document.getElementById('stage'); if (st) st.classList.toggle('playing', on);
   if (game && game.canvas) game.canvas.style.display = on ? '' : 'none';
   const o = document.getElementById('overlay'); if (o) o.style.display = on ? '' : 'none';
 }
@@ -139,6 +140,7 @@ const begin = entry => {
   playing = true; stopPicker();
   if (tv) tv.hidden = true; const note = document.getElementById('tv-note'); if (note) note.hidden = true;
   Sound.ensure();
+  { const st = document.getElementById('stage'); if (st) st.classList.add('playing'); }
   if (!game) { start(entry); return; }
   showGame(true);
   const { first, firstData } = entry || route();

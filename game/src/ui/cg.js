@@ -7,6 +7,7 @@
 //   the set      the viewer's own TV: sound and picture changes in green (on-screen display)
 // HTML elements beside it carry the same words for screen readers; this canvas is only pixels.
 import { ccText, ccWidth, ccWrap, ccBox, ccRich, ccCaptionBlock, plain, ADV } from '../art/ccfont.js';
+import { STRIP } from '../core/display.js';
 
 const W = 320, H = 180;
 // a broadcast palette that never changes with her world's look
@@ -22,6 +23,7 @@ const ease = u => 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3);
 function ensure() {
   if (ctx) return true;
   cv = document.getElementById('cg'); if (!cv) return false;
+  cv.height = H + STRIP; // the picture, then the caption strip under it
   ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
   return true;
 }
@@ -35,7 +37,7 @@ function frame() {
   S.osd = S.osd.filter(o => t < o.until);
   if (S.bug && t > S.bug.until) S.bug = null;
   if (S.rec && t > S.rec.until) S.rec = null;
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H + STRIP);
   if (!busy()) { running = false; return; }
   if (!S.menu) { drawCards(t); drawCaption(t); }
   drawPage(t); drawMenu(t); drawTop(t); // the set's own messages sit over the picture; pages and the menu cover them
@@ -43,17 +45,16 @@ function frame() {
 }
 
 // ------------------------------------------------------------------ captions
-// Captions live in the strip under everyone's feet (the floor is y 160 to 180 in every side
-// view), so they never cover a character: one line in the middle of the strip, two filling it,
-// a third only for a long line. What she looks at (narration) takes the strip over while it is
+// Captions live in their own strip under the picture (y 180 to 210 on this canvas), so they
+// never cover the game: one line in the middle of the strip, up to three filling it. What she looks at (narration) takes the strip over while it is
 // up, and the scene holds its own lines until it is gone.
-const CAP_COLS = 46, CAP_ROW = 10;
+const CAP_COLS = 50, CAP_ROW = 10;
 function drawCaption(t) {
   S.capRect = null;
   if (S.page) return; // a text page replaces the captions while it is up
   const d = S.desc, c = S.caption;
   const lines = d ? d.lines : c ? c.lines : null; if (!lines) return;
-  const n = lines.length, bottom = n === 1 ? 175 : 180;
+  const n = Math.min(3, lines.length), bottom = H + STRIP - Math.floor((STRIP - n * CAP_ROW) / 2);
   const r = ccCaptionBlock(ctx, lines, 160, bottom, { italic: d ? true : c.italic, row: CAP_ROW, top: 1, shown: d ? d.shown : undefined, alpha: d ? d.alpha : 1, ink: d ? d.ink : undefined });
   const x0 = Math.min(...r.boxes.map(b => b.x)), x1 = Math.max(...r.boxes.map(b => b.x + b.w));
   S.capRect = { x0, y0: r.top, x1, y1: bottom };

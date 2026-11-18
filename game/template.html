@@ -23,6 +23,8 @@
   h1 span { color: var(--red); }
   .tag { color: var(--quiet); }
   #stage { position: relative; display: flex; justify-content: center; max-width: 1940px; margin: 0 auto; min-height: 180px; }
+  /* while the game is on, room under the picture for the caption strip */
+  #stage.playing { padding-bottom: var(--strip, 120px); }
   #stage canvas { display: block; image-rendering: pixelated; outline: none; max-width: 100%; }
   #overlay { position: absolute; top: 0; left: 50%; transform: translateX(-50%); pointer-events: none; overflow: hidden; }
   #cg { position: absolute; inset: 0; width: 100%; height: 100%; }
