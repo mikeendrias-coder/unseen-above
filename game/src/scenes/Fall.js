@@ -77,12 +77,13 @@ const LANES = [
 ];
 const WARN = 0.9; // dust trickles down the whole lane this long before a chunk comes down
 // N in story mode: the next ledge down
-// the show's tape marks (checkpoints), where she stands and the floor's y: the third floor down
-// (clear of the falling bits), the ledge over the shaft, the stub halfway down it
-const MARKS = [{ x: 176, y: 320 }, { x: 250, y: 432 }, { x: 162, y: 528 }];
-// gold left out on the way down: under the first falling bits, on a floor, on the one that
+// the show's tape marks (checkpoints), where she stands and the floor's y: the second floor down
+// (right of its falling bits), the third (clear of them), the ledge over the shaft, the stub
+// halfway down it. None at the start (one step back) or on the rotten floor (it is the way out).
+const MARKS = [{ x: 264, y: 256 }, { x: 176, y: 320 }, { x: 250, y: 432 }, { x: 162, y: 528 }];
+// gold left out on the way down: under the first falling bits, under the second, on the one that
 // crumbles, and against the shaft's right wall where the bits come down
-const GOLD = [{ x: 150, y: 192 }, { x: 272, y: 256 }, { x: 240, y: 384 }, { x: 203, y: 610 }];
+const GOLD = [{ x: 150, y: 192 }, { x: 248, y: 256 }, { x: 240, y: 384 }, { x: 203, y: 610 }];
 const SKIP = [{ x: 120, y: 192 }, { x: 240, y: 256 }, { x: 140, y: 320 }, { x: 250, y: 432 }, { x: 162, y: 528 }, { x: 180, y: 672 }];
 
 function buildMap() {
@@ -361,7 +362,9 @@ export class Fall extends SideEpisode {
     if (this.black > 0) {
       const n = this.black >= 0.9 ? 4 : this.black >= 0.6 ? 3 : this.black >= 0.3 ? 2 : 1;
       kg.fillStyle(0x000000, 1);
-      if (n === 4) kg.fillRect(-2, -2, 324, 184); else for (let y = -2; y < 182; y++) if ((y & 3) < n && (n !== 2 || (y & 1) === 0)) kg.fillRect(-2, y, 324, 1);
+      // rows kept out of every four: 1 (row 0), 2 (rows 0 and 2), 3 (rows 0, 1 and 2)
+      const keep = [0, 0b0001, 0b0101, 0b0111][n];
+      if (n === 4) kg.fillRect(-2, -2, 324, 184); else for (let y = -2; y < 182; y++) if ((keep >> (y & 3)) & 1) kg.fillRect(-2, y, 324, 1);
     }
     this.drawLocks([]);
     this.drawHud();

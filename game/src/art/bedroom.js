@@ -56,14 +56,16 @@ export const LEVEL = {
   // under the long table, by his bag
   marks: [15 * T + 20, 628 + 22, 59 * T - 4],
   // gold left out, [x, the surface's y]: the piano, the dining table, the long table's silver,
-  // the billiard table, over the first gap in the run (bag and all), on top of the heap
-  gold: [[121, 128], [252, 132], [676, 132], [800, 134], [66 * T + 16, 112], [83 * T + 8, 80]],
-  // the run: a gap to jump, a slab to crouch under, a wide gap (the bag is heavy: one jump only,
-  // so three tiles, a long run-up jump; it was four tiles and a double jump before Nov 18),
+  // the billiard table, on the lip of the last gap in the run (right where to jump from), on top
+  // of the heap
+  gold: [[121, 128], [252, 132], [676, 132], [800, 134], [77 * T - 4, GROUND], [83 * T + 8, 80]],
+  // the run: a gap to jump, a slab to crouch under, a last gap (the bag is heavy: one jump only,
+  // so two tiles, the same as the first; it was four tiles and a double jump before Nov 18; three
+  // tiles left a 0.3 s take-off window with Space held, too tight for a class on a projector),
   // then the ceiling hanging down to a hand above the floor and a heap past it: climb the gap
   // between them by jumping from wall to wall
   run: {
-    gaps: [{ t0: 66, t1: 67, at: 66 * T - 70 }, { t0: 76, t1: 78, at: 76 * T - 74 }],
+    gaps: [{ t0: 66, t1: 67, at: 66 * T - 70 }, { t0: 77, t1: 78, at: 77 * T - 74 }],
     slab: { x: 1128, w: 34, top: 96, bottom: 150, at: 1128 - 84, warn: 0.5 },
     hang: { tx: 80, top: 1, bottom: 8 },  // the ceiling, down to y 144: she walks under it
     heap: { tx: 83, top: 5, bottom: 9 },  // a heap of it, 80 px tall: too high to jump

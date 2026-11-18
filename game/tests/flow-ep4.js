@@ -81,8 +81,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
       const k = s.kid, x = k.x + k.w;
       set('r', true);
       const near = (a, b) => x > a && x < b;
-      // with his bag she has no double jump: the wide gap is one long jump from its very edge
-      const jumpAt = [[958, 970], [1046, 1057], [1213, 1223]];
+      // with his bag she has no double jump: the last gap is one held jump from near its edge
+      const jumpAt = [[958, 970], [1046, 1057], [1222, 1232]];
       if (k.onGround && jumpAt.some(([a, b]) => near(a, b))) { jumpNow = true; set('j', true); }
       else if (k.vy > 0) set('j', false);
       set('d', x > 1120 && x < 1172);

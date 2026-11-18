@@ -230,6 +230,10 @@ export const NOTICE = {
   gold: {
     first: ['Gold, set right on her path.']
   },
+  // the first tape mark she ever reaches, in any episode (core/props.js Marks); never again
+  tape: {
+    first: ['Tape on the floor. If she dies, she starts here.']
+  },
   moon: {
     fountain: ['A gold fountain, the twin of the one on the grounds.', 'Up here, the water is the expensive part.'],
     bench: ['A bench. Nobody up here sits outside.'],

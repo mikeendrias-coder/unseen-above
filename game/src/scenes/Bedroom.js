@@ -749,7 +749,7 @@ export class Bedroom extends SideEpisode {
   hint() {
     if (this.mode !== 'house' || this.leaving) return overlay.hint('');
     const k = this.kid, x = (k.x + k.w / 2) / TILE;
-    if (this.collapse && !this.collapse.done && x < 79) return overlay.hint('Run. With the bag, no double jump. Crouch under the slab.');
+    if (this.collapse && !this.collapse.done && x < 79) return overlay.hint('Run. With the bag, one jump: hold Space at the edge. Crouch under the slab.');
     if (this.collapse && x >= 78) return overlay.hint('Jump from wall to wall to climb. Then the doors.');
     if (this.bag.have) return overlay.hint(this.collapse ? 'Go. The doors are at the end of the hall.' : 'Keep holding J. Something else is in the bag.');
     if (x < 12) return overlay.hint('Cameras click twice, then flash. Hide when they click.');

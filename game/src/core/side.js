@@ -318,27 +318,18 @@ export class SideEpisode extends Phaser.Scene {
     this.idleT = still ? (this.idleT || 0) + this.game.loop.delta / 1000 : 0;
     const glance = this.idleT > 4 && (this.idleT % 3.4) > 2.8;
     this.girl.setTexture(tex).setPosition(Math.round(k.x + k.w / 2), Math.round(k.y + k.h)).setFlipX(glance ? k.face > 0 : k.face < 0);
-    this.girl.setAlpha(k.inv > 0 && Math.floor(k.inv * 14) % 2 ? 0.3 : 1); // hurt: she blinks while safe
+    this.girl.setAlpha(k.inv > 0 && Math.floor(k.inv * 14) % 2 ? 0 : 1); // hurt: she blinks (gone on alternate beats, never see-through)
     // her shadow on whatever is under her, smaller the higher she is
     const sg = this.shadowG; if (!sg) return; sg.clear();
     if (!this.girl.visible || this.dead) return;
     const cx = k.x + k.w / 2; let gy = null;
     for (let d = 0; d < 48; d++) if (this.solidPx(cx, k.y + k.h + d)) { gy = k.y + k.h + d; break; }
     if (gy == null) return;
-    const h = gy - (k.y + k.h), w = Math.max(2, 7 - h / 6);
-    sg.fillStyle(0x000000, Math.max(0.08, 0.32 - h / 120) * this.girl.alpha); sg.fillEllipse(Math.round(cx), Math.round(gy), w * 2, 2);
-  }
-  // A light cone, the way ART_DIRECTION section 2 draws light: one flat lighter tone with a hard
-  // edge (a single fill, no stacked layers, no additive blending) and a 1 px rim along its two
-  // sides. It turns red as it locks on; the red steps up in three flat stages, not a fade.
-  drawCone(g, src, base, color, limit) {
-    const lockMix = Math.min(1, src.lock / (limit || LOCK)), col = lockMix > 0 ? hexNum(this.P.hazard) : hexNum(color);
-    const step = lockMix > 0 ? Math.ceil(lockMix * 3) / 3 : 0, a = Math.min(0.3, base + step * 0.1);
-    g.fillStyle(col, a); g.fillPoints(src.cone, true);
-    const c = src.cone, n = c.length; if (n < 3) return;
-    g.lineStyle(1, col, Math.min(0.55, a * 2.6));
-    g.lineBetween(Math.round(c[0].x), Math.round(c[0].y), Math.round(c[1].x), Math.round(c[1].y));
-    g.lineBetween(Math.round(c[0].x), Math.round(c[0].y), Math.round(c[n - 1].x), Math.round(c[n - 1].y));
+    if (!this.girl.alpha) return;
+    // a hard row of ash0 pixels, narrower the higher she is; from 16 px up, every other pixel
+    const h = gy - (k.y + k.h), w = Math.round(Math.max(2, 7 - h / 6)), x0 = Math.round(cx) - w, y = Math.round(gy);
+    sg.fillStyle(hexNum(this.P.crack), 1);
+    if (h < 16) sg.fillRect(x0, y, w * 2, 1); else for (let x = x0 + (y & 1); x < x0 + w * 2; x += 2) sg.fillRect(x, y, 1, 1);
   }
   drawLocks(sources, limit) {
     const fx = this.fxG, P = this.P, t = this.clock; fx.clear();

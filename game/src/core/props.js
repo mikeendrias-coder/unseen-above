@@ -29,7 +29,6 @@ import { Sound } from './sound.js';
 import { K } from './side.js';
 import { hexNum } from '../art/painter.js';
 import { ASH } from '../art/palettes.js';
-import { pixText } from '../art/pixfont.js';
 import { state } from './state.js';
 import { checkpointOf } from './death.js';
 import { NOTICE } from '../data/dialogue.js';
@@ -267,11 +266,13 @@ export function hardCone(g, pts, col, view) {
 }
 
 // ------------------------------------------------------------------ the show's marks on the floor
-// Checkpoints (Nov 18). Each section of an episode starts at a strip of gaffer tape on the floor
-// with a take mark (a small number), the way a crew marks where an actor starts. Standing on it
-// sets the visit's checkpoint (death.js): a death or Backspace starts her there; running out of
-// lives clears it and the episode starts from the top. A mark she has reached is bone white, the
-// next ones are dull; the one just reached blinks twice.
+// Checkpoints (Nov 18). Each section of an episode starts at a T of gaffer tape on the floor, the
+// way a crew marks where an actor starts (no number: the TAKE n stamp is the only count on screen).
+// Standing on it sets the visit's checkpoint (death.js): a death or Backspace starts her there;
+// running out of lives clears it and the episode starts from the top. A mark she has reached is
+// bone white, the next ones are dull; the one just reached blinks twice. Both have a 1 px ash0
+// outline, so the tape reads on the pale stone and balcony edges too. The first mark she ever
+// reaches, in any episode, says what it is (NOTICE.tape.first), once.
 //   this.marks = new Marks(this, [{ x, y }, ...]);          // side view: x her left edge, y the floor
 //   this.marks = new Marks(this, [{ tx, ty }, ...], { top: true });   // top-down tiles
 //   opts.carry(): extra data a retry from a mark needs (glasses on, pebbles in her pocket)
@@ -300,6 +301,13 @@ export class Marks {
     this.scene.markCheckpoint(at);
     Sound.noise(0.03, 0.04, 3200); Sound.tone(1250, 0.03, 'square', 0.01); // a slate clack, quiet
     if (this.opts.onMark) this.opts.onMark(i);
+    // what the tape means, once in the whole game: checked before hear(), so a busy bubble
+    // never uses the line up unseen
+    const b = this.scene.bubbles;
+    if (b && !b.busy('item') && !b.busy('tape') && state.hear('tape:first')) {
+      const p = this.top ? { x: m.tx * 16 + 8, y: m.ty * 16 } : { x: m.x + 4, y: m.y - K.hStand - 4 };
+      b.look('tape', { lines: NOTICE.tape.first }, () => p);
+    }
   }
   draw(g, seen) {
     this.list.forEach((m, i) => {
@@ -307,11 +315,11 @@ export class Marks {
       if (seen && !seen(x + 6, y)) return;
       const on = i <= this.active, lit = on && !(this.blink > 0 && i === this.active && Math.floor(this.blink * 8) % 2);
       const tape = C(lit ? 'bone' : 'boneLo'), dark = C('ash0');
-      // a strip of tape across the floor, torn at both ends, and a short leg down the floor's face
-      g.fillStyle(tape, 1); g.fillRect(x, y, 12, 2); g.fillRect(x + 5, y + 2, 2, 2);
-      g.fillStyle(dark, 1); g.fillRect(x, y + 1, 1, 1); g.fillRect(x + 11, y, 1, 1);
-      // the take mark: the section's number, in marker on the floor face beside the leg
-      pixText(g, String(i + 1), x + 8, y + 3, lit ? C('bone') : C('ash4'), 1, 1);
+      // a T of tape: a strip across the floor's top and a short leg down its face, outlined in
+      // ash0 so it shows on pale floors as well as dark ones
+      g.fillStyle(dark, 1); g.fillRect(x - 1, y - 1, 14, 4); g.fillRect(x + 4, y + 3, 4, 3);
+      g.fillStyle(tape, 1); g.fillRect(x, y, 12, 2); g.fillRect(x + 5, y + 2, 2, 3);
+      g.fillStyle(dark, 1); g.fillRect(x + 11, y + 1, 1, 1); g.fillRect(x, y, 1, 1); // torn ends
     });
   }
 }
@@ -319,9 +327,10 @@ export class Marks {
 // ------------------------------------------------------------------ gold left out on the path
 // Gold bait (research/features_nov17.md item 8): small gold pieces the show set out along the
 // best line and the risky one (near a light's edge, over a gap, on a board that gives way). She
-// picks one up by touching it. Picked pieces stay picked for this page visit, take after take.
-// The count is kept in the story for the results paperwork:
-//   state.story.gold       = { ep1: 3, ep2: 5, ... }  pieces she has picked up, per episode id
+// picks one up by touching it. Picked pieces stay picked take after take (a death, Backspace);
+// a new visit to the episode, or running out of lives, sets them all out again. The count is
+// kept in the story for the results paperwork:
+//   state.story.gold       = { ep1: 3, ep2: 5, ... }  pieces picked up on the latest visit, per episode id
 //   state.story.goldPlaced = { ep1: 8, ep2: 8, ... }  pieces the show set out, per episode id
 // (episode ids: ep1 grounds, ep2 gallery, ep3fall the fall, ep3 east wing, ep4 bedroom.) The
 // first piece she ever finds says one line; after that, only a two-note chime.
@@ -332,7 +341,13 @@ const TAKEN = {};
 export class Gold {
   constructor(scene, list, opts) {
     this.scene = scene; this.list = list; this.opts = opts || {}; this.top = !!this.opts.top;
-    this.key = scene.epId; this.taken = TAKEN[this.key] || (TAKEN[this.key] = new Set()); this.pops = []; this.t = 0;
+    this.key = scene.epId; this.pops = []; this.t = 0;
+    const d = (scene.sys.settings && scene.sys.settings.data) || {};
+    if (!TAKEN[this.key] || !d.retry || d.outOfTakes) {
+      TAKEN[this.key] = new Set();
+      const all = state.story.gold || {}; if (all[this.key]) state.storySet('gold', Object.assign({}, all, { [this.key]: 0 }));
+    }
+    this.taken = TAKEN[this.key];
     const placed = Object.assign({}, state.story.goldPlaced || {}); if (placed[this.key] !== list.length) { placed[this.key] = list.length; state.storySet('goldPlaced', placed); }
   }
   get count() { return this.taken.size; }
@@ -350,15 +365,15 @@ export class Gold {
     this.taken.add(i);
     const p = this.at(this.list[i]); this.pops.push({ x: p.x, y: p.y - 2, t: 0 });
     Sound.tone(1568, 0.05, 'square', 0.01); setTimeout(() => Sound.tone(2093, 0.08, 'square', 0.009), 60);
-    const all = Object.assign({}, state.story.gold || {}); all[this.key] = Math.max(all[this.key] || 0, this.taken.size); state.storySet('gold', all);
+    const all = Object.assign({}, state.story.gold || {}); all[this.key] = this.taken.size; state.storySet('gold', all);
     const s = this.scene;
-    if (state.hear('gold:first') && s.bubbles && !s.bubbles.busy('item')) s.bubbles.look('item', { lines: NOTICE.gold.first }, () => ({ x: p.x, y: p.y - 6 }));
+    if (s.bubbles && !s.bubbles.busy('item') && !s.bubbles.busy('tape') && state.hear('gold:first')) s.bubbles.look('item', { lines: NOTICE.gold.first }, () => ({ x: p.x, y: p.y - 6 }));
   }
   draw(g, seen) {
     this.list.forEach((m, i) => {
       if (this.taken.has(i)) return;
       const { x, y } = this.at(m); if (seen && !seen(x, y)) return;
-      // a gold ring lying flat: dark rim, gold body, one bright pixel; now and then a hard glint
+      // a gold ring lying on the floor: dark rim, gold body, one bright pixel; now and then a hard glint
       g.fillStyle(C('ash0'), 1); g.fillRect(x - 2, y - 4, 5, 4);
       g.fillStyle(C('gold'), 1); g.fillRect(x - 1, y - 3, 3, 2);
       g.fillStyle(C('goldLo'), 1); g.fillRect(x, y - 2, 1, 1);

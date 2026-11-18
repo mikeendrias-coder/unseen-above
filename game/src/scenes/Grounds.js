@@ -2,11 +2,12 @@
 // the face of the house to the front door on the balcony. Rebuilt Nov 17 (final pass): a tall
 // level in seven short sections (art/estate.js lists them), physics props (core/props.js), the
 // house hurts her (falls, a crate), what watches her kills her (lamps, drones, the scan).
-// A death restarts the episode; the body stays where it fell, older on every take.
+// A death starts the next take at the last tape mark she reached (core/props.js Marks); out of
+// lives, the episode starts from the top. The body stays where it fell, older on every take.
 import { Music } from '../core/music.js';
 import { hexNum, Painter } from '../art/painter.js';
 import { makeSprites, girlFrame } from '../art/sprites.js';
-import { TILE, VIEW_W, GROUND, TERRACE, LOGGIA, BALCONY, LEVEL, CITY_GROUND, buildMap, paintSky, paintMoon, paintCity, paintLevel } from '../art/estate.js';
+import { TILE, VIEW_W, GROUND, TERRACE, BALCONY, LEVEL, CITY_GROUND, buildMap, paintSky, paintMoon, paintCity, paintLevel } from '../art/estate.js';
 import { ASH } from '../art/palettes.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -99,8 +100,7 @@ export class Grounds extends SideEpisode {
     this.skipPoints = LEVEL.skip.map(([x]) => x * T);
     // the show's tape marks: a death goes back to the last one she stood on (core/props.js)
     this.markG = this.add.graphics().setDepth(1.3);
-    this.tapeHintT = 0;
-    this.tape = new Marks(this, LEVEL.marks.map(([x, y]) => ({ x, y })), { onMark: () => { if (state.hear('hint:tape')) this.tapeHintT = 4; } });
+    this.tape = new Marks(this, LEVEL.marks.map(([x, y]) => ({ x, y })));
     this.gold = new Gold(this, LEVEL.gold.map(([x, y]) => ({ x, y })));
     this.drawBodies();
     this.drawFloor();
@@ -178,7 +178,6 @@ export class Grounds extends SideEpisode {
     this.clock += dt; this.safeT = Math.max(0, (this.safeT || 0) - dt);
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
-    this.tapeHintT = Math.max(0, this.tapeHintT - dt);
     if (!this.dead && !this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); this.tape.update(dt); }
     else { this.dyn.update(dt); if (this.dead && this.girl.visible) this.settle(dt); }
     this.gold.update(dt);
@@ -357,7 +356,6 @@ export class Grounds extends SideEpisode {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
     if (this.scan) return overlay.hint(x > 93 ? 'W or J at the door.' : 'Run. If the scan reaches you, the strike comes.');
-    if (this.tapeHintT > 0) return overlay.hint('Tape on the floor: a new start. Backspace retries.');
     if (x < 15) return overlay.hint('A and D move. Space jumps. J looks at things.');
     if (x < 34) return overlay.hint('Hide in the hedges’ shadow. Space twice jumps higher.');
     if (x < 38) return overlay.hint('Jump from wall to wall to climb.');
