@@ -286,7 +286,7 @@ export class Bedroom extends SideEpisode {
   pullBag(held) {
     const B = this.bag; B.have = true; B.hold = 0; this.bagThing.off = true;
     Sound.tone(150, 0.2, 'triangle', 0.04, 90); Sound.noise(0.3, 0.06, 700);
-    this.say('His bag. Still heavy.');
+    if (state.hear('bd:bag')) this.say('His bag. Still heavy.'); // said once, not on every take
     fx.shake(this.cameras.main, 160, 0.004); Sound.tone(70, 0.6, 'sawtooth', 0.03, 50); // the beam above shifts
     if (!held) { B.letGo = true; this.time.delayedCall(800, () => this.bringDown()); }
   }

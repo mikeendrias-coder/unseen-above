@@ -89,7 +89,7 @@ function paint(P) {
   const ash0 = P.crack, ash1 = P.skyTop, ash2 = P.ground, ash3 = P.rubble, ash4 = P.rubbleHi;
   // the back wall of the stair hall and the shaft: wallpaper strips that give out the deeper it goes
   p.rect(0, 0, w, HH, P.void);
-  for (let y = 0; y < 24 * TILE; y += 2) p.rect(0, y, w, 2, y < 12 * TILE ? P.wallLo : 'd:' + P.wallLo + ':' + ash1 + ':checker');
+  for (let y = 0; y < 25 * TILE; y += 2) p.rect(0, y, w, 2, y < 12 * TILE ? P.wallLo : 'd:' + P.wallLo + ':' + ash1 + ':checker');
   for (let x = 6; x < w; x += 26) p.rect(x, 20, 3, 24 * TILE - 30, P.wallLine);
   p.rect(0, 16, w, 2, P.goldLo); p.rect(0, 18, w, 1, ash0);
   // where the floors of the house met the back wall: a dotted scar, not a ledge
@@ -322,7 +322,7 @@ export class Fall extends SideEpisode {
     this.chunks = this.chunks.filter(ch => ch.y < cam.worldView.bottom + 20);
     // speed: thin solid streaks rushing up past her as she drops
     const sg = this.streakG; sg.clear();
-    if (this.phase === 'falling' || this.phase === 'through') { sg.fillStyle(hexNum(P.rubble), 1); for (let i = 0; i < 10; i++) { const x = 150 + ((i * 53 + 17) % 120) - 60, y = 180 - ((t * 520 + i * 67) % 220); sg.fillRect(x, Math.round(y), 1, 14); } }
+    if (this.phase === 'falling' || this.phase === 'through') { sg.fillStyle(hexNum(P.rubble), 1); for (let i = 0; i < 10; i++) { const x = SX0 + 2 + ((i * 53 + 17) % (SX1 - SX0 - 4)), y = 180 - ((t * 520 + i * 67) % 220); sg.fillRect(x, Math.round(y), 1, 14); } }
     // a few red lights in the walls, blinking
     const lg = this.ledG; lg.clear();
     [[40, 30], [300, 52], [9 * TILE + 4, 26 * TILE], [13 * TILE + 2, 33 * TILE], [11 * TILE, 45 * TILE]].forEach(([x, y], i) => { if (Math.sin(t * 2 + i * 1.7) > 0) { lg.fillStyle(hexNum(P.led), 1); lg.fillRect(x, y, 1, 1); } });

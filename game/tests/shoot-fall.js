@@ -13,7 +13,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => { window.__noDeath = true; });
   for (let i = 0; i < 6; i++) { await p.evaluate(() => window.__game.scene.skipAhead()); await p.waitForTimeout(700); await shot('1-ledge' + i); if (await p.evaluate(() => window.__game.scene.phase !== 'walk')) break; }
   await p.waitForFunction(() => window.__game.scene.phase !== 'walk', null, { timeout: 8000 }); await shot('2-crack');
-  await p.waitForFunction(() => window.__game.scene.phase === 'through', null, { timeout: 10000 }); await p.waitForTimeout(80); await shot('3-through');
+  await p.waitForFunction(() => ['through', 'falling'].includes(window.__game.scene.phase), null, { timeout: 10000 }); await shot('3-through');
   await p.waitForFunction(() => window.__game.scene.phase === 'falling' && window.__game.scene.fallT > 0.6, null, { timeout: 10000 }); await shot('4-tumble');
   await p.waitForFunction(() => window.__game.scene.phase === 'dark' && window.__game.scene.landed, null, { timeout: 10000 }); await p.waitForTimeout(400); await shot('6-dark');
   await p.waitForFunction(() => window.__game.scene.sys.settings.key === 'eastwing' && window.__game.scene.clock > 1.6, null, { timeout: 20000 }); await shot('7-landing');
