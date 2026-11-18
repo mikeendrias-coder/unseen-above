@@ -92,7 +92,9 @@ function paintKeeper(P) {
   // a work bench with searchlight bulbs, a small TV on a crate
   p.rect(200, 120, 70, 4, P.wood); p.rect(200, 120, 70, 1, P.woodHi); p.rect(204, 124, 3, 36, P.wood); p.rect(263, 124, 3, 36, P.wood);
   for (let i = 0; i < 7; i++) { p.circle(208 + i * 8, 116, 3, P.glassLit); p.rect(207 + i * 8, 118, 3, 2, P.colLo); }
-  p.rect(230, 140, 26, 20, P.wood); p.rect(232, 124, 22, 16, P.device);
+  // the crate under the TV: solid (ROOMS.keeper.solids), so it reads as a crate: outline, light top, slats
+  p.rect(229, 139, 28, 21, P.crack); p.rect(230, 140, 26, 20, P.wood); p.rect(230, 140, 26, 1, P.woodHi); [146, 153].forEach(y => p.rect(231, y, 24, 1, P.crack));
+  p.rect(231, 123, 24, 17, P.crack); p.rect(232, 124, 22, 16, P.device);
   ['#b8b2a3', '#f5ce77', '#b8b2a3', '#f2d58c', '#6b6c70', '#e3412b', '#6b6c70'].forEach((c, i) => p.rect(234 + i * 3, 126, 3, 9, c));
   p.rect(234, 135, 18, 3, P.void); p.mark('tv', 243, 136);
   // a crew coat on a hook, a pass on a lanyard
@@ -144,7 +146,9 @@ const ROOMS = {
       { x0: 278, x1: 304, y: 42, text: ['A crew coat. The pass says SEASON 41.'] }
     ],
     // the small TV on the crate: J turns the dial. Every channel is 07.
-    use: { x0: 228, x1: 258, y: 122, key: 'tv', text: ['She turns the dial. Every channel is 07.'] }
+    use: { x0: 228, x1: 258, y: 122, key: 'tv', text: ['She turns the dial. Every channel is 07.'] },
+    // solid: the bench top (she walks under it), the crate and the TV on it
+    solids: [{ id: 'bench', x: 200, y: 120, w: 70, h: 4 }, { id: 'crate', x: 230, y: 140, w: 26, h: 20 }, { id: 'tv', x: 232, y: 124, w: 22, h: 16 }]
   },
   workshop: {
     paint: paintWorkshop, bg: 'wallLo',
@@ -154,7 +158,9 @@ const ROOMS = {
       { x0: 266, x1: 288, y: 88, text: [take => 'A clipboard. Episode 3, take ' + take + '. The fall: done.'] }
     ],
     // the small screen: J plays the tape. Her fall, over and over.
-    use: { x0: 262, x1: 306, y: 48, key: 'tape', text: ['Her fall, on tape. Over and over.', 'Under the screen: KEEP THE FALL.'] }
+    use: { x0: 262, x1: 306, y: 48, key: 'tape', text: ['Her fall, on tape. Over and over.', 'Under the screen: KEEP THE FALL.'] },
+    // solid: the bench top and its tray (she walks under the bench), the beam on the sawhorses
+    solids: [{ id: 'bench', x: 48, y: 118, w: 92, h: 4 }, { id: 'tray', x: 58, y: 112, w: 40, h: 6 }, { id: 'beam', x: 160, y: 128, w: 92, h: 8 }]
   },
   wardrobe: {
     paint: paintWardrobe, bg: 'wallLo', doorX: 286,
@@ -165,7 +171,8 @@ const ROOMS = {
       { x0: 74, x1: 116, y: 146, text: ['Small shoes in a row, worn down at the same heel.'] }
     ],
     // the cord of the one bulb: J pulls it. In the dark, the light behind the mirror stays on.
-    use: { x0: 240, x1: 262, y: 40, key: 'cord', text: ['In the dark, a red light behind the mirror.'] }
+    use: { x0: 240, x1: 262, y: 40, key: 'cord', text: ['In the dark, a red light behind the mirror.'] },
+    solids: [{ id: 'table', x: 182, y: 134, w: 54, h: 4 }] // the mirror's table: she walks under it
   },
   staff: {
     paint: paintStaff, bg: 'wallLo',
@@ -175,7 +182,9 @@ const ROOMS = {
       { x0: 250, x1: 276, y: 68, text: ['Spare glasses. Boxes of them.'] }
     ],
     // his bedroll (Option C): J unrolls it; inside, his route through the house, in his hand
-    use: { x0: 280, x1: 312, y: 146, key: 'bedroll', text: ['His map of the house. It ends in the bedroom.'] }
+    use: { x0: 280, x1: 312, y: 146, key: 'bedroll', text: ['His map of the house. It ends in the bedroom.'] },
+    // solid: the console desk under the monitors (she climbs over it); she comes in at the door
+    solids: [{ id: 'desk', x: 40, y: 128, w: 116, h: 4 }, { id: 'desk', x: 44, y: 132, w: 108, h: 28 }], spawnX: 22
   }
 };
 
@@ -198,7 +207,8 @@ export class Room extends SideEpisode {
     this.roomFx = this.add.graphics().setDepth(1);
     this.commonLayers();
     const dx = R.doorX || 18; this.doorX = dx;
-    this.spawn(dx < 160 ? 40 : dx - 22); this.kid.face = dx < 160 ? 1 : -1;
+    this.props = (R.solids || []).map(r => Object.assign({}, r)); // furniture she can stand on or bump into
+    this.spawn(R.spawnX != null ? R.spawnX : dx < 160 ? 40 : dx - 22); this.kid.face = dx < 160 ? 1 : -1;
     R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'J', noPrompt: false, use: () => this.describe(it) }); });
     // one thing to do in each room, not only to look at
     this.act = { on: false, t: 0, n: 0 }; this.roomId = data.id || 'staff'; this.useSrc = null; // the scene object is reused from room to room

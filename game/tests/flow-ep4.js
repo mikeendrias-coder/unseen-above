@@ -139,7 +139,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.rerun && window.__game.scene.mode === 'after', null, 20000);
   ok('back from the break: the bedroom again from the kneel, no lines, and he is gone', await p.evaluate(() => window.__game.scene.bro.texture.key === 'bro_dead'));
   await p.keyboard.down('ArrowRight'); await until(() => window.__game.scene.nearThing === window.__game.scene.voidThing, null, 10000); await p.keyboard.up('ArrowRight');
-  await p.keyboard.press('KeyE');
+  await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW'); // the void door is a door: W
   await until(() => window.__game.scene.mode === 'void', null, 4000);
   ok('E opens the door at the end', true);
   await until(() => document.querySelector('#card').classList.contains('on') && /EPISODE 4/.test(document.querySelector('#card').textContent), null, 15000);

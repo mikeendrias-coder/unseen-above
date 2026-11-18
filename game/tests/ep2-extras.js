@@ -36,7 +36,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   // the staff room and back
   await p.evaluate(() => { const s = window.__game.scene; s.robot.x = 205; s.robot.dir = 1; s.kid.x = 8 * 16 + 4; s.kid.y = 322; });
   await until(() => { const s = window.__game.scene; return s.nearThing && s.nearThing.label === 'J' && s.nearThing !== s.cabinetThing; });
-  await press('KeyE');
+  await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW'); // doors are W
   await until(() => window.__game.scene.sys.settings.key === 'room' && window.__game.scene.clock > 0.5);
   ok('the staff door opens the staff room', true);
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 200; s.kid.y = 146; });
@@ -44,7 +44,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 290; s.kid.y = 146; });
   await until(() => !!window.__game.scene.nearThing); await press('KeyE'); await p.waitForTimeout(1500); await shot('room2');
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 22; s.kid.y = 146; });
-  await until(() => !!window.__game.scene.nearThing); await press('KeyE');
+  await until(() => !!window.__game.scene.nearThing); await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW');
   await until(() => window.__game.scene.sys.settings.key === 'gallery' && window.__unseen.game.scene.isActive('gallery'));
   ok('back in the gallery, glasses still on: ' + await p.evaluate(() => window.__game.scene.glasses), await p.evaluate(() => window.__game.scene.glasses));
   // the light switch: the gold goes dark, the red stays

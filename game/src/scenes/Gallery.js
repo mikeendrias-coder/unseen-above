@@ -14,7 +14,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode, K } from '../core/side.js';
-import { Props, Marks, Gold, hardCone } from '../core/props.js';
+import { Props, Marks, Gold, hardCone, pushClear } from '../core/props.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE, bodyLines } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
@@ -245,12 +245,15 @@ export class Gallery extends SideEpisode {
         D.y = M - 6; D.phase = 'down';
         fx.shake(this.cameras.main, 260, 0.014); Sound.noise(0.6, 0.18, 3000); Sound.tone(1800, 0.25, 'triangle', 0.025, 2600);
         this.burst.explode(10, X.x, M - 4);
-        this.props.push({ id: 'fallen chandelier', x: X.x - 13, y: M - 7, w: 26, h: 7 });
-        const hit = !window.__noDeath && k.x + k.w > X.x - X.footprint && k.x < X.x + X.footprint && k.y + k.h > M - 30 && k.y < M;
+        // the wreck is solid where it is drawn (28 x 7), so she can stand on it or bump into it
+        const wreck = { id: 'fallen chandelier', x: X.x - 14, y: M - 7, w: 28, h: 7 };
+        this.props.push(wreck);
+        const hit = k.x + k.w > X.x - X.footprint && k.x < X.x + X.footprint && k.y + k.h > M - 30 && k.y < M;
         if (hit && !this.dead) {
-          this.hurt(2, 'chandelier');
-          // the house hurt her: it throws her clear of the wreck
-          if (!this.dead) { const s = kc < X.x ? -1 : 1; k.vx = s * 120; k.vy = -150; k.onGround = false; for (let i = 0; i < 24 && this.boxHits(k.x, k.y, k.w, k.h); i++) k.x += s; }
+          this.hurt(2, 'chandelier'); // the house: HP (hurt() decides what story mode and tests do)
+          // it throws her clear of the wreck, hurt or not, so she is never left inside it (Nov 18:
+          // in story mode she stood stuck inside the fallen chandelier)
+          if (!this.dead) pushClear(this, wreck, kc < X.x ? -1 : 1);
         }
       }
     }
@@ -507,7 +510,7 @@ export class Gallery extends SideEpisode {
   hint() {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
-    if (this.atDoor()) return overlay.hint('W or J at the door.');
+    if (this.atDoor()) return overlay.hint('W at the door.');
     if (x > 73) return overlay.hint('Low beam: jump it. Two beams: crouch. Door at the end.');
     if (!this.glasses && x < 20) return overlay.hint('A and D move. Space jumps. J uses things and talks.');
     if (!this.glasses) return overlay.hint('Something here is watching you. You cannot see it yet.');

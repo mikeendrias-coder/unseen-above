@@ -251,6 +251,25 @@ export class Props {
 // one flat tone, lined up with the world's pixels, with its two edges drawn solid (fill 'solid'
 // lays every pixel instead, for thin beams in the sky). No alpha, no blending, no hatching
 // (docs/ART_DIRECTION.md section 2). view (optional) clips it to what is on screen.
+// Something solid just landed where she stands (a chandelier, a slab): move her out of rect r,
+// toward side s (-1 left, 1 right) first, then the other way, then up on top of it, and give her
+// a small knock that way. She is never left inside a solid thing, whatever HP or story mode did.
+export function pushClear(scene, r, s, knock) {
+  const k = scene.kid; if (!k) return;
+  const inside = () => k.x < r.x + r.w && k.x + k.w > r.x && k.y < r.y + r.h && k.y + k.h > r.y;
+  if (!inside() && !scene.boxHits(k.x, k.y, k.w, k.h)) return;
+  const x0 = k.x, y0 = k.y, reach = r.w + k.w + 24;
+  let side = 0;
+  for (const dir of [s || 1, -(s || 1)]) {
+    for (let d = 1; d <= reach; d++) if (!scene.boxHits(x0 + dir * d, y0, k.w, k.h)) { k.x = x0 + dir * d; side = dir; break; }
+    if (side) break;
+  }
+  if (!side) { k.x = x0; k.y = r.y - k.h; for (let i = 0; i < 40 && scene.boxHits(k.x, k.y, k.w, k.h); i++) k.y -= 1; }
+  if (knock !== false) { k.vx = (side || s || 1) * 120; k.vy = -150; k.onGround = false; }
+  else { k.vx = 0; k.vy = 0; }
+  k.peakY = k.y;
+}
+
 export function hardCone(g, pts, col, view, fill) {
   if (!pts || pts.length < 3) return;
   const solid = fill === 'solid';

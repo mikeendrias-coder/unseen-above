@@ -33,7 +33,8 @@ export const LEVEL = {
   polisher: { x0: 56 * T + 6, x1: 59 * T + 6, speed: 26 },  // clear of the top of the atrium wall (N lands there)
   boards: [{ x: 60 * T, y: MEZZ, w: 32 }, { x: 62 * T, y: MEZZ, w: 32 }],
   dropper: { x: 69 * T + 8, hang: 150, warn: 0.45, footprint: 14 },
-  props: [],
+  // solid things off the grid: the heap of dust sheets on the atrium floor (she stands on it)
+  props: [{ id: 'dust sheets', x: 37 * T + 3, y: GROUND - 6, w: 130, h: 6 }],
   camLock: 0.55, // cameras take a little longer than lamps to lock on
   cameras: [
     // sweep: a smooth pan between two angles (degrees, y down), over the broken stair
@@ -259,7 +260,10 @@ export function paintLevel(P, map, dark) {
   const rail = (x0, x1) => { for (let x = x0; x < x1; x += 5) p.rect(x, M - 12, 2, 12, P.col); p.rect(x0, M - 13, x1 - x0, 2, P.colHi); };
   rail(33 * T, 37 * T - 2); rail(54 * T + 2, 60 * T); rail(64 * T, 73 * T);
   portrait(p, P, 40 * T, 46, 40, 52, 'house', false); portrait(p, P, 46 * T, 60, 30, 38, 'lady', false); portrait(p, P, 51 * T - 4, 44, 26, 34, 'man', true, 1);
-  for (let x = 37 * T + 4; x < 54 * T - 20; x += 26) { const h = 5 + (x * 7) % 5; p.rect(x - 1, G - h - 1, 26, h + 1, O); p.rect(x, G - h, 24, h, P.colLo); p.rect(x, G - h, 24, 1, P.col); p.rect(x + 6 + (x % 5), G - h + 1, 1, h - 1, P.rubble); p.rect(x + 15, G - h + 2, 1, h - 2, P.rubble); }
+  // the dust sheets: one low heap she can stand on (LEVEL.props 'dust sheets'), its top flat, its
+  // folds in the face; the far end of the floor stays bare for the robot's row of bodies
+  const SH = LEVEL.props[0];
+  for (let x = SH.x + 1; x < SH.x + SH.w - 1; x += 26) { const h = SH.h, w = Math.min(24, SH.x + SH.w - 1 - x); p.rect(x - 1, G - h - 1, w + 2, h + 1, O); p.rect(x, G - h, w, h, P.colLo); p.rect(x, G - h, w, 1, P.col); p.rect(x + 6 + (x % 5), G - h + 1, 1, h - 1, P.rubble); p.rect(x + 15, G - h + 2, 1, h - 2, P.rubble); }
   // ---- D, the worn upper gallery: stains and cracks, a missing portrait, the hole in the roof
   // pale marks where paintings used to hang: an outline in the wall's light tone, a nail
   [[54 * T + 10, 34, 24, 30], [64 * T + 2, 44, 32, 40], [66 * T + 12, 104, 20, 26], [71 * T - 2, 30, 22, 28], [55 * T + 4, 140, 18, 22]].forEach(([x, y, w, h]) => {

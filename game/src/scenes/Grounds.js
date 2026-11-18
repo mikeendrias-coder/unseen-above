@@ -360,7 +360,7 @@ export class Grounds extends SideEpisode {
   hint() {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
-    if (this.atDoor()) return overlay.hint('W or J at the door.');
+    if (this.atDoor()) return overlay.hint('W at the door.');
     if (this.scan) return overlay.hint(x > 90 ? 'The door is just ahead.' : 'Run. If the scan reaches you, the strike comes.');
     if (x < 15) return overlay.hint('A and D move. Space jumps. J looks at things.');
     if (x < 34) return overlay.hint('Hide in the hedges’ shadow. Space twice jumps higher.');
