@@ -21,6 +21,13 @@ This is the only file to edit. The page (paper.html) is built from it.
    own line anywhere below as "[^1]: text of the note". Notes are numbered in the order
    they first appear in the text, so the labels can be anything ([^ost], [^kyl]).
    A long note can go on over more lines if those lines start with two spaces.
+   Citations, Bluebook style:
+     [^kyl]: National Defense Authorization Act for Fiscal Year 1997, Pub. L. No. 104-201, § 1064, 110 Stat. 2422, 2653 (1996).
+     [^two]: *See* G.A. Res. 41/65, supra note [^kyl], princ. IV.   (supra note [^label] becomes the right number by itself)
+     [^three]: Id. art. IX.   (Id., supra and infra are put in italics for you)
+   Links: paste the bare URL, or [text](https://...). They open in a new tab.
+   Your own "Cite this paper" text: add a section "## Cite this paper" near the end; its first
+   paragraph is the Bluebook form, the second the plain form. Without it, the page makes one.
 
 6. Rebuild. In a terminal, from the game folder:
      node paper/build.js           just the paper (under a second)
