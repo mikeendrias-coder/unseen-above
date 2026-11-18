@@ -79,12 +79,12 @@ const norm = s => String(s).replace(/\s+/g, ' ').trim();
     await p.close();
   }
 
-  // ---- her bodies: one from take 1 on the grounds, killed by a lamp
+  // ---- her bodies: one from take 1 on the grounds, killed by a lamp (laid by the start, on the floor)
   {
     const p = await open('grounds');
-    await p.evaluate(() => { const s = window.__game.scene; window.__game.state.addBody(s.epId, 30 * 16, 160, 'garden lamp'); s.scene.restart({}); });
+    await p.evaluate(() => { const s = window.__game.scene; const st = s.level.start; window.__game.state.addBody(s.epId, st.x + 20, st.y + 14, 'garden lamp'); s.scene.restart({}); });
     await p.waitForFunction(() => window.__game.scene.clock > 0.6 && window.__game.scene.things.some(t => t.body), null, { timeout: 20000, polling: 50 });
-    await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 30 * 16 - 2 - k.w / 2; k.y = 120; k.vx = 0; k.vy = 0; });
+    await p.evaluate(() => { const s = window.__game.scene, k = s.kid, st = s.level.start; k.x = st.x + 18 - k.w / 2; k.y = st.y; k.vx = 0; k.vy = 0; });
     await p.waitForTimeout(500);
     const near = await p.evaluate(() => !!(window.__game.scene.nearThing && window.__game.scene.nearThing.body));
     ok('standing by her old body, E is on offer', near);
