@@ -35,7 +35,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await cardOn('END OF EPISODE 1'); ok('episode 1 door: ' + await card(), true);
   await scene('satellite');
   ok('then satellite batch ' + await p.evaluate(() => window.__game.scene.batch + ', screen ' + window.__game.scene.skinN), await p.evaluate(() => window.__game.scene.batch === 1));
-  const solveBatch = async () => { for (let i = 0; i < 3; i++) { await until(() => !window.__game.scene.solved); await p.evaluate(() => window.__game.scene.win()); await until(i => window.__game.scene.levelIdx > i || window.__game.scene.ended, i); } };
+  // one turning puzzle per batch (batch 1 starts with the ring): win() each until the batch ends
+  const solveBatch = async () => { for (let i = 0; i < 4; i++) { await until(() => window.__game.scene.ended || (window.__game.scene.level && !window.__game.scene.solved)); const lv = await p.evaluate(() => window.__game.scene.ended ? -1 : window.__game.scene.levelIdx); if (lv < 0) break; await p.evaluate(() => window.__game.scene.win()); await until(lv => window.__game.scene.levelIdx > lv || window.__game.scene.ended, lv); } };
   await solveBatch();
   await cardOn('END OF BATCH 1'); ok('end of batch 1: ' + await card(), true);
   // episode 2

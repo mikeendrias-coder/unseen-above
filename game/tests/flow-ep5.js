@@ -10,7 +10,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const until = (fn, arg, ms) => p.waitForFunction(fn, arg, { timeout: ms || 60000, polling: 50 });
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   const key = () => p.evaluate(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key);
-  const solveBatch = async () => { for (let i = 0; i < 3; i++) { await until(() => !window.__game.scene.solved); await p.evaluate(() => window.__game.scene.win()); await until(i => window.__game.scene.levelIdx > i || window.__game.scene.ended, i); } };
+  // one turning puzzle per batch (batch 1 starts with the ring): win() each until the batch ends
+  const solveBatch = async () => { for (let i = 0; i < 4; i++) { await until(() => window.__game.scene.ended || (window.__game.scene.level && !window.__game.scene.solved)); const lv = await p.evaluate(() => window.__game.scene.ended ? -1 : window.__game.scene.levelIdx); if (lv < 0) break; await p.evaluate(() => window.__game.scene.win()); await until(lv => window.__game.scene.levelIdx > lv || window.__game.scene.ended, lv); } };
   await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html#batch4'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'satellite' && window.__game.scene.batch === 4);

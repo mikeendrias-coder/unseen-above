@@ -26,7 +26,7 @@ export function winSound(scene, skin) {
 // The game show's Earth: a cartoon globe the kids would recognize (the Americas, Africa and
 // Europe, Greenland, a few clouds), shaded like a ball, with a thick white outline. Shapes are
 // in unit coordinates on the disc, so the globe draws cleanly at any size.
-const LAND = [
+export const LAND = [
   [[-0.78, -0.5], [-0.55, -0.72], [-0.2, -0.74], [-0.02, -0.56], [-0.12, -0.42], [-0.18, -0.24], [-0.32, -0.12], [-0.42, -0.02], [-0.5, -0.18], [-0.7, -0.26]], // North America
   [[-0.42, -0.04], [-0.3, -0.06], [-0.22, 0.12], [-0.3, 0.16]],                                                   // Central America
   [[-0.3, 0.12], [-0.06, 0.16], [0.08, 0.34], [-0.02, 0.56], [-0.16, 0.86], [-0.28, 0.74], [-0.36, 0.42]],          // South America
@@ -35,7 +35,7 @@ const LAND = [
   [[0.34, -0.14], [0.68, -0.2], [0.88, 0.04], [0.74, 0.42], [0.54, 0.66], [0.46, 0.34], [0.3, 0.14]]               // Africa
 ];
 const CLOUDS = [[-0.66, -0.12, 0.3], [0.12, -0.38, 0.26], [0.2, 0.62, 0.34], [-0.86, 0.3, 0.18]]; // [u, v, half width]
-const inPoly = (pts, x, y) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+export const inPoly = (pts, x, y) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
 function globeTexture(scene, r) {
   const key = 'win_globe_' + r;
   if (scene.textures.exists(key)) return key;
@@ -69,7 +69,12 @@ export class WinFx {
   }
   start(skin, board, extra) {
     this.on = { skin, board, t: 0, extra: extra || {} };
-    if (skin === 4) {
+    if (skin === 4 && extra && extra.girl) {
+      // the globe puzzle: the zap comes for the girl where she stands on the turning Earth
+      this.on.earth = { x: extra.girl.x, y: extra.girl.y + 2, r: 0 }; this.on.onGlobe = true;
+      this.on.zapAt = 1.0; this.on.zapped = false; this.on.hitAt = null;
+      const P = LOOKS[state.look] || LOOKS.A; this.on.girl = { hair: flat(P.hair), body: '#ff8fc8' };
+    } else if (skin === 4) {
       const b = board, ex = b.x + b.w * 0.74, ey = b.y + b.h * 0.78;
       const r = Math.round(b.w * 0.13);
       this.on.earth = { x: Math.round(ex), y: Math.round(ey), r };
