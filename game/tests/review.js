@@ -58,7 +58,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok(`chandelier at 3 HP: HP ${hurt.hp}, thrown clear (inside the wreck: ${hurt.inside}), she walks away (${moved})`, hurt.hp === 1 && !hurt.dead && !hurt.inside && moved);
   // the line depends on the mode (core/death.js EXPLAIN): IMMUNE says lights and lasers reset her
   const hpLine = { normal: 'HP: hits. Lights and lasers take a life.', endless: 'HP: hits. Lights and lasers take a life.', immune: 'HP: hits. Lights and lasers reset you.' }[(await rec()).mode];
-  ok('the first HP lost explains HP in the strip (' + hpLine + ')', await until(t => [...window.__ccSeen].some(c => c.includes(t)), hpLine, 6000).then(() => true, async () => { console.log('     strip showed: ' + JSON.stringify(await S(() => [...window.__ccSeen]))); return false; }));
+  ok('the first HP lost explains HP in the strip (' + hpLine + ')', await until(t => [...window.__ccSeen].some(c => c.startsWith('HP: hits.')), hpLine, 6000).then(() => true, async () => { console.log('     strip showed: ' + JSON.stringify(await S(() => [...window.__ccSeen]))); return false; }));
   await S(() => clearInterval(window.__ccPoll));
   await p.keyboard.press('Backspace'); await back();
   const g0 = await rec();
