@@ -82,6 +82,21 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.nearThing === window.__game.scene.cabinetThing); await press('KeyJ');
   await until(() => window.__game.state.hasClue('drawer'));
   ok('on a later take the glasses are back in the drawer (clue drawer)', true);
+  // the tape marks: with the glasses on, she stands on the second mark; a death starts her there,
+  // glasses still on, and the mark she reached shows lit (Nov 18 checkpoints)
+  await until(() => window.__game.scene.glasses);
+  await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene, m = s.tape.list[1], k = s.kid; k.x = m.x; k.y = m.y - 14; k.vx = 0; k.vy = 0; });
+  await until(() => window.__game.scene.tape.active === 1);
+  const take = await p.evaluate(() => window.__game.scene.ep.take);
+  await p.evaluate(() => { window.__noDeath = false; window.__game.scene.die({ id: 'test', direct: true }); });
+  await until(t => { const s = window.__game.scene; return s.ep.take > t && !s.dead && s.clock > 0.3; }, take);
+  const back = await p.evaluate(() => { const s = window.__game.scene, m = s.tape.list[1]; return { at: Math.round(s.kid.x) === m.x && Math.round(s.kid.y + s.kid.h) === m.y, glasses: s.glasses && s.gl.on, active: s.tape.active }; });
+  ok('a death goes back to the last tape mark, glasses on ' + JSON.stringify(back), back.at && back.glasses && back.active === 1);
+  await shot('tape');
+  // gold: touching a piece picks it up and counts it in the story
+  await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene, m = s.gold.list[5], k = s.kid; k.x = m.x - 4; k.y = m.y - 14; k.vx = 0; k.vy = 0; });
+  await until(() => window.__game.scene.gold.count > 0);
+  ok('a gold piece is picked up and counted (' + JSON.stringify(await p.evaluate(() => window.__game.state.story.gold)) + ' of ' + JSON.stringify(await p.evaluate(() => window.__game.state.story.goldPlaced)) + ')', await p.evaluate(() => window.__game.state.story.gold.ep2 >= 1 && window.__game.state.story.goldPlaced.ep2 === window.__game.scene.gold.list.length));
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
   await b.close();
 })().catch(e => { console.log('FAIL ' + e.message.split('\n')[0]); process.exit(1); });
