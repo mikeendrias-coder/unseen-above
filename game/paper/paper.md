@@ -43,7 +43,7 @@ Michael Endrias · Intro to Space Law · Prof. A.J. Link · Fall 2026
 
 ## TL;DR
 
-Space law protects powerful states from being seen, not people from being watched. In 2026 the U.S. "asked" satellite companies to hide the Iran war: the public lost its view, the government kept its own, and the people photographed every day were never asked at all. That is a choice, not a gap. Article VI of the Outer Space Treaty already makes states supervise their satellite companies, and they can do it for people.
+Space law could work for people if States chose it to. Powerful States instead choose to use space law and space to protect themselves from being seen, rather than protecting people from being seen. In 2026, the US government “asked” satellite companies to obscure imagery of its war with Iran: the public was denied seeing while the US government retained its own view, and the people being imaged, as every day, were never asked. Article VI of the Outer Space Treaty obliges States to supervise space activities by their nationals, including companies, and that could apply to people, too.
 
 ## Executive summary
 
