@@ -49,7 +49,7 @@ function field(x, t) {
   box(x, 0, 62, TVW, TVH - 62, A.ash2); for (let y = 66; y < TVH; y += 5) box(x, 0, y, TVW, 1, A.ash1);
   for (let i = 0; i < 40; i++) box(x, (i * 37) % TVW, 63 + ((i * 13) % 34), 1, 2, A.ash3);
   const cyc = 16, u = (t % cyc) / cyc, stop = u > 0.42 && u < 0.58;
-  const mx = Math.round(-6 + (u < 0.42 ? u / 0.42 * 66 : u < 0.58 ? 66 : 66 + (u - 0.58) / 0.42 * 90)), fy = 86;
+  const mx = Math.round(-6 + (u < 0.42 ? u / 0.42 * 66 : u < 0.58 ? 66 : 66 + (u - 0.58) / 0.42 * 90)), fy = 80; // above the TAKE strip
   const dx = mx + 1, dy = 14 + Math.round(Math.sin(t * 2) * 1);
   // the light: a hard checker wedge from the drone to the ground around him
   for (let y = dy + 3; y < fy + 2; y++) { const hw = Math.round((y - dy) * 0.28); for (let xx = dx - hw; xx <= dx + hw; xx++) if ((xx + y) % 2 === 0 && xx >= 0 && xx < TVW) box(x, xx, y, 1, 1, A.boneLo); }
@@ -127,25 +127,29 @@ function testCard(x, t) {
 }
 
 // The dial: the ending's own feed is channel 7 (finale.js draws it); the rest are here.
+// corner: where its mark sits (and where the set's number shows after a flip), clear of what the
+// channel is about: on BASEMENT the camera is top right, so the mark goes top left.
 export const CHANNELS = [
-  { n: 7, own: true },
-  { n: 12, name: 'THE CABIN', draw: cabin, sound: 'drone' },
-  { n: 19, name: 'THE FIELD', draw: field, sound: 'drone' },
-  { n: 23, name: 'BASEMENT', draw: basement, sound: 'steps' },
-  { n: 31, name: 'MAIN STREET', draw: street, sound: 'crowd' },
-  { n: 44, name: 'NO SIGNAL', draw: testCard, sound: 'beep', noBug: true }
+  { n: 7, own: true, corner: 'tr' },
+  { n: 12, name: 'THE CABIN', draw: cabin, sound: 'drone', corner: 'tr' },
+  { n: 19, name: 'THE FIELD', draw: field, sound: 'drone', corner: 'tr' },
+  { n: 23, name: 'BASEMENT', draw: basement, sound: 'steps', corner: 'tl' },
+  { n: 31, name: 'MAIN STREET', draw: street, sound: 'crowd', corner: 'tr' },
+  { n: 44, name: 'NO SIGNAL', draw: testCard, sound: 'beep', noBug: true, corner: 'tr' }
 ];
-export function drawChannel(x, ch, t) {
+// osd: the set's number is up, over the mark, so the mark is left out (it would show twice)
+export function drawChannel(x, ch, t, osd) {
   x.imageSmoothingEnabled = false;
   ch.draw(x, t);
-  if (!ch.noBug) { const s = 'CH ' + ch.n; ccText(x, s, TVW - 4 - ccWidth(s), 4, A.gold); }
+  if (!ch.noBug && !osd) { const s = 'CH ' + ch.n; ccText(x, s, ch.corner === 'tl' ? 4 : TVW - 4 - ccWidth(s), 4, A.gold); }
 }
-// the set's own number, in the top left for a moment after a flip: a big number, the name under it
-export function drawOsd(x, n, name) {
-  const s = 'CH ' + (n < 10 ? '0' : '') + n, w = Math.max(ccWidth(s, 2), ccWidth(name || '')) + 6;
-  box(x, 4, 4, w, name ? 27 : 18, A.ash0);
-  ccText(x, s, 7, 6, A.bone, { sx: 2, sy: 2 });
-  if (name) ccText(x, name, 7, 22, A.boneLo);
+// the set's own number for a moment after a flip: a big number, the name under it, in the corner
+// the channel's mark sits in (tl or tr)
+export function drawOsd(x, n, name, corner) {
+  const s = 'CH ' + (n < 10 ? '0' : '') + n, w = Math.max(ccWidth(s, 2), ccWidth(name || '')) + 6, bx = corner === 'tl' ? 2 : TVW - 2 - w;
+  box(x, bx, 2, w, name ? 27 : 18, A.ash0);
+  ccText(x, s, bx + 3, 4, A.bone, { sx: 2, sy: 2 });
+  if (name) ccText(x, name, bx + 3, 20, A.boneLo);
 }
 // a flip: a few frames of square static in four greys
 export function drawStatic(x) {

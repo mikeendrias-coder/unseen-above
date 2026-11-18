@@ -114,6 +114,13 @@ const WHO5 = { statue07: true, request1: true, cameraMoon: true, laserTone: true
   ok('during the beat A flips away: ' + await p.evaluate(() => window.__finale.channel.n), await p.evaluate(() => window.__finale.ch !== 0));
   await until(() => window.__finale.t > window.__finale.beat.climax + 0.2, null, 40000);
   ok('at the climax the show takes the set back to channel 7', await p.evaluate(() => window.__finale.ch === 0));
+  // after the climax a flip stays where it lands (the first press used to snap back to CH 07)
+  await p.keyboard.press('KeyD'); await p.waitForTimeout(500);
+  ok('after the climax D stays on ' + await p.evaluate(() => window.__finale.channel.n), await p.evaluate(() => window.__finale.channel.n === 12 && window.__finale.phase === 'beat'));
+  // a miss on the set's side panel (round the knobs) does not skip the beat; N does, in any mode
+  const side = await spot(262, 150); await p.mouse.click(side.x, side.y); await p.waitForTimeout(150);
+  ok('a click on the set beside the knobs leaves the beat running', await p.evaluate(() => window.__finale.phase === 'beat'));
+  ok('the key strip offers N while the beat plays', await p.evaluate(() => window.__game.scene.offerSkip === true));
   await until(() => window.__finale.phase === 'card', null, 30000);
   ok('left alone, the beat runs out into the ending screen', true);
   // CHAPTERS: the title screen, its chapter list open

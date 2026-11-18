@@ -377,6 +377,8 @@ export class Moon extends SideEpisode {
     this.finale = new Finale(this, { kind, id, ctx: this.tvCtx, tex: this.tvTex, room: this.roomG, card: this.formG, flash: this.flashRect, bite: this.bite, pieces: this.pieces, hiss: this.hiss });
   }
   updateLast(dt) {
+    // N skips the final beat in every mode (the key strip lights it while the beat plays)
+    this.offerSkip = this.finale.phase === 'beat';
     this.finale.update(dt, this.ctl);
     this.lastT = this.finale.t;
   }
@@ -525,7 +527,7 @@ export class Moon extends SideEpisode {
     const won = this.mode === 'room' && this.roomT <= 2.2;
     const aim = this.mode === 'r2' && this.r2Aim ? Math.min(1, (this.r2T - 3.4) / 1) : null;
     this.show.setVisible(true).draw({ t, score: 2400, round: won ? 1 : 2, zap: won ? this.roomT + 0.5 : null, lock: aim,
-      top: round2 && this.mode !== 'r2' && Math.floor(t * 2.5) % 2 === 0 ? 'ROUND 2 READY?' : null, r2: this.mode === 'r2' && this.r2Took });
+      top: round2 && this.mode !== 'r2' && this.mode !== 'choose' && Math.floor(t * 2.5) % 2 === 0 ? 'ROUND 2 READY?' : null, /* not while the reply slip is up: it would cut the line */ r2: this.mode === 'r2' && this.r2Took });
   }
 
   // her reply slip in the playroom. (No glasses up here: she has none on the Moon, so no crack

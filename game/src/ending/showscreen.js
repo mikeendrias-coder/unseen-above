@@ -191,6 +191,32 @@ export function drawShow(ctx, w, h, o) {
   if (zap != null && zap < 0.08) R(0, 0, w, h, '#ffffff');
 }
 
+// The same game, small: for a screen seen across a room inside another picture (the couch in THE
+// COUCH, the playroom wall in LOOK BACK). The game show's panel and bulbs, LIVE, the score, the
+// turning Earth with its maze and the girl in pink walking it, two beads behind her, the amber
+// box on her now and then. x0, y0, w, h: where, in ctx; o: { t, score, lock (force the box on) }.
+export function drawShowMini(ctx, x0, y0, w, h, o) {
+  const t = o.t || 0, R = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x0 + a, y0 + b, ww, hh); };
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+  R(0, 0, w, h, SHOW.bg); R(2, 2, w - 4, h - 4, SHOW.panel);
+  let n = 0; const chase = Math.floor(t * 3);
+  const bulb = (x, y) => { R(x, y, 1, 1, (n + chase) % 2 ? SHOW.yellow : SHOW.pink); n++; };
+  for (let x = 2; x < w - 2; x += 4) { bulb(x, 0); bulb(x, h - 1); }
+  for (let y = 3; y < h - 2; y += 4) { bulb(0, y); bulb(w - 1, y); }
+  R(4, 4, 25, 9, SHOW.pink); ccText(ctx, 'LIVE', x0 + 5, y0 + 5, '#ffffff');
+  ccText(ctx, 'SCORE', x0 + 4, y0 + 16, SHOW.mint);
+  ccText(ctx, String(o.score != null ? o.score : 2400 + Math.floor(t / 2.5) * 400), x0 + 4, y0 + 25, SHOW.yellow);
+  const r = Math.max(9, Math.min(Math.floor(h / 2) - 4, Math.floor((w - 40) / 2) - 2)), cx = x0 + w - r - 6, cy = y0 + Math.floor(h / 2) + 1;
+  const girlLon = t * 0.35, at = paintGlobe(ctx, cx, cy, r, -girlLon + 0.12 + Math.sin(t * 0.7) * 0.1, -0.3);
+  const g = at(GIRL_LAT, girlLon);
+  [[0.9, G4.beads[0]], [1.3, G4.beads[1]]].forEach(([back, c]) => { const q = at(GIRL_LAT, girlLon - back); if (q.z > 0.05) bead(ctx, q.x, q.y, c); });
+  if (g.z > 0.05) {
+    if (o.lock || Math.floor(t / 1.5) % 3 === 2) { const s = 8; ctx.strokeStyle = SHOW.amber; ctx.lineWidth = 1; if (Math.floor(t * 8) % 2) ctx.strokeRect(g.x - s + 0.5, g.y - 6 - s + 0.5, 2 * s, 2 * s); }
+    drawShowGirl(ctx, g.x, g.y + 1, t, 1);
+  }
+  ctx.restore();
+}
+
 // One screen in a Phaser scene: its own canvas, an image at (x, y) in the world.
 let serial = 0;
 export class ShowScreen {

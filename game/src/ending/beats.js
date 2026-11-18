@@ -2,17 +2,19 @@
 // "build it out, nothing to skip or is happening"). Each is drawn every frame with whole-pixel
 // rects into the TV's own canvas (art/moon.js TVSCREEN, 146 x 100), in the Ash and Gold palette.
 //   moon      THE VEST     the blast takes a bite out of the Moon; pieces fall toward Earth; the
-//                          people in the room on Earth get up and cheer; the show goes off the air
+//                          people in the room on Earth get up, cheer, hug; the signal tears and
+//                          drops to SIGNAL LOST, and they dance in front of it
 //   rerun     END IT ALL   the rerun of the grounds loops faster and faster, a body for every
 //                          loop, the tape rolls, the set switches itself off
 //   ridge     ROUND TWO    a new girl on the ridge; PLAYER 2 picks a light; the light finds her
-//   playroom  LOOK BACK    the kids, seen, dance and cry at once; then the show's camera swings
-//                          onto them, the screen goes red, two clicks, black
+//   playroom  LOOK BACK    the kids, seen, dance and cry at once; then the show's own camera comes
+//                          down and turns on them, their screen goes red, two clicks, black
 //   couch     THE COUCH    the three of them on the couch; the kids fall asleep on her; she
 //                          looks back at us and says shh
 // loop: true draws the feed as it runs after the beat (the TV again, from the ending screen).
 import { drawTv, TVSCREEN, feedHouse, feedGatePost, feedRect, tvText } from '../art/moon.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
+import { drawShowMini } from './showscreen.js';
 
 export const TVW = TVSCREEN.w, TVH = TVSCREEN.h;
 const A = {
@@ -30,24 +32,33 @@ export const BEATS = {
   moon: { end: 22, climax: 2.2 },
   rerun: { end: 19, climax: 13.3 },
   ridge: { end: 17.5, climax: 12.6 },
-  playroom: { end: 22.5, climax: 16.3 },
+  playroom: { end: 23, climax: 16.3 },
   couch: { end: 23, climax: 15.2 }
 };
 
 // Captions for the sounds, in the strip under the picture (the show's own captions): [time, text]
 export const BEAT_CC = {
-  moon: [[2.5, '[A BOOM, VERY FAR AWAY]'], [8.6, '[CHEERING IN THE ROOM]'], [15.6, '[THE SIGNAL DROPS]']],
+  moon: [[2.5, '[A BOOM, VERY FAR AWAY]'], [8.6, '[CHEERING IN THE ROOM]'], [15.4, '[THE SIGNAL DROPS]'], [18.4, '[CLAPPING AND WHOOPING]']],
   rerun: [[1.2, '[A RERUN, PLAYING TO NOBODY]'], [8, '[THE TAPE SPEEDS UP]'], [13.6, '[THE TAPE CHEWS]'], [15.6, '[THE SET CLICKS OFF]']],
   ridge: [[3.6, '[PLAYER 2 PICKS A LIGHT]'], [9.6, '[GAME SHOW JINGLE]'], [12.8, '[A CHARGE BUILDS]']],
-  playroom: [[3.4, "[THEY'RE CRYING]"], [4.6, '[DANCE MUSIC]'], [16.4, '[THE MUSIC STOPS]'], [19.2, '[CLICK. CLICK.]']],
+  playroom: [[3.4, "[THEY'RE CRYING]"], [4.6, '[DANCE MUSIC]'], [16.4, '[THE MUSIC STOPS]'], [16.9, '[A CAMERA MOTOR]'], [19.7, '[CLICK. CLICK.]']],
   couch: [[1.4, '[THE SHOW GOES ON]'], [11, '[SNORING]'], [16.4, '[SHH]']]
 };
 
 // ------------------------------------------------------------------ THE VEST
-// The Moon in the old TV (art/moon.js drawTv), and three pieces streaking down toward Earth.
+// The Moon in the old TV (art/moon.js drawTv), and pieces streaking down toward Earth. Then the
+// signal goes: the picture tears, turns to snow, and the station's card comes up, SIGNAL LOST,
+// while the two of them in the room dance in front of it.
+const V = { TEAR: 15.2, SNOW: 17.2, CARD: 18.2 };
+const hash2 = (a, b) => { let h = (a * 374761393 + b * 668265263) >>> 0; h = (h ^ (h >>> 13)) * 1274126177 >>> 0; return (h ^ (h >>> 16)) >>> 0; };
+function snow(x, f, y0, y1) {
+  const cols = [A.ash0, A.ash3, A.ash5, A.bone];
+  for (let y = y0; y < y1; y += 2) for (let xx = 0; xx < TVW; xx += 3) box(x, xx, y, 3, 2, cols[hash2(xx * 7 + y, f) % 4]);
+}
 function moon(x, t, o, loop) {
   const bt = loop ? 13 + (t % 9) : t;
-  const bugOn = loop ? false : bt < 15.2 || (bt < 16 && Math.floor(bt * 8) % 2 === 0);
+  const bugOn = loop ? false : bt < V.TEAR || (bt < 16 && Math.floor(bt * 8) % 2 === 0);
+  if (!loop && bt >= V.CARD) return signalLost(x, bt - V.CARD);
   drawTv(x, 'moon', { t: bt, blast: bt - 2.4, bug: bugOn, bite: o.bite, pieces: o.pieces });
   const d = { x: TVSCREEN.dome.x - TVSCREEN.x, y: TVSCREEN.dome.y - TVSCREEN.y };
   // pieces falling toward Earth: a hot head and a short grey tail, one pixel at a time
@@ -57,46 +68,104 @@ function moon(x, t, o, loop) {
     for (let k = 1; k < 18; k++) box(x, hx + k, hy - k * -slope * 0.6, 1, 1, k < 5 ? A.gold : k < 11 ? A.ash5 : A.ash3);
     box(x, hx - 1, hy - 1, 3, 3, A.goldHi); box(x, hx, hy, 1, 1, A.bone);
   });
-  if (!loop && bt > 16) { // off the air: the station's bars, thin, over the bottom of the picture
-    const u = Math.floor((bt - 16) * 6) % 2; box(x, 0, TVH - 4, TVW, 1, u ? A.ash2 : A.ash3);
+  if (loop || bt < V.TEAR) return;
+  // the signal tears: rows of the picture slip sideways, more and more, and snow eats it
+  const u = clamp((bt - V.TEAR) / (V.SNOW - V.TEAR), 0, 1), f = Math.floor(bt * 15);
+  const img = x.getImageData(0, 0, TVW, TVH);
+  for (let y = 0; y < TVH; y += 3) {
+    const h = hash2(y, f);
+    if (h % 100 < 20 + u * 60) { const off = ((h >>> 8) % 40) - 20; x.putImageData(img, Math.round(off * (0.3 + u)), 0, 0, y, TVW, 3); }
   }
+  for (let y = 0; y < TVH; y += 6) if (hash2(y + 1000, f) % 100 < u * 100) snow(x, f + y, y, y + 6);
+  if (bt >= V.SNOW) snow(x, f, 0, TVH);
 }
-// The two people on Earth in front of the TV, from behind: sitting, lit at the blast, up on their
-// feet, cheering, hugging. g is the room's Phaser Graphics (screen space).
+// the station's card: bars, a black box, SIGNAL LOST blinking, a dark hum bar rolling down
+function signalLost(x, u) {
+  const bars = [A.bone, A.boneLo, A.goldHi, A.gold, A.ash5, A.ash4, A.ash3];
+  bars.forEach((c, i) => box(x, Math.round(i * TVW / 7), 0, Math.ceil(TVW / 7), 88, c)); // tall, so the two of them stand out against it
+  box(x, 0, 88, TVW, TVH - 88, A.ash1); for (let i = 0; i < 12; i++) box(x, i * 12 + 2, 91, 6, 7, i % 2 ? A.ash4 : A.ash0);
+  const hy = Math.floor((u * 22) % (TVH + 12)) - 12; box(x, 0, hy, TVW, 3, A.ash4);
+  const s = 'SIGNAL LOST', w = ccWidth(s, 2) + 10; box(x, TVW / 2 - w / 2, 12, w, 24, A.ash0);
+  ccText(x, s, TVW / 2 - w / 2 + 5, 17, Math.floor(u * 1.6) % 3 === 2 ? A.boneLo : A.bone, { sx: 2, sy: 2 });
+  const m = 'FROM THE MOON', mw = ccWidth(m) + 6; box(x, TVW / 2 - mw / 2, 36, mw, 11, A.ash0); ccText(x, m, TVW / 2 - mw / 2 + 3, 38, A.boneLo);
+  if (u < 0.15) snow(x, Math.floor(u * 60), 0, TVH);
+}
+// The two people on Earth in front of the TV, from behind, in silhouette against the picture:
+// sitting, lit at the blast, up on their feet, cheering, hugging and rocking, then dancing in
+// front of the station's card. g is the room's Phaser Graphics (screen space).
 export function vestRoom(g, t, loop) {
-  const ink = 0x1b1c21, rim = loop ? 0x6b6c70 : (t > 2.4 && t < 2.75 ? 0xebe6d8 : 0x8f8d87);
-  const up = loop ? 0 : clamp((t - 7.2) / 0.3, 0, 1), cheer = !loop && t > 8.4 && t < 12.6, hug = !loop && t >= 12.6;
-  const people = [{ x: hug ? 122 : 112, big: true }, { x: hug ? 140 : 150, big: false }];
+  const ink = 0x1b1c21, ab = n => clamp(n, 0, 1);
+  const flick = !loop && t >= V.TEAR && t < V.CARD ? (Math.floor(t * 15) % 2 ? 0xebe6d8 : 0x8f8d87) : null;
+  const rim = loop ? 0x6b6c70 : flick || (t > 2.4 && t < 2.75 ? 0xebe6d8 : t >= V.CARD ? 0xebe6d8 : 0x8f8d87);
+  const up = loop ? 0 : ab((t - 7.2) / 0.3);
+  const cheer = !loop && t > 8.4 && t < 12.6, hug = !loop && t >= 12.6 && t < 16.8, part = !loop && t >= 16.8 && t < 17.6, dance = !loop && t >= 17.6;
+  const df = Math.floor(t * 4) % 4, rock = hug ? Math.round(Math.sin((t - 12.6) * 2.6) * 3) : 0;
   const R = (x, y, w, h, c) => { g.fillStyle(c, 1); g.fillRect(Math.round(x), Math.round(y), w, h); };
-  people.forEach((P, i) => {
-    const hop = cheer && Math.floor(t * 5 + i) % 2 ? 3 : 0;
-    const hr = P.big ? 6 : 5, sw = P.big ? 12 : 10, top = Math.round(141 - up * (P.big ? 12 : 9) - hop + (P.big ? 0 : 3)), px = Math.round(P.x);
+  const seg = (ax, ay, bx, by) => { const n = Math.ceil(Math.hypot(bx - ax, by - ay)); for (let k = 0; k <= n; k++) { const u = k / Math.max(1, n); R(ax + (bx - ax) * u - 1, ay + (by - ay) * u - 1, 3, 3, ink); } };
+  const fist = (x, y) => { R(x - 2, y - 2, 5, 4, ink); R(x - 1, y - 3, 3, 1, rim); };
+  const people = [{ x: 112, big: true }, { x: 150, big: false }];
+  if (hug) { people[0].x = 126 + rock; people[1].x = 140 + rock; }
+  else if (part) { people[0].x = 122; people[1].x = 144; }
+  else if (dance) { people[0].x = 112 + [0, -5, 0, 5][df]; people[1].x = 152 + [0, 5, 0, -5][df]; }
+  const geo = people.map((P, i) => {
+    const hop = (cheer && Math.floor(t * 5 + i) % 2) || (dance && (df + i) % 2) ? 4 : 0;
+    const hr = P.big ? 6 : 5, sw = P.big ? 12 : 10;
+    const top = Math.round(141 - up * (P.big ? 40 : 33) - hop + (P.big ? 0 : 3)) + (hug ? 2 : 0); // standing, their heads and arms are against the picture
+    const lean = hug ? (i ? -2 : 2) : part ? (i ? -1 : 1) : 0;
+    return { px: Math.round(P.x), hx: Math.round(P.x) + lean, top, hr, sw, nk: top + hr * 2 - 1, big: P.big };
+  });
+  geo.forEach((q, i) => {
+    const { px, hx, top, hr, sw, nk } = q;
     // a round head (corners cut), a neck, sloped shoulders, a back down out of the picture
     const head = [[2, 1], [1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [2, 1]].slice(0, hr * 2 - 1);
-    head.forEach(([cut], j) => R(px - hr + cut, top + j, hr * 2 - cut * 2, 1, ink));
-    const nk = top + head.length; R(px - 2, nk, 4, 2, ink);
+    head.forEach(([cut], j) => R(hx - hr + cut, top + j, hr * 2 - cut * 2, 1, ink));
+    R(px - 2, nk, 4, 2, ink);
     for (let j = 0; j < 4; j++) R(px - sw + 4 - j, nk + 2 + j, (sw - 4 + j) * 2, 1, ink);
     R(px - sw, nk + 6, sw * 2, 180 - nk - 6, ink);
-    if (!P.big) R(px - 2, top - 3, 5, 3, ink); // her hair, tied up
+    if (!q.big) R(hx - 2, top - 3, 5, 3, ink); // her hair, tied up
     // the TV's light along their top edges
-    R(px - hr + 2, top - 1, hr * 2 - 4, 1, rim); R(px - hr + 1, top, 1, 1, rim); R(px + hr - 2, top, 1, 1, rim); R(px - hr, top + 1, 1, 3, rim); R(px + hr - 1, top + 1, 1, 3, rim);
-    if (!P.big) R(px - 2, top - 4, 5, 1, rim);
+    R(hx - hr + 2, top - 1, hr * 2 - 4, 1, rim); R(hx - hr + 1, top, 1, 1, rim); R(hx + hr - 2, top, 1, 1, rim); R(hx - hr, top + 1, 1, 3, rim); R(hx + hr - 1, top + 1, 1, 3, rim);
+    if (!q.big) R(hx - 2, top - 4, 5, 1, rim);
     for (let j = 0; j < 4; j++) { R(px - sw + 3 - j, nk + 1 + j, 1, 1, rim); R(px + sw - 4 + j, nk + 1 + j, 1, 1, rim); }
     R(px - sw + 4, nk + 1, sw - 4 - 2, 1, rim); R(px + 3, nk + 1, sw - 4 - 2, 1, rim);
+    if (part) { const s = i ? -1 : 1; R(hx + s * hr - (s > 0 ? 0 : 1), top + 4, 1, 3, rim); } // turned to each other: a cheek in the light
+    const shL = { x: px - sw + 2, y: nk + 4 }, shR = { x: px + sw - 2, y: nk + 4 };
     if (cheer) {
       // fists in the air, waving: up and out, then straight up
       const wide = Math.floor(t * 5 + i) % 2;
-      [-1, 1].forEach(s => {
-        const sx = px + s * (sw - 2), sy = nk + 4, ex = sx + s * (wide ? 6 : 2), ey = sy - 16;
-        for (let k = 0; k <= 16; k++) { const u = k / 16; R(sx + (ex - sx) * u - 1, sy + (ey - sy) * u, 3, 1, ink); }
-        R(ex - 2, ey - 3, 5, 4, ink); R(ex - 1, ey - 4, 3, 1, rim);
+      [[-1, shL], [1, shR]].forEach(([s, sh]) => { const ex = sh.x + s * (wide ? 6 : 2), ey = sh.y - 16; seg(sh.x, sh.y, ex, ey); fist(ex, ey); });
+    } else if (dance) {
+      // a dumb happy dance: one fist pumps up while the other swings low, then both up, then hands on hips
+      const f = (df + i * 2) % 4;
+      [[-1, shL], [1, shR]].forEach(([s, sh]) => {
+        const upArm = f === 1 || (f === 0 && s < 0) || (f === 2 && s > 0);
+        if (upArm) { const ex = sh.x + s * (f === 1 ? 7 : 3), ey = sh.y - 17; seg(sh.x, sh.y, ex, ey); fist(ex, ey); }
+        else if (f === 3) { const ex = sh.x + s * 7, ey = sh.y + 4; seg(sh.x, sh.y, ex, ey); seg(ex, ey, sh.x + s * 2, sh.y + 10); R(ex - 1, ey - 2, 3, 1, rim); }
+        else { const ex = sh.x + s * 10, ey = sh.y + 6; seg(sh.x, sh.y, ex, ey); R(ex - 1, ey - 2, 3, 1, rim); }
       });
-    } else if (hug) {
-      // an arm round the other one's back
-      R(px + (i ? -sw - 4 : sw - 3), nk + 8, 7, 3, ink); R(px + (i ? -sw - 4 : sw - 3), nk + 7, 7, 1, rim);
     }
   });
+  if (hug) {
+    // arms round each other's backs, lit along the top
+    const [a, b] = geo;
+    R(a.px + 2, a.nk + 7, b.px + b.sw - 1 - a.px - 2, 3, ink); R(a.px + 4, a.nk + 6, b.px + b.sw - 1 - a.px - 6, 1, rim);
+    R(a.px - a.sw + 1, b.nk + 12, b.px - a.px + a.sw - 4, 3, ink); R(a.px - a.sw + 3, b.nk + 11, 8, 1, rim);
+  }
 }
+// ------------------------------------------------------------------ the girl, in the feeds
+// About 8 x 17, outlined in black so she holds up against a beam or a bright ground: dark hair
+// with a tail, a face, a grey coat lit on one side, two legs that step. face 1 right, -1 left;
+// up: she looks up (at a light).
+function girlFig(x, gx, fy, step, face, up) {
+  const f = face < 0 ? -1 : 1, top = fy - 17;
+  box(x, gx - 1, top - 1, 10, 18, A.ash0);
+  box(x, gx + 1, top, 6, 4, A.ash1); box(x, gx + (f > 0 ? 0 : 7), top + 1, 1, 6, A.ash1); // hair, its tail behind her
+  box(x, gx + 1, top + 4, 6, 3, A.boneLo); box(x, gx + (f > 0 ? 5 : 2), top + (up ? 4 : 5), 1, 1, A.ash0); // face, an eye
+  box(x, gx, top + 7, 8, 7, A.ash5); box(x, gx + (f > 0 ? 6 : 0), top + 7, 2, 7, A.bone); // coat, lit on the side facing the light
+  box(x, gx + 1, top + 14, 2, 3, step ? A.ash5 : A.ash4); box(x, gx + 5, top + 14, 2, 3, step ? A.ash4 : A.ash5);
+  if (step) box(x, gx + (f > 0 ? 6 : 0), fy - 1, 2, 1, A.ash5);
+}
+
 // ------------------------------------------------------------------ END IT ALL
 // the grounds at night, the house and its gate, the girl walking up to it again and again
 const RR = { ground: 70, from: 10, len: 58 };
@@ -107,11 +176,22 @@ function rerunPicture(x, t, pos, loops, bodies, take) {
   const fr = feedRect(x); feedHouse(fr, 42, RR.ground);
   box(x, 0, 62, 30, 8, A.bronzeLo); box(x, 120, 62, 26, 8, A.bronzeLo);
   feedGatePost(fr, 34, RR.ground); feedGatePost(fr, 114, RR.ground);
-  // a body at the gate for every time round: small grey heaps, piling up
-  for (let k = 0; k < bodies; k++) { const bx = 62 - (k % 8) * 6 + (k >= 8 ? 3 : 0), by = RR.ground - 2 - (k >= 8 ? 2 : 0); box(x, bx, by, 5, 2, k % 2 ? A.ash4 : A.ash5); box(x, bx - 1, by + 1, 1, 1, A.ash1); }
+  // a body for every time round: each one her, lying down (dark hair, a face, her grey coat lit
+  // along the top), stacked into a pile by the gate that she walks past every loop. The newest
+  // one flashes as it lands.
+  const ROWS_N = [3, 3, 3, 2, 2, 1, 1];
+  for (let k = 0, row = 0, i = 0; k < bodies; k++, i++) {
+    if (i >= ROWS_N[Math.min(row, ROWS_N.length - 1)]) { row++; i = 0; }
+    const bx = 2 + i * 13 + row * 6, by = RR.ground - 5 - row * 4, face = (k * 5) % 3 === 1 ? -1 : 1;
+    const fresh = k === bodies - 1 && pos < 6;
+    box(x, bx - 1, by - 1, 14, 6, A.ash0);
+    const hx = face > 0 ? bx + 8 : bx, cx = face > 0 ? bx + 1 : bx + 4;
+    box(x, cx, by, 7, 4, fresh ? A.bone : A.ash5); box(x, cx, by, 7, 1, A.bone); // her coat, lit along the top
+    box(x, face > 0 ? bx : bx + 11, by + 1, 1, 3, A.ash4); // her feet
+    box(x, hx, by, 4, 4, A.ash1); box(x, hx + (face > 0 ? 0 : 2), by + 1, 2, 2, A.boneLo); // her hair, her face
+  }
   // her, walking up to the gate
-  const gx = Math.round(RR.from + pos), step = Math.floor(t * 8) % 2;
-  box(x, gx - 1, 59, 5, 11, A.ash0); box(x, gx, 62, 3, 6, A.ash5); box(x, gx, 60, 3, 2, A.ash1); box(x, gx + (step ? 0 : 2), 68, 1, 2, A.ash5);
+  girlFig(x, Math.round(RR.from + pos) - 3, RR.ground, Math.floor(t * 8) % 2, 1);
   if (Math.floor(t * 1.5) % 2 === 0) { box(x, 6, 6, 40, 11, A.red); tvText(x, 'RERUN', 11, 8, A.bone); }
   box(x, 6, TVH - 14, 44, 10, A.red); ccText(x, 'TAKE ' + take, 8, TVH - 13, A.bone);
   ccText(x, 'CH 07', TVW - 4 - ccWidth('CH 07'), 4, A.gold);
@@ -159,20 +239,21 @@ function ridge(x, t, o, loop) {
   const walk = clamp((tt - 1.5) / 11, 0, 1), gx = Math.round(14 + walk * 50), gy = ridgeY(gx), moving = !loop ? tt > 1.5 && tt < 12.5 : true, st = moving && Math.floor(tt * 6) % 2;
   const found = !loop && tt >= 12.2;
   const cut = !loop && tt >= 14.2;
-  box(x, gx - 1, gy - 12, 5, 12, A.ash0); box(x, gx, gy - 9, 3, 8, A.ash5); box(x, gx, gy - 11, 3, 2, A.ash1); box(x, gx + (st ? 0 : 2), gy - 1, 1, 1, A.ash5);
   // the searchlight on the roof: once picked, it comes on and swings up the slope to her
   if (!loop && tt >= 10) {
-    const ang0 = 200, ang1 = Math.atan2(gy - 6 - 55, gx - 110) * 180 / Math.PI + 360, a = ang0 + (ang1 - ang0) * clamp((tt - 10) / 2.2, 0, 1);
+    const ang0 = 200, ang1 = Math.atan2(gy - 9 - 55, gx - 110) * 180 / Math.PI + 360, a = ang0 + (ang1 - ang0) * clamp((tt - 10) / 2.2, 0, 1);
     const col = found ? A.red : A.goldHi;
     for (let r = 4; r < 90; r++) for (let w = -Math.floor(r * 0.12); w <= Math.floor(r * 0.12); w++) {
       const q = a * Math.PI / 180, px = Math.round(110 + Math.cos(q) * r - Math.sin(q) * w), py = Math.round(55 + Math.sin(q) * r + Math.cos(q) * w);
       if ((px + py) % 2 === 0 && px >= 0 && py >= 0 && px < TVW && py < TVH) box(x, px, py, 1, 1, col);
     }
   }
+  // her, over the beam (outlined, so the light never swallows her); she stops and looks up when it finds her
+  girlFig(x, gx - 3, gy, st, 1, found);
   // PLAYER 2's cursor: the amber box, hopping light to light, then onto her
   if (tt >= 3.5) {
     let tx, ty, s = 4;
-    if (!loop && tt >= 12.2) { tx = gx + 1; ty = gy - 6; s = Math.max(4, Math.round(10 - (tt - 12.2) * 6)); }
+    if (!loop && tt >= 12.2) { tx = gx + 1; ty = gy - 9; s = Math.max(11, Math.round(18 - (tt - 12.2) * 10)); }
     else { const i = loop ? Math.floor((tt - 3.5) / 0.7) % 6 : Math.min(LIGHTS.length - 1, Math.floor((tt - 3.5) / 0.85)); [tx, ty] = LIGHTS[i]; }
     if (!(found && Math.floor(tt * 8) % 2)) { x.strokeStyle = A.amber; x.lineWidth = 1; x.strokeRect(tx - s + 0.5, ty - s + 0.5, 2 * s, 2 * s); }
   }
@@ -240,31 +321,43 @@ function kid(x, cx, fy, o) {
     if (!ink) { box(x, hx0 + 8, hy0 - 3 + jig, 2, 2, A.gold); box(x, hx0 + 1, hy0 - 1 + jig, W - 2, 1, clothLo); }
   }
   if (ink || P.back) return;
-  // the face: shades (or eyes screwed shut), sad brows, a mouth wide open, tears
-  const ey = hy0 + 6, mx = hx0 + W / 2;
+  // the face: shades (or eyes screwed shut), sad brows, a wobbling frown, tears
+  const ey = hy0 + 6, mx = Math.round(hx0 + W / 2);
   if (o.shades) { box(x, hx0 + 2, ey, W - 4, 3, A.ash0); box(x, mx - 1, ey + 2, 2, 1, skinLo); box(x, hx0 + 4, ey, 2, 1, A.ash4); box(x, hx0 + 11, ey, 2, 1, A.ash4); }
   else if (o.squint) { box(x, hx0 + 4, ey + 1, 3, 1, A.ash0); box(x, hx0 + 11, ey + 1, 3, 1, A.ash0); }
   else { box(x, hx0 + 5, ey, 2, 2, A.ash0); box(x, hx0 + 11, ey, 2, 2, A.ash0); if (o.look) { box(x, hx0 + 5, ey, 2, 1, A.bone); box(x, hx0 + 11, ey, 2, 1, A.bone); } }
   if (o.cry || o.squint) { box(x, hx0 + 3, ey - 2, 2, 1, A.ash0); box(x, hx0 + 5, ey - 3, 2, 1, A.ash0); box(x, hx0 + 13, ey - 2, 2, 1, A.ash0); box(x, hx0 + 11, ey - 3, 2, 1, A.ash0); }
-  const wail = o.cry && o.t != null && Math.floor(o.t * 6) % 2;
-  box(x, mx - 3, ey + 5, 6, wail ? 4 : 2, A.ash0); if (o.cry) box(x, mx - 2, ey + 5 + (wail ? 3 : 1), 4, 1, A.red);
+  // the mouth: a frown, corners down; on the sob it opens into a wide-bottomed wail; the lip shakes
+  const sob = (o.cry || o.squint) && o.t != null && Math.floor(o.t * 5) % 3 === 0, shake = o.t != null && Math.floor(o.t * 12) % 2;
+  if (sob) { box(x, mx - 1, ey + 5, 2, 1, A.ash0); box(x, mx - 2, ey + 6, 4, 1, A.ash0); box(x, mx - 3, ey + 7, 6, 2, A.ash0); }
+  else { box(x, mx - 1, ey + 5, 2, 1, A.ash0); box(x, mx - 2, ey + 6, 1, 1, A.ash0); box(x, mx + 1, ey + 6, 1, 1, A.ash0); box(x, mx - 3, ey + 7, 1, 1, A.ash0); box(x, mx + 2, ey + 7, 1, 1, A.ash0); box(x, mx - 1 + (shake ? 1 : 0), ey + 7, 1, 1, skinLo); }
   if (o.cry) {
-    // two streams down the cheeks, and drops flung off on every move
-    [hx0 + 3, hx0 + W - 4].forEach((tx, i) => {
-      const side = i ? 1 : -1, len = 3 + (Math.floor(o.t * 7 + i) % 3);
-      box(x, tx, ey + 3, 1, len, A.bone);
-      for (let j = 0; j < 8; j++) {
-        const a = ((o.t + j * 0.14 + i * 0.07) % 1.1);
-        const dx = tx + side * (2 + a * 20), dy = ey + 4 + a * a * 70 - a * 14;
-        if (dy < fy - 1) box(x, dx, dy, 1, 2, A.bone);
+    // two streams from under the eyes down the cheeks, edged in grey both sides so they show
+    [hx0 + 3, hx0 + W - 5].forEach((tx, i) => {
+      const len = 5 + (Math.floor(o.t * 7 + i) % 2);
+      box(x, tx - 1, ey + 3, 4, len + 1, A.ash4); box(x, tx, ey + 3, 2, len, A.bone); box(x, tx, ey + 3 + ((Math.floor(o.t * 10) + i) % len), 2, 1, A.boneLo);
+    });
+    // dancing, the tears shoot out sideways from under the shades in two arcs, like a cartoon
+    // fountain: a dashed stream that runs outward and falls
+    if (o.spray) [-1, 1].forEach(side => {
+      const pts = [];
+      for (let k = 0; k < 14; k++) {
+        const a = k / 13; if ((Math.floor(a * 13 - o.t * 18) % 3 + 3) % 3 === 0) continue;
+        const px = (side < 0 ? hx0 + 1 : hx0 + W - 3) + side * (2 + a * 17), py = ey + 2 - 6 * a + 30 * a * a;
+        if (py < fy - 2) pts.push([px, py]);
       }
+      pts.forEach(([px, py]) => box(x, px - 1, py - 1, 4, 4, A.ash0));
+      pts.forEach(([px, py]) => box(x, px, py, 2, 2, A.bone));
     });
   }
 }
 // the puddle under each kid, growing while they cry
 function puddle(x, cx, fy, n) { const w = Math.min(26, Math.round(n)); if (w > 1) { box(x, cx - w / 2, fy + 1, w, 1, A.bone); box(x, cx - w / 2 + 2, fy + 2, Math.max(0, w - 4), 1, A.boneLo); } }
-// the playroom, seen from its own camera
-function playroomRoom(x, t, beat) {
+// the playroom, seen from the camera she turned on them: the wall with its lights, their giant
+// screen on it with their game going (ending/showscreen.js), the gold bench, the floor.
+// scr: 'game' (their game) or 'red' (gone red, REC)
+const GS = { x: 33, y: 3, w: 76, h: 38 };
+function playroomRoom(x, t, beat, scr) {
   box(x, 0, 0, TVW, TVH, A.bronze);
   for (let yy = 8; yy < 60; yy += 12) for (let xx = 6 + (yy % 24 ? 6 : 0); xx < TVW; xx += 12) {
     const on = beat != null && (Math.floor(xx / 12) + Math.floor(yy / 12) + beat) % 4 === 0;
@@ -272,6 +365,26 @@ function playroomRoom(x, t, beat) {
   }
   box(x, 0, 84, TVW, TVH - 84, A.bronzeLo); box(x, 0, 84, TVW, 1, A.gold);
   box(x, 18, 55, 110, 24, A.ash0); box(x, 19, 56, 108, 22, A.gold); box(x, 19, 56, 108, 1, A.goldHi); box(x, 19, 72, 108, 6, A.goldLo);
+  box(x, GS.x - 2, GS.y - 2, GS.w + 4, GS.h + 4, A.ash0); box(x, GS.x - 1, GS.y - 1, GS.w + 2, 1, A.ash3);
+  if (scr === 'red') {
+    box(x, GS.x, GS.y, GS.w, GS.h, A.red);
+    const s = 'REC', w = ccWidth(s, 3); box(x, GS.x + GS.w / 2 - w / 2 - 12, GS.y + 14, 8, 8, A.bone); ccText(x, s, GS.x + GS.w / 2 - w / 2 + 2, GS.y + 9, A.bone, { sx: 3, sy: 3 });
+  } else drawShowMini(x, GS.x, GS.y, GS.w, GS.h, { t });
+}
+// the show's own camera, on a boom from the ceiling: it comes down into the picture (down 0 to 1),
+// then turns (turn 0 side on, pointed away; 1 lens down; 2 lens on the kids), its red light on
+function boomCam(x, t, down, turn) {
+  const bx = 114, top = Math.round(-16 + down * 40);
+  box(x, bx + 8, 0, 3, Math.max(0, top), A.ash0); box(x, bx + 9, 0, 1, Math.max(0, top), A.ash4);
+  box(x, bx - 1, top - 1, 22, 13, A.ash0); box(x, bx, top, 20, 11, A.ash3); box(x, bx + 1, top + 1, 18, 2, A.ash4); box(x, bx + 3, top + 5, 7, 4, A.ash2);
+  if (turn === 0) { box(x, bx + 20, top + 1, 8, 9, A.ash0); box(x, bx + 21, top + 2, 6, 7, A.ash2); box(x, bx + 27, top + 3, 1, 5, A.boneLo); }
+  else if (turn === 1) { box(x, bx + 5, top + 11, 10, 7, A.ash0); box(x, bx + 6, top + 12, 8, 5, A.ash2); box(x, bx + 7, top + 17, 6, 1, A.boneLo); }
+  else {
+    // the lens, round and dark, on them: a ring that catches the light
+    box(x, bx - 7, top + 6, 11, 11, A.ash0); box(x, bx - 6, top + 7, 9, 9, A.ash2); box(x, bx - 4, top + 9, 5, 5, A.ash0); box(x, bx - 3, top + 10, 2, 2, A.bone);
+  }
+  const on = turn > 0 && Math.floor(t * 4) % 2 === 0;
+  box(x, bx + 15, top - 3, 4, 3, A.ash0); box(x, bx + 16, top - 2, 2, 2, on || turn === 2 ? A.red : A.ash2);
 }
 const KIDS = [{ cx: 46, big: true }, { cx: 101, big: false }];
 function dancers(x, t, opts) {
@@ -285,7 +398,7 @@ function dancers(x, t, opts) {
     const mirror = i === 1 && opts.squint ? { aL: pose.aR, aR: pose.aL } : {};
     const P = Object.assign({}, pose, mirror);
     puddle(x, k.cx, fy, opts.puddle || 0);
-    const o = { pose: P, big: k.big, t, cry: opts.cry, squint: opts.squint, shades: opts.shades && !(k.big && opts.slip), look: opts.look };
+    const o = { pose: P, big: k.big, t, cry: opts.cry, squint: opts.squint, shades: opts.shades && !(k.big && opts.slip), look: opts.look, spray: opts.spray };
     [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => kid(x, k.cx + dx, fy + dy, Object.assign({}, o, { ink: A.ash0 })));
     kid(x, k.cx, fy, o);
     if (k.big && opts.slip) { // the shades slide down his nose: wet eyes over the top of them
@@ -296,39 +409,53 @@ function dancers(x, t, opts) {
 }
 let OFFC = null;
 const offscreen = () => OFFC || (OFFC = Object.assign(document.createElement('canvas'), { width: TVW, height: TVH }));
+// Timeline: they cry; the music starts and they dance, crying the whole time; the music stops,
+// they huddle. The show's camera comes down on its boom and turns its lens on them. Cut to that
+// camera: its viewfinder, REC, the amber box closing on their faces. Cut back: their giant screen
+// has gone red, REC on it, the room red with it; two clicks (the screen blinks off twice); black.
+export const LB = { DANCE: 4.6, STOP: 16.3, DOWN: 16.8, TURN: 17.4, POV: 18.1, RED: 19.2, C1: 19.7, C2: 20.1, BLACK: 20.5 };
 function lookback(x, t, o, loop) {
-  const DANCE_AT = 4.6, STOP = 16.3, SWING = 16.9, CLOSE = 17.3, RED = 18.7, BLACK = 19.9;
-  if (loop) { const f = Math.floor(t * 4) % 8; playroomRoom(x, t, f); dancers(x, t, { frame: f, cry: true, shades: true, sync: Math.floor(t / 4) % 3 === 2, puddle: 18 }); tvText(x, 'LIVE', 8, 6, A.red); ccText(x, 'CH 07', TVW - 4 - ccWidth('CH 07'), 4, A.gold); return; }
-  if (t >= BLACK) { box(x, 0, 0, TVW, TVH, A.ash0); return; }
-  const f = t >= DANCE_AT ? Math.floor((Math.min(t, STOP) - DANCE_AT) * 4) % 8 : null;
-  const scene = () => {
-    playroomRoom(x, t, f != null && t < STOP ? f : null);
-    dancers(x, t, { frame: t < DANCE_AT ? null : f, squint: t < 3.2, cry: t >= 3.2, shades: t >= DANCE_AT, sync: t >= 10.5 && t < 13, puddle: clamp((t - 3.2) * 1.6, 0, 22), slip: t >= STOP, look: t >= STOP, huddle: clamp((t - STOP) / 0.4, 0, 1) });
+  const L = LB;
+  if (loop) { const f = Math.floor(t * 4) % 8; playroomRoom(x, t, f, 'game'); dancers(x, t, { frame: f, cry: true, shades: true, spray: true, sync: Math.floor(t / 4) % 3 === 2, puddle: 18 }); tvText(x, 'LIVE', 8, 6, A.red); ccText(x, 'CH 07', TVW - 4 - ccWidth('CH 07'), 4, A.gold); return; }
+  if (t >= L.BLACK) { box(x, 0, 0, TVW, TVH, A.ash0); return; }
+  const f = t >= L.DANCE ? Math.floor((Math.min(t, L.STOP) - L.DANCE) * 4) % 8 : null;
+  const turn = t < L.TURN ? 0 : t < L.TURN + 0.35 ? 1 : 2;
+  const scene = (scr) => {
+    playroomRoom(x, t, f != null && t < L.STOP ? f : null, scr);
+    dancers(x, t, { frame: t < L.DANCE ? null : f, squint: t < 3.2, cry: t >= 3.2, spray: t >= L.DANCE && t < L.STOP, shades: t >= L.DANCE, sync: t >= 10.5 && t < 13, puddle: clamp((t - 3.2) * 1.6, 0, 22), slip: t >= L.STOP, look: t >= L.DOWN, huddle: clamp((t - L.STOP) / 0.4, 0, 1) });
+    if (t >= L.DOWN) boomCam(x, t, clamp((t - L.DOWN) / 0.5, 0, 1), turn);
     tvText(x, 'LIVE', 8, 6, A.red); ccText(x, 'CH 07', TVW - 4 - ccWidth('CH 07'), 4, A.gold);
   };
-  if (t < SWING) return scene();
-  if (t < CLOSE) {
-    // the camera swings: the picture whips sideways, smeared into lines
-    const u = (t - SWING) / (CLOSE - SWING), off = Math.round(u * u * 160);
-    x.save(); x.translate(-off, 0); scene(); x.restore();
-    box(x, TVW - off, 0, off, TVH, A.ash1);
-    for (let yy = 0; yy < TVH; yy += 3) box(x, 0, yy, TVW, 1, (yy / 3) % 2 ? A.ash2 : A.bronzeHi);
+  if (t < L.POV) return scene('game');
+  if (t < L.RED) {
+    // the show's camera: its viewfinder, close on their faces, the lock box closing on them
+    const sc = offscreen(), s2 = sc.getContext('2d');
+    playroomRoom(x, t, null, 'game'); dancers(x, t, { cry: true, slip: true, shades: true, look: true, puddle: 22, huddle: 1 });
+    s2.clearRect(0, 0, TVW, TVH); s2.drawImage(x.canvas, 0, 0);
+    x.imageSmoothingEnabled = false; box(x, 0, 0, TVW, TVH, A.ash0);
+    x.drawImage(sc, 37, 30, 73, 50, 0, 0, TVW, TVH);
+    const u = clamp((t - L.POV) / 0.8, 0, 1), bw = Math.round(132 - u * 20), bh = Math.round(80 - u * 30), bx = Math.round(TVW / 2 - bw / 2), by = Math.round(22 - u * 8);
+    x.strokeStyle = A.amber; x.lineWidth = 1; if (u < 1 || Math.floor(t * 8) % 2) x.strokeRect(bx + 0.5, by + 0.5, bw, bh);
+    // the viewfinder: corner marks, a cross in the middle, REC and its dot
+    box(x, 4, 4, 9, 1, A.bone); box(x, 4, 4, 1, 9, A.bone); box(x, TVW - 13, 4, 9, 1, A.bone); box(x, TVW - 5, 4, 1, 9, A.bone);
+    box(x, 4, TVH - 5, 9, 1, A.bone); box(x, 4, TVH - 13, 1, 9, A.bone); box(x, TVW - 13, TVH - 5, 9, 1, A.bone); box(x, TVW - 5, TVH - 13, 1, 9, A.bone);
+    box(x, TVW / 2 - 3, TVH / 2, 7, 1, A.bone); box(x, TVW / 2, TVH / 2 - 3, 1, 7, A.bone);
+    box(x, 7, 7, 32, 10, A.ash0); if (Math.floor(t * 3) % 2 === 0) box(x, 9, 9, 6, 6, A.red);
+    ccText(x, 'REC', 18, 9, A.bone);
     return;
   }
-  // close on them: a hard cut to twice the size, the show's lock box closing on both faces
-  const sc = offscreen(), s2 = sc.getContext('2d');
-  scene(); s2.clearRect(0, 0, TVW, TVH); s2.drawImage(x.canvas, 0, 0);
-  x.imageSmoothingEnabled = false; box(x, 0, 0, TVW, TVH, A.ash0);
-  x.drawImage(sc, 37, 30, 73, 50, 0, 0, TVW, TVH);
-  const close = clamp((t - CLOSE) / 1.1, 0, 1), bw = Math.round(140 - close * 24), bh = Math.round(90 - close * 34), bx = Math.round(TVW / 2 - bw / 2), by = Math.round(26 - close * 10);
-  x.strokeStyle = A.amber; x.lineWidth = 1; if (close < 1 || Math.floor(t * 8) % 2) x.strokeRect(bx + 0.5, by + 0.5, bw, bh);
-  if (t >= RED) {
-    // their screen goes red: everything light turns red, everything dark goes black
-    const img = x.getImageData(0, 0, TVW, TVH), d = img.data;
-    for (let i = 0; i < d.length; i += 4) { const l = d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15; if (l > 70) { d[i] = 0xe3; d[i + 1] = 0x41; d[i + 2] = 0x2b; } else { d[i] = 0x0e; d[i + 1] = 0x0f; d[i + 2] = 0x12; } }
-    x.putImageData(img, 0, 0);
-    tvText(x, 'REC', 6, 6, A.bone);
+  // back in the room: their screen has gone red; the room takes its light
+  const off = (t >= L.C1 && t < L.C1 + 0.12) || (t >= L.C2 && t < L.C2 + 0.12);
+  if (off) { box(x, 0, 0, TVW, TVH, A.ash0); box(x, 130, 22, 2, 2, A.red); return; } // a click: the room goes dark, only the camera's light on
+  scene('red');
+  const img = x.getImageData(0, 0, TVW, TVH), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const px = (i / 4) % TVW, py = Math.floor(i / 4 / TVW);
+    if (px >= GS.x && px < GS.x + GS.w && py >= GS.y && py < GS.y + GS.h) continue; // the screen itself stays as it is
+    const l = d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15;
+    if (l > 120) { d[i] = 0xe3; d[i + 1] = 0x41; d[i + 2] = 0x2b; } else { d[i] = 0x0e; d[i + 1] = 0x0f; d[i + 2] = 0x12; }
   }
+  x.putImageData(img, 0, 0);
 }
 
 // ------------------------------------------------------------------ THE COUCH
@@ -336,35 +463,41 @@ function lookback(x, t, o, loop) {
 function couchFig(x, cx, by, o) {
   const lx = o.lean ? o.lean[0] : 0, ly = o.lean ? o.lean[1] : 0, hw = o.small ? 7 : 8, hh = o.small ? 13 : 15, top = by - 14 - hh + ly;
   box(x, cx - 12, by - 15, 24, 15, A.ash0); box(x, cx - 11, by - 14, 22, 14, o.body); box(x, cx + 7, by - 13, 3, 13, o.bodyLo);
+  if (lx) { const nx = lx > 0 ? cx : cx + lx; box(x, nx - 2, by - 17, Math.abs(lx) + 4, 4, A.ash0); box(x, nx - 1, by - 16, Math.abs(lx) + 2, 2, o.bodyLo); } // the neck, bent over
   box(x, cx - hw - 1 + lx, top - 1, hw * 2 + 2, hh + 2, A.ash0); box(x, cx - hw + lx, top, hw * 2, hh, o.hair); box(x, cx - hw + lx, top + hh - 3, hw * 2, 3, o.hairLo);
   box(x, cx - 3, by - 15, 6, 1, A.ash5); // a neck
-  if (o.knot) { box(x, cx - 3 + lx, top - 5, 6, 5, A.ash0); box(x, cx - 2 + lx, top - 4, 4, 4, o.hair); }
-  if (o.crown) { box(x, cx - hw + lx, top - 3, hw * 2, 3, A.bone); [0, hw - 1, hw * 2 - 2].forEach(d => box(x, cx - hw + d + lx, top - 5, 2, 2, A.bone)); box(x, cx - 1 + lx, top - 2, 2, 1, A.gold); }
-  if (o.face) { // she turns round: a cheek, an eye, and then a finger to her lips
-    box(x, cx - hw + lx, top + 4, 7, 8, A.boneLo); box(x, cx - hw + 2 + lx, top + 6, 2, 2, A.ash0); box(x, cx - hw + 2 + lx, top + 10, 3, 1, A.ash5);
-    if (o.shh) { box(x, cx - hw - 3 + lx, top + 7, 2, 9, A.boneLo); box(x, cx - hw - 4 + lx, top + 14, 4, 4, A.boneLo); }
+  if (o.knot) { box(x, cx - 3 + lx + (lx > 0 ? 2 : 0), top - 5, 6, 5, A.ash0); box(x, cx - 2 + lx + (lx > 0 ? 2 : 0), top - 4, 4, 4, o.hair); }
+  if (o.crown) { const cx2 = cx + lx - (lx < 0 ? 2 : 0); box(x, cx2 - hw, top - 3, hw * 2, 3, A.bone); [0, hw - 1, hw * 2 - 2].forEach(d => box(x, cx2 - hw + d, top - 5, 2, 2, A.bone)); box(x, cx2 - 1, top - 2, 2, 1, A.gold); }
+  if (o.face) {
+    // she turns round to us: a cheek, an eye, a mouth; then a finger up against her lips
+    const fx = cx - hw + lx;
+    box(x, fx - 1, top + 2, 11, 13, A.ash0); box(x, fx, top + 3, 9, 11, A.boneLo); box(x, fx, top + 3, 9, 2, o.hair);
+    box(x, fx + 2, top + 6, 2, 2, A.ash0); box(x, fx + 6, top + 6, 2, 2, A.ash0); box(x, fx + 2, top + 5, 2, 1, o.hairLo); box(x, fx + 6, top + 5, 2, 1, o.hairLo);
+    box(x, fx + 3, top + 10, 4, 1, A.ash4);
+    if (o.shh) {
+      box(x, fx + 3, top + 7, 4, 9, A.ash0); box(x, fx + 4, top + 8, 2, 7, A.bone); // the finger, over her lips
+      box(x, fx + 1, top + 14, 8, 6, A.ash0); box(x, fx + 2, top + 15, 6, 4, A.boneLo); // the hand under it
+    }
   }
 }
 function couch(x, t, o, loop) {
   const tt = loop ? 12 + (t % 6) : t;
   box(x, 0, 0, TVW, TVH, A.ash1);
-  // their giant screen, Earth turning on it, small fires on its night side
-  box(x, 36, 4, 74, 40, A.ash0); box(x, 38, 6, 70, 36, A.ash2);
-  const ex = 73, ey = 24, r = 14, spin = Math.floor(tt * 2) % 28;
-  for (let dy = -r; dy <= r; dy++) { const hw = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35); box(x, ex - hw, ey + dy, 2 * hw + 1, 1, A.ash3); box(x, ex + Math.round(hw * 0.4), ey + dy, Math.max(0, hw - Math.round(hw * 0.4)) + 1, 1, A.ash1); }
-  [[-9, -6, 7, 5], [1, 2, 6, 4], [-5, 6, 4, 3]].forEach(([a, b, w, h]) => { const xx = ((a + spin + 14) % 28) - 14; if (Math.abs(xx) + w < 13 && Math.abs(b) + h < 12) box(x, ex + xx, ey + b, w, h, A.ash4); });
-  [[ex + 5, ey - 5], [ex + 8, ey + 3], [ex + 3, ey + 8], [ex + 10, ey - 1]].forEach(([a, b], i) => { if (Math.floor(tt * 2 + i) % 3) box(x, a, b, 1, 1, A.gold); });
+  // their giant screen, their game still going on it (ending/showscreen.js)
+  box(x, 24, 0, 86, 40, A.ash0); drawShowMini(x, 26, 1, 82, 37, { t: tt }); // clear of the CH 07 mark
   // the couch
   box(x, 14, 60, 118, 26, A.ash0); box(x, 15, 61, 116, 24, A.gold); box(x, 15, 61, 116, 1, A.goldHi); box(x, 15, 78, 116, 7, A.goldLo);
   box(x, 7, 54, 10, 32, A.ash0); box(x, 8, 55, 8, 30, A.goldLo); box(x, 129, 54, 10, 32, A.ash0); box(x, 130, 55, 8, 30, A.goldLo);
   box(x, 0, 86, TVW, TVH - 86, A.ash0);
-  const leanL = tt > 6.5 ? [3, 2] : null, leanR = tt > 9 ? [-3, 2] : null;
+  // the kids nod off onto her shoulders: the head sinks in, tips over, and rests on her
+  const nod = (at) => { const u = clamp((tt - at) / 1.2, 0, 1); return u > 0 ? [Math.round(u * 8), Math.round(u * 6)] : null; };
+  const leanL = nod(6.5), leanR = nod(9), rR = leanR ? [-leanR[0], leanR[1]] : null;
   const turned = !loop && tt > 15 && tt < 19.5, shh = !loop && tt > 16.2 && tt < 19;
-  couchFig(x, 44, 72, { hair: A.goldHi, hairLo: A.gold, body: A.bone, bodyLo: A.boneLo, small: true, knot: true, lean: leanL });
   couchFig(x, 73, 72, { hair: A.ash3, hairLo: A.ash2, body: A.ash5, bodyLo: A.ash4, face: turned, shh });
-  couchFig(x, 102, 72, { hair: A.gold, hairLo: A.goldLo, body: A.bone, bodyLo: A.boneLo, small: true, crown: true, lean: leanR });
+  couchFig(x, 44, 72, { hair: A.goldHi, hairLo: A.gold, body: A.bone, bodyLo: A.boneLo, small: true, knot: true, lean: leanL });
+  couchFig(x, 102, 72, { hair: A.gold, hairLo: A.goldLo, body: A.bone, bodyLo: A.boneLo, small: true, crown: true, lean: rR });
   // asleep: z's rise off the kids and pop
-  if (tt > 10.5) [[44, 0], [102, 0.8]].forEach(([cx, ph], i) => { const u = ((tt + ph) % 1.6) / 1.6; ccText(x, 'z', cx + 4 + Math.round(u * 8) + i, Math.round(46 - u * 18), u < 0.7 ? A.bone : A.ash4, { sx: u < 0.4 ? 1 : 2, sy: u < 0.4 ? 1 : 2 }); });
+  if (tt > 10.5) [[55, 0], [91, 0.8]].forEach(([cx, ph], i) => { const u = ((tt + ph) % 1.6) / 1.6; ccText(x, 'z', cx + (i ? -4 : 4) + Math.round(u * 8) * (i ? -1 : 1), Math.round(50 - u * 18), u < 0.7 ? A.bone : A.ash4, { sx: u < 0.4 ? 1 : 2, sy: u < 0.4 ? 1 : 2 }); });
   if (!loop && tt < 5 && !(tt > 4.6 && Math.floor(tt * 10) % 2)) ccText(x, 'CH 07', TVW - 4 - ccWidth('CH 07'), 4, A.gold);
 }
 

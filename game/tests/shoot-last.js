@@ -3,7 +3,7 @@
 // last-card.png and last-ch<n>.png at deviceScaleFactor 1.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
-const SHOTS = { vest: ['moon', [3, 9.5, 17]], endall: ['rerun', [6, 14, 15.8]], round2: ['ridge', [5, 11, 13]], lookback: ['playroom', [3.5, 8, 11, 17.6, 19]], couch: ['couch', [8, 12, 16.8]] };
+const SHOTS = { vest: ['moon', [3, 9.5, 13.5, 16, 19]], endall: ['rerun', [6, 14, 15.8]], round2: ['ridge', [5, 11, 13]], lookback: ['playroom', [3.5, 8, 11, 17.6, 18.5, 19.5]], couch: ['couch', [8, 12, 16.8]] };
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 1360, height: 880 }, deviceScaleFactor: 1 });

@@ -15,8 +15,9 @@ import { overlay } from '../core/overlay.js';
 import { state } from '../core/state.js';
 import { ENDINGS, endingOf } from '../data/endings.js';
 import { ccText, ccWidth, ccWrap } from '../art/ccfont.js';
-import { drawBeat, BEATS, BEAT_CC, OWN_NAME, vestRoom } from './beats.js';
+import { drawBeat, BEATS, BEAT_CC, OWN_NAME, vestRoom, LB } from './beats.js';
 import { CHANNELS, drawChannel, drawOsd, drawStatic } from './channels.js';
+import { TVSCREEN } from '../art/moon.js';
 
 // the set's two knobs (paintLastRoom): the top one turns the channel up, the bottom one down
 export const KNOBS = [{ x: 239, y: 94, d: 1 }, { x: 239, y: 112, d: -1 }];
@@ -38,6 +39,8 @@ export function leave(to) {
   }, 0);
 }
 
+const onPicture = (x, y) => x >= TVSCREEN.x && x < TVSCREEN.x + TVSCREEN.w && y >= TVSCREEN.y && y < TVSCREEN.y + TVSCREEN.h;
+
 export class Finale {
   // o: { kind, id, ctx (the TV's 2D context), tex, room, card (Graphics), flash (the scene's black
   // rectangle), bite, pieces, hiss }
@@ -56,15 +59,17 @@ export class Finale {
   flip(d, forced) {
     const n = CHANNELS.length;
     this.ch = forced ? 0 : (this.ch + d + n) % n;
-    this.chT = 0; this.flipT = 0.18; this.osdT = 2.6; this.amb = -1;
+    this.chT = 0; this.flipT = 0.18; this.osdT = 1.8; this.amb = -1;
     if (d) this.knob[d > 0 ? 0 : 1]++;
     Sound.click(0.03); Sound.noise(0.16, 0.04, 7000);
     if (this.ch !== 0) overlay.clearCaption();
   }
   // a click on the picture (x, y in the 320 x 180 picture)
   click(x, y) {
-    const k = KNOBS.find(q => Math.hypot(x - q.x, y - q.y) <= 8);
-    if (this.phase === 'beat') { if (k) this.flip(k.d); else this.toCard(); return; }
+    const k = KNOBS.find(q => Math.hypot(x - q.x, y - q.y) <= 10);
+    // during the beat only a click on the picture itself skips; a miss on the set's side panel
+    // (round the knobs, the speaker) does nothing, so trying the knobs never loses the beat
+    if (this.phase === 'beat') { if (k) this.flip(k.d); else if (onPicture(x, y)) this.toCard(); return; }
     if (this.phase === 'tv') { if (k) this.flip(k.d); else if (this.backBox && x >= this.backBox.x && x < this.backBox.x + this.backBox.w && y >= this.backBox.y && y < this.backBox.y + this.backBox.h) this.toCard(); return; }
     if (this.phase === 'card' && this.cardT > 0.35) { const i = this.rowAt(x, y); if (i >= 0) { this.pick = i; this.press(); } }
   }
@@ -83,7 +88,7 @@ export class Finale {
     Sound.stamp(0.8);
   }
   toTv() {
-    this.phase = 'tv'; this.tvT = 0; this.ch = 0; this.chT = 0; this.osdT = 2.6; this.flipT = 0.18; this.step = -1;
+    this.phase = 'tv'; this.tvT = 0; this.ch = 0; this.chT = 0; this.osdT = 1.8; this.flipT = 0.18; this.step = -1;
     this.card.clear(); this.rows = null;
     if (this.hiss) this.hiss.set(0.015, 0.6);
     Sound.click(0.03); Sound.noise(0.16, 0.04, 7000);
@@ -101,7 +106,9 @@ export class Finale {
       this.t += dt;
       if (c.leftP()) this.flip(-1); else if (c.rightP()) this.flip(1);
       if (c.advance()) { this.toCard(); return this.draw(dt); }
-      if (!this.forced && this.ch !== 0 && this.t >= this.beat.climax) { this.forced = true; this.flip(0, true); }
+      // at the climax the show takes the set back to channel 7, once: only a viewer still away then
+      // is pulled back; any flip after the climax stays where it lands
+      if (!this.forced && this.t >= this.beat.climax) { this.forced = true; if (this.ch !== 0) this.flip(0, true); }
       this.cues(this.t);
       if (this.t >= this.beat.end) this.toCard();
       // black, then the TV, in two steps (whole-object fades only)
@@ -140,6 +147,9 @@ export class Finale {
       this.cue('hug', 12.6, () => Sound.tone(392, 0.6, 'sine', 0.015, null, 0.4), true);
       this.cue('drop', 15.2, () => { Sound.noise(0.3, 0.06, 6000); if (this.hiss) this.hiss.set(0.05, 1.2); });
       this.cue('bug', 16, () => Sound.click(0.03));
+      this.cue('card', 18.2, () => { if (this.hiss) this.hiss.set(0.008, 0.3); Sound.tone(1000, 2.5, 'sine', 0.008); }, true);
+      // they dance to nothing in front of the card: claps and whoops on the beat
+      if (t >= 17.6 && t < this.beat.end) { const s = Math.floor((t - 17.6) / 0.25); if (s !== this.step) { this.step = s; if (s % 2 === 0) Sound.noise(0.05, 0.04, 2500); if (s % 4 === 1) Sound.tone(500 + (s % 8) * 40, 0.18, 'triangle', 0.015, 820); } }
     } else if (k === 'rerun') {
       this.cue('bed', 0.9, () => { this.beds.show = Sound.show(0.02); });
       if (t > 1 && t < 13.4) { const s = Math.floor(t * (2 + t * 0.4)); if (s !== this.step) { this.step = s; if (this.ch === 0) Sound.tone(160 + t * 26, 0.05, 'sawtooth', 0.005); } }
@@ -157,12 +167,15 @@ export class Finale {
       [3.2, 3.9].forEach((at, i) => this.cue('sob' + i, at, () => Sound.tone(640, 0.35, 'triangle', 0.014, 420)));
       if (t >= 4.6 && t < 16.3) this.music(t - 4.6);
       this.cue('scratch', 16.3, () => { Sound.noise(0.25, 0.08, 3000); Sound.tone(900, 0.28, 'sawtooth', 0.03, 110); });
-      this.cue('swing', 16.9, () => Sound.noise(0.35, 0.06, 2400));
-      [17.4, 17.7, 18.0].forEach((at, i) => this.cue('lock' + i, at, () => Sound.tone(1200 + i * 200, 0.05, 'square', 0.015)));
-      this.cue('red', 18.7, () => Sound.tone(62, 0.9, 'sawtooth', 0.04));
-      this.cue('c1', 19.2, () => { Sound.click(0.04); Sound.tone(2600, 0.03, 'square', 0.02); });
-      this.cue('c2', 19.5, () => { Sound.click(0.04); Sound.tone(2600, 0.03, 'square', 0.02); });
-      this.cue('black', 19.9, () => { Sound.noise(0.08, 0.05, 6000); if (this.hiss) this.hiss.set(0.0001, 0.2); });
+      // the show's camera comes down on its boom (a motor), turns (a servo), locks on (three beeps)
+      this.cue('down', LB.DOWN, () => { Sound.tone(140, 0.5, 'sawtooth', 0.012, 220); Sound.noise(0.4, 0.02, 900); });
+      this.cue('turn', LB.TURN, () => Sound.tone(420, 0.6, 'square', 0.008, 260));
+      this.cue('pov', LB.POV, () => Sound.noise(0.06, 0.05, 6000));
+      [0.3, 0.55, 0.8].forEach((d, i) => this.cue('lock' + i, LB.POV + d, () => Sound.tone(1200 + i * 200, 0.05, 'square', 0.015)));
+      this.cue('red', LB.RED, () => Sound.tone(62, 0.9, 'sawtooth', 0.04));
+      this.cue('c1', LB.C1, () => { Sound.click(0.04); Sound.tone(2600, 0.03, 'square', 0.02); });
+      this.cue('c2', LB.C2, () => { Sound.click(0.04); Sound.tone(2600, 0.03, 'square', 0.02); });
+      this.cue('black', LB.BLACK, () => { Sound.noise(0.08, 0.05, 6000); if (this.hiss) this.hiss.set(0.0001, 0.2); });
     } else if (k === 'couch') {
       this.cue('bed', 1.2, () => { this.beds.show = Sound.show(0.018); });
       this.cue('bug', 5, () => { Sound.click(0.02); this.scene.bugOff = true; }, true);
@@ -206,8 +219,10 @@ export class Finale {
       const own = this.ch === 0;
       if (this.flipT > 0) drawStatic(x);
       else if (own) drawBeat(x, this.kind, this.phase === 'beat' ? this.t : this.tvT, { bite: this.bite, pieces: this.pieces }, this.phase === 'tv');
-      else drawChannel(x, this.channel, this.chT);
-      if (this.osdT > 0 && this.flipT <= 0) drawOsd(x, this.channel.n, own ? OWN_NAME[this.kind] : this.channel.name);
+      else drawChannel(x, this.channel, this.chT, this.osdT > 0);
+      // the set's number and name for a moment after a flip, in the corner the channel's own mark
+      // sits in, over it (so the number never shows twice)
+      if (this.osdT > 0 && this.flipT <= 0) drawOsd(x, this.channel.n, own ? OWN_NAME[this.kind] : this.channel.name, this.channel.corner);
       this.tex.refresh();
     }
     this.drawRoom();
