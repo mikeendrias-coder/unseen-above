@@ -264,12 +264,12 @@ export class EastWing extends TopDownEpisode {
     while (cur && !(cur[0] === from[0] && cur[1] === from[1])) { out.unshift(cur); cur = prev.get(key(...cur)); }
     return out;
   }
-  showHp() { CG.hp(state.immune ? null : this.hp, 3); }
+  showHp() { CG.hp(this.hp, 3); } // every mode (IMMUNE too: at 0 she regenerates at the mark)
   // she walks into the robot, or it rolls into her: a shock off its shell, a heart, and she is
   // thrown back a tile. It does not see her for it (its lens looks past her feet).
   onBump(x, y) { const R = this.robot; if (Math.round(R.x) === x && Math.round(R.y) === y) this.bumpRobot(); }
   bumpRobot() {
-    if (this.dead || this.leaving || this.inv > 0 || state.immune || window.__noDeath) return;
+    if (this.dead || this.leaving || this.inv > 0 || window.__noDeath) return;
     const R = this.robot, k = this.kid;
     this.hp = Math.max(0, this.hp - 1); this.inv = 1; this.showHp();
     Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800); fx.shake(this.cameras.main, 120, 0.006);

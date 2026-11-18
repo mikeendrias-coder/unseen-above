@@ -75,6 +75,9 @@ export function startTakes(scene) {
 export function tapeTake(scene) {
   juice.prime(scene); // her squash and stretch frames, ready before the first landing
   const n = scene.ep && scene.ep.take, k = scene.kid; if (!k || !(n > 1) || !hasTakes(scene)) return;
+  // back from an immune death (or an immune retry): the same take goes on, so no new tape
+  const data = (scene.sys && scene.sys.settings && scene.sys.settings.data) || {};
+  if (data.regen) return;
   if (scene.__tape && scene.__tape.take === n && (scene.__tape.pending || (scene.__tape.g && scene.__tape.g.scene))) return; // already down
   // the glasses' readout sits in the lower left of the view: juice.tape keeps the tape readable
   const meter = !!(scene.gl && scene.gl.has), cp = checkpointOf(scene), mark = cp && cp.i != null;
@@ -97,23 +100,32 @@ export function showStatus(scene, hp, maxHp) {
   cg.lives(hide ? null : takesLeft(scene), TAKES, state.mode);
 }
 
-// One line in the strip the first time in a run (state.newRun forgets it) she loses HP, and the
-// first time she loses a life. It waits for the strip to be free (a death line, a look, a talk),
-// for up to 12 s; if it never is, it waits for the next time.
-const EXPLAIN = { hp: 'HP: hits from the house. A light or a laser takes a life.', lives: 'LIVES: you go back to the last tape mark.' };
+// One line in the strip the first time in a run (state.newRun forgets it) and mode she loses HP,
+// and the first time she loses a life. Each fits the strip on one line (40 columns) and says what is true
+// in the mode she is in. It waits for the strip to be free (a death line, a look, a talk) for up
+// to 3 s (LIVES 8 s), and is dropped if she dies or the take restarts first (an HP line read over full hearts
+// would teach the wrong thing); it comes the next time instead. The LIVES line waits out the
+// restart and shows on the new take.
+const EXPLAIN = {
+  hp: { normal: 'HP: hits. Lights and lasers take a life.', endless: 'HP: hits. Lights and lasers take a life.', immune: 'HP: hits. Lights and lasers reset you.' },
+  lives: { normal: 'LIVES: you go back to the tape mark.', endless: 'LIVES: endless. Back to the tape mark.' }
+};
+export const explainText = (kind, mode) => { const e = EXPLAIN[kind]; return e ? e[mode || state.mode] || null : null; };
 const waiting = {};
 export function explain(kind) {
-  const key = 'explain:' + kind;
-  if (!EXPLAIN[kind] || waiting[kind] || state.heard(key)) return;
+  const key = 'explain:' + kind + ':' + state.mode, text0 = explainText(kind);
+  if (!text0 || waiting[kind] || state.heard(key)) return;
+  const sc0 = window.__game && window.__game.scene, take0 = sc0 && sc0.sys && sc0.sys.settings.data;
   waiting[kind] = true;
   const t0 = performance.now();
   const go = () => {
-    const sc = window.__game && window.__game.scene;
-    if (performance.now() - t0 > 12000 || !sc || !sc.epId) { waiting[kind] = false; return; }
-    const busy = (overlay.line && !overlay.line.dead) || overlay.describing() || cg.pageUp || window.__paused || (kind === 'lives' && waiting.hp);
-    if (busy) { setTimeout(go, 250); return; }
+    const sc = window.__game && window.__game.scene, text = explainText(kind);
+    // gone stale: too long, another scene, a new take, or (for HP) she is dying now
+    if (!text || performance.now() - t0 > (kind === 'hp' ? 3000 : 8000) || !sc || !sc.epId || sc !== sc0 || (kind === 'hp' && (sc.dead || (sc.sys && sc.sys.settings.data) !== take0))) { waiting[kind] = false; return; }
+    const busy = sc.dead || (overlay.line && !overlay.line.dead) || overlay.describing() || cg.pageUp || window.__paused || (kind === 'lives' && waiting.hp);
+    if (busy) { setTimeout(go, 200); return; }
     waiting[kind] = false;
-    overlay.caption(null, EXPLAIN[kind], { ms: 4200, instant: true, key });
+    overlay.caption(null, text, { ms: 4200, instant: true, key });
   };
   setTimeout(go, kind === 'lives' ? 450 : 120);
 }
@@ -152,7 +164,7 @@ export function beginDeath(scene, src, impact, fire) {
   if (!regen) results.died(scene);
   // a life used up (NORMAL only: ENDLESS never runs out, IMMUNE loses nothing)
   if (state.mode === 'normal' && hasTakes(scene) && visits[scene.epId]) { visits[scene.epId].left = Math.max(0, visits[scene.epId].left - 1); scene.takesLeft = visits[scene.epId].left; showStatus(scene); }
-  if (!regen && hasTakes(scene)) explain('lives');
+  if (!regen && hasTakes(scene)) { waiting.hp = false; explain('lives'); }
   d.hit = quiet => {
     if (d.impacted) return; d.impacted = true; impact(!!quiet);
     // the strike lands: a hit-stop and a 2 px kick (not when a key cut it short)

@@ -60,14 +60,14 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.waitForFunction(() => window.__game.scene.kid && !window.__game.scene.dead && window.__game.scene.clock > 0.3, null, { timeout: 20000 });
   const left0 = await S(() => window.__game.scene.takesLeft);
   ok('a new visit has 5 lives, minus the fall: ' + left0, left0 === 4);
-  ok('the first HP lost (a fall) was explained in the strip, once', await S(() => window.__unseen.state.heard('explain:hp')));
+  ok('the first HP lost (a fall) was explained in the strip, once', await S(() => window.__unseen.state.heard('explain:hp:' + window.__unseen.state.mode)));
   ok('the strip reads HP as hearts and LIVES as a number', await S(() => { const st = window.__unseen.cg.status; return st.hp && st.hp.max === 3 && st.lives && st.lives.n === 4 && st.lives.kind === 'normal'; }));
   const tA = Date.now();
   await S(() => window.__game.scene.die({ id: 'garden lamp' }));
   await p.waitForFunction(() => window.__game.scene.kid && !window.__game.scene.dead && window.__game.scene.clock > 0.05, null, { timeout: 10000 });
   const fastMs = Date.now() - tA;
   ok(`after the first death the next take starts fast (${fastMs} ms, no key)`, fastMs < 2000 && await S(() => window.__game.scene.takesLeft === 3));
-  ok('the first life lost was explained in the strip, once', await p.waitForFunction(() => window.__unseen.state.heard('explain:lives'), null, { timeout: 14000 }).then(() => true, () => false));
+  ok('the first life lost was explained in the strip, once', await p.waitForFunction(() => window.__unseen.state.heard('explain:lives:' + window.__unseen.state.mode), null, { timeout: 14000 }).then(() => true, () => false));
   for (let i = 0; i < 2; i++) {
     await S(() => window.__game.scene.die({ id: 'garden lamp' }));
     await p.waitForTimeout(150); await p.keyboard.press('Space');

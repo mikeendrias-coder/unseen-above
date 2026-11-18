@@ -26,7 +26,7 @@ export const presenting = () => !!state.settings.presenter;
 const PRESENT_MUSIC = 2, PRESENT_SFX = 4;
 export const MODE_WORD = { normal: 'NORMAL', endless: 'ENDLESS', immune: 'IMMUNE' };
 // what each mode means, short enough for the pause menu's help line
-export const MODE_HELP = { normal: 'Out of lives: the episode restarts.', endless: 'Lives never run out.', immune: 'Lose nothing. Back to the mark.' };
+export const MODE_HELP = { normal: '5 lives, then the episode restarts.', endless: 'Lives never run out.', immune: 'Lose nothing. Back to the mark.' };
 function tags() {
   overlay.immune(state.mode !== 'normal' && !presenting(), MODE_WORD[state.mode]);
   const t = document.getElementById('ptag');
@@ -65,8 +65,8 @@ export function setMode(m) {
 }
 // the next mode: NORMAL, ENDLESS, IMMUNE, then NORMAL again (d -1 goes back)
 export function cycleMode(d) { const i = MODES.indexOf(state.mode); return setMode(MODES[(i + (d < 0 ? MODES.length - 1 : 1)) % MODES.length]); }
-// the I key, the key under the game, the title: cycle, and say the mode on the set
-export function stepMode(d) { const m = cycleMode(d); overlay.note('Mode: ' + MODE_WORD[m], 1600); return m; }
+// the I key, the key under the game, the title: cycle, and say the mode and what it means on the set
+export function stepMode(d) { const m = cycleMode(d); overlay.note(MODE_WORD[m] + '. ' + MODE_HELP[m], 2200); return m; }
 // immune or not (old callers: the title switch and tests)
 export function setStory(on) { return setMode(on ? 'immune' : state.mode === 'immune' ? 'normal' : state.mode); }
 // may N skip ahead here right now

@@ -9,7 +9,7 @@ import { cg } from './ui/cg.js';
 import { STEPS } from './core/flow.js';
 import { state } from './core/state.js';
 import { Music } from './core/music.js';
-import { stepMode, syncImmunity, setPresenter, presenting, MODE_WORD } from './core/review.js';
+import { stepMode, syncImmunity, setPresenter, presenting, MODE_WORD, MODE_HELP } from './core/review.js';
 import { newGame } from './data/endings.js';
 import { itemPanel } from './core/panels.js';
 import { Grounds } from './scenes/Grounds.js';
@@ -281,7 +281,10 @@ function syncGuide() {
   if (cont) { cont.hidden = !st; const at = cont.querySelector('i'); if (at && st) at.textContent = SHORT[st.id] || st.label; cont.setAttribute('aria-label', st ? 'Continue: ' + st.label : 'Continue'); }
   if (go) { go.classList.toggle('second', !!st); go.firstChild.textContent = st ? 'From the start' : 'Begin'; }
   if (optNew) { optNew.hidden = !(remembered() || presenting()); if (!armed) optNew.querySelector('i').textContent = ''; }
-  sw(optStory, state.mode !== 'normal', MODE_WORD[state.mode].toLowerCase());
+  sw(optStory, state.mode !== 'normal', MODE_WORD[state.mode]);
+  // what the mode means, in plain sight under the picture (ENDLESS with the strip's infinity sign)
+  const mn = document.getElementById('mode-note');
+  if (mn) { const w = mn.querySelector('b'); w.textContent = 'Mode ' + MODE_WORD[state.mode]; w.classList.toggle('inf', state.mode === 'endless'); mn.querySelector('i').textContent = ': ' + MODE_HELP[state.mode] + ' I cycles it.'; }
   sw(optFlash, !!state.settings.reduceFlash, state.settings.reduceFlash ? 'reduced' : 'full');
   sw(optPresent, presenting(), presenting() ? 'on' : 'off');
   // full screen and big captions are presenter tools: on the title only while presenting (U and

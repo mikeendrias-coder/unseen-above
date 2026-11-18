@@ -2,17 +2,17 @@
 // in small type under it, in two rows (Nov 18: they wrap inside the window and sit right under the
 // caption strip): what she does, then the show's own controls. Clicking one does what the key does: it sends the game the same key
 // the keyboard would (held while the pointer is down, for moving, jumping, crouching and
-// running). I is the mode: it cycles NORMAL, ENDLESS, IMMUNE and says which under it (latched
-// down unless NORMAL). Switches (sound, flashing, glasses) latch down while on and stay in step
+// running). I is the mode: it cycles NORMAL, ENDLESS, IMMUNE and says which under it in capitals
+// (ENDLESS with an infinity sign; latched down unless NORMAL). Switches (sound, flashing, glasses) latch down while on and stay in step
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
 // Presenter tools (Nov 18): Pres is presenter mode, H holds the picture (ui/pause.js), U is full
 // screen (main.js). On a satellite screen W A S D say "turn": they turn the globe. On its request
 // form W and S say "check", and the keys that do nothing there are blank and grey. In the
-// top-down east wing W A S D walk up, down, left and right and Space greys out. In the fight K
+// top-down east wing W A S D walk up, down, left and right (W says door at a door) and Space greys out. In the fight K
 // says "swing".
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
-import { stepMode, canSkip, setPresenter, presenting } from '../core/review.js';
+import { stepMode, canSkip, setPresenter, presenting, MODE_WORD } from '../core/review.js';
 import { overlay } from '../core/overlay.js';
 
 const KEYS = [
@@ -67,7 +67,7 @@ const DYN = {
   l: () => (form() ? ['ask who', !stamped()] : null), // otherwise the glasses switch speaks for L
   a: () => form() ? ['', false] : [sat() ? 'turn' : 'left', true],
   d: () => form() ? ['', false] : [sat() ? 'turn' : 'right', true],
-  w: () => form() ? ['check', !stamped()] : [sat() ? 'turn' : top() ? 'up' : 'door', !ring()],
+  w: () => form() ? ['check', !stamped()] : [sat() ? 'turn' : top() ? (scene().atDoor ? 'door' : 'up') : 'door', !ring()],
   s: () => form() ? ['check', !stamped()] : [sat() ? 'turn' : top() ? 'down' : 'crouch', !ring()],
   space: () => sat() || top() ? ['', false] : ['jump', true],
   shift: () => sat() ? ['', false] : ['run', true],
@@ -81,7 +81,7 @@ const glasses = () => { const sc = scene(), g = sc && sc.gl; return g && g.has ?
 
 // what each switch shows: [pressed, word under it]
 const SWITCH = {
-  immune: () => [state.mode !== 'normal', 'mode: ' + state.mode],
+  immune: () => [state.mode !== 'normal', MODE_WORD[state.mode]], // ENDLESS gets an infinity sign after it (.inf)
   sound: () => [!Sound.muted, Sound.muted ? 'sound off' : 'sound on'],
   flash: () => [!!state.settings.reduceFlash, state.settings.reduceFlash ? 'flash reduced' : 'flash full'],
   glasses: () => { const g = glasses(); return [!!(g && g.on), g ? (g.on ? 'glasses on' : 'glasses') : 'glasses'] },
@@ -138,7 +138,10 @@ export function initKeys() {
       if (!k.sw) return;
       const [on, word] = SWITCH[k.sw]();
       if (b.getAttribute('aria-pressed') !== String(on)) b.setAttribute('aria-pressed', String(on));
-      if (lbl.textContent !== word) { lbl.textContent = word; if (k.sw === 'immune') b.setAttribute('aria-label', word + ', key I cycles it'); }
+      if (lbl.textContent !== word) {
+        lbl.textContent = word;
+        if (k.sw === 'immune') { lbl.classList.toggle('inf', state.mode === 'endless'); b.setAttribute('aria-label', 'mode ' + word + (state.mode === 'endless' ? ', lives never run out' : state.mode === 'immune' ? ', she regenerates' : '') + ', key I cycles it'); }
+      }
       if (k.sw === 'glasses') b.classList.toggle('off', !glasses());
     });
     els.forEach(({ k, b, lbl }) => {

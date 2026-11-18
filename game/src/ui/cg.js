@@ -92,22 +92,29 @@ function drawFlash() { const f = S.flash; if (!f) return; ctx.fillStyle = patter
 
 // ------------------------------------------------------------------ the strip under the picture
 // Captions in the middle (40 columns), her HP at the left end, the lives left at the right end.
-// HP is three hearts under a small HP; LIVES is a number under a small LIVES (an infinity sign in
+// HP is three hearts under a small HP; LIVES is a number under a small LIVES (3 x 5 letters) (an infinity sign in
 // ENDLESS, the word IMMUNE in IMMUNE). Bone is what she has, ash3 what is gone.
 const CAP_COLS = 40, CAP_ROW = 10;
 // a 7 x 6 heart and a 9 x 5 infinity sign, '#' is ink
 const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
 const INF = ['.##...##.', '#..#.#..#', '#...#...#', '#..#.#..#', '.##...##.'];
 function glyph(rows, x, y, color) { ctx.fillStyle = color; rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') ctx.fillRect(x + i, y + j, 1, 1); }); }
+// the strip's two labels in a 3 x 5 face, smaller than the values under them
+const SMALL = {
+  H: ['#.#', '#.#', '###', '#.#', '#.#'], P: ['##.', '#.#', '##.', '#..', '#..'], L: ['#..', '#..', '#..', '#..', '###'],
+  I: ['###', '.#.', '.#.', '.#.', '###'], V: ['#.#', '#.#', '#.#', '#.#', '.#.'], E: ['###', '#..', '##.', '#..', '###'], S: ['.##', '#..', '.#.', '..#', '##.']
+};
+const smallW = s => s.length * 4 - 1;
+function small(s, x, y, color) { [...s].forEach((c, i) => glyph(SMALL[c], x + i * 4, y, color)); }
 function drawStrip() {
-  const top = H + 5, valY = H + 14;
+  const top = H + 7, valY = H + 14;
   if (S.hp) {
-    ccText(ctx, 'HP', 6, top, INK_LO);
+    small('HP', 6, top, INK_LO);
     for (let i = 0; i < S.hp.max; i++) glyph(HEART, 6 + i * 9, valY + 1, i < S.hp.n ? PAPER : INK_LO);
   }
   if (S.lives) {
     const L = S.lives, label = 'LIVES';
-    ccText(ctx, label, 316 - ccWidth(label), top, L.kind === 'normal' && L.n <= 1 ? ASH.red : INK_LO);
+    small(label, 316 - smallW(label), top, L.kind === 'normal' && L.n <= 1 ? ASH.red : INK_LO);
     if (L.kind === 'endless') glyph(INF, 316 - 9, valY + 1, PAPER);
     else if (L.kind === 'immune') ccText(ctx, 'IMMUNE', 316 - ccWidth('IMMUNE'), valY, PAPER);
     else { const v = String(L.n); ccText(ctx, v, 316 - ccWidth(v), valY, PAPER); }

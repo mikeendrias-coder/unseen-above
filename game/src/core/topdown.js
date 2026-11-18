@@ -269,7 +269,7 @@ export class TopDownEpisode extends Phaser.Scene {
   // at: { tx, ty } (a tile), or null to clear it
   markCheckpoint(at) { setCheckpoint(this, at); }
   canRestart() { return !this.dead && !this.leaving && !this.done; }
-  restartTake() { if (!this.canRestart()) return false; this.dead = true; this.ep.take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart(retryData(this))); return true; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; const im = state.mode === 'immune'; if (!im) this.ep.take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart(Object.assign(retryData(this), im ? { regen: true } : {}))); return true; }
   skipDeath() { return skipDeath(this); }
   // her bodies from earlier takes; each one can be looked at with E
   drawBodies() {
@@ -299,7 +299,7 @@ export class TopDownEpisode extends Phaser.Scene {
   // against it). J at a door says W. W counts once per press, and not if it was held when the
   // scene began.
   updateThings() {
-    this.nearThing = null;
+    this.nearThing = null; this.atDoor = false;
     const up = this.ctl.up(), upTap = up && this.upHeld === false; this.upHeld = up;
     if (this.dead || this.leaving || this.done || this.kid.moving) return;
     const k = this.kid, near = this.things.filter(t => !t.off && (t.reach === 2 ? Math.max(Math.abs(t.tx - k.tx), Math.abs(t.ty - k.ty)) <= 1 || Math.abs(t.tx - k.tx) + Math.abs(t.ty - k.ty) <= 2 : Math.abs(t.tx - k.tx) + Math.abs(t.ty - k.ty) <= (t.reach || 1)));
@@ -307,6 +307,7 @@ export class TopDownEpisode extends Phaser.Scene {
     const rank = t => (t.door ? 2 : t.look ? 1 : 0);
     this.nearThing = near.sort((a, b) => rank(a) - rank(b))[0] || null;
     const door = near.find(t => t.door);
+    this.atDoor = !!door; // the W key under the game says door here
     if (door && upTap) { door.use(); return; }
     const t = this.nearThing;
     if (t && t.hold) return; // held things read the key themselves (useHeld)

@@ -54,7 +54,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.down('KeyA'); await p.waitForTimeout(500); await p.keyboard.up('KeyA');
   const moved = await S(x => window.__game.scene.kid.x < x - 8, hurt.x);
   ok(`chandelier at 3 HP: HP ${hurt.hp}, thrown clear (inside the wreck: ${hurt.inside}), she walks away (${moved})`, hurt.hp === 1 && !hurt.dead && !hurt.inside && moved);
-  ok('the first HP lost explains HP in the strip', await until(() => /HP: hits from the house/.test(document.getElementById('cc').textContent), null, 6000).then(() => true, () => false));
+  ok('the first HP lost explains HP in the strip', await until(() => /HP: hits\. Lights and lasers/.test(document.getElementById('cc').textContent), null, 6000).then(() => true, () => false));
   await p.keyboard.press('Backspace'); await back();
   const g0 = await rec();
   await under(2);

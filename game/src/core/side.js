@@ -321,12 +321,12 @@ export class SideEpisode extends Phaser.Scene {
     beginDeath(this, src, impact, (onImpact, o) => { this.cameras.main.stopFollow(); return this.strikeFx.fire({ view: this.cameras.main.worldView, tx: x, ty: y, P: this.P, onImpact, from: this.satX, short: o && o.short }); });
   }
   groundBelow(x) { for (let ty = 0; ty < this.map.H; ty++) if (this.solidTile(Math.floor(x / TILE), ty) && !this.solidTile(Math.floor(x / TILE), ty - 1)) { if (ty * TILE > this.kid.y) return ty * TILE; } return 160; }
-  // a retry by choice (Backspace, or the pause menu): the next take, no body, no life used up
+  // a retry by choice (Backspace, or the pause menu): the next take, no body, no life used up (IMMUNE: the same take again)
   // a checkpoint for this visit: deaths and retries start here until she runs out of lives.
   // at: { x, y } (her top-left, as kid.x and kid.y), or null to clear it
   markCheckpoint(at) { setCheckpoint(this, at); }
   canRestart() { return !this.dead && !this.leaving && !this.done; }
-  restartTake() { if (!this.canRestart()) return false; this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart(retryData(this))); return true; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; const im = state.mode === 'immune'; if (!im) state.episode(this.epId).take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart(Object.assign(retryData(this), im ? { regen: true } : {}))); return true; }
   // Mute, restart; while she is dying, a key skips the strike. Returns true when the
   // scene is restarting.
   commonKeys() {

@@ -126,9 +126,10 @@ export class Hallway extends SideEpisode {
   doorReady() { return (this.mode === 'after' || this.mode === 'giveup') && !this.dead && !this.leaving; }
   // a clue found in a look: noted once, with the count
   noteClue(id) { if (id && state.clue(id)) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600); }
-  // a death in the fight counts toward the creator giving up
+  // a death in the fight counts toward the creator giving up (not in IMMUNE: a regeneration
+  // counts nothing, so fumbles in class never switch the fight to give-up mode)
   die(src) {
-    if (!this.dead && (this.mode === 'fight' || this.mode === 'between')) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);
+    if (!this.dead && state.mode !== 'immune' && (this.mode === 'fight' || this.mode === 'between')) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);
     super.die(src);
   }
   // a take thrown away in the middle of the fight (Backspace) counts as a death too; this is also

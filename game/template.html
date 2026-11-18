@@ -71,6 +71,7 @@
   .tv-chapters button:focus::before { content: ""; position: absolute; top: calc(var(--u, 4px) * 4); width: calc(var(--u, 4px) * 3); height: calc(var(--u, 4px) * 5); background: var(--ink); clip-path: polygon(0 0, 33.4% 0, 33.4% 20%, 66.7% 20%, 66.7% 40%, 100% 40%, 100% 60%, 66.7% 60%, 66.7% 80%, 33.4% 80%, 33.4% 100%, 0 100%); left: calc(var(--u, 4px) * 3); }
   .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); text-align: center; }
   .tv-note b { font-weight: normal; color: var(--ink); }
+  .tv-note i { font-style: normal; }
 
   #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--ink); color: var(--ground); border: 0; font: 20px/1 var(--pix); cursor: pointer; }
   #chrome-bottom { max-width: 1940px; margin: 4px auto 0; }
@@ -79,10 +80,12 @@
      Two rows (what she does, then the show's controls), each wrapping inside the window, never
      past its left edge ("safe" keeps an overflowing row on screen), right under the strip. */
   .keybar { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0 auto; max-width: 100%; }
-  .keyrow { display: flex; flex-wrap: wrap; justify-content: center; justify-content: safe center; gap: 4px 4px; max-width: 100%; }
+  .keyrow { display: flex; flex-wrap: wrap; justify-content: center; justify-content: safe center; gap: 4px 12px; max-width: 100%; }
   .key { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 36px; max-width: 100%; padding: 0; background: none; border: 0; color: var(--quiet); font: 10px/1 var(--pix); cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; }
   .key .cap { display: block; min-width: 14px; padding: 4px 6px 3px; background: var(--boneLo); color: var(--ground); border: 2px solid var(--ground); border-bottom-width: 2px; box-shadow: 0 3px 0 var(--ash3), 0 3px 0 2px var(--ground); line-height: 10px; text-align: center; transform: translateY(0); }
   .key .lbl { display: block; margin-top: 2px; white-space: nowrap; }
+  /* ENDLESS: the strip's 9 x 5 infinity sign after the word (no font has one) */
+  .inf::after { content: ""; display: inline-block; width: 9px; height: 5px; margin-left: 4px; vertical-align: 1px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 5' shape-rendering='crispEdges'%3E%3Crect x='1' y='0' width='1' height='1'/%3E%3Crect x='2' y='0' width='1' height='1'/%3E%3Crect x='6' y='0' width='1' height='1'/%3E%3Crect x='7' y='0' width='1' height='1'/%3E%3Crect x='0' y='1' width='1' height='1'/%3E%3Crect x='3' y='1' width='1' height='1'/%3E%3Crect x='5' y='1' width='1' height='1'/%3E%3Crect x='8' y='1' width='1' height='1'/%3E%3Crect x='0' y='2' width='1' height='1'/%3E%3Crect x='4' y='2' width='1' height='1'/%3E%3Crect x='8' y='2' width='1' height='1'/%3E%3Crect x='0' y='3' width='1' height='1'/%3E%3Crect x='3' y='3' width='1' height='1'/%3E%3Crect x='5' y='3' width='1' height='1'/%3E%3Crect x='8' y='3' width='1' height='1'/%3E%3Crect x='1' y='4' width='1' height='1'/%3E%3Crect x='2' y='4' width='1' height='1'/%3E%3Crect x='6' y='4' width='1' height='1'/%3E%3Crect x='7' y='4' width='1' height='1'/%3E%3C/svg%3E") no-repeat 0 0 / 9px 5px; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 5' shape-rendering='crispEdges'%3E%3Crect x='1' y='0' width='1' height='1'/%3E%3Crect x='2' y='0' width='1' height='1'/%3E%3Crect x='6' y='0' width='1' height='1'/%3E%3Crect x='7' y='0' width='1' height='1'/%3E%3Crect x='0' y='1' width='1' height='1'/%3E%3Crect x='3' y='1' width='1' height='1'/%3E%3Crect x='5' y='1' width='1' height='1'/%3E%3Crect x='8' y='1' width='1' height='1'/%3E%3Crect x='0' y='2' width='1' height='1'/%3E%3Crect x='4' y='2' width='1' height='1'/%3E%3Crect x='8' y='2' width='1' height='1'/%3E%3Crect x='0' y='3' width='1' height='1'/%3E%3Crect x='3' y='3' width='1' height='1'/%3E%3Crect x='5' y='3' width='1' height='1'/%3E%3Crect x='8' y='3' width='1' height='1'/%3E%3Crect x='1' y='4' width='1' height='1'/%3E%3Crect x='2' y='4' width='1' height='1'/%3E%3Crect x='6' y='4' width='1' height='1'/%3E%3Crect x='7' y='4' width='1' height='1'/%3E%3C/svg%3E") no-repeat 0 0 / 9px 5px; }
   .key:hover .cap { background: var(--ink); }
   .key.down .cap, .key[aria-pressed="true"] .cap { transform: translateY(3px); box-shadow: 0 0 0 0 var(--ash3), 0 0 0 2px var(--ground); }
   .key[aria-pressed="true"] .cap { background: var(--ink); box-shadow: inset 0 0 0 1px var(--ground), 0 0 0 2px var(--ground); }
@@ -137,7 +140,7 @@
       <button id="continue" class="main" type="button" hidden>Continue<i>Episode 1</i></button>
       <button id="start" class="main" type="button">Begin<span>Sound on. Enter begins.</span></button>
       <button id="opt-new" type="button" hidden><b>New game</b><i></i><span>Clears her takes, bodies, clues and lines heard.</span></button>
-      <button id="opt-story" type="button" aria-pressed="false"><b>Mode</b><i>normal</i><span>I cycles it. Normal: out of lives, the episode restarts. Endless: lives never run out. Immune: hazards play out, then she is back at the mark with nothing lost. N skips ahead in endless and immune.</span></button>
+      <button id="opt-story" type="button" aria-pressed="false"><b>Mode</b><i>NORMAL</i><span>I cycles it. Normal: 5 lives, then the episode restarts. Endless: lives never run out. Immune: hazards play out, then she is back at the mark with nothing lost. N skips ahead in endless and immune.</span></button>
       <button id="opt-flash" type="button" aria-pressed="false"><b>Flashing</b><i>full</i><span>Reduced: dim, slow flashes and no shake.</span></button>
       <button id="opt-present" type="button" aria-pressed="false"><b>Presenter</b><i>off</i><span>For a class: immune mode, N skips anywhere, 0 to 9 jump to parts, H holds the picture, a refresh comes back here.</span></button>
       <button id="opt-full" type="button" aria-pressed="false" hidden><b>Full screen</b><i>off</i><span>U does it too.</span></button>
@@ -148,7 +151,7 @@
   </div>
 </div>
 <footer id="chrome-bottom">
-  <p class="tv-note" id="tv-note"><b>Flashing lights.</b> The Flash key below turns them down. Best with a keyboard.</p>
+  <p class="tv-note" id="tv-note"><b>Flashing lights.</b> The Flash key below turns them down. Best with a keyboard.<br><span id="mode-note" aria-hidden="true"><b>Mode NORMAL</b><i>: 5 lives, then the episode restarts. I cycles it.</i></span></p>
   <p id="h-hint"></p>
   <div id="keybar" class="keybar" role="group" aria-label="Keys. Click one to press it."></div>
   <nav id="jump" class="jump" aria-label="Chapters" hidden>
