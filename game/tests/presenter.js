@@ -116,10 +116,15 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.press('Digit2');
   await until(() => window.__game.scene.sys.settings.key === 'satellite' && window.__game.scene.clock > 0.3, null, 20000);
   await p.waitForTimeout(400);
-  const labs = await S(() => [...document.querySelectorAll('#keybar .key')].slice(0, 5).map(k => k.querySelector('.lbl').textContent));
-  // (batch 1 opens on a request form: W and S walk its fields, A and D do nothing; on the globe all four turn)
-  const formUp = await S(() => !!window.__game.scene.form);
-  ok('on a satellite screen the keys say turn, or field on a form (' + labs.join(', ') + ')', formUp ? labs[3] === 'field' && labs[4] === 'field' && !labs[0].trim() : labs[0] === 'turn' && labs[1] === 'turn');
+  // the keys in KEYS order: A D Space S W
+  const labs5 = () => S(() => [...document.querySelectorAll('#keybar .key')].slice(0, 5).map(k => k.querySelector('.lbl').textContent));
+  if (await S(() => !!window.__game.scene.form)) {
+    const fl = await labs5();
+    ok('on the request form W and S say check, A D and Space are blank (' + fl.join(', ') + ')', fl[3] === 'check' && fl[4] === 'check' && !fl[0] && !fl[1] && !fl[2]);
+    await S(() => window.__game.scene.form.dismiss()); await p.waitForTimeout(400);
+  }
+  const labs = await labs5();
+  ok('on a satellite screen the keys say turn (' + labs.join(', ') + ')', labs[0] === 'turn' && labs[1] === 'turn');
 
   // an ending from the title's chapters: the playroom with that reply
   await p.keyboard.press('KeyP'); await until(() => window.__paused === true, null, 3000);

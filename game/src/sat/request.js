@@ -121,6 +121,7 @@ export class RequestForm {
     if (this.stamp || this.done || !this.ready()) return;
     this.stamp = { kind, t: 0, noted: false };
     recordRequest(this.batch, kind);
+    overlay.hint('J goes on.'); // the checking is over
     Sound.noise(0.07, 0.09, 380); Sound.tone(70, 0.1, 'square', 0.03);
   }
   // Enter (or N): past the form. During the lock the press is dropped, so a key mashed at the end

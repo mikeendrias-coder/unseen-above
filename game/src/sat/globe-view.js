@@ -11,12 +11,13 @@ const H = h => parseInt(h.slice(1), 16);
 const px32 = h => { const v = H(h); return (0xff000000 | ((v & 0xff) << 16) | (v & 0xff00) | (v >> 16)) >>> 0; };
 
 // Each screen's colors for the puzzle. surf: lit, mid, shade. floor: the groove's bottom;
-// edgeD and edgeL: its shadowed and lit walls. beads: one color per bead.
+// edgeD and edgeL: its shadowed and lit walls. beads: one color per bead. back: the grooves of the
+// ring's far side, seen faintly through the middle, so the maze reads as one loop.
 export const PAL = {
-  1: { surf: ['#1d5a2c', '#154a23', '#0e3519'], grid: '#1a4f27', floor: '#020403', edgeD: '#020403', edgeL: '#3dff74', outline: '#1d7a3a', blur: ['#0d2a14', '#14401f', '#1d7a3a'], beads: ['#c6ffd6', '#ffb347'], beadLo: '#1d7a3a', target: '#ff4d4d', gate: '#c6ffd6', inner: '#04100a', rim: '#1d7a3a' },
-  2: { surf: ['#34485e', '#2a3a4c', '#1e2a37'], floor: '#0a1018', edgeD: '#05080c', edgeL: '#7f9fb0', outline: '#5f7f8a', blur: ['#2a3a4c', '#3c5066', '#5f7f8a'], beads: ['#ffb347', '#59d38a'], beadLo: '#0a1018', target: '#ff5a4a', gate: '#c8d6e5', inner: '#121a24', rim: '#5f7f8a' },
-  3: { surf: ['#ffffff', '#f3f4f6', '#e2e5ea'], floor: '#aeb7c4', edgeD: '#7a8597', edgeL: '#d5dae1', outline: '#2f3a4a', blur: ['#9aa4b3', '#b7bfcb', '#7a8597'], beads: ['#3b6fd8', '#ff9f1c'], beadLo: '#1b3a80', target: '#d94a4a', gate: '#2f3a4a', inner: '#cfd5de', rim: '#2f3a4a' },
-  4: { surf: ['#7fa4ff', '#4f7fff', '#3a5fd6'], land: ['#3ee6a0', '#21b77e', '#1f9e6e'], ice: '#eef3ff', floor: '#1b0f3a', edgeD: '#1b0f3a', edgeL: '#ffd23f', outline: '#ffffff', blur: ['#b8a8ff', '#ff5fa2', '#4b3a96'], beads: ['#ffffff', '#3ee6c1'], beadLo: '#1b0f3a', target: '#ff5fa2', gate: '#ffffff', inner: '#2b1a5c', rim: '#ffd23f', thick: true }
+  1: { surf: ['#1d5a2c', '#154a23', '#0e3519'], grid: '#1a4f27', floor: '#020403', edgeD: '#020403', edgeL: '#3dff74', outline: '#1d7a3a', blur: ['#0d2a14', '#14401f', '#1d7a3a'], beads: ['#c6ffd6', '#ffb347'], beadLo: '#1d7a3a', target: '#ff4d4d', gate: '#c6ffd6', inner: '#04100a', back: '#0e3519', rim: '#1d7a3a' },
+  2: { surf: ['#34485e', '#2a3a4c', '#1e2a37'], floor: '#0a1018', edgeD: '#05080c', edgeL: '#7f9fb0', outline: '#5f7f8a', blur: ['#2a3a4c', '#3c5066', '#5f7f8a'], beads: ['#ffb347', '#59d38a'], beadLo: '#0a1018', target: '#ff5a4a', gate: '#c8d6e5', inner: '#121a24', back: '#2a3a4c', rim: '#5f7f8a' },
+  3: { surf: ['#ffffff', '#f3f4f6', '#e2e5ea'], floor: '#aeb7c4', edgeD: '#7a8597', edgeL: '#d5dae1', outline: '#2f3a4a', blur: ['#9aa4b3', '#b7bfcb', '#7a8597'], beads: ['#3b6fd8', '#ff9f1c'], beadLo: '#1b3a80', target: '#d94a4a', gate: '#2f3a4a', inner: '#cfd5de', back: '#aeb7c4', rim: '#2f3a4a' },
+  4: { surf: ['#7fa4ff', '#4f7fff', '#3a5fd6'], land: ['#3ee6a0', '#21b77e', '#1f9e6e'], ice: '#eef3ff', floor: '#1b0f3a', edgeD: '#1b0f3a', edgeL: '#ffd23f', outline: '#ffffff', blur: ['#b8a8ff', '#ff5fa2', '#4b3a96'], beads: ['#ffffff', '#3ee6c1'], beadLo: '#1b0f3a', target: '#ff5fa2', gate: '#ffffff', inner: '#2b1a5c', back: '#4b3a96', rim: '#ffd23f', thick: true }
 };
 
 // The far side of the cartoon Earth (the near side is the picture in wins.js): Asia, India,
@@ -138,9 +139,17 @@ export class TurnView {
         else { mask[k] = 1; buf[k] = col.surf[tone]; }
         continue;
       }
-      // the back of the band: the inside of the ring shows through the middle
+      // the back of the band: the inside of the ring shows through the middle, with the far
+      // side's grooves drawn faintly, so a dot that goes round the back stays in the maze
       const hb = (y - R * cf * st) / ct;
-      if (Math.abs(hb) <= hwB + 0.5) { mask[k] = 5; buf[k] = Math.abs(hb) > hwB - 1 ? col.rim : col.inner; }
+      if (Math.abs(hb) <= hwB + 0.5) {
+        mask[k] = 5;
+        if (Math.abs(hb) > hwB - 1) { buf[k] = col.rim; continue; }
+        let th = Math.atan2(s, -cf) - phi; th = ((th % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const fr = (hb + hwB) / rowH, r = Math.min(rows - 1, Math.floor(fr)), fc = th / colW, c = Math.floor(fc) % cols, cell = r * cols + c;
+        const du = (fc - Math.floor(fc) - 0.5) * colW * R, dv = (fr - r - 0.5) * rowH;
+        buf[k] = this.groove(cell, du, dv, hw) ? col.back : col.inner;
+      }
     }
   }
   // carved look: a groove's upper-left wall in shadow, its lower-right wall lit; the blur is a
@@ -180,12 +189,31 @@ export class TurnView {
     const list = items.map(it => Object.assign({ q: this.project(it.p) }, it)).sort((a, b) => a.q.z - b.q.z);
     list.forEach(it => {
       const q = it.q;
-      if (!this.seen(q)) { if (it.tick) this.rimTick(q, it.color, t); return; }
+      if (!this.seen(q)) {
+        // on the ring's far side, where the band shows through the middle: drawn small, in place
+        if (this.onBack(q)) { if (it.kind === 'bead') this.beadBack(q.x, q.y, it.color); else if (it.kind === 'target') this.targetBack(q.x, q.y, it.color, it.lock); return; }
+        if (it.tick) this.rimTick(q, it.color, t); return;
+      }
       if (it.kind === 'bead') this.bead(q.x, q.y, it.color, it.caught);
       else if (it.kind === 'target') this.target(q.x, q.y, it.color, t, it.lock);
       else if (it.kind === 'gate') this.gate(it, q);
       else if (it.kind === 'girl') this.girl(q.x, q.y, t, it.hair);
     });
+  }
+  // is a projected point on the ring's far band, not hidden by the near one
+  onBack(q) {
+    if (!this.B.ring) return false;
+    const i = q.x - (this.cx - this.ox), j = q.y - (this.cy - this.oy);
+    return i >= 0 && j >= 0 && i < this.w && j < this.h && this.mask[j * this.w + i] === 5;
+  }
+  beadBack(x, y, color) {
+    this.rect(x - 2, y - 1, 5, 3, H(this.P.beadLo)); this.rect(x - 1, y - 2, 3, 5, H(this.P.beadLo));
+    this.rect(x - 1, y - 1, 3, 3, H(color));
+  }
+  targetBack(x, y, color, lock) {
+    const c = H(lock ? '#ffb01f' : color);
+    this.rect(x - 2, y - 2, 5, 1, c); this.rect(x - 2, y + 2, 5, 1, c); this.rect(x - 2, y - 2, 1, 5, c); this.rect(x + 2, y - 2, 1, 5, c);
+    this.rect(x, y, 1, 1, c);
   }
   rect(x, y, w, h, c, a) { this.g.fillStyle(c, a == null ? 1 : a); this.g.fillRect(Math.round(x), Math.round(y), w, h); }
   // something behind the ball: a blinking mark on the outline, where it would come round

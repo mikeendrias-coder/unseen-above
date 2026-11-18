@@ -4,9 +4,10 @@
 // running). Switches (immunity, sound, flashing, glasses) latch down while on and stay in step
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
 // Presenter tools (Nov 18): Pres is presenter mode, H holds the picture (ui/pause.js), U is full
-// screen (main.js). On a satellite screen W A S D say "turn": they turn the globe (on a request
-// form W and S say "field"); Space and Shift grey out there. In the top-down east wing W A S D
-// walk up, down, left and right and Space greys out. In the fight K says "swing".
+// screen (main.js). On a satellite screen W A S D say "turn": they turn the globe. On its request
+// form W and S say "check", and the keys that do nothing there are blank and grey. In the
+// top-down east wing W A S D walk up, down, left and right and Space greys out. In the fight K
+// says "swing".
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
 import { setStory, canSkip, setPresenter, presenting } from '../core/review.js';
@@ -51,21 +52,23 @@ const sat = () => { const sc = scene(); return playing() && sc && sc.sys && sc.s
 const ring = () => { const sc = sat(); return !!(sc && sc.level && sc.level.id === 'ring'); };
 // while a satellite request form is up, J K L stamp and ask
 const form = () => { const sc = sat(); return !!(sc && sc.form); };
+// the form is stamped: J goes on (W S and L do nothing now)
+const stamped = () => { const sc = sat(); return !!(sc && sc.form && sc.form.stamp); };
 // the top-down east wing: W A S D walk her up, down, left and right; nothing to jump
 const top = () => { const sc = scene(); return !!(playing() && sc && sc.sys && !sat() && typeof sc.kidPx === 'function'); };
 // the fight backstage, once she holds the sword: K swings it
 const sword = () => { const sc = scene(); return !!(playing() && sc && sc.sys && sc.sys.settings.key === 'hallway' && sc.sword && sc.sword.have); };
+// on the form W and S check a field; A D and Space do nothing, and J K do nothing on a puzzle
 const DYN = {
-  j: () => [form() ? 'approve' : 'use', true],
-  k: () => [form() ? 'deny' : sword() ? 'swing' : 'throw', true],
-  l: () => (form() ? ['ask who', true] : null), // otherwise the glasses switch speaks for L
-  // on a request form W and S walk the fields and A D do nothing; on the globe they all turn it
-  a: () => (form() ? ['\u00a0', false] : [sat() ? 'turn' : 'left', true]),
-  d: () => (form() ? ['\u00a0', false] : [sat() ? 'turn' : 'right', true]),
-  w: () => (form() ? ['field', true] : [sat() ? 'turn' : top() ? 'up' : 'door', !ring()]),
-  s: () => (form() ? ['field', true] : [sat() ? 'turn' : top() ? 'down' : 'crouch', !ring()]),
-  space: () => ['jump', !sat() && !top()],
-  shift: () => ['run', !sat()],
+  j: () => form() ? [stamped() ? 'go on' : 'approve', true] : sat() ? ['', false] : ['use', true],
+  k: () => form() ? ['deny', !stamped()] : sat() ? ['', false] : [sword() ? 'swing' : 'throw', true],
+  l: () => (form() ? ['ask who', !stamped()] : null), // otherwise the glasses switch speaks for L
+  a: () => form() ? ['', false] : [sat() ? 'turn' : 'left', true],
+  d: () => form() ? ['', false] : [sat() ? 'turn' : 'right', true],
+  w: () => form() ? ['check', !stamped()] : [sat() ? 'turn' : top() ? 'up' : 'door', !ring()],
+  s: () => form() ? ['check', !stamped()] : [sat() ? 'turn' : top() ? 'down' : 'crouch', !ring()],
+  space: () => sat() || top() ? ['', false] : ['jump', true],
+  shift: () => sat() ? ['', false] : ['run', true],
   esc: () => { const sc = scene(), k = sc && sc.sys && sc.sys.settings.key; return [playing() && (k === 'intro' || k === 'kids') ? 'skip scene' : 'menu', true]; },
   skip: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canSkip(sc); } catch (e) { /* not a scene yet */ } return ['skip ahead', on]; }
 };
@@ -136,7 +139,7 @@ export function initKeys() {
       if (!k.dyn) return;
       const r = DYN[k.dyn](); if (!r) return;
       const [word, on] = r;
-      if (lbl.textContent !== word) { lbl.textContent = word; b.setAttribute('aria-label', word + ', key ' + k.cap); }
+      if (lbl.textContent !== word) { lbl.textContent = word; b.setAttribute('aria-label', word ? word + ', key ' + k.cap : 'key ' + k.cap + ', not used here'); }
       b.classList.toggle('off', !on);
     });
   }
