@@ -17,6 +17,7 @@ import { goNext } from '../core/flow.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
+import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
 import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, PLAYROOM_REPLY, PLAYROOM_EMPTY, PLAYROOM_ASK, MOON_LOOKS, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
@@ -157,7 +158,8 @@ export class Moon extends SideEpisode {
     if (this.mode === 'arrive') { this.settle(dt); if (this.kid.onGround) this.startTalk(); }
     if (['talk', 'choose', 'vest', 'lit', 'r2', 'cut'].includes(this.mode)) this.settle(dt);
     if (this.mode === 'walkto') this.updateWalkTo(dt);
-    if (this.talking) { this.talkT -= dt; if (c.advance() || this.talkT <= 0) this.nextLine(); }
+    // J, Enter, Space or a click finish a line, then move on (ui/typer.js takes the keys)
+    if (this.talking && !typer.waiting()) { this.talkT -= dt; if (this.talkT <= 0) this.nextLine(); }
     if (this.mode === 'choose') this.updateChoose(c);
     if (this.mode === 'vest') this.updateVest(dt);
     if (this.mode === 'r2') this.updateR2(dt);
@@ -263,9 +265,9 @@ export class Moon extends SideEpisode {
   nextLine() {
     this.talkI++;
     if (this.talkI >= this.lines.length) { this.talking = false; overlay.clearCaption(); const f = this.after; this.after = null; if (f) f(); return; }
-    const l = this.lines[this.talkI];
-    this.talkT = lineSeconds(l.text) + (l.who ? 0.5 : 0.9);
-    overlay.caption(l.who, l.text);
+    const l = this.lines[this.talkI], i = this.talkI, lines = this.lines;
+    this.talkT = typer.total(l.text, lineSeconds(l.text) + (l.who ? 0.5 : 0.9));
+    overlay.caption(l.who, l.text, { block: true, scene: this, onAdvance: () => { if (this.talking && this.lines === lines && this.talkI === i) this.nextLine(); } });
     if (/CLICK\. CLICK/.test(l.text)) { this.vest = 0.01; Sound.click(0.03); this.time.delayedCall(260, () => Sound.click(0.03)); this.talkT = 1.1; }
     if (/JINGLE/.test(l.text)) [523, 659, 784, 1047].forEach((f, i) => this.time.delayedCall(i * 140, () => Sound.tone(f, 0.16, 'square', 0.025, null, 0.3)));
     if (/CLICKS ON/.test(l.text)) { Sound.click(0.04); this.camLight = true; }
@@ -281,7 +283,7 @@ export class Moon extends SideEpisode {
   // ------------------------------------------------------------------ her reply: a slip to fill in
   startChoose() {
     this.mode = 'choose'; this.choices = replies(this.force); this.pick = Math.max(0, this.choices.findIndex(r => r.ending === this.force)); this.chooseT = 0;
-    overlay.caption('KID', 'Are you here for round two?');
+    overlay.caption('KID', 'Are you here for round two?', { instant: true }); // just said: not typed again
   }
   updateChoose(c) {
     this.chooseT += this.game.loop.delta / 1000;

@@ -148,7 +148,8 @@ export class Grounds extends SideEpisode {
     look('crate', LEVEL.crate.x - 4, LEVEL.crate.x + 20, TR - 30, TR, TR - 28, N.crate);
     look('cradle', 70 * T, 72 * T, 12 * T - 30, 12 * T, 12 * T - 24, N.cradle);
     // the house tidies its own looks away once said: mark them heard as they are used
-    this.things.forEach(t => { if (t.hearKey) { const use = t.use; t.use = () => { state.hear(t.hearKey); use(); }; } });
+    // (heard once a line of it is out, ui/typer.js, not when it is asked for)
+    this.things.forEach(t => { if (t.hearKey) t.src.key = t.hearKey; });
   }
 
   // footprints in the ash outside the wall, and the koi (drawn live)

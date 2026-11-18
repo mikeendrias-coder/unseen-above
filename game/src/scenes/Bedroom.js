@@ -13,6 +13,7 @@ import { TILE, GROUND, BX, LEVEL, buildMap, paintLevel, paintBrother, trail } fr
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
+import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, inPoly, K } from '../core/side.js';
 import { goNext } from '../core/flow.js';
@@ -266,7 +267,7 @@ export class Bedroom extends SideEpisode {
     if (this.box.t > 0 || this.bag.have) return;
     this.box.t = LEVEL.musicBox.mask; this.box.note = 0;
     Sound.tone(900, 0.05, 'square', 0.01); // the key turns
-    if (state.hear('bd:musicbox')) overlay.sfx('[A MUSIC BOX PLAYS]', 1800);
+    overlay.sfx('[A MUSIC BOX PLAYS]', 1800, 'bd:musicbox'); // once ever (heard when shown)
   }
   updateBox(dt) {
     const B = this.box; if (B.t <= 0) return;
@@ -307,7 +308,7 @@ export class Bedroom extends SideEpisode {
   pullBag(held) {
     const B = this.bag; B.have = true; B.hold = 0; this.bagThing.off = true;
     Sound.tone(150, 0.2, 'triangle', 0.04, 90); Sound.noise(0.3, 0.06, 700);
-    if (state.hear('bd:bag')) this.say('His bag. Still heavy.'); // said once, not on every take
+    this.say('His bag. Still heavy.', 'bd:bag'); // said once, not on every take (heard once it is out)
     fx.shake(this.cameras.main, 160, 0.004); Sound.tone(70, 0.6, 'sawtooth', 0.03, 50); // the beam above shifts
     if (!held) { B.letGo = true; this.time.delayedCall(800, () => this.bringDown()); }
   }
@@ -399,7 +400,9 @@ export class Bedroom extends SideEpisode {
     // reaching him in the air, she lands first, then kneels: nobody freezes mid jump
     if (this.mode === 'bedroom' && k.x + k.w / 2 >= LEVEL.brother.kneel) this.mode = 'arrive';
     if (this.mode === 'arrive') { this.settle(dt); if (k.onGround) this.startTalk(); }
-    if (this.mode === 'talk') { this.talkT -= dt; if (c.advance() || this.talkT <= 0) this.nextLine(); }
+    // the talk: J, Enter, Space or a click finish a line, then move on (ui/typer.js takes the keys);
+    // left alone, each line moves on by itself after its old time
+    if (this.mode === 'talk' && !typer.waiting()) { this.talkT -= dt; if (this.talkT <= 0) this.nextLine(); }
     if (this.mode === 'dying') {
       this.dyingT += dt;
       if (this.dyingT > 3.4 && !this.broDead) { this.broDead = true; this.bro.setTexture('bro_dead'); Sound.tone(98, 1.8, 'sine', 0.02); }
@@ -426,9 +429,9 @@ export class Bedroom extends SideEpisode {
     // after the break the scene runs again with nothing said: he just goes
     if (this.rerun) this.talkI = BEDROOM.length;
     if (this.talkI >= BEDROOM.length) return this.endTalk();
-    const l = BEDROOM[this.talkI];
-    this.talkT = lineSeconds(l.text) + (l.who ? 0.4 : 0.8);
-    overlay.caption(l.who, l.text);
+    const l = BEDROOM[this.talkI], i = this.talkI;
+    this.talkT = typer.total(l.text, lineSeconds(l.text) + (l.who ? 0.4 : 0.8));
+    overlay.caption(l.who, l.text, { block: true, scene: this, onAdvance: () => { if (this.mode === 'talk' && this.talkI === i) this.nextLine(); } });
     if (/COUGH/.test(l.text)) { this.coughT = 1.3; Sound.noise(0.2, 0.05, 1100); this.time.delayedCall(380, () => Sound.noise(0.25, 0.06, 900)); }
   }
   endTalk() {
@@ -439,7 +442,9 @@ export class Bedroom extends SideEpisode {
   // holding on to him: a tap says so once; held, the red lights close in, and at 15 s the show
   // cuts to a break (a false ending), then runs the scene again from the kneel
   holdOn() {
-    if (state.hear('bd:holdon')) this.bubbles.look('item', { lines: NOTICE.bedroom.hold }, () => ({ x: LEVEL.brother.x + 12, y: GROUND - 22 }));
+    // said once: heard once it is out, so a tap that cuts it short says it again next time
+    if (!this.holdSrc) this.holdSrc = { lines: NOTICE.bedroom.hold, key: 'bd:holdon' };
+    if (!state.heard('bd:holdon')) this.bubbles.look('item', this.holdSrc, () => ({ x: LEVEL.brother.x + 12, y: GROUND - 22 }));
   }
   updateStay(dt) {
     const held = this.nearThing === this.broThing && this.ctl.useHeld();
@@ -485,8 +490,9 @@ export class Bedroom extends SideEpisode {
     this.beds.breath.set(0.0001 + 0.06 * near * near, 0.4);
   }
 
-  say(text) {
-    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xebe6d8, pitch: 760 });
+  // once: a key; said until it has been shown in full once
+  say(text, once) {
+    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xebe6d8, pitch: 760, once });
   }
 
   // ------------------------------------------------------------------ drawing

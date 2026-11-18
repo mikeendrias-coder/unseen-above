@@ -14,6 +14,7 @@
 import { ccText, ccWidth, ccWrap, ccBox, ccCaptionBlock, plain, ADV } from '../art/ccfont.js';
 import { ASH } from '../art/palettes.js';
 import { STRIP } from '../core/display.js';
+import { typer, Line, rowsShown, voice } from './typer.js';
 
 const W = 320, H = 180;
 // The old teletext role names, kept because scenes use them, now in Ash and Gold.
@@ -45,17 +46,24 @@ function pattern(color, kind) {
 }
 function dim(x, y, w, h) { ctx.fillStyle = pattern(INK, 'checker'); ctx.fillRect(x, y, w, h); }
 
+let lastT = 0;
+// the pause menu, a notice and the presenter's freeze (H) stop the line clock
+const held = () => !!(window.__paused || window.__frozen || S.menu || (S.page && !S.page.closeAt));
 function frame() {
   const t = now();
-  if (S.caption && S.caption.until && t > S.caption.until) S.caption = null;
+  // the strip caption types on real time; the pause menu and a notice stop its clock
+  const ms = lastT ? Math.min(100, (t - lastT) * 1000) : 0; lastT = t;
+  if (S.caption && !held() && !S.desc) S.caption.line.step(ms, typer.fast(S.caption.line));
+  if (S.caption && (S.caption.line.dead || (S.caption.until && t > S.caption.until && S.caption.line.shown))) S.caption = null;
   S.cards = S.cards.filter(c => t < c.outAt);
   S.osd = S.osd.filter(o => t < o.until);
   if (S.bug && t > S.bug.until) S.bug = null;
   if (S.rec && t > S.rec.until) S.rec = null;
   if (S.flash && t > S.flash.until) S.flash = null;
   if (S.page && S.page.closeAt) S.page = null;
+  typer.tick(); // the hint line follows the caption (overlay.hint)
   ctx.clearRect(0, 0, W, H + STRIP);
-  if (!busy()) { running = false; return; }
+  if (!busy()) { running = false; lastT = 0; return; }
   drawFlash();
   if (!S.menu) { drawCards(t); drawCaption(t); drawStrip(); }
   drawPage(t); drawMenu(t); drawTop(t);
@@ -87,11 +95,14 @@ function drawCaption(t) {
   const d = S.desc, c = S.caption;
   const lines = d ? d.lines : c ? c.lines : null; if (!lines) return;
   const n = Math.min(3, lines.length), bottom = H + STRIP - Math.floor((STRIP - n * CAP_ROW) / 2);
-  const r = ccCaptionBlock(ctx, lines, 160, bottom, { italic: d ? true : c.italic, row: CAP_ROW, top: 1, shown: d ? d.shown : undefined, alpha: d ? d.alpha : 1, ink: d ? d.ink : undefined });
+  // the letters typed so far (the speaker's name shows whole from the start)
+  const shown = d ? d.shown : rowsShown(c.lines, c.line.n);
+  const r = ccCaptionBlock(ctx, lines, 160, bottom, { italic: d ? true : c.italic, row: CAP_ROW, top: 1, shown, alpha: d ? d.alpha : 1, ink: d ? d.ink : undefined });
   const x0 = Math.min(...r.boxes.map(b => b.x)), x1 = Math.max(...r.boxes.map(b => b.x + b.w));
   S.capRect = { x0, y0: r.top, x1, y1: bottom };
-  // more to say: a small arrow after the last line once it is out
-  if (d && d.more && Math.floor(t * 3) % 2 === 0) { const b = r.boxes[n - 1]; ctx.fillStyle = PAPER; ctx.fillRect(b.x + b.w + 2, bottom - 6, 3, 1); ctx.fillRect(b.x + b.w + 3, bottom - 5, 1, 1); }
+  // the line is out and a press moves it on: a blinking arrow after the last line (7 x 4, so it
+  // still reads on a projector)
+  if (d ? d.more : c.line.arrow()) { const b = r.boxes[n - 1], ax = b.x + b.w + 2, ay = bottom - 8; ctx.fillStyle = PAPER; for (let i = 0; i < 4; i++) ctx.fillRect(ax + i, ay + i, 7 - i * 2, 1); }
 }
 
 // ------------------------------------------------------------------ stamps, key caps, paper
@@ -242,13 +253,21 @@ function drawMenu(t) {
 
 // ------------------------------------------------------------------ the API
 export const cg = {
+  // A caption types out (ui/typer.js). opts: italic, ms (gone that long after it starts, once it
+  // is out), and for the typer: block, noSkip, onAdvance, onShown, key, scene, instant, locked.
+  // Returns the Line.
   caption(speaker, text, opts) {
     opts = opts || {};
-    const full = (speaker ? speaker + ': ' : '') + text;
-    S.caption = { lines: ccWrap(full, CAP_COLS), italic: !!opts.italic, until: opts.ms ? now() + opts.ms / 1000 : 0 };
+    const name = speaker ? speaker + ': ' : '', lines = ccWrap(name + text, CAP_COLS), seq = lines.join(' ');
+    const line = new Line(seq, Object.assign({ pitch: voice(speaker), start: name.trim().length }, opts));
+    line.own(opts.scene || (window.__game && window.__game.scene));
+    S.caption = { lines, line, italic: !!opts.italic, until: opts.ms ? now() + opts.ms / 1000 : 0 };
     kick();
+    return line;
   },
-  clearCaption() { S.caption = null; },
+  clearCaption() { S.caption = null; typer.tick(); },
+  // the strip caption's line (ui/typer.js), or null
+  get line() { return S.caption ? S.caption.line : null; },
   // narration from a look with J, set every frame while it is up (null clears it)
   describe(d) { S.desc = d && d.lines && d.lines.length ? d : null; if (S.desc) kick(); },
   get describing() { return !!S.desc; },
@@ -283,3 +302,10 @@ export const cg = {
   lives(n, max) { S.lives = n == null ? null : { n, max }; kick(); },
   clearAll() { S.hp = null; S.lives = null; S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; S.flash = null; }
 };
+// where the typer finds the lines a press acts on, and the pixel grid under a click
+typer.hook({
+  strip: () => (S.caption && !S.desc ? S.caption.line : null),
+  narration: () => (S.desc && S.desc.line) || null,
+  blocked: held,
+  grid: ev => { if (!ensure()) return null; const r = cv.getBoundingClientRect(); return r.width ? { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * (H + STRIP) } : null; }
+});

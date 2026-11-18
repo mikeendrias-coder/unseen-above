@@ -19,6 +19,7 @@ import { TILE, GROUND, H, ARENA, LEVEL, buildMap, paintLevel, paintCreator, POSE
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
+import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K, inPoly } from '../core/side.js';
 import { goNext } from '../core/flow.js';
@@ -32,6 +33,8 @@ const HP = 9, ROUND_AT = [9, 6, 3];                     // hits left when each r
 const TELL = [0.68, 0.6, 0.52];                         // how long the creator winds up, per round
 const BLADE = 15, ARM = 6;
 export const GIVE_UP_AT = 6;
+// a line for the queue with a no-repeat key (a plain string is the creator's)
+const keyed = (l, key) => Object.assign(typeof l === 'string' ? { who: 'CREATOR', text: l } : Object.assign({}, l), { key });
 const RETRY_KEY = 'hallRetryAt';                          // her deaths in the fight before the creator gives up
 const SCREAM_EVERY = 4, DRAIN = 0.6;
 const THING_CLUE = { shelf: 'shelf', board: 'continuity' };
@@ -155,8 +158,7 @@ export class Hallway extends SideEpisode {
       if (c.throwP() && (this.mode === 'fight' || this.mode === 'giveup')) this.swing();
     } else if (this.dead && this.girl.visible) this.settle(dt);
     this.gl.update(dt);
-    // Enter moves the captions on when nothing is at stake
-    if (c.skipLine() && this.lineT > 0 && this.mode !== 'fight' && this.mode !== 'giveup') { this.lineT = 0; this.nextLine(); }
+    // Enter moves the captions on when nothing is at stake (ui/typer.js takes the keys)
     this.updateLines(dt);
     if (this.mode === 'walk') this.walkIn();
     if (this.mode === 'giveup') this.updateGiveUp(dt);
@@ -180,7 +182,11 @@ export class Hallway extends SideEpisode {
   onRescale() { super.onRescale(); this.updateView(1); }
 
   // ------------------------------------------------------------------ lines
-  // Captions in a queue: each line holds for as long as it takes to read, then the next.
+  // Captions in a queue: each line types out (ui/typer.js) and holds for as long as it takes to
+  // read, then the next. The train into the fight blocks (J, Enter, Space or a click finish a line,
+  // then move on); outside the fight Enter moves a line on; the fight's lines run themselves.
+  // An entry may carry a key: dropped if heard, marked heard once it is fully shown (so a line cut
+  // short by a death plays again). always: said even when heard, whole at once, on for 0.6 s.
   say(lines, cb, keep, now) {
     if (!keep) this.queue = [];
     if (now) this.lineT = 0; // cut in over whatever is up
@@ -195,15 +201,19 @@ export class Hallway extends SideEpisode {
     // a callback may start lines of its own; then those play, and this queue is done
     if (l.cb) { l.cb(); if (this.lineT <= 0) this.nextLine(); return; }
     if (l.pause) { overlay.clearCaption(); this.lineT = l.pause; return; }
+    if (l.key != null && !l.always && state.heard(l.key)) { this.lineT = 0; return this.nextLine(); }
     const text = l.text.replace('{take}', this.ep.take);
     // a voice from off screen is captioned in italics
     const off = l.who === 'CREATOR' && (this.cr.x < this.view.x - 4 || this.cr.x > this.view.x + 324);
-    overlay.caption(l.who, text, { italic: off });
-    this.lineT = lineSeconds(text) + (l.who ? 0.3 : 0.6);
+    const fight = () => this.mode === 'fight' || this.mode === 'giveup';
+    const line = overlay.caption(l.who, text, { italic: off, key: l.key, scene: this, block: !!(this.train && l.who), noSkip: fight, instant: !!l.always,
+      onAdvance: () => { if (overlay.line === line) { this.lineT = 0; this.nextLine(); } } });
+    this.lineT = l.always ? 0.6 : typer.total(text, lineSeconds(text) + (l.who ? 0.3 : 0.6));
     if (l.on) l.on();
   }
-  // while she looks at something, the creator waits for her
-  updateLines(dt) { if (this.lineT > 0 && !overlay.describing()) { this.lineT -= dt; if (this.lineT <= 0) this.nextLine(); } }
+  // while she looks at something, the creator waits for her (and in presenter mode, a blocking
+  // line waits for a press)
+  updateLines(dt) { if (this.lineT > 0 && !overlay.describing() && !typer.waiting()) { this.lineT -= dt; if (this.lineT <= 0) this.nextLine(); } }
   describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.look('item', it, () => ({ x, y })); }
 
   // ------------------------------------------------------------------ the walk in and the toss
@@ -216,7 +226,7 @@ export class Hallway extends SideEpisode {
     Music.play('boss', { fadeIn: 1.5 });
     const toss = { who: null, text: '[A SWORD CLATTERS]', on: () => this.throwSword() };
     // the first two retries get one line each, never twice; after that, silence (Nov 17)
-    if (retry) { const i = [0, 1].find(j => !state.heard('HALL_AGAIN' + j)); if (i != null) state.hear('HALL_AGAIN' + i); this.say(i != null ? [HALL_AGAIN[i], toss] : [toss]); }
+    if (retry) { const i = [0, 1].find(j => !state.heard('HALL_AGAIN' + j)); this.say(i != null ? [keyed(HALL_AGAIN[i], 'HALL_AGAIN' + i), toss] : [toss]); }
     else { this.train = true; this.say(HALL_IN.concat(HALL_TOSS.slice(0, 3), [toss]), () => { this.train = false; }); }
     this.cr.st = 'talk'; this.cr.walkTo = 30 * T; if (retry) this.cr.x = 30 * T;
   }
@@ -255,7 +265,7 @@ export class Hallway extends SideEpisode {
     Object.assign(c, { x: 30 * T, st: 'broken', pose: 'stand', face: -1, open: true, unarmed: true, drain: 0, screamT: 2.2, walkTo: null });
     // the sword falls out of their hand and lands between them
     this.sword.fly = { sx: c.x - 6, sy: G - 18, ex: Math.max(ARENA.x0 + 20, Math.min(c.x - 30, this.kid.x + this.kid.w / 2 + 30)), t: 0.2 };
-    if (state.hear('HALL_GIVEUP_drop')) this.say([{ who: null, text: HALL_GIVEUP.drop }]);
+    this.say([{ who: null, text: HALL_GIVEUP.drop, key: 'HALL_GIVEUP_drop' }]);
   }
   updateGiveUp(dt) {
     const c = this.cr; if (c.st !== 'broken') return;
@@ -327,12 +337,13 @@ export class Hallway extends SideEpisode {
     c.kx = (c.x < k.x + k.w / 2 ? -1 : 1) * 90;
     Sound.tone(220, 0.16, 'sawtooth', 0.04, 110); Sound.noise(0.12, 0.07, 2200); fx.shake(this.cameras.main, 120, 0.006);
     this.sparks.explode(10, c.x, G - 14);
-    const hi = HP - c.hp - 1, line = HALL_HIT[hi] && state.hear('HALL_HIT' + hi) ? HALL_HIT[hi] : null;
+    const hi = HP - c.hp - 1, line = HALL_HIT[hi] && !state.heard('HALL_HIT' + hi) ? keyed(HALL_HIT[hi], 'HALL_HIT' + hi) : null;
     // the last hit stops everything at once: no more attacks, no traps, then the yield
     if (c.hp <= 0) { this.mode = 'between'; c.st = 'between'; c.t = 99; this.endTraps(); this.say(line ? [line] : [], () => this.yieldFight(), false, true); return; }
     const next = ROUND_AT.indexOf(c.hp);
     // each round's line is said once ever; a retry goes straight on after a short beat
-    const roundLines = next > 0 && state.hear('HALL_ROUND' + next) ? HALL_ROUND[next] : [];
+    // (heard once its last line is out: a death in the middle says it all again)
+    const roundLines = next > 0 && !state.heard('HALL_ROUND' + next) ? HALL_ROUND[next].map((l, j, a) => j === a.length - 1 ? keyed(l, 'HALL_ROUND' + next) : l) : [];
     if (next > 0) { c.st = 'between'; c.t = 99; this.mode = 'between'; this.say([line].concat(roundLines, roundLines.length || line ? [] : [{ who: null, text: '', pause: 1.2 }]), () => this.startRound(next), false, true); this.endTraps(); }
     else if (line) this.say([line], null, false, true);
   }

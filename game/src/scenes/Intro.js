@@ -9,6 +9,7 @@ import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
+import { typer } from '../ui/typer.js';
 import { pixelZoom } from '../core/display.js';
 import { hexNum, rng } from '../art/painter.js';
 import { ASH as A } from '../art/palettes.js';
@@ -94,7 +95,6 @@ export class Intro extends Phaser.Scene {
     if (reviewKeys(this)) { c.endFrame(); return; }
     if (c.skip()) { this.finish(true); c.endFrame(); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
-    if (c.advance() && this.t > T.lines[0].start - 0.5 && this.t < T.goDown) { const next = T.lines.find(l => l.start > this.t); this.t = next ? next.start : T.goDown; }
     this.t += dt;
     const warp = this.t > T.later && this.t < T.alone ? 6 : 1;
     this.w += dt * warp;
@@ -134,7 +134,12 @@ export class Intro extends Phaser.Scene {
     const line = T.lines.find(l => t >= l.start && t < l.end);
     if (line !== this.curLine) {
       this.curLine = line;
-      if (line) overlay.caption(line.who, line.text);
+      // a press finishes the line; the next press goes to the next line (ui/typer.js takes the keys).
+      // A line that would spend over 40% of its time typing shows whole (spec A4.6).
+      if (line) {
+        const next = T.lines.find(l => l.start > line.start), gap = (next ? next.start : T.goDown) - line.start;
+        overlay.caption(line.who, line.text, { block: true, scene: this, instant: typer.typeSeconds(line.text) > 0.4 * gap, onAdvance: () => this.nextLine(line) });
+      }
       else if (t >= T.goDown - 0.1 && t < T.later) overlay.clearCaption();
     }
     if (t >= T.lines[0].start && !this.hum) { this.hum = true; this.time.delayedCall(800, () => { this.music = Sound.lounge(0.02); }); }
@@ -144,6 +149,13 @@ export class Intro extends Phaser.Scene {
     if (t >= T.alone && !this.aloneShown) { this.aloneShown = true; overlay.caption(RIDGE_ALONE.who, RIDGE_ALONE.text); }
     if (t >= T.aloneEnd && !this.aloneCleared) { this.aloneCleared = true; overlay.clearCaption(); }
     if (t >= T.followEnd && !this.fading) { this.fading = true; this.cameras.main.fadeOut(1300, 0, 0, 0); }
+  }
+
+  // the opening's clock jumps to the next line (or past the talk) when a line that is out is pressed
+  nextLine(line) {
+    const T = this.T;
+    if (this.curLine !== line || this.t >= T.goDown) return;
+    const next = T.lines.find(l => l.start > this.t); this.t = next ? next.start : T.goDown;
   }
 
   draw(t, dtW) {
