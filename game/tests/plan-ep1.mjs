@@ -9,7 +9,7 @@ const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 const T = 16;
 
-export async function botPage(p) {
+async function botPage(p) {
   // window.__bot(policy source, seconds): the policy runs once a frame as (s, k, t, mem) and
   // returns { l, r, jump, hold, down }. Resolves with where she ended up.
   await p.evaluate(() => {
@@ -30,7 +30,7 @@ export async function botPage(p) {
     });
   });
 }
-export const place = (p, x, feet) => p.evaluate(([x, feet]) => { const s = window.__game.scene, k = s.kid; k.x = x; k.h = 14; k.crouch = false; k.y = feet - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; k.onGround = false; k.hp = 3; k.inv = 0; }, [x, feet]);
+const place = (p, x, feet) => p.evaluate(([x, feet]) => { const s = window.__game.scene, k = s.kid; if (s.dyn) s.dyn.riding = null; k.x = x; k.h = 14; k.crouch = false; k.y = feet - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; k.onGround = false; k.hp = 3; k.inv = 0; }, [x, feet]);
 
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });

@@ -1,89 +1,103 @@
-// Checks episode 2: (1) the two cameras can be passed without a lock, searching over position,
-// time and pose (standing or crouched) with the same camera motion as the game; (2) every laser
-// shot can be survived by the move it asks for (jump the low beam, crouch under the high pair).
-// Bundle first: npx esbuild tests/plan-ep2.mjs --bundle --platform=node --format=esm --outfile=tests/out/plan2.mjs
-import { LEVEL, TILE, GROUND, buildMap, camAngle, laserAt, beamHits } from '../src/art/gallery.js';
-import fs from 'fs';
-const map = buildMap();
-const solidTile = (tx, ty) => { if (tx < 0 || tx >= map.W || ty >= map.H) return true; if (ty < 0) return false; return map.m[ty][tx] === 1; };
-const solidPx = (x, y) => solidTile(Math.floor(x / TILE), Math.floor(y / TILE));
-const inPoly = (pts, x, y) => { let inside = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside; } return inside; };
-const cone = (x, y, angle, half, range) => { const pts = [{ x, y }]; for (let a = angle - half; a <= angle + half + 0.001; a += 1) { const r = a * Math.PI / 180, dx = Math.cos(r), dy = Math.sin(r); let d = 0; while (d < range) { d += 2; if (solidPx(x + dx * d, y + dy * d)) { d -= 1; break; } } pts.push({ x: x + dx * Math.min(d, range), y: y + dy * Math.min(d, range) }); } return pts; };
-// lowest walking surface under x (the desk has room beneath it, so the floor counts there)
-const surface = x => { const tx = Math.floor(x / TILE); if (!solidTile(tx, 9)) return GROUND; let ty = 9; while (ty > 0 && solidTile(tx, ty - 1)) ty--; return ty * TILE; };
-const DX = 4, DT = DX / 72, T = 90, STEPS = Math.round(T / DT), END = LEVEL.laser.x0, NX = Math.floor(END / DX) + 2;
-const H = [14, 9];
-const danger = [new Uint8Array(NX * STEPS), new Uint8Array(NX * STEPS)];
-for (let k = 0; k < STEPS; k++) {
-  const t = k * DT, cones = LEVEL.cameras.map(c => cone(c.x, c.y, camAngle(c, t), c.half, c.range));
-  for (let i = 0; i < NX; i++) for (let p = 0; p < 2; p++) {
-    const x = i * DX, feet = surface(x + 4), top = feet - H[p], cx = x + 4, mid = top + H[p] / 2;
-    const probes = [[cx, top + 2], [cx, mid], [cx, feet - 2], [x + 1, mid], [x + 7, mid]];
-    danger[p][i * STEPS + k] = cones.some(c => probes.some(([px, py]) => inPoly(c, px, py))) ? 1 : 0;
-  }
-}
-// state: (cell, tick, pose, lock ticks). Lit adds one tick of lock, dark removes two. The game
-// locks at 0.55 s (about 9.9 ticks); the search allows 7 so that a found path has slack.
-const MAXL = 7, NL = MAXL + 1, idx = (i, k, p, l) => ((i * STEPS + k) * 2 + p) * NL + l;
-const N = NX * STEPS * 2 * NL, seen = new Uint8Array(N), prev = new Int32Array(N).fill(-1), q = new Int32Array(N);
-const dec = s => { const l = s % NL, r1 = (s - l) / NL, p = r1 % 2, r2 = (r1 - p) / 2, k = r2 % STEPS, i = (r2 - k) / STEPS; return { i, k, p, l }; };
-const startI = Math.floor(LEVEL.start.x / DX), goal = Math.floor((END - 8) / DX);
-let qh = 0, qt = 0;
-for (let k0 = 0; k0 < Math.round(8 / DT); k0 += 6) { const s0 = idx(startI, k0, 0, 0); seen[s0] = 1; q[qt++] = s0; }
-let found = -1, far = 0;
-while (qh < qt) {
-  const s = q[qh++], { i, k, p, l } = dec(s);
-  if (i > far) far = i;
-  if (i >= goal) { found = s; break; }
-  if (k + 1 >= STEPS) continue;
-  for (const np of [0, 1]) for (const di of [1, 0, -1]) {
-    if (np === 1 && di !== 0 && k % 2) continue; // crouched, she moves every other tick
-    const ni = i + di; if (ni < 0 || ni >= NX) continue;
-    if (surface(ni * DX + 4) < surface(i * DX + 4) - 40) continue;
-    const lit = danger[np][ni * STEPS + k + 1], nl = lit ? l + 1 : Math.max(0, l - 2);
-    if (nl > MAXL) continue;
-    const ns = idx(ni, k + 1, np, nl);
-    if (seen[ns]) continue;
-    seen[ns] = 1; prev[ns] = s; q[qt++] = ns;
-  }
-}
-if (found < 0) console.log('CAMERAS: NO SAFE PATH. Furthest x:', far * DX, '(tile', Math.floor(far * DX / TILE) + ')');
-else {
-  console.log('cameras: path found, reaching the laser hall', (dec(found).k * DT).toFixed(1), 's in');
-  let s = found, lit = 0, crouch = 0; const waits = {};
-  while (prev[s] >= 0) { const a = dec(s), b = dec(prev[s]); if (a.l > b.l) lit++; if (a.p) crouch++; if (a.i === b.i) { const tl = Math.floor(a.i * DX / TILE); waits[tl] = (waits[tl] || 0) + DT; } s = prev[s]; }
-  console.log('  lit ticks', lit, ' crouched ticks', crouch, ' waits (tile:s):', Object.entries(waits).filter(([, v]) => v > 0.3).map(([a, v]) => a + ':' + v.toFixed(1)).join('  '));
-}
-// holding Right while standing, from many start times
-let ok = 0, tries = 0; const fails = {};
-for (let k0 = 0; k0 < Math.round(40 / DT); k0 += 3) {
-  tries++; let l = 0, i = startI, k = k0, dead = false;
-  while (i < goal && k < STEPS - 1) { k++; i++; const lit = danger[0][i * STEPS + k]; l = lit ? l + 1 : Math.max(0, l - 2); if (l > 9) { dead = true; const b = Math.floor(i * DX / TILE); fails[b] = (fails[b] || 0) + 1; break; } }
-  if (!dead) ok++;
-}
-console.log('holding Right survives the cameras', ok, 'of', tries, 'starts; caught at tiles:', Object.entries(fails).map(([a, v]) => a + ':' + v).join(' '));
-// danger maps (standing | crouched), x across, time down, first 20 s
-const rows = Math.round(20 / DT), img = Buffer.alloc(NX * 2 * rows);
-for (let k = 0; k < rows; k++) for (let p = 0; p < 2; p++) for (let i = 0; i < NX; i++) img[k * NX * 2 + p * NX + i] = danger[p][i * STEPS + k] ? 40 : (surface(i * DX + 4) < GROUND ? 170 : 255);
-fs.mkdirSync('tests/out', { recursive: true });
-fs.writeFileSync('tests/out/danger2.pgm', Buffer.concat([Buffer.from(`P5 ${NX * 2} ${rows} 255\n`), img]));
+// Episode 2, the gallery: every move the level asks for, played with the game's own physics.
+// A bot drives the controls in game time with the cameras and the laser asleep, section by
+// section; then the house's damage: the polisher's bump, the boards, the chandelier, the sheets.
+// NODE_PATH=/home/michael/work/node_modules UA_BASE=http://localhost:8783 node tests/plan-ep2.mjs
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright');
+const BASE = process.env.UA_BASE || 'http://localhost:8766';
+const T = 16, G = 336, M = 208;
 
-// (2) the laser: simulate the real jump arc and the crouch against every shot in the order
-const g = 690, jumpV = 236, L = LEVEL.laser, fireAt = L.first + L.tell + L.charge, cyc = L.tell + L.charge + L.fire + L.idle;
-// height of the feet t seconds after a held jump, integrated the way moveKid does it (60 fps)
-const ARC = (() => { const out = []; let y = 0, vy = -jumpV; for (let f = 0; f < 120; f++) { out.push(Math.max(0, -y)); const apex = Math.abs(vy) < 40; vy = Math.min(260, vy + g * (apex ? 0.5 : 1) / 60); y += vy / 60; if (y >= 0 && f > 2) { out.push(0); break; } } return out; })();
-const arc = t => t < 0 ? 0 : (ARC[Math.floor(t * 60)] || 0);
-L.order.forEach((shot, n) => {
-  const t0 = fireAt + n * cyc, ys = L.shots[shot];
-  const bad = (u, top, bottom) => laserAt(L, u).phase === 'fire' && ys.some(y => beamHits(top, bottom, y));
-  if (shot === 'low') {
-    // jump windows: for which jump start times does she clear the whole fire phase?
-    const good = []; for (let j = t0 - 0.8; j < t0 + 0.05; j += 0.01) { let hit = false; for (let u = t0; u < t0 + L.fire; u += 0.005) { const h = u >= j ? arc(u - j) : 0; if (bad(u, GROUND - 14 - h, GROUND - h)) { hit = true; break; } } if (!hit) good.push(j); }
-    console.log(`laser shot ${n} low: jump window ${good.length ? ((good[good.length - 1] - good[0]) * 1000).toFixed(0) + ' ms' : 'NONE'}`);
-  } else {
-    let standHit = false, crouchHit = false, jumpOk = false;
-    for (let u = t0; u < t0 + L.fire; u += 0.005) { if (bad(u, GROUND - 14, GROUND)) standHit = true; if (bad(u, GROUND - 9, GROUND)) crouchHit = true; }
-    for (let j = t0 - 0.8; j < t0; j += 0.01) { let hit = false; for (let u = t0; u < t0 + L.fire; u += 0.005) { const h = arc(u - j); if (u - j > ARC.length / 60) { if (bad(u, GROUND - 14, GROUND)) hit = true; } else if (bad(u, GROUND - 14 - h, GROUND - h)) hit = true; } if (!hit) jumpOk = true; }
-    console.log(`laser shot ${n} high: standing ${standHit ? 'dies' : 'LIVES'}, crouched ${crouchHit ? 'DIES' : 'lives'}, a jump ${jumpOk ? 'CAN DODGE' : 'cannot dodge'}`);
-  }
-});
+async function botPage(p) {
+  // window.__bot(policy source, seconds): the policy runs once a frame as (s, k, t, mem) and
+  // returns { l, r, jump, hold, down }. Resolves with where she ended up.
+  await p.evaluate(() => {
+    window.__bot = (src, secs) => new Promise(done => {
+      const s = window.__game.scene, real = s.ctl, pol = new Function('s', 'k', 't', 'mem', src), mem = {};
+      let cache = { t: -1 }, t0 = s.clock;
+      const cur = () => { if (cache.t !== s.clock) { const t = s.clock - t0; cache = Object.assign({ t: s.clock, used: false }, pol(s, s.kid, t, mem) || {}); } return cache; };
+      s.ctl = Object.assign({}, real, {
+        left: () => !!cur().l, right: () => !!cur().r, down: () => !!cur().down, up: () => !!cur().up,
+        jumpHeld: () => !!(cur().hold || cur().jump), jumpPressed: () => { const c = cur(); if (c.jump && !c.used) { c.used = true; return true; } return false; },
+        downP: () => false, interact: () => !!cur().use
+      });
+      const tick = () => {
+        if (s.clock - t0 >= secs || mem.stop) { s.ctl = real; const k = s.kid; done({ x: Math.round(k.x), y: Math.round(k.y + k.h), hp: k.hp, ground: k.onGround, dead: s.dead, mem }); return; }
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+  });
+}
+const place = (p, x, feet) => p.evaluate(([x, feet]) => { const s = window.__game.scene, k = s.kid; if (s.dyn) s.dyn.riding = null; k.x = x; k.h = 14; k.crouch = false; k.y = feet - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; k.onGround = false; k.hp = 3; k.inv = 0; }, [x, feet]);
+
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+  const p = await b.newPage({ viewport: { width: 1280, height: 860 } });
+  const errs = []; p.on('pageerror', e => errs.push(e.message));
+  let fails = 0; const ok = (label, v) => { if (!v) fails++; console.log((v ? 'ok   ' : 'FAIL ') + label); };
+  await p.addInitScript(() => { window.__noPanels = true; try { localStorage.setItem('unseen-above-v1', JSON.stringify({ look: 'A', episodes: {}, seenIntro: true })); } catch (e) {} });
+  await p.goto(BASE + '/local.html?scene=gallery'); await p.click('#start');
+  await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.kid && window.__game.scene.clock > 0.5, null, { timeout: 30000 });
+  const quiet = () => p.evaluate(() => { const s = window.__game.scene; s.cams.forEach(c => { c.range = 0; }); s.laser.awake = false; s.laserDef.x0 = 99999; });
+  await quiet(); await p.evaluate(() => { window.__noDeath = true; });
+  await botPage(p);
+  const run = (src, secs) => p.evaluate(([src, secs]) => window.__bot(src, secs), [src, secs]);
+
+  // B: up the broken stair: the steps, the landing (under the desk), the hanging steps, the gap
+  await place(p, 18 * T, G);
+  // the steps up to the landing have faces she bumps into; the hanging steps are jumped at set spots
+  let r = await run(`
+    if (k.onGround && k.y + k.h === 208 && k.x >= 33 * 16) mem.stop = 1;
+    const feet = k.y + k.h, wall = s.boxHits(k.x + 3, k.y, k.w, k.h);
+    const spots = [[27 * 16 + 2, 288, 28 * 16 + 4], [29 * 16 + 2, 256, 30 * 16 + 4], [31 * 16 + 4, 224, 99999]];
+    if (k.onGround) { mem.aim = null; for (const [x, f, aim] of spots) if (feet === f && k.x >= x) { mem.aim = aim; (mem.trail = mem.trail || []).push([Math.round(k.x), feet]); return { r: 1, jump: 1, hold: 1 }; } }
+    if (!k.onGround && mem.aim) return { r: k.x < mem.aim, hold: 1 };
+    return { r: 1, jump: k.onGround && wall, hold: 1 };`, 8);
+  ok(`B: up the stair to the upper floor (feet ${r.y}, x ${r.x}) ${JSON.stringify(r.mem.trail)}`, r.y === M && r.x >= 33 * T);
+  // C: ride the two chandeliers over the atrium to the far floor
+  await place(p, 35 * T + 4, M);
+  r = await run(`
+    const [a, c] = s.swings, ride = s.dyn.riding;
+    if (k.onGround && k.x >= 54 * 16) { mem.stop = 1; return {}; }
+    if (!ride && !k.onGround && k.x < 37 * 16 && !mem.go) return { hold: 1 };
+    if (!ride && k.onGround && k.x < 40 * 16) { if (a.ex < 38 * 16 + 2 && a.vx < 0 && Math.abs(k.x - 572) < 3) return { jump: 1, hold: 1 }; return { r: k.x < 570, l: k.x > 574 }; }
+    if (ride) mem.go = 1;
+    if (ride === a) { if (c.ex - a.ex < 26 && a.vx > 0) { mem.a = 1; return { jump: 1, hold: 1 }; } return {}; }
+    if (ride === c) { mem.c = 1; if (c.ex > 53 * 16 && c.vx > 0) return { jump: 1, hold: 1, r: 1 }; return {}; }
+    return { r: 1, hold: 1 };`, 14);
+  ok(`C: two chandeliers to the far floor (feet ${r.y}, x ${r.x}, ${JSON.stringify(r.mem)})`, r.y === M && r.x >= 54 * T);
+  // D: double jump over the boards before they go
+  await place(p, 58 * T, M);
+  r = await run(`if (k.onGround && k.x > 64 * 16 + 2) { mem.stop = 1; return {}; } if (!mem.a && k.x > 59 * 16 + 6) { mem.a = t; return { r: 1, jump: 1, hold: 1 }; } if (mem.a && !mem.b && t - mem.a > 0.32) { mem.b = 1; return { r: 1, jump: 1, hold: 1 }; } return { r: 1, hold: 1 };`, 4);
+  ok(`D: over the boards in one long jump (feet ${r.y}, x ${r.x})`, r.y === M && r.x > 64 * T);
+  // D: standing on the boards, they drop her into the pocket; a double jump gets her out
+  await place(p, 61 * T, M);
+  r = await run(`return {};`, 1.6);
+  ok(`D: the boards give way (feet ${r.y})`, r.y === 16 * T);
+  r = await run(`if (!mem.a) { mem.a = t; return { jump: 1, hold: 1 }; } if (!mem.b && t - mem.a > 0.32) { mem.b = 1; return { jump: 1, hold: 1, r: 1 }; } if (k.onGround && k.y + k.h === 208) mem.stop = 1; return { r: mem.b, hold: 1 };`, 3);
+  ok(`D: out of the pocket with a double jump (feet ${r.y})`, r.y === M);
+  // E: down the broken stair into the laser hall without a hurt
+  await p.evaluate(() => { window.__noDeath = false; window.__game.scene.drop.phase = 'down'; });
+  await place(p, 71 * T, M);
+  r = await run(`if (k.onGround && k.y + k.h === 336) mem.stop = 1; return { r: 1 };`, 4);
+  ok(`E: down into the laser hall, no harm (feet ${r.y}, hp ${r.hp})`, r.y === G && r.hp === 3);
+
+  // the house's damage (watchers still off)
+  await place(p, 54 * T + 2, M); await p.evaluate(() => { const s = window.__game.scene; s.polisher.x = 57 * 16; s.polisher.dir = -1; });
+  r = await run(`if (k.hp < 3) mem.stop = 1; return { r: k.x < 54 * 16 + 4 };`, 2.5);
+  ok(`D: the polisher bumps her: hp ${r.hp}`, r.hp === 2);
+  await place(p, 54 * T, M); await p.evaluate(() => { const s = window.__game.scene; s.polisher.x = 58 * 16; s.polisher.dir = -1; });
+  r = await run(`const Q = s.polisher; if (k.onGround && Math.abs(Q.x - (k.x + 4)) < 30 && !mem.j) { mem.j = t; return { jump: 1, hold: 1, r: 1 }; } return { r: mem.j != null && t - mem.j < 0.6, hold: 1 };`, 2.5);
+  ok(`D: jumping over the polisher: hp ${r.hp}`, r.hp === 3);
+  await p.evaluate(() => { const s = window.__game.scene; s.drop.phase = 'hang'; s.drop.y = 150; s.props = s.props.filter(r => r.id !== 'fallen chandelier'); });
+  await place(p, 68 * T + 4, M);
+  r = await run(`return {};`, 2);
+  ok(`D: standing under the chandelier when it drops: hp ${r.hp}`, r.hp === 1);
+  await place(p, 36 * T + 4, M);
+  r = await run(`if (!mem.a) { mem.a = 1; return { jump: 1, hold: 1, r: 1 }; } return { r: k.x < 42 * 16 };`, 3);
+  ok(`C: a fall into the atrium lands on the dust sheets: hp ${r.hp} (no more than 2 lost), feet ${r.y}`, r.hp >= 1 && r.y === G && !r.dead);
+  console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
+  console.log(fails ? fails + ' FAILED' : 'all passed');
+  await b.close();
+})().catch(e => { console.log('FAIL ' + e.message.split('\n')[0]); process.exit(1); });

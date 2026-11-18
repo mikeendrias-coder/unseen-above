@@ -27,7 +27,7 @@ export const LEVEL = {
   hallLamps: [{ x: 6 * T, y: 118 }, { x: 15 * T, y: 118 }],  // the chandeliers the switch turns off
   robot: { x0: 3 * T, x1: 13 * T, speed: 16 },
   // C: two chandeliers she rides over the atrium (anchor, chain length, swing)
-  swings: [{ x: 41 * T, y: 16, len: 150, amp: 30, period: 3.0, phase: 0 }, { x: 50 * T + 6, y: 16, len: 150, amp: 30, period: 3.0, phase: 0.5 }],
+  swings: [{ x: 41 * T, y: 16, len: 165, amp: 30, period: 3.0, phase: 0 }, { x: 50 * T + 6, y: 16, len: 165, amp: 30, period: 3.0, phase: 0.5 }],
   pit: { x0: 37 * T, x1: 54 * T },
   // D: a floor polisher on the upper floor, boards that give way, a chandelier that drops
   polisher: { x0: 54 * T + 6, x1: 59 * T + 6, speed: 26 },
@@ -45,13 +45,13 @@ export const LEVEL = {
   ],
   // The laser: shots are sets of beam heights. "low" must be jumped, "high" must be crouched under.
   laser: {
-    id: 'laser', x0: 76 * T, x1: 89 * T,
+    id: 'laser', x0: 77 * T, x1: 89 * T,
     shots: { low: [GROUND - 4], high: [GROUND - 32, GROUND - 11] },
     order: ['low', 'high', 'low', 'low', 'high', 'low', 'high', 'high'],
     first: 1.2, idle: 0.9, tell: 0.7, charge: 0.5, fire: 0.4
   },
   hole: { x0: 58 * T, x1: 63 * T },
-  skip: [[19, ROWS.floor], [31, ROWS.mezz], [55, ROWS.mezz], [64, ROWS.mezz], [75, ROWS.floor]]
+  skip: [[19, ROWS.floor], [33, ROWS.mezz], [55, ROWS.mezz], [64, ROWS.mezz], [77, ROWS.floor]]
 };
 
 // Where a camera points t seconds into the take. The broken one snaps to each aim, then holds.
@@ -87,13 +87,13 @@ export function buildMap() {
   // B: the broken grand stair: three steps, a landing with a desk on it, two hanging steps, a gap
   solid(20, 20, 20, 20, 'x'); solid(21, 19, 21, 20, 'x'); solid(22, 18, 27, 20, 'x');
   solid(24, 16, 25, 16, 'd');
-  solid(28, 16, 28, 16, 'x'); solid(29, 15, 29, 15, 'x');
-  solid(31, M, 36, M, 'k');                       // the near upper floor, open under it
+  solid(28, 16, 29, 16, 'x'); solid(30, 14, 31, 14, 'x');
+  solid(33, M, 36, M, 'k');                       // the near upper floor, open under it
   solid(54, 14, 54, F - 1, 'w');                  // C: the atrium's far wall
   // D: the far upper floor is thick: a wall mass with a pocket under the boards that give way
-  solid(54, M, 72, F - 1, 'w'); clear(60, M, 63, 16); for (let x = 54; x <= 72; x++) mat[M][x] = m[M][x] ? 'k' : '.';
+  solid(54, M, 72, F - 1, 'w'); clear(60, M, 63, 15); for (let x = 54; x <= 72; x++) mat[M][x] = m[M][x] ? 'k' : '.';
   // the broken stair down into the laser hall
-  solid(73, 16, 73, F - 1, 'x'); solid(74, 18, 74, F - 1, 'x');
+  solid(73, 16, 74, F - 1, 'x'); solid(75, 18, 76, F - 1, 'x');
   solid(89, 1, 89, F - 1, 'e');                   // E: the end wall with the laser ports
   return { W, H, m, mat };
 }
@@ -168,7 +168,7 @@ export function paintLevel(P, map, dark) {
   sconce(p, P, 30 * T, 150, true); sconce(p, P, 20 * T, 260, true);
   // ---- C, the atrium: tall, the upper floor's railings at both edges, dust sheets heaped below
   const rail = (x0, x1) => { for (let x = x0; x < x1; x += 5) p.rect(x, M - 12, 2, 12, P.col); p.rect(x0, M - 13, x1 - x0, 2, P.colHi); };
-  rail(31 * T, 37 * T - 2); rail(54 * T + 2, 60 * T); rail(64 * T, 73 * T);
+  rail(33 * T, 37 * T - 2); rail(54 * T + 2, 60 * T); rail(64 * T, 73 * T);
   portrait(p, P, 40 * T, 46, 40, 52, 14, false); portrait(p, P, 46 * T, 60, 30, 38, 15, false); portrait(p, P, 51 * T - 4, 44, 26, 34, 16, true);
   for (let x = 37 * T + 4; x < 54 * T - 20; x += 26) { const h = 5 + (x * 7) % 5; p.rect(x - 1, G - h - 1, 26, h + 1, O); p.rect(x, G - h, 24, h, P.colLo); p.rect(x, G - h, 24, 1, P.col); p.rect(x + 6 + (x % 5), G - h + 1, 1, h - 1, P.rubble); p.rect(x + 15, G - h + 2, 1, h - 2, P.rubble); }
   // ---- D, the worn upper gallery: stains and cracks, a missing portrait, the hole in the roof
@@ -183,7 +183,7 @@ export function paintLevel(P, map, dark) {
   checkerPoly(p, [[hx0 + 10, 16], [hx1 - 12, 16], [hx1 + 10, M], [hx0 + 14, M]], P.wallHi);
   sconce(p, P, 57 * T, 120, false); sconce(p, P, 70 * T, 120, false);
   // the pocket under the boards: joists and dust
-  p.rect(60 * T, M + 2, 64, 46, O); for (let x = 60 * T + 4; x < 64 * T; x += 12) p.rect(x, M + 2, 3, 46, P.wood);
+  p.rect(60 * T, M + 2, 64, 30, O); for (let x = 60 * T + 4; x < 64 * T; x += 12) p.rect(x, M + 2, 3, 30, P.wood);
   // ---- E, the laser hall: cold and bare, strip lights, ports in the end wall
   p.rect(73 * T, 22, 16 * T, G - 22, '#2e3036'); p.rect(73 * T, G - 22, 16 * T, 22, '#1b1c21'); p.rect(73 * T, G - 22, 16 * T, 1, '#45474d');
   for (let x = 76 * T; x < 89 * T; x += 48) { p.rect(x + 20, 30, 8, G - 52, '#1b1c21'); p.rect(x + 20, 30, 1, G - 52, '#45474d'); }

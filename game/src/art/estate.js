@@ -36,7 +36,7 @@ export const LEVEL = {
   scan: { trigger: 76 * T, below: BALCONY + 20, behind: 140, speed: 50 },
   // searchlights: base point, sweep between angles (degrees, y down), period in seconds, phase 0..1
   lights: [
-    { id: 'garden lamp', x: 34 * T + 8, y: 330, a0: 118, a1: 168, period: 4.6, phase: 0.0, half: 6, range: 330 },
+    { id: 'garden lamp', x: 34 * T + 8, y: 296, a0: 116, a1: 164, period: 4.2, phase: 0.0, half: 6, range: 340 },
     { id: 'terrace lamp', x: 67 * T, y: 110, a0: 122, a1: 150, period: 3.8, phase: 0.3, half: 7, range: 260 },
     { id: 'west balcony lamp', x: 80 * T, y: 14, a0: 62, a1: 118, period: 2.8, phase: 0.1, half: 8, range: 120 },
     { id: 'east balcony lamp', x: 92 * T, y: 14, a0: 62, a1: 118, period: 2.8, phase: 0.6, half: 8, range: 120 }
@@ -244,7 +244,7 @@ export function paintLevel(P, map) {
   // ---------------- C: under the hedge wall, the stems it stands on ----------------
   [35 * T + 3, 35 * T + 11].forEach(x => p.rect(x, 24 * T, 2, T, P.wood));
   // B: the garden lamp on its tall post
-  lampPost(p, P, 34 * T + 8, 326, G);
+  lampPost(p, P, 34 * T + 8, 292, G);
 
   // ---------------- the solid world ----------------
   paintTiles(p, P, map);

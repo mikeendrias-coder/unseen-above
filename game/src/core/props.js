@@ -93,7 +93,7 @@ export class Props {
     this.list.forEach(p => {
       if (p.kind === 'crumble' && p.state === 'solid' && this.standsOn(k, p.r)) { p.state = 'shake'; p.t = 0; Sound.noise(0.18, 0.04, 700); Sound.tone(140, 0.12, 'triangle', 0.02, 110); }
       if (p.kind === 'swing' && !this.riding && !(this.letGo && p === this.lastSwing) && !k.onGround && !s.leaving) {
-        const g = { x: p.ex - 7, y: p.ey - 4, w: 14, h: 14 };
+        const g = { x: p.ex - 7, y: p.ey - 6, w: 14, h: 18 };
         if (overlap(g, k)) { this.riding = p; Sound.tone(520, 0.05, 'square', 0.015, 700); }
       }
     });
