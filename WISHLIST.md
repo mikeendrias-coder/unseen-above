@@ -74,6 +74,8 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **Lives vs HP is confusing.** Make the two readable at a glance and explained once.
 - `todo` **Some lasers in the top-down level do not trigger.** A laser hit should cost a life.
 - `todo` **East wing (top-down) looks unsatisfying:** a real pile of pebbles, carry at most five, dead ends, make it cooler like the side levels.
+- `todo` **Episode 4 lags when the lasers or flashes fire** (Michael, Nov 18). Profile and fix.
+- `todo` **Add moving targets** (Michael, Nov 18): read as moving watchers in the levels (lasers on tracks, sweeping cameras, patrolling drones). Confirm with Michael if he meant something else.
 - `todo` **Key buttons under the game run off the left edge of the window, with a big empty gap above them** (docs/feedback/nov18-shed-keys.png).
 
 ## Hosting
