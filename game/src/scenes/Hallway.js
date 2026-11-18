@@ -19,6 +19,7 @@ import { TILE, GROUND, H, ARENA, LEVEL, buildMap, paintLevel, paintCreator, POSE
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
+import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K, inPoly } from '../core/side.js';
 import { goNext } from '../core/flow.js';
@@ -155,8 +156,7 @@ export class Hallway extends SideEpisode {
       if (c.throwP() && (this.mode === 'fight' || this.mode === 'giveup')) this.swing();
     } else if (this.dead && this.girl.visible) this.settle(dt);
     this.gl.update(dt);
-    // Enter moves the captions on when nothing is at stake
-    if (c.skipLine() && this.lineT > 0 && this.mode !== 'fight' && this.mode !== 'giveup') { this.lineT = 0; this.nextLine(); }
+    // Enter moves the captions on when nothing is at stake (ui/typer.js takes the keys)
     this.updateLines(dt);
     if (this.mode === 'walk') this.walkIn();
     if (this.mode === 'giveup') this.updateGiveUp(dt);
@@ -180,7 +180,10 @@ export class Hallway extends SideEpisode {
   onRescale() { super.onRescale(); this.updateView(1); }
 
   // ------------------------------------------------------------------ lines
-  // Captions in a queue: each line holds for as long as it takes to read, then the next.
+  // Captions in a queue: each line types out (ui/typer.js) and holds for as long as it takes to
+  // read, then the next. The train into the fight blocks (J, Enter, Space or a click finish a line,
+  // then move on); outside the fight Enter moves a line on; the fight's lines run themselves.
+  // An entry may carry a key: heard once it is fully shown, never said again (always: said anyway).
   say(lines, cb, keep, now) {
     if (!keep) this.queue = [];
     if (now) this.lineT = 0; // cut in over whatever is up
@@ -195,15 +198,19 @@ export class Hallway extends SideEpisode {
     // a callback may start lines of its own; then those play, and this queue is done
     if (l.cb) { l.cb(); if (this.lineT <= 0) this.nextLine(); return; }
     if (l.pause) { overlay.clearCaption(); this.lineT = l.pause; return; }
+    if (l.key != null && !l.always && state.heard(l.key)) { this.lineT = 0; return this.nextLine(); }
     const text = l.text.replace('{take}', this.ep.take);
     // a voice from off screen is captioned in italics
     const off = l.who === 'CREATOR' && (this.cr.x < this.view.x - 4 || this.cr.x > this.view.x + 324);
-    overlay.caption(l.who, text, { italic: off });
-    this.lineT = lineSeconds(text) + (l.who ? 0.3 : 0.6);
+    const fight = () => this.mode === 'fight' || this.mode === 'giveup';
+    const line = overlay.caption(l.who, text, { italic: off, key: l.key, scene: this, block: !!(this.train && l.who), noSkip: fight,
+      onAdvance: () => { if (overlay.line === line) { this.lineT = 0; this.nextLine(); } } });
+    this.lineT = typer.total(text, lineSeconds(text) + (l.who ? 0.3 : 0.6));
     if (l.on) l.on();
   }
-  // while she looks at something, the creator waits for her
-  updateLines(dt) { if (this.lineT > 0 && !overlay.describing()) { this.lineT -= dt; if (this.lineT <= 0) this.nextLine(); } }
+  // while she looks at something, the creator waits for her (and in presenter mode, a blocking
+  // line waits for a press)
+  updateLines(dt) { if (this.lineT > 0 && !overlay.describing() && !typer.waiting()) { this.lineT -= dt; if (this.lineT <= 0) this.nextLine(); } }
   describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.look('item', it, () => ({ x, y })); }
 
   // ------------------------------------------------------------------ the walk in and the toss

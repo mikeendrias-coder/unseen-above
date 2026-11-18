@@ -13,6 +13,7 @@ import { TILE, GROUND, BX, LEVEL, buildMap, paintLevel, paintBrother, trail } fr
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
+import { typer } from '../ui/typer.js';
 import { display } from '../core/display.js';
 import { SideEpisode, inPoly, K } from '../core/side.js';
 import { goNext } from '../core/flow.js';
@@ -385,7 +386,9 @@ export class Bedroom extends SideEpisode {
     // reaching him in the air, she lands first, then kneels: nobody freezes mid jump
     if (this.mode === 'bedroom' && k.x + k.w / 2 >= LEVEL.brother.kneel) this.mode = 'arrive';
     if (this.mode === 'arrive') { this.settle(dt); if (k.onGround) this.startTalk(); }
-    if (this.mode === 'talk') { this.talkT -= dt; if (c.advance() || this.talkT <= 0) this.nextLine(); }
+    // the talk: J, Enter, Space or a click finish a line, then move on (ui/typer.js takes the keys);
+    // left alone, each line moves on by itself after its old time
+    if (this.mode === 'talk' && !typer.waiting()) { this.talkT -= dt; if (this.talkT <= 0) this.nextLine(); }
     if (this.mode === 'dying') {
       this.dyingT += dt;
       if (this.dyingT > 3.4 && !this.broDead) { this.broDead = true; this.bro.setTexture('bro_dead'); Sound.tone(98, 1.8, 'sine', 0.02); }
@@ -412,9 +415,9 @@ export class Bedroom extends SideEpisode {
     // after the break the scene runs again with nothing said: he just goes
     if (this.rerun) this.talkI = BEDROOM.length;
     if (this.talkI >= BEDROOM.length) return this.endTalk();
-    const l = BEDROOM[this.talkI];
-    this.talkT = lineSeconds(l.text) + (l.who ? 0.4 : 0.8);
-    overlay.caption(l.who, l.text);
+    const l = BEDROOM[this.talkI], i = this.talkI;
+    this.talkT = typer.total(l.text, lineSeconds(l.text) + (l.who ? 0.4 : 0.8));
+    overlay.caption(l.who, l.text, { block: true, scene: this, onAdvance: () => { if (this.mode === 'talk' && this.talkI === i) this.nextLine(); } });
     if (/COUGH/.test(l.text)) { this.coughT = 1.3; Sound.noise(0.2, 0.05, 1100); this.time.delayedCall(380, () => Sound.noise(0.25, 0.06, 900)); }
   }
   endTalk() {
