@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="The paper behind the game Unseen Above. Michael Endrias, Introduction to Space Law.">
+<title>Unseen Above: Space Law and the Power to See and Not Be Seen</title>
+<style>
+  /* The paper page for Unseen Above. The game's one palette, Ash and Gold (src/art/palettes.js
+     ASH): a bone sheet of paperwork on an ash desk, ash ink, red only for the stamp. The caption
+     face (fonts/ch07-caption.ttf, the game's pixel letters) is for headings, labels and the stamp,
+     always at whole multiples of 10px so it stays sharp. Reading text is a book serif already on
+     the computer, so the page needs no network. No glows, no gradients. Built by paper/build.js. */
+  @font-face { font-family: "CH07 Caption"; src: url(data:font/ttf;base64,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AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAF8AAAADAQIBAwEEAQUBBgEHAQgBCQEKAQsBDAENAQ4BDwEQAREBEgETARQBFQEWARcBGAEZARoBGwEcAR0BHgEfASABIQEiASMBJAElASYBJwEoASkBKgErASwBLQEuAS8BMAExATIBMwE0ATUBNgE3ATgBOQE6ATsBPAE9AT4BPwFAAUEBQgFDAUQBRQFGAUcBSAFJAUoBSwFMAU0BTgFPAVABUQFSAVMBVAFVAVYBVwFYAVkBWgFbAVwBXQFeB3VuaTAwNDEHdW5pMDA0Mgd1bmkwMDQzB3VuaTAwNDQHdW5pMDA0NQd1bmkwMDQ2B3VuaTAwNDcHdW5pMDA0OAd1bmkwMDQ5B3VuaTAwNEEHdW5pMDA0Qgd1bmkwMDRDB3VuaTAwNEQHdW5pMDA0RQd1bmkwMDRGB3VuaTAwNTAHdW5pMDA1MQd1bmkwMDUyB3VuaTAwNTMHdW5pMDA1NAd1bmkwMDU1B3VuaTAwNTYHdW5pMDA1Nwd1bmkwMDU4B3VuaTAwNTkHdW5pMDA1QQd1bmkwMDYxB3VuaTAwNjIHdW5pMDA2Mwd1bmkwMDY0B3VuaTAwNjUHdW5pMDA2Ngd1bmkwMDY3B3VuaTAwNjgHdW5pMDA2OQd1bmkwMDZBB3VuaTAwNkIHdW5pMDA2Qwd1bmkwMDZEB3VuaTAwNkUHdW5pMDA2Rgd1bmkwMDcwB3VuaTAwNzEHdW5pMDA3Mgd1bmkwMDczB3VuaTAwNzQHdW5pMDA3NQd1bmkwMDc2B3VuaTAwNzcHdW5pMDA3OAd1bmkwMDc5B3VuaTAwN0EHdW5pMDAzMAd1bmkwMDMxB3VuaTAwMzIHdW5pMDAzMwd1bmkwMDM0B3VuaTAwMzUHdW5pMDAzNgd1bmkwMDM3B3VuaTAwMzgHdW5pMDAzOQd1bmkwMDJFB3VuaTAwMkMHdW5pMDAyMQd1bmkwMDNGB3VuaTAwMjcHdW5pMDAyMgd1bmkwMDNBB3VuaTAwM0IHdW5pMDAyRAd1bmkwMDVGB3VuaTAwMjgHdW5pMDAyOQd1bmkwMDVCB3VuaTAwNUQHdW5pMDAyRgd1bmkwMDI2B3VuaTAwMkIHdW5pMDAzRAd1bmkwMDI1B3VuaTAwMjMHdW5pMDAyQQd1bmkwMDNFB3VuaTAwM0MHdW5pMDA3Qwd1bmkwMEI3B3VuaTI1Q0YHdW5pMjY2QQd1bmkyMDI2B3VuaTI1ODgHdW5pMjVCQwd1bmkyNUI2) format("truetype"); font-display: block; }
+  :root {
+    --ash0: #0e0f12; --ash1: #1b1c21; --ash2: #2e3036; --ash3: #45474d; --ash4: #6b6c70; --ash5: #8f8d87;
+    --bone: #ebe6d8; --boneLo: #b8b2a3; --red: #e3412b;
+    --pix: "CH07 Caption", ui-monospace, Menlo, Consolas, monospace;
+    --serif: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Cambria, Georgia, "Noto Serif", "DejaVu Serif", serif;
+    /* the caption face's sizes: label, heading, title */
+    --p1: 10px; --p2: 20px; --p3: 40px;
+    --gut: 16px;
+    --pad: clamp(18px, 5vw, 64px);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--ash1); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ash1); color: var(--ash0); font: clamp(18px, 0.55vw + 12px, 24px)/1.6 var(--serif); padding: 0 max(var(--gut), env(safe-area-inset-right, 0px)) 48px max(var(--gut), env(safe-area-inset-left, 0px)); }
+  ::selection { background: var(--ash0); color: var(--bone); }
+  .px { font-family: var(--pix); -webkit-font-smoothing: none; font-smooth: never; font-weight: normal; letter-spacing: 0; }
+  a { color: inherit; }
+  a:focus { outline: none; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--ash0); outline-offset: 2px; }
+  .skip { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 6px 10px; background: var(--bone); color: var(--ash0); font: var(--p1)/1.4 var(--pix); text-decoration: none; }
+  .skip:focus { left: var(--gut); }
+
+  /* the strip across the top: the channel, and the way back to the game as one of its key caps */
+  .strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; max-width: 1240px; margin: 0 auto; padding: 14px 0 16px; color: var(--ash5); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .strip b { color: var(--bone); font-weight: normal; }
+  .strip i { color: var(--red); font-style: normal; }
+  .keycap { display: inline-block; padding: 6px 10px 5px; background: var(--boneLo); color: var(--ash0); border: 2px solid var(--ash0); box-shadow: 0 3px 0 var(--ash3), 0 3px 0 2px var(--ash0); font: var(--p1)/10px var(--pix); text-decoration: none; -webkit-font-smoothing: none; white-space: nowrap; }
+  .keycap:hover { background: var(--bone); }
+  .keycap:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--ash0); }
+  .keycap:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
+
+  /* the desk: the index on the left, the sheet on the right */
+  .desk { display: grid; grid-template-columns: 250px minmax(0, 860px); justify-content: center; align-items: start; gap: 28px; max-width: 1240px; margin: 0 auto; }
+
+  /* The index: a form of its own, sticky beside the sheet. On phones it is a bar along the top
+     that opens into the list. The row being read is inverted, with the game's pick mark. */
+  .index { position: sticky; top: 16px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow: auto; background: var(--bone); border: 2px solid var(--ash0); box-shadow: 0 0 0 2px var(--ash3); scrollbar-width: thin; }
+  .index summary { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 7px; background: var(--ash0); color: var(--bone); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; list-style: none; cursor: default; }
+  .index summary::-webkit-details-marker { display: none; }
+  .index summary::marker { content: ""; }
+  .index summary .now { display: none; }
+  .index summary .arrow { display: none; }
+  .index ol { margin: 0; padding: 0; list-style: none; }
+  .index li { border-bottom: 1px solid var(--boneLo); }
+  .index li:last-child { border-bottom: 0; }
+  .index a { position: relative; display: grid; grid-template-columns: 56px 1fr; gap: 6px; padding: 7px 10px 7px 18px; text-decoration: none; line-height: 1.3; }
+  .index .ttab { padding-top: 3px; color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; white-space: nowrap; }
+  .index .ttext { font-size: 15px; }
+  .index a:hover { background: var(--boneLo); }
+  .index a[aria-current="true"] { background: var(--ash0); color: var(--bone); }
+  .index a[aria-current="true"] .ttab { color: var(--boneLo); }
+  .index a[aria-current="true"]::before { content: ">"; position: absolute; left: 7px; top: 9px; font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .index .foot { padding: 10px; border-top: 2px solid var(--ash0); }
+
+  /* the sheet */
+  .sheet { min-width: 0; background: var(--bone); border: 2px solid var(--ash0); box-shadow: 0 0 0 2px var(--ash3); padding: 0 var(--pad) 40px; }
+  .cover { margin: 0 calc(-1 * var(--pad)); padding: 0 var(--pad) 22px; border-bottom: 4px double var(--ash0); }
+  .formrow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin: 0 calc(-1 * var(--pad)); padding: 9px var(--pad) 8px; background: var(--ash0); color: var(--boneLo); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .formrow b { color: var(--bone); font-weight: normal; }
+  .coverbody { position: relative; padding-top: 28px; }
+  h1 { margin: 0; padding-right: 150px; font-size: 1em; font-weight: normal; }
+  h1 .t1 { display: block; font: var(--p3)/1.1 var(--pix); -webkit-font-smoothing: none; text-transform: uppercase; letter-spacing: 0; }
+  h1 .t2 { display: block; max-width: 24em; margin-top: 16px; font: 600 1.6em/1.25 var(--serif); }
+  .stamp { position: absolute; right: 0; top: 30px; padding: 7px 10px 6px; border: 3px solid var(--red); outline: 2px solid var(--red); outline-offset: 3px; color: var(--red); font: var(--p2)/1 var(--pix); -webkit-font-smoothing: none; }
+  .stamp small { display: block; margin-top: 6px; font-size: var(--p1); text-align: center; }
+  /* the form's fields: label in caps on a ruled line, the entry beside it */
+  .fields { display: grid; grid-template-columns: repeat(4, minmax(0, auto)); gap: 0 20px; margin: 22px 0 0; }
+  .field { min-width: 0; padding: 6px 0 5px; border-bottom: 1px solid var(--ash4); }
+  .field.wide { grid-column: 1 / -1; }
+  .field dt { color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .field dd { margin: 2px 0 0; }
+
+  /* sections: a tab with the part, a heading in the caption face, ruled off */
+  .part { padding-top: 30px; }
+  .part + .part { margin-top: 18px; border-top: 2px solid var(--ash0); }
+  .sechead { margin-bottom: 14px; }
+  .tab { display: block; width: fit-content; margin-top: -32px; margin-bottom: 14px; padding: 6px 8px 5px; background: var(--ash0); color: var(--bone); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; vertical-align: top; }
+  .part h2 { margin: 0; scroll-margin-top: 64px; font: var(--p2)/1.5 var(--pix); -webkit-font-smoothing: none; }
+  .part h2 em { font-style: normal; text-decoration: underline; text-underline-offset: 4px; }
+  .prose { max-width: 66ch; }
+  .prose p { margin: 0 0 1em; }
+  .prose h3, .prose h4 { width: fit-content; margin: 1.6em 0 0.6em; padding-bottom: 4px; border-bottom: 2px solid var(--ash0); scroll-margin-top: 20px; font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; text-transform: uppercase; }
+  .prose h4 { border-bottom-width: 1px; color: var(--ash3); }
+  .prose ul, .prose ol { margin: 0 0 1em; padding-left: 1.4em; }
+  .prose li { margin-bottom: 0.3em; }
+  .prose blockquote { margin: 0 0 1em; padding: 2px 0 2px 1em; border-left: 4px solid var(--ash4); color: var(--ash2); }
+  .prose a { text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .prose a:hover { background: var(--boneLo); }
+  .prose hr { height: 0; margin: 1.6em 0; border: 0; border-top: 1px solid var(--ash4); }
+  .prose code { font: 0.85em ui-monospace, Menlo, Consolas, monospace; background: var(--boneLo); padding: 0 3px; }
+  .prose img { max-width: 100%; }
+  .prose table { border-collapse: collapse; margin: 0 0 1em; font-size: 0.9em; }
+  .prose th, .prose td { padding: 4px 10px; border-bottom: 1px solid var(--ash4); text-align: left; }
+  .prose th { font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; color: var(--ash3); }
+
+  /* the TL;DR: a slip on top of the sheet, bigger words, double ruled */
+  .tldr { margin: 30px 0 8px; padding: 0 22px 6px; border: 2px solid var(--ash0); outline: 1px solid var(--ash0); outline-offset: 3px; }
+  .tldr .tab { margin-top: -13px; margin-bottom: 12px; margin-left: -8px; }
+  .tldr h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tldr .sechead { margin: 0; }
+  .tldr .prose { max-width: none; font-size: 1.22em; line-height: 1.5; }
+  .tldr + .part { margin-top: 26px; }
+
+  /* placeholders Michael still has to write: a flat grey box */
+  mark.todo { background: var(--boneLo); color: var(--ash2); padding: 1px 5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+  /* note marks in the text, and the notes */
+  /* the mark rides above the line without pushing the lines apart; an unseen pad around it
+     makes it easy to hit with a thumb */
+  .fnref { position: relative; top: -0.55em; line-height: 0; vertical-align: baseline; font-size: 1em; }
+  .fnref a { position: relative; display: inline-block; min-width: 16px; margin-left: 2px; padding: 3px 3px 2px; background: var(--ash0); color: var(--bone); font: var(--p1)/1 var(--pix); -webkit-font-smoothing: none; text-align: center; text-decoration: none; vertical-align: baseline; scroll-margin-top: 30vh; }
+  .fnref a::after { content: ""; position: absolute; inset: -10px -7px; }
+  .fnref a:hover, .fnref a.hot { background: var(--ash3); }
+  .fnref a.on, .fnref a[aria-expanded="true"] { background: var(--bone); color: var(--ash0); box-shadow: 0 0 0 2px var(--ash0); }
+  .fnref a:target { outline: 3px solid var(--ash0); outline-offset: 3px; }
+  .fnref a:focus-visible { outline: 2px solid var(--ash0); outline-offset: 3px; }
+  /* links inside citations: long addresses break anywhere instead of running off the slip */
+  .fntext a, .side a, .pop a, .citetext a { overflow-wrap: anywhere; word-break: normal; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .fntext a:hover, .side a:hover, .pop .popbody a:hover { background: var(--boneLo); }
+  .fntext, .sntext, .popbody { overflow-wrap: break-word; hyphens: manual; }
+  .xref { font-variant-numeric: lining-nums; }
+  .fnlist { max-width: 56em; margin: 0; padding: 0; list-style: none; font-size: 0.86em; line-height: 1.55; }
+  .fnlist li { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 10px 8px 9px 0; border-bottom: 1px solid var(--ash4); scroll-margin-top: 30vh; }
+  .fnlist li:target { background: var(--boneLo); }
+  .fnnum { padding-top: 4px; color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; text-align: right; }
+  .fntext p { margin: 0 0 0.5em; }
+  .fntext p:last-child { margin: 0; }
+  .fnback { display: inline-block; margin-left: 4px; padding: 3px 5px 2px; border: 1px solid var(--ash0); font: var(--p1)/1 var(--pix); -webkit-font-smoothing: none; text-decoration: none; vertical-align: 2px; white-space: nowrap; }
+  .fnback:hover { background: var(--ash0); color: var(--bone); }
+  .fnback:focus-visible { outline: 2px solid var(--ash0); outline-offset: 2px; }
+
+  /* Notes in the margin (wide windows; the script adds html.sn). The sheet grows a ruled
+     column on the right, like the remarks column of a form. Each note sits level with its
+     mark; when two would touch, the later one moves down. Long notes show five lines and a
+     MORE key. */
+  :root { --nc: 268px; --ng: 40px; }
+  .body { position: relative; }
+  .side { display: none; }
+  .sn .body > .part { margin-right: calc(var(--nc) + var(--ng)); }
+  .sn .body::after { content: ""; position: absolute; top: 0; bottom: 0; right: calc(var(--nc) + var(--ng) / 2); border-left: 1px solid var(--ash4); }
+  .sn .body::before { content: "NOTES"; position: absolute; top: 4px; right: 0; width: var(--nc); color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .sn .side { display: block; position: absolute; right: 0; width: var(--nc); margin: 0; padding: 0 0 0 0; font-size: 15px; line-height: 1.45; color: var(--ash1); }
+  .side .snrow { display: grid; grid-template-columns: 30px 1fr; gap: 8px; padding: 4px 6px 6px 4px; margin: -4px -6px 0 -4px; }
+  .side .snnum { align-self: start; justify-self: start; min-width: 22px; padding: 3px 3px 2px; background: var(--ash0); color: var(--bone); font: var(--p1)/1 var(--pix); -webkit-font-smoothing: none; text-align: center; }
+  .side .sntext { max-height: calc(1.45em * 5); overflow: hidden; }
+  .side.open .sntext { max-height: none; }
+  .side .sntext p { margin: 0 0 0.4em; }
+  .side .sntext p:last-child { margin: 0; }
+  .side.hot .snrow { background: var(--boneLo); }
+  .side.on .snrow { background: var(--boneLo); box-shadow: inset 3px 0 0 var(--ash0); }
+  .side.on .snnum { background: var(--bone); color: var(--ash0); box-shadow: 0 0 0 2px var(--ash0); }
+  .side:focus { outline: none; }
+  .side:focus-visible .snrow { outline: 2px solid var(--ash0); outline-offset: 0; }
+  .snmore { display: none; margin: 4px 0 0 38px; padding: 3px 5px 2px; background: none; border: 1px solid var(--ash0); color: var(--ash0); font: var(--p1)/1 var(--pix); -webkit-font-smoothing: none; cursor: pointer; }
+  .side.long .snmore { display: inline-block; }
+  .snmore:hover { background: var(--ash0); color: var(--bone); }
+  .snmore:focus-visible { outline: 2px solid var(--ash0); outline-offset: 2px; }
+  /* "Id." and other notes that point back: a small label naming the note they mean */
+  .idof { display: inline-block; margin: 0 0 4px; padding: 2px 4px 1px; border: 1px solid var(--ash4); color: var(--ash3); font: var(--p1)/1.2 var(--pix); -webkit-font-smoothing: none; text-decoration: none; }
+  .idof:hover { background: var(--ash0); color: var(--bone); border-color: var(--ash0); }
+  .idof:focus-visible { outline: 2px solid var(--ash0); outline-offset: 2px; }
+
+  /* The pop-up slip (narrower windows, and a mark used a second time). On phones it docks to
+     the bottom of the screen like a receipt; Esc, CLOSE or a tap elsewhere puts it away. */
+  .pop { position: absolute; z-index: 40; display: block; width: min(440px, calc(100vw - 32px)); background: var(--bone); color: var(--ash0); border: 2px solid var(--ash0); box-shadow: 0 0 0 2px var(--ash3), 6px 6px 0 2px var(--ash0); font-size: 16px; line-height: 1.5; text-align: left; text-indent: 0; font-style: normal; font-weight: normal; }
+  .pop[hidden] { display: none; }
+  .pop:focus { outline: none; }
+  .pophead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 6px 6px 10px; background: var(--ash0); color: var(--bone); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .popbtns { display: flex; gap: 6px; }
+  .popbtns button { padding: 4px 6px 3px; background: var(--bone); color: var(--ash0); border: 0; font: var(--p1)/1 var(--pix); -webkit-font-smoothing: none; cursor: pointer; }
+  .popbtns button:hover { background: var(--boneLo); }
+  .popbtns button:focus-visible { outline: 2px solid var(--bone); outline-offset: 2px; }
+  .popbtns button[hidden] { display: none; }
+  .popbody { max-height: min(52vh, 420px); overflow: auto; padding: 12px 14px 10px; overscroll-behavior: contain; }
+  .popbody p { margin: 0 0 0.5em; }
+  .popbody p:last-child { margin: 0; }
+  .popfoot { padding: 0 14px 10px; }
+  .popfoot a { font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; color: var(--ash3); text-decoration: none; }
+  .popfoot a:hover { color: var(--ash0); text-decoration: underline; }
+  .popfoot a:focus-visible { outline: 2px solid var(--ash0); outline-offset: 2px; }
+  .pop.dock { position: fixed; left: 0; right: 0; bottom: 0; top: auto !important; width: auto; border-width: 2px 0 0; box-shadow: 0 -2px 0 var(--ash3); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pop.dock .pophead { padding: 4px 6px 4px var(--gut); min-height: 44px; }
+  .pop.dock .popbtns button { min-height: 32px; padding: 6px 10px 5px; }
+  .pop.dock .popbody { max-height: 46vh; max-height: 46dvh; padding: 12px var(--gut) 10px; }
+  .pop.dock .popfoot { padding: 0 var(--gut) 12px; }
+
+  /* the reading meter: twenty cells in the index, filled as the text is read */
+  .meter { display: flex; align-items: center; gap: 8px; padding: 8px 10px 9px; border-top: 2px solid var(--ash0); color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .meter .cells { display: flex; flex: 1; gap: 2px; }
+  .meter .cells i { flex: 1; height: 8px; background: var(--boneLo); }
+  .meter .cells i.f { background: var(--ash0); }
+  .meter .mpct { min-width: 4ch; text-align: right; }
+
+  /* Cite this paper: a two-row form, each row with its own COPY key */
+  .cite .citeform { border: 2px solid var(--ash0); }
+  .citerow { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: start; gap: 8px 16px; padding: 12px 12px 12px 0; }
+  .citerow + .citerow { border-top: 1px solid var(--ash4); }
+  .citelabel { padding: 5px 0 0 12px; color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .citetext { margin: 0; font-size: 0.92em; line-height: 1.5; }
+  .copy { margin-top: 2px; font-size: var(--p1); cursor: pointer; }
+  .copy.done { background: var(--ash0); color: var(--bone); }
+  .copied { min-height: 1.4em; margin: 8px 0 0; color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+  .notes + .cite { margin-top: 18px; }
+
+  .eof { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin: 36px 0 0; padding-top: 14px; border-top: 4px double var(--ash0); color: var(--ash3); font: var(--p1)/1.4 var(--pix); -webkit-font-smoothing: none; }
+
+  /* Wide windows with notes in the margin: a narrower index and a wider sheet */
+  .sn { --pad: 40px; }
+  .sn .desk { grid-template-columns: 220px minmax(0, 1080px); gap: 24px; max-width: 1340px; }
+  .sn .strip { max-width: 1340px; }
+  .sn .index a { grid-template-columns: 50px 1fr; }
+
+  /* Phones and narrow windows: the index becomes a bar along the top that opens into the list. */
+  @media (max-width: 999px) {
+    .desk { display: block; }
+    .index { top: 0; z-index: 10; margin: 0 calc(-1 * var(--gut)) 14px; max-height: none; overflow: visible; border-width: 0 0 2px; box-shadow: none; background: var(--ash0); }
+    .index summary { min-height: 44px; padding: 0 var(--gut); cursor: pointer; gap: 12px; }
+    .index summary .now { display: block; overflow: hidden; color: var(--boneLo); white-space: nowrap; text-overflow: ellipsis; text-align: right; }
+    .index summary .arrow { display: inline-block; margin-left: 6px; }
+    .index details[open] summary .arrow { transform: scaleY(-1); }
+    .index ol { position: absolute; left: 0; right: 0; top: 100%; max-height: 70vh; max-height: 70dvh; overflow: auto; padding: 0; background: var(--bone); border-bottom: 2px solid var(--ash0); }
+    .index a { padding: 10px var(--gut) 10px 28px; min-height: 44px; }
+    .index a[aria-current="true"]::before { left: 12px; top: 12px; }
+    .index .ttext { font-size: 16px; }
+    .index .foot { display: none; }
+    /* the meter becomes a thin line along the bottom of the bar */
+    .meter { position: absolute; left: 0; right: 0; bottom: -2px; padding: 0; border: 0; height: 3px; }
+    .meter .mlabel, .meter .mpct { display: none; }
+    .meter .cells { gap: 0; height: 3px; }
+    .meter .cells i { height: 3px; background: transparent; }
+    .meter .cells i.f { background: var(--ash5); }
+    .part h2 { scroll-margin-top: 104px; }
+    .prose h3, .prose h4 { scroll-margin-top: 64px; }
+    .sheet { margin: 0 calc(-1 * var(--gut) + 6px); }
+  }
+  @media (max-width: 560px) {
+    :root { --p3: 30px; }
+    h1 { padding-right: 0; }
+    .stamp { position: static; display: inline-block; margin: 0 0 18px; }
+    .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tldr { padding: 0 14px 4px; }
+    .tldr .prose { font-size: 1.12em; }
+    h1 .t2 { font-size: 1.35em; }
+    .fnlist li { grid-template-columns: 26px 1fr; }
+    .citerow { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 10px 12px; }
+    .citelabel { padding: 0; }
+    .citetext { grid-column: 1 / -1; grid-row: 2; }
+    .copy { grid-column: 2; grid-row: 1; margin: 0; }
+  }
+  /* Projectors and big screens: the caption face steps up a whole size */
+  @media (min-width: 1600px) and (min-height: 820px) {
+    :root { --p1: 20px; --p2: 30px; --p3: 60px; }
+    .desk { grid-template-columns: 330px minmax(0, 1060px); max-width: 1500px; }
+    .strip { max-width: 1500px; }
+    .index a { grid-template-columns: 100px 1fr; gap: 10px; padding-left: 26px; }
+    .index .ttab { padding-top: 0; }
+    .index .ttext { font-size: 18px; }
+    .index a[aria-current="true"]::before { left: 8px; top: 8px; }
+    .tab { margin-top: -38px; }
+    .part h2 { scroll-margin-top: 84px; }
+    .tldr .tab { margin-top: -20px; }
+    h1 { padding-right: 230px; }
+    .fnlist li { grid-template-columns: 50px 1fr; }
+    .fnref a { min-width: 24px; }
+    .sn { --nc: 380px; --ng: 48px; --pad: 56px; }
+    .sn .desk { grid-template-columns: 300px minmax(0, 1420px); max-width: 1760px; }
+    .sn .strip { max-width: 1760px; }
+    .sn .index a { grid-template-columns: 90px 1fr; }
+    .sn .side { font-size: 18px; }
+    .side .snrow { grid-template-columns: 44px 1fr; }
+    .side .snnum { min-width: 32px; }
+    .snmore { margin-left: 52px; }
+    .meter .cells i { height: 12px; }
+    .pop { width: min(560px, calc(100vw - 32px)); font-size: 19px; }
+    .citerow { grid-template-columns: 150px minmax(0, 1fr) auto; }
+  }
+
+  @media print {
+    @page { margin: 0.8in 0.9in; }
+    html, body { background: #fff; }
+    body { padding: 0; font-size: 11.5pt; line-height: 1.5; }
+    .strip, .index, .skip, .eof .keycap, .fnback, .side, .pop, .meter, .copy, .copied, .idof { display: none !important; }
+    .sn .body > .part { margin-right: 0; }
+    .body::before, .body::after { display: none !important; }
+    .body { min-height: 0 !important; }
+    /* notes print as endnotes: the marks as plain raised numbers, the list after the text */
+    .fnref { top: -0.45em; font-size: 0.75em; }
+    .fnref a, .fnref a.on, .fnref a[aria-expanded="true"] { box-shadow: none; outline: 0; font: 8pt/1 Georgia, serif; }
+    .fnref a::after { display: none; }
+    .notes { break-before: page; }
+    .fnlist { font-size: 9.5pt; }
+    .fnlist li { padding: 4px 0; border-bottom: 0; grid-template-columns: 24px 1fr; }
+    .fnnum { font: 9.5pt/1.55 Georgia, serif; padding-top: 0; color: #000; }
+    .fntext a, .citetext a { color: #000; }
+    .cite .citeform { border: 1px solid #000; }
+    .citerow { grid-template-columns: 90px minmax(0, 1fr); }
+    .cite { break-inside: avoid; }
+    .desk { display: block; max-width: none; }
+    .sheet { margin: 0; border: 0; box-shadow: none; padding: 0; background: #fff; }
+    .cover, .formrow { margin: 0; }
+    .formrow { padding: 0 0 6px; background: none; color: #000; border-bottom: 1px solid #000; }
+    .formrow b { color: #000; }
+    .coverbody { padding-top: 18px; }
+    .tab, .tldr .tab { margin: 0 0 8px; background: none; color: #000; border: 1px solid #000; }
+    .part { padding-top: 14px; }
+    .tldr { margin: 18px 0 0; padding: 12px 16px 2px; outline: 0; }
+    .tldr { break-inside: avoid; }
+    .part h2, .sechead { break-after: avoid; }
+    .sechead { break-inside: avoid; }
+    .prose p { orphans: 3; widows: 3; }
+    .prose { max-width: none; }
+    .fnref a { background: none; color: #000; padding: 0 1px; min-width: 0; }
+    .fnlist li { break-inside: avoid; }
+    mark.todo { background: #ddd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { text-decoration: none; }
+  }
+  main a { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<a class="skip" href="#paper">Skip to the paper</a>
+<div class="strip">
+  <span><b>UNSEEN ABOVE</b> · CH 07 · <i>●</i> THE PAPER BEHIND THE SHOW</span>
+  <a class="keycap" href="./" data-back>BACK TO THE GAME</a>
+</div>
+<div class="desk">
+  <nav class="index" aria-label="Contents">
+    <details id="toc" open>
+      <summary><span>INDEX</span><span class="now" aria-hidden="true"></span><span class="arrow" aria-hidden="true">▼</span></summary>
+      <ol>
+<li><a href="#tldr" data-for="tldr"><span class="ttab">TL;DR</span><span class="ttext">TL;DR</span></a></li>
+<li><a href="#summary" data-for="summary"><span class="ttab">SUMMARY</span><span class="ttext">Executive summary</span></a></li>
+<li><a href="#intro" data-for="intro"><span class="ttab">INTRO</span><span class="ttext">Introduction</span></a></li>
+<li><a href="#part-1" data-for="part-1"><span class="ttab">PART I</span><span class="ttext">Space Law's Data Rules Are Written for Sensing States</span></a></li>
+<li><a href="#part-2" data-for="part-2"><span class="ttab">PART II</span><span class="ttext">Formal Control: A Right Not to Be Seen, for One State</span></a></li>
+<li><a href="#part-3" data-for="part-3"><span class="ttab">PART III</span><span class="ttext">Informal Control: Shutter Control by Checkbook</span></a></li>
+<li><a href="#part-4" data-for="part-4"><span class="ttab">PART IV</span><span class="ttext">The Exposed: What the Law Offers the People Being Watched</span></a></li>
+<li><a href="#part-5" data-for="part-5"><span class="ttab">PART V</span><span class="ttext">Reading Article VI for People</span></a></li>
+<li><a href="#a-note-on-the-companion-game" data-for="a-note-on-the-companion-game"><span class="ttab"> </span><span class="ttext">A Note on the Companion Game</span></a></li>
+<li><a href="#conclusion" data-for="conclusion"><span class="ttab">END</span><span class="ttext">Conclusion</span></a></li>
+<li><a href="#bibliography" data-for="bibliography"><span class="ttab"> </span><span class="ttext">Bibliography</span></a></li>
+<li><a href="#notes" data-for="notes"><span class="ttab">NOTES</span><span class="ttext">Notes</span></a></li>
+<li><a href="#cite" data-for="cite"><span class="ttab">CITE</span><span class="ttext">Cite this paper</span></a></li>
+      </ol>
+      <div class="foot"><a class="keycap" href="./" data-back>BACK TO THE GAME</a></div>
+    </details>
+    <div class="meter" role="progressbar" aria-label="Read so far" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="mlabel">READ</span><span class="cells"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mpct">0%</span></div>
+  </nav>
+  <script>
+    // Phones get the index as a closed bar; wide windows keep it open beside the sheet.
+    (function () {
+      var d = document.getElementById('toc'), wide = window.matchMedia('(min-width: 1000px)');
+      function fit() { d.open = wide.matches; }
+      fit();
+      if (wide.addEventListener) wide.addEventListener('change', fit);
+      d.querySelector('summary').addEventListener('click', function (e) { if (wide.matches) e.preventDefault(); });
+    })();
+  </script>
+  <main id="paper" class="sheet">
+    <header class="cover">
+      <div class="formrow"><span><b>FORM UA-07</b> · PAPER</span><span>COMPANION TO THE GAME</span></div>
+      <div class="coverbody">
+        <div class="stamp filed" role="img" aria-label="Status: FILED">FILED</div>
+        <h1><span class="t1">Unseen Above</span><span class="t2">Space Law and the Power to See and Not Be Seen</span></h1>
+        <dl class="fields">
+          <div class="field wide"><dt>BY</dt><dd>Michael Endrias · Intro to Space Law · Prof. A.J. Link · Fall 2026</dd></div>
+          <div class="field"><dt>SECTIONS</dt><dd>11</dd></div>
+          <div class="field"><dt>NOTES</dt><dd>133</dd></div>
+          <div class="field"><dt>READING TIME</dt><dd>31 min</dd></div>
+          <div class="field"><dt>STATUS</dt><dd>FILED</dd></div>
+        </dl>
+      </div>
+    </header>
+
+<div class="body">
+<section class="part tldr" aria-labelledby="tldr">
+<header class="sechead"><span class="tab" aria-hidden="true">TL;DR</span><h2 id="tldr">TL;DR</h2></header>
+<div class="prose"><p>Space law could work for people if States chose it to. Powerful States instead choose to use space law and space to protect themselves from being seen, rather than protecting people from being seen. In 2026, the US government “asked” satellite companies to obscure imagery of its war with Iran: the public was denied seeing while the US government retained its own view, and the people being imaged, as every day, were never asked. Article VI of the Outer Space Treaty obliges States to supervise space activities by their nationals, including companies, and that could apply to people, too.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="summary">
+<header class="sechead"><span class="tab" aria-hidden="true">SUMMARY</span><h2 id="summary">Executive summary</h2></header>
+<div class="prose"><p>In April 2026, the U.S. government &quot;requested&quot; that satellite companies withhold imagery of the war with Iran. The public lost its view; the government kept its own. This paper argues that the pattern is built into the law.</p>
+<ul>
+<li><strong>Part I.</strong> Space law&#39;s data rules were written for the states that do the sensing. The treaties count objects, not pictures; the 1986 Remote Sensing Principles refused sensed states a veto; national licensing screens data for national security, never for the people in the frame.</li>
+<li><strong>Part II.</strong> One state got a right not to be seen clearly: the Kyl-Bingaman Amendment caps U.S. imagery of Israel, and in practice the blur covers Palestine too. NOAA calls privacy &quot;outside the scope of the Act.&quot; The statute&#39;s &quot;international obligations&quot; clause says otherwise.</li>
+<li><strong>Part III.</strong> The quieter lever is the checkbook. The formal &quot;shutter control&quot; tool has never been used; contracts and &quot;voluntary&quot; requests did the work in Afghanistan, Ukraine, Gaza and Iran, off the record and outside the guardrails, with real First Amendment and Article 19 problems.</li>
+<li><strong>Part IV.</strong> The people being watched get almost nothing: RF sensing is unlicensed, satellite internet makes users findable, and the Fourth Amendment offers thin protection at home and none abroad.</li>
+<li><strong>Part V.</strong> Article VI, read with Article III and the ICCPR, already requires states to supervise orbital data for people: privacy criteria in licensing, withholds only on the record, licensing for RF sensing, and public reporting of government requests. No new treaty is needed.</li>
+</ul>
+</div>
+</section>
+
+<section class="part" aria-labelledby="intro">
+<header class="sechead"><span class="tab" aria-hidden="true">INTRO</span><h2 id="intro">Introduction</h2></header>
+<div class="prose"><p>Planet emailed subscribers on April 4, 2026, about five weeks into a US-Israeli bombing campaign targeting Iran. &quot;Due to the conflict in the Middle East,&quot; it read, &quot;the U.S. government has requested all satellite imagery providers voluntarily implement an indefinite withhold of imagery in the designated Area of Interest.&quot;<sup class="fnref"><a href="#fn-1" id="fnref-1" aria-label="Note 1">1</a></sup> A month earlier, the same company had insisted that its first delays were &quot;not the result of a directive or requirement from any government.&quot;<sup class="fnref"><a href="#fn-2" id="fnref-2" aria-label="Note 2">2</a></sup> There was now a sender to that request.</p>
+<p>Notice, too, who did <em>not</em> go dark. According to a Planet spokesperson, the U.S. government, &quot;as well as some foreign governments and commercial users,&quot; still had unrestricted access to the war imagery.<sup class="fnref"><a href="#fn-3" id="fnref-3" aria-label="Note 3">3</a></sup> The public had no view of the war. The government kept its own.</p>
+<p>And yet, those same satellites continue to take pictures of ordinary people every single day. Those people never got an email, and nothing in space law gives them a say.</p>
+<p>This paper claims that this is no accident. When space law determines what a satellite can see, it shields the powerful from being seen, not people from being watched. Donna Haraway had a name for the privilege at stake: &quot;the power to see and not be seen.&quot;<sup class="fnref"><a href="#fn-4" id="fnref-4" aria-label="Note 4">4</a></sup> These powerful states hold both halves of that power in their hands, and they can even grant the second half to their allies. Most sensed states, and the people below them, don&#39;t have either. But that&#39;s not a gap, that&#39;s a decision because the tool to close it is in the treaty.</p>
+<p>This paper proceeds as follows. Part I shows that space law&#39;s data rules were created with the sensing states in mind. Part II will examine the only place in which U.S. law recognizes a right not to be seen. Part III follows the quieter lever: contracts and &quot;requests.&quot; Part IV asks what the law provides those being monitored (very little). Part V argues that a closer reading of the Outer Space Treaty&#39;s Article VI, focused on what it actually says, requires states to supervise orbital data for people and not just for themselves.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="part-1">
+<header class="sechead"><span class="tab" aria-hidden="true">PART I</span><h2 id="part-1">Space Law&#39;s Data Rules Are Written for Sensing States</h2></header>
+<div class="prose"><p>But if a satellite takes a picture of you, whose problem is that under space law? A state&#39;s, and usually only the camera-owning state gets a real say.</p>
+<h3 id="a-the-treaties-count-objects-not-pictures">A. The Treaties Count Objects, Not Pictures</h3>
+<p>To kick off, the Liability Convention defines &quot;damage&quot; as &quot;loss of life, personal injury or other impairment of health; or loss of or damage to property.&quot;<sup class="fnref"><a href="#fn-5" id="fnref-5" aria-label="Note 5">5</a></sup> Those are a few of the things a falling object can do. A camera does none of that. Von der Dunk reports the majority view that damage &quot;caused by an intrusion of privacy&quot; through satellite data &quot;should not be held compensable under the Liability Convention.&quot;<sup class="fnref"><a href="#fn-6" id="fnref-6" aria-label="Note 6">6</a></sup> And the regime knows who pays when a satellite lands on a barn. It says nothing about what the satellite actually saw during its descent.</p>
+<h3 id="b-the-data-rules-that-exist-protect-states-thinly">B. The Data Rules That Exist Protect States, Thinly</h3>
+<p>The closest thing to a data code in space law is the 1986 Remote Sensing Principles. They record a defeat. In COPUOS, the Soviets, the French and much of the developing world sought the prior consent of the imaged state for dissemination of the imagery; the U.S. and its allies favored unrestricted dissemination.<sup class="fnref"><a href="#fn-7" id="fnref-7" aria-label="Note 7">7</a></sup> Consent lost.<sup class="fnref"><a href="#fn-8" id="fnref-8" aria-label="Note 8">8</a></sup> The sensed state got consolation prizes: sensing must not harm &quot;the legitimate rights and interests of the sensed State,&quot; and the sensed state may buy data on its territory &quot;on a non-discriminatory basis and on reasonable cost terms.&quot;<sup class="fnref"><a href="#fn-9" id="fnref-9" aria-label="Note 9">9</a></sup> As von der Dunk puts it, the sensed state &quot;has no veto to prevent it from being &#39;sensed.&#39;&quot;<sup class="fnref"><a href="#fn-10" id="fnref-10" aria-label="Note 10">10</a></sup></p>
+<p>Notice whose rights these are. The Principles say nothing about individuals or human rights, and &quot;[p]rivacy aspects of VHR remote sensing data dissemination, at least, have not been considered.&quot;<sup class="fnref"><a href="#fn-11" id="fnref-11" aria-label="Note 11">11</a></sup> Even state privacy fares poorly: Lyall and Larsen weigh the claim that sensing infringes &quot;the privacy of a state&quot; and find &quot;a more cogent argument&quot; for monitoring.<sup class="fnref"><a href="#fn-12" id="fnref-12" aria-label="Note 12">12</a></sup> We can borrow Stefoudi&#39;s term for what remains: <em>sovereign privacy</em>, a privacy that belongs to governments, not people.<sup class="fnref"><a href="#fn-13" id="fnref-13" aria-label="Note 13">13</a></sup></p>
+<p>The remainder of the toolkit is constructed in a similar fashion. The ITU Constitution ensures the confidentiality of international correspondence and then authorizes member states to surrender it to their own authorities.<sup class="fnref"><a href="#fn-14" id="fnref-14" aria-label="Note 14">14</a></sup> The rare exception, the 1982 Direct Broadcasting Principles&#39; right &quot;to seek, receive and impart information,&quot; passed by vote over U.S. opposition.<sup class="fnref"><a href="#fn-15" id="fnref-15" aria-label="Note 15">15</a></sup></p>
+<p>And none of it was by accident. Washington, worried that ICAO involvement would &quot;civilianise&quot; space and threaten plans for a spy satellite programme, persuaded ICAO&#39;s new president to keep space off the agenda.<sup class="fnref"><a href="#fn-16" id="fnref-16" aria-label="Note 16">16</a></sup></p>
+<h3 id="c-national-licensing-screens-data-for-the-state">C. National Licensing Screens Data for the State</h3>
+<p>Domestic law finishes the job. A U.S. license issues only if the applicant will honor &quot;any applicable international obligations and national security concerns of the United States.&quot;<sup class="fnref"><a href="#fn-17" id="fnref-17" aria-label="Note 17">17</a></sup> Other licensing states ask the same question:</p>
+<ul>
+<li>Canada may interrupt service to protect &quot;national security, defence, foreign policy interests and/or upholding Canada&#39;s international obligations.&quot;<sup class="fnref"><a href="#fn-18" id="fnref-18" aria-label="Note 18">18</a></sup></li>
+<li>Japan asks whether use &quot;is likely to cause adverse effect on ensuring the peace and security of the international community and the national security of Japan.&quot;<sup class="fnref"><a href="#fn-19" id="fnref-19" aria-label="Note 19">19</a></sup></li>
+<li>France protects &quot;defense and foreign policy and compliance with international obligations.&quot;<sup class="fnref"><a href="#fn-20" id="fnref-20" aria-label="Note 20">20</a></sup></li>
+</ul>
+<p>Harris and Baumann find these regimes &quot;mainly driven by national security concerns.&quot;<sup class="fnref"><a href="#fn-21" id="fnref-21" aria-label="Note 21">21</a></sup> Nobody&#39;s got a privacy test for the people in the frame.</p>
+<p>A sensed state can buy photos of itself, but it can&#39;t stop photos from being taken. With one exception. Since 1996, one state has possessed a right that the others don&#39;t: a statutory right not to be clearly perceived. Part II turns to it.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="part-2">
+<header class="sechead"><span class="tab" aria-hidden="true">PART II</span><h2 id="part-2">Formal Control: A Right Not to Be Seen, for One State</h2></header>
+<div class="prose"><p>Under the 1986 Principles, a state can take images of another state&#39;s territory without requesting permission, and the state being imaged only gets a chance to access the information.<sup class="fnref"><a href="#fn-22" id="fnref-22" aria-label="Note 22">22</a></sup> Then U.S. law did a strange thing: it gave that right, in slightly altered form, to only one state.</p>
+<h3 id="a-one-sentence-one-state">A. One sentence, one state</h3>
+<p>The Kyl-Bingaman Amendment accomplishes that purpose in a single sentence. A U.S. agency &quot;may issue a license for the collection or dissemination by a non-Federal entity of satellite imagery with respect to Israel&quot; &quot;only if such imagery is no more detailed or precise than satellite imagery of Israel that is available from commercial sources.&quot;<sup class="fnref"><a href="#fn-23" id="fnref-23" aria-label="Note 23">23</a></sup> It sets no number and defines no territory. It pegs Israel&#39;s protection to the market: American companies may show Israel no more sharply than a foreign seller already does.</p>
+<p>For more than twenty years regulators read that as 2 meters. Then, in July 2020, NOAA found that imagery of Israel was &quot;readily and consistently available from non-U.S. commercial sources at a resolution of 0.4 meters,&quot; and so it &quot;changed the existing resolution limit of 2.0 m GSD to 0.4 m GSD.&quot;<sup class="fnref"><a href="#fn-24" id="fnref-24" aria-label="Note 24">24</a></sup> Amnon Harari, then head of space programs at Israel&#39;s Defense Ministry, told Kan public radio: &quot;We would always prefer to be photographed at the lowest resolution possible. It&#39;s always preferable to be seen blurred, rather than precisely.&quot;<sup class="fnref"><a href="#fn-25" id="fnref-25" aria-label="Note 25">25</a></sup></p>
+<p>We can call this a <em>right to be blurred</em>: not a right to go unseen, but a statutory right to be seen less clearly than the technology allows. International law didn&#39;t give any sensed state that much. Under US law, it went to one.</p>
+<h3 id="b-where-does-israel-end">B. Where does &quot;Israel&quot; end?</h3>
+<p>Consider a question the statute never answers: does &quot;Israel&quot; include the West Bank, Gaza, or the Golan Heights? NOAA has never said. The 2020 notice speaks only of &quot;Israel&quot; and the &quot;State of Israel,&quot; and defines neither.<sup class="fnref"><a href="#fn-26" id="fnref-26" aria-label="Note 26">26</a></sup> If you read section 1064 literally, it could allow imaging Palestine at full resolution. &quot;Yet, in practice, this is not the case.&quot;<sup class="fnref"><a href="#fn-27" id="fnref-27" aria-label="Note 27">27</a></sup> As Zena Agha put it, &quot;in practice, the KBA&#39;s restrictions apply throughout Palestine-Israel.&quot;<sup class="fnref"><a href="#fn-28" id="fnref-28" aria-label="Note 28">28</a></sup> Michael Fradley describes the limit as reaching the occupied territories and the Golan &quot;by implicit extension.&quot;<sup class="fnref"><a href="#fn-29" id="fnref-29" aria-label="Note 29">29</a></sup> Firms round up: &quot;if a corner of the image includes Israel, we treat that image as if KBA applies to the whole scene.&quot;<sup class="fnref"><a href="#fn-30" id="fnref-30" aria-label="Note 30">30</a></sup></p>
+<p>Of course, the extension was not uniform. Zerbini and Fradley found West Bank and Golan tiles that had not been degraded, and they described &quot;multiple and often contradicting interpretations by U.S. regulators.&quot;<sup class="fnref"><a href="#fn-31" id="fnref-31" aria-label="Note 31">31</a></sup> And yet the unevenness is the whole point: the scope of the blur was established by practice, by regulators who didn&#39;t push and companies who didn&#39;t risk. This is already informal control, which Part III addresses directly.</p>
+<h3 id="c-who-pays-and-who-gets-protected">C. Who pays, and who gets protected</h3>
+<p>But, who pays for the blur? Palestinians taking photos of demolitions, settlements, and war damage, along with the investigators, archaeologists, and journalists who have worked alongside them. Agha argues the law &quot;is better characterized as censorship,&quot; since it &quot;hinders the work of archaeologists, environmentalists, geographers, and humanitarians.&quot;<sup class="fnref"><a href="#fn-32" id="fnref-32" aria-label="Note 32">32</a></sup> James Walker, who interviewed human rights analysts, agrees the limit &quot;does block some forms of VHR dependent analysis.&quot;<sup class="fnref"><a href="#fn-33" id="fnref-33" aria-label="Note 33">33</a></sup></p>
+<p>Compare this with how that same regime acts toward people. The law mandates that all licenses make a sensed government&#39;s territorial data available to the government.<sup class="fnref"><a href="#fn-34" id="fnref-34" aria-label="Note 34">34</a></sup> In its 2020 rule, NOAA kept that condition, now an offer made &quot;[u]pon request,&quot; over a privacy objection, because &quot;[t]he Act requires Commerce to include this condition, so Commerce cannot lawfully omit this condition.&quot;<sup class="fnref"><a href="#fn-35" id="fnref-35" aria-label="Note 35">35</a></sup> When commenters asked NOAA to address privacy itself, the answer was short: &quot;such concerns are outside the scope of the Act. These requests are better addressed to Congress.&quot;<sup class="fnref"><a href="#fn-36" id="fnref-36" aria-label="Note 36">36</a></sup> To put it another way, the law protects sensed governments, and the agency says it can do nothing for sensed people.</p>
+<p>But is that right? The statute has an opening. No license may issue unless the applicant will comply with &quot;any applicable international obligations . . . of the United States.&quot;<sup class="fnref"><a href="#fn-37" id="fnref-37" aria-label="Note 37">37</a></sup> Licensees must also operate &quot;to observe the international obligations of the United States.&quot;<sup class="fnref"><a href="#fn-38" id="fnref-38" aria-label="Note 38">38</a></sup> The United States is party to the ICCPR, which bars arbitrary interference with privacy and protects the freedom to seek and receive information.<sup class="fnref"><a href="#fn-39" id="fnref-39" aria-label="Note 39">39</a></sup> Of course, there are limits. The Covenant is not self-executing.<sup class="fnref"><a href="#fn-40" id="fnref-40" aria-label="Note 40">40</a></sup> And § 60122(b)(1) ties its obligations clause to § 60146, the FCC&#39;s radio frequency section.<sup class="fnref"><a href="#fn-41" id="fnref-41" aria-label="Note 41">41</a></sup> However, neither of these limits mandates the NOAA interpretation. &quot;Outside the scope&quot; was a choice about what &quot;international obligations&quot; means.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="part-3">
+<header class="sechead"><span class="tab" aria-hidden="true">PART III</span><h2 id="part-3">Informal Control: Shutter Control by Checkbook</h2></header>
+<div class="prose"><p>On March 11, 2026, Planet Labs told the press that its new hold on Middle East imagery &quot;is not the result of a directive or requirement from any government. It is Planet&#39;s decision.&quot;<sup class="fnref"><a href="#fn-42" id="fnref-42" aria-label="Note 42">42</a></sup> Less than four weeks later, Planet&#39;s notice to customers told a different story: &quot;the U.S. government has requested all satellite imagery providers voluntarily implement an indefinite withhold of imagery in the designated Area of Interest.&quot;<sup class="fnref"><a href="#fn-43" id="fnref-43" aria-label="Note 43">43</a></sup> So which was it? We can&#39;t tell. That is the problem. In recent conflicts, private gatekeeping and government &quot;requests,&quot; not the formal legal process, decided what the public could see from orbit.</p>
+<h3 id="a-the-tool-nobody-uses">A. The Tool Nobody Uses</h3>
+<p>There&#39;s actually a tool for this on paper. NOAA&#39;s rules require higher-tier licensees to obey &quot;limited-operations directives issued by the Secretary&quot; that &quot;temporarily limit data collection and/or dissemination during periods of increased concerns for national security and where necessary to meet international obligation or foreign policy interests.&quot;<sup class="fnref"><a href="#fn-44" id="fnref-44" aria-label="Note 44">44</a></sup> The trade calls this &quot;shutter control,&quot; and it has thin but real guardrails. The Secretary of Defense or State must make the call, and that function &quot;shall not be delegated below the Secretary or acting Secretary.&quot;<sup class="fnref"><a href="#fn-45" id="fnref-45" aria-label="Note 45">45</a></sup> Conditions &quot;should be imposed for the smallest area and for the shortest period necessary.&quot;<sup class="fnref"><a href="#fn-46" id="fnref-46" aria-label="Note 46">46</a></sup> Of course, the agreement also says it creates &quot;[n]o legal rights or remedies.&quot;<sup class="fnref"><a href="#fn-47" id="fnref-47" aria-label="Note 47">47</a></sup></p>
+<p>It has never been used: &quot;[t]he government has never formally invoked that authority, though it has reached in that direction.&quot;<sup class="fnref"><a href="#fn-48" id="fnref-48" aria-label="Note 48">48</a></sup> Why reach, rather than invoke?</p>
+<h3 id="b-the-contract-is-the-lever">B. The Contract Is the Lever</h3>
+<p>Buying is more convenient than ordering. In October 2001, just as the bombing campaign against Afghanistan commenced, the government&#39;s imagery agency purchased exclusive imagery rights from Space Imaging&#39;s Ikonos, which was the only commercial satellite capable of taking high-resolution images of Afghanistan.<sup class="fnref"><a href="#fn-49" id="fnref-49" aria-label="Note 49">49</a></sup></p>
+<p>The checkbook has only grown. In 2022, the National Reconnaissance Office gave BlackSky, Maxar and Planet decade-long contracts worth billions.<sup class="fnref"><a href="#fn-50" id="fnref-50" aria-label="Note 50">50</a></sup> Maxar&#39;s alone was worth up to $3.24 billion.<sup class="fnref"><a href="#fn-51" id="fnref-51" aria-label="Note 51">51</a></sup> The military depends on these firms,<sup class="fnref"><a href="#fn-52" id="fnref-52" aria-label="Note 52">52</a></sup> but they depend on it more. Consider Ukraine. In March 2025, an NGA spokesperson said that, &quot;[i]n accordance with the Administration&#39;s directive on support to Ukraine, NGA has temporarily suspended access to GEGD,&quot; its portal for government-bought commercial imagery.<sup class="fnref"><a href="#fn-53" id="fnref-53" aria-label="Note 53">53</a></sup> A whole country&#39;s view went dark by account setting, not legal act.</p>
+<h3 id="c-gaza-and-iran">C. Gaza and Iran</h3>
+<p><em>Gaza, 2023.</em> NOAA said it was &quot;not considering additional restrictions,&quot; and Maxar said it was the &quot;primary decision maker&quot; on whether and when to release an image.<sup class="fnref"><a href="#fn-54" id="fnref-54" aria-label="Note 54">54</a></sup> Planet told NPR it &quot;decided to apply additional review for SkySat imagery over the conflict region.&quot;<sup class="fnref"><a href="#fn-55" id="fnref-55" aria-label="Note 55">55</a></sup> The companies, not the law, decided.</p>
+<p><em>Iran, 2026.</em> Planet&#39;s holds escalated from a 96-hour delay to the April 4 &quot;indefinite withhold,&quot; retroactive to March 9.<sup class="fnref"><a href="#fn-56" id="fnref-56" aria-label="Note 56">56</a></sup> Not everyone went blind. Bloomberg reported, citing a Planet spokesperson, that &quot;the US government, as well as some foreign governments and commercial users, still had unrestricted access to war imagery.&quot;<sup class="fnref"><a href="#fn-57" id="fnref-57" aria-label="Note 57">57</a></sup> The buyer kept the power to see and not be seen. The public lost it.</p>
+<p>Vantor&#39;s story is murkier. In March, it said it &quot;may implement enhanced access controls&quot; but that these decisions were &quot;not mandated by any government.&quot;<sup class="fnref"><a href="#fn-58" id="fnref-58" aria-label="Note 58">58</a></sup> It later told Bloomberg it hadn&#39;t received any requests.<sup class="fnref"><a href="#fn-59" id="fnref-59" aria-label="Note 59">59</a></sup> Yet the Washington Post reported in May that Vantor and Planet &quot;have complied with requests from the U.S. government to limit, delay, or indefinitely withhold&quot; publication.<sup class="fnref"><a href="#fn-60" id="fnref-60" aria-label="Note 60">60</a></sup> But neither I nor the public can resolve this contradiction. That is the point.</p>
+<p>Let us call this pattern <em>shutter control by checkbook</em>. A wire reporter called the 2001 deal &quot;checkbook shutter control,&quot;<sup class="fnref"><a href="#fn-61" id="fnref-61" aria-label="Note 61">61</a></sup> and Witjes and Olbrich describe the government as the industry&#39;s biggest customer and its regulator.<sup class="fnref"><a href="#fn-62" id="fnref-62" aria-label="Note 62">62</a></sup></p>
+<h3 id="d-why-the-route-matters">D. Why the Route Matters</h3>
+<p>To be sure, protecting &quot;allied and NATO-partner personnel&quot; may justify some limits.<sup class="fnref"><a href="#fn-63" id="fnref-63" aria-label="Note 63">63</a></sup> But international law permits only limits &quot;provided by law and are necessary.&quot;<sup class="fnref"><a href="#fn-64" id="fnref-64" aria-label="Note 64">64</a></sup> The issue isn&#39;t about the limits per se. It is to limits made off the record.</p>
+<p>First, the checkbook bypasses all of the safeguards built into the formal tool: there&#39;s no Secretary-level approval, no geographic or temporal constraints, no documentation. Moreover, it dodges an old prior restraint fight. Critics warned that &quot;[i]f shutter control is exercised in any but the most compelling circumstances, a court challenge is inevitable.&quot;<sup class="fnref"><a href="#fn-65" id="fnref-65" aria-label="Note 65">65</a></sup> The request will not trigger any such challenge.</p>
+<p>But even that informal pressure has limits under the First Amendment. &quot;[C]oercion, persuasion, and intimidation&quot; can amount to censorship, and compliance under them &quot;was not voluntary.&quot;<sup class="fnref"><a href="#fn-66" id="fnref-66" aria-label="Note 66">66</a></sup> Prior restraints bear &quot;a heavy presumption against [their] constitutional validity.&quot;<sup class="fnref"><a href="#fn-67" id="fnref-67" aria-label="Note 67">67</a></sup> Under NRA v. Vullo, the question is whether conduct &quot;could be reasonably understood to convey a threat of adverse government action in order to punish or suppress&quot; speech.<sup class="fnref"><a href="#fn-68" id="fnref-68" aria-label="Note 68">68</a></sup></p>
+<p>More importantly, the remand renders the argument tighter. The Second Circuit granted qualified immunity because no case had clearly established that pressuring &quot;third-party regulated entities into refraining from nonexpressive activity&quot; was coercion.<sup class="fnref"><a href="#fn-69" id="fnref-69" aria-label="Note 69">69</a></sup> A company that refuses to publish its own images is not a third party. It is the speaker, because &quot;the creation and dissemination of information are speech.&quot;<sup class="fnref"><a href="#fn-70" id="fnref-70" aria-label="Note 70">70</a></sup> A &quot;request&quot; from its licensor and biggest customer thus looks closer to direct coercion of a speaker than Vullo&#39;s facts did. That&#39;s an argument, not a holding. Standing is also a hurdle: Murthy demands &quot;a substantial risk&quot; of future restriction.<sup class="fnref"><a href="#fn-71" id="fnref-71" aria-label="Note 71">71</a></sup> It&#39;s not going to sue its biggest customer.</p>
+<p>Finally, this is Article VI &quot;continuing supervision&quot; in practice.<sup class="fnref"><a href="#fn-72" id="fnref-72" aria-label="Note 72">72</a></sup> The McGill Manual agrees: &quot;[a]uthorisation and continuing supervision by the appropriate State is required for all space activities of non-governmental entities, including those in support of military space activities.&quot;<sup class="fnref"><a href="#fn-73" id="fnref-73" aria-label="Note 73">73</a></sup> Nor, as the Dark and Quiet Skies II report puts it, can a state &quot;circumvent a prohibition placed upon it by contracting its violative activity to a nongovernmental actor.&quot;<sup class="fnref"><a href="#fn-74" id="fnref-74" aria-label="Note 74">74</a></sup> In short, whenever a state is concerned about its own interest, supervision becomes more rapid and finer grained. It&#39;s done off the record.</p>
+<p>What about those below us, those who do not wish to be seen? Part IV turns to them.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="part-4">
+<header class="sechead"><span class="tab" aria-hidden="true">PART IV</span><h2 id="part-4">The Exposed: What the Law Offers the People Being Watched</h2></header>
+<div class="prose"><p>This Part asks what the law gives the people below. In short, space law gives them nothing; domestic law, just a bit.</p>
+<h3 id="a-found-not-photographed">A. Found, Not Photographed</h3>
+<p>Consider HawkEye 360. Their satellites don&#39;t take pictures, they detect radios. The company told the SEC that the National Reconnaissance Office &quot;is our largest customer&quot; and that 61% of its 2025 revenue came from U.S. government work.<sup class="fnref"><a href="#fn-75" id="fnref-75" aria-label="Note 75">75</a></sup> It also told investors that its &quot;in-orbit RF sensing activities are not currently regulated by any single U.S. regulatory agency.&quot;<sup class="fnref"><a href="#fn-76" id="fnref-76" aria-label="Note 76">76</a></sup> That is just a correct interpretation of the rules. NOAA licenses only data that &quot;can be processed into imagery of surface features of the Earth.&quot;<sup class="fnref"><a href="#fn-77" id="fnref-77" aria-label="Note 77">77</a></sup> NOAA advised HawkEye 360 in 2016 that it did not require a license.<sup class="fnref"><a href="#fn-78" id="fnref-78" aria-label="Note 78">78</a></sup> The FCC does not grant collection licenses, but only spectrum licenses.<sup class="fnref"><a href="#fn-79" id="fnref-79" aria-label="Note 79">79</a></sup> Buyers noticed. In 2019, Frontex spent roughly €1.5 million on a HawkEye 360 pilot that aimed to detect radio emitters out at sea.<sup class="fnref"><a href="#fn-80" id="fnref-80" aria-label="Note 80">80</a></sup></p>
+<p>And satellite internet works the same way, in reverse. The terminal is a radio, and the network needs to know where it is. India&#39;s May 5, 2025 conditions require records of &quot;UT location with precise latitude / longitude&quot; and demand real-time tracking of terminals.<sup class="fnref"><a href="#fn-81" id="fnref-81" aria-label="Note 81">81</a></sup> The Ukrainian whitelist of 2026 (according to Cabinet Resolution No. 115) matches each civilian terminal with a national ID and a tax ID.<sup class="fnref"><a href="#fn-82" id="fnref-82" aria-label="Note 82">82</a></sup> And Starlink&#39;s January 15, 2026 privacy policy lets user data train AI models; the opt-out shown covers only &quot;third-party collaborators.&quot;<sup class="fnref"><a href="#fn-83" id="fnref-83" aria-label="Note 83">83</a></sup> We can call this <em>location by subscription</em>: being online now means being findable.<sup class="fnref"><a href="#fn-84" id="fnref-84" aria-label="Note 84">84</a></sup></p>
+<p>Imagery is no better. Even Sergio Marchisio, chairing COPUOS&#39;s Legal Subcommittee, conceded that the Remote Sensing Principles do not &quot;provide an adequate discipline as regards the production, use and treatment of highly sophisticated and detailed imagery,&quot; including its implications for &quot;individual privacy.&quot;<sup class="fnref"><a href="#fn-85" id="fnref-85" aria-label="Note 85">85</a></sup></p>
+<h3 id="b-what-domestic-law-offers">B. What Domestic Law Offers</h3>
+<p>The Fourth Amendment affords Americans some protection, less than it appears. Consider the cases in turn:</p>
+<ol>
+<li><em>Dow Chemical.</em> The Court said satellite surveillance &quot;might be constitutionally proscribed absent a warrant,&quot; but only &quot;as the Government concedes,&quot; and only in dictum.<sup class="fnref"><a href="#fn-86" id="fnref-86" aria-label="Note 86">86</a></sup></li>
+<li><em>Kyllo.</em> Using a device &quot;not in general public use&quot; to look into a home is a search.<sup class="fnref"><a href="#fn-87" id="fnref-87" aria-label="Note 87">87</a></sup> But as Justice Stevens warned in dissent, the threat &quot;will grow, rather than recede, as the use of intrusive equipment becomes more readily available.&quot;<sup class="fnref"><a href="#fn-88" id="fnref-88" aria-label="Note 88">88</a></sup></li>
+<li><em>Carpenter</em> and <em>Chatrie.</em> Location records are protected, &quot;even though for only a limited time, and from a third-party tech company.&quot;<sup class="fnref"><a href="#fn-89" id="fnref-89" aria-label="Note 89">89</a></sup> But <em>Carpenter</em> calls itself &quot;a narrow one&quot; and sets aside &quot;collection techniques involving foreign affairs or national security.&quot;<sup class="fnref"><a href="#fn-90" id="fnref-90" aria-label="Note 90">90</a></sup> And <em>Chatrie</em> does not decide whether the government may simply buy the data.</li>
+</ol>
+<p>Then there is everyone else. &quot;The people&quot; protected are those &quot;part of a national community&quot; or with &quot;sufficient connection&quot; to it.<sup class="fnref"><a href="#fn-91" id="fnref-91" aria-label="Note 91">91</a></sup></p>
+<h3 id="c-who-is-most-exposed">C. Who Is Most Exposed</h3>
+<p>Space law funnels all claims through states. But as Bin Cheng observed, absent damage, other states &quot;may not even take the trouble of raising the issue, unless they see some national interests in doing so.&quot;<sup class="fnref"><a href="#fn-92" id="fnref-92" aria-label="Note 92">92</a></sup> HawkEye 360 made the same point from the other side: there have been &quot;no formal concerns raised by Parties to the Treaty.&quot;<sup class="fnref"><a href="#fn-93" id="fnref-93" aria-label="Note 93">93</a></sup> So the most exposed are people without a powerful state to press their claims: migrants, the stateless, the occupied, and citizens of small states. Liberia&#39;s President Tubman put it plainly in 1966: &quot;we share the same heavens with the greatest powers. Their catastrophes are usually ours.&quot;<sup class="fnref"><a href="#fn-94" id="fnref-94" aria-label="Note 94">94</a></sup></p>
+<p>Is this a gap, then, or a choice? In Part V I argue that it is a choice.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="part-5">
+<header class="sechead"><span class="tab" aria-hidden="true">PART V</span><h2 id="part-5">Reading Article VI for People</h2></header>
+<div class="prose"><p>Data is already covered by Article VI of the Outer Space Treaty, which, read in conjunction with Article III, places a requirement on States to supervise their operators to protect people, not just themselves.</p>
+<h3 id="a-three-steps">A. Three Steps</h3>
+<p><em>Step one: supervision reaches data.</em> Article VI provides that the activities of non-governmental entities in outer space &quot;shall require authorization and continuing supervision by the appropriate State Party.&quot;<sup class="fnref"><a href="#fn-95" id="fnref-95" aria-label="Note 95">95</a></sup> But does &quot;activities in outer space&quot; include what happens to the data once it lands? Bin Cheng asked a version of that question about activities, such as the terms on which data are distributed, that take place on the ground but have their effects on Earth. His answer: &quot;the answer appears to be in the affirmative.&quot;<sup class="fnref"><a href="#fn-96" id="fnref-96" aria-label="Note 96">96</a></sup> The Remote Sensing Principles point the same way. They define &quot;remote sensing activities&quot; to include &quot;processing, interpreting and disseminating the processed data,&quot;<sup class="fnref"><a href="#fn-97" id="fnref-97" aria-label="Note 97">97</a></sup> and Principle XIV puts state responsibility for those activities &quot;[i]n compliance with article VI.&quot;<sup class="fnref"><a href="#fn-98" id="fnref-98" aria-label="Note 98">98</a></sup> And practice confirms it. Parts II and III show that oversight of orbital data is routine: limits on resolution, limited operations orders, sensed-government access. The question isn&#39;t about whether supervision reaches the data. It is whom supervision serves.</p>
+<p><em>Step two: supervision must follow international law.</em> Article III requires states to carry on space activities &quot;in accordance with international law, including the Charter of the United Nations.&quot;<sup class="fnref"><a href="#fn-99" id="fnref-99" aria-label="Note 99">99</a></sup> The Charter, in turn, commits the United Nations to promote &quot;universal respect for, and observance of, human rights,&quot; and every member &quot;pledge[s]&quot; to act toward that end.<sup class="fnref"><a href="#fn-100" id="fnref-100" aria-label="Note 100">100</a></sup> Under Article VI of the Treaty, the state is responsible for ensuring that national activities comply with the Treaty, including Article III.<sup class="fnref"><a href="#fn-101" id="fnref-101" aria-label="Note 101">101</a></sup> Cristian van Eijk puts the point well: &quot;Space is pay-to-play, but human rights are not.&quot;<sup class="fnref"><a href="#fn-102" id="fnref-102" aria-label="Note 102">102</a></sup></p>
+<p><em>Step three: the obligations.</em> Which international law? Article 17 of the ICCPR bars &quot;arbitrary or unlawful interference&quot; with privacy and gives &quot;[e]veryone . . . the right to the protection of the law against such interference.&quot;<sup class="fnref"><a href="#fn-103" id="fnref-103" aria-label="Note 103">103</a></sup> The Human Rights Committee reads that right as running against interference &quot;whether [it] emanate[s] from State authorities or from natural or legal persons.&quot;<sup class="fnref"><a href="#fn-104" id="fnref-104" aria-label="Note 104">104</a></sup> It also says that &quot;[t]he gathering and holding of personal information . . . whether by public authorities or private individuals or bodies, must be regulated by law.&quot;<sup class="fnref"><a href="#fn-105" id="fnref-105" aria-label="Note 105">105</a></sup> Article 19, meanwhile, protects the freedom &quot;to seek, receive and impart information . . . regardless of frontiers.&quot;<sup class="fnref"><a href="#fn-106" id="fnref-106" aria-label="Note 106">106</a></sup> An imaging or RF-sensing satellite engages both rights at once.</p>
+<h3 id="b-what-article-vi-adds">B. What Article VI Adds</h3>
+<p>This is what&#39;s special about space. Under Article VI, as Cheng read it, a private operator&#39;s activities are &quot;imputable to the State as if it were its own act.&quot;<sup class="fnref"><a href="#fn-107" id="fnref-107" aria-label="Note 107">107</a></sup> That matters. Ordinarily, a state&#39;s duty toward private actors is a positive one: to regulate and exercise due diligence. But if a licensee&#39;s collection counts as the state&#39;s own act, it engages the state&#39;s <em>negative</em> duty to respect privacy. Milanovic has argued that this duty to respect, unlike the duty to ensure, should be &quot;territorially unlimited.&quot;<sup class="fnref"><a href="#fn-108" id="fnref-108" aria-label="Note 108">108</a></sup> Or, in other words, Article VI makes corporate data usage a state act.</p>
+<p>This also answers Frans von der Dunk, who calls privacy in remote sensing &quot;very much a national matter,&quot; something states may address through licensing if they choose.<sup class="fnref"><a href="#fn-109" id="fnref-109" aria-label="Note 109">109</a></sup> But once Steps one through three are in place, &quot;may&quot; becomes &quot;must,&quot; at least for people within the licensing state&#39;s jurisdiction.</p>
+<h3 id="c-what-is-new-here">C. What Is New Here</h3>
+<p>To be sure, others have tied space law to privacy. Saboorian proposes new international data protection standards for satellite communications operators, built by blending the GDPR with the space treaties.<sup class="fnref"><a href="#fn-110" id="fnref-110" aria-label="Note 110">110</a></sup> Ferreira-Snyman wonders how human rights can be applied to humans who live in space.<sup class="fnref"><a href="#fn-111" id="fnref-111" aria-label="Note 111">111</a></sup> Freeland and Ireland-Piper, and Macchi, focus on corporate accountability, and both look mainly to new bodies or new due diligence laws.<sup class="fnref"><a href="#fn-112" id="fnref-112" aria-label="Note 112">112</a></sup> The closest work examines whether data centers in orbit are subject to Article VI oversight and whether privacy laws apply to data processed in orbit.<sup class="fnref"><a href="#fn-113" id="fnref-113" aria-label="Note 113">113</a></sup> This paper differs from these in three ways: it is based on the law as it stands, not as it might be proposed; it addresses imagery and RF sensing; and it protects people on Earth.</p>
+<h3 id="d-objections-and-responses">D. Objections and Responses</h3>
+<p><em>Objection one: the Principles do not cover this.</em> They are limited to &quot;improving natural resources management, land use and the protection of the environment,&quot;<sup class="fnref"><a href="#fn-114" id="fnref-114" aria-label="Note 114">114</a></sup> and Lyall and Larsen say that reading in military sensing &quot;would strain credulity.&quot;<sup class="fnref"><a href="#fn-115" id="fnref-115" aria-label="Note 115">115</a></sup> <em>Response:</em> Fair. Which is why step one is based on Cheng&#39;s interpretation of Article VI, with the Principles just serving as backup. Cheng&#39;s reading is contested. Stotler notes that Schmeichel&#39;s rival reading appears to follow the Vienna Convention more closely, and he suggests states may prefer it as militaries lean on commercial satellites.<sup class="fnref"><a href="#fn-116" id="fnref-116" aria-label="Note 116">116</a></sup> But Stotler also concedes that Cheng&#39;s view &quot;has been roundly endorsed&quot; and that &quot;Cheng&#39;s interpretation has won the day.&quot;<sup class="fnref"><a href="#fn-117" id="fnref-117" aria-label="Note 117">117</a></sup> And his own thesis cuts my way: if interpretation is creation, then choosing to read supervision as protecting only states is a choice, too.</p>
+<p><em>Objection two: privacy limits are limits on information.</em> <em>Response:</em> Yes, and that is why one test governs both. Article 19 allows restrictions only &quot;as are provided by law and are necessary,&quot; including &quot;[f]or respect of the rights or reputations of others.&quot;<sup class="fnref"><a href="#fn-118" id="fnref-118" aria-label="Note 118">118</a></sup> Those privacy rules that pass that test are legal. Informal withholds by phone call, as in Part III, are not.</p>
+<p><em>Objection three: the United States reads the ICCPR as territorial.</em> It does, and the Committee &quot;regrets&quot; that position.<sup class="fnref"><a href="#fn-119" id="fnref-119" aria-label="Note 119">119</a></sup> The Committee&#39;s own test reaches &quot;anyone within the power or effective control&quot; of a state.<sup class="fnref"><a href="#fn-120" id="fnref-120" aria-label="Note 120">120</a></sup> <em>Response:</em> The claim holds, at a minimum, for people on U.S. territory. Beyond that, the gap is part of the finding: the people abroad who are most watched are the ones the sensing state says it owes nothing.</p>
+<p><em>Objection four: the ICCPR is not self-executing.</em> The 1992 declaration says so.<sup class="fnref"><a href="#fn-121" id="fnref-121" aria-label="Note 121">121</a></sup> Montgomery does the same for Article VI.<sup class="fnref"><a href="#fn-122" id="fnref-122" aria-label="Note 122">122</a></sup> <em>Response:</em> Goehring answers this directly. A non-self-executing treaty is still binding; it is simply &quot;&#39;addressed to&#39; the political branches rather than the courts.&quot;<sup class="fnref"><a href="#fn-123" id="fnref-123" aria-label="Note 123">123</a></sup> Thus, the obligation lies with Congress and NOAA. And NOAA already has the hook: no license issues unless the Secretary finds in writing that the applicant will comply with &quot;any applicable international obligations.&quot;<sup class="fnref"><a href="#fn-124" id="fnref-124" aria-label="Note 124">124</a></sup> Privacy is not &quot;outside the scope of the Act.&quot;<sup class="fnref"><a href="#fn-125" id="fnref-125" aria-label="Note 125">125</a></sup> It is in the statute&#39;s own words.</p>
+<p><em>Objection five: states spy on each other all the time.</em> <em>Response:</em> They do, and international law largely tolerates it.<sup class="fnref"><a href="#fn-126" id="fnref-126" aria-label="Note 126">126</a></sup> That is a rule between nations. You don&#39;t commit espionage by licensing out a company to market pictures of individuals. It is trade, regulated by the state.</p>
+<h3 id="e-what-supervision-for-people-would-require">E. What Supervision for People Would Require</h3>
+<p>If this reading is right, Article VI requires at least four things:</p>
+<ol>
+<li><strong>Privacy and public-access criteria in licensing</strong>, alongside the national security criteria already there.</li>
+<li><strong>Withholds only through the formal process</strong>, on the record, so they can be tested under Article 19(3).</li>
+<li><strong>Authorization for RF sensing</strong>, which, as one operator admits, is &quot;not currently regulated by any single U.S. regulatory agency.&quot;<sup class="fnref"><a href="#fn-127" id="fnref-127" aria-label="Note 127">127</a></sup></li>
+<li><strong>Public reporting of government requests to operators</strong>, so the supervisor is also supervised.</li>
+</ol>
+<p>This would not need any new treaty. There needs to be a state that reads the old one for people.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="a-note-on-the-companion-game">
+<header class="sechead"><h2 id="a-note-on-the-companion-game">A Note on the Companion Game</h2></header>
+<div class="prose"><p>This paper has a companion: <em>Unseen Above</em>, a short pixel-art browser game.<sup class="fnref"><a href="#fn-128" id="fnref-128" aria-label="Note 128">128</a></sup> The player can alternate between these two roles. In one, you are a girl on a dying Earth, sneaking through a decaying mansion past cameras, sensors and a laser that seems to come from the side rather than from above. In the other, you&#39;re a satellite back end, where you solve neat routing and sorting problems. You can guess the turn: the puzzles were aiming the strikes at her, and the whole thing is a TV show watched by wealthy people on the Moon, who stay unseen until the end.</p>
+<p>Why a game? Because the argument is about <em>positions</em>, and a game can put you in both. The player is both the watcher and the watched. The paperwork-like puzzles are Part III&#39;s contracts and &quot;requests.&quot; The sourceless laser is informal control that leaves no record. The glasses that reveal the sensors, then crack, are the public losing its view of the powerful while staying visible to them. And the viewers on the Moon are the thesis itself.</p>
+<p>Ingrid LaFleur describes Afrofuturism as a way to &quot;craft decolonized destinies&quot; through &quot;speculative modalities such as science fiction, surrealism, magical realism, and horror.&quot;<sup class="fnref"><a href="#fn-129" id="fnref-129" aria-label="Note 129">129</a></sup> She also warns that satellites are crowding out the North Star that guided Harriet Tubman: &quot;We will soon no longer be able to map our liberation in the skies.&quot;<sup class="fnref"><a href="#fn-130" id="fnref-130" aria-label="Note 130">130</a></sup> The games allow players to experience justice from within rather than simply to read about it.<sup class="fnref"><a href="#fn-131" id="fnref-131" aria-label="Note 131">131</a></sup></p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="conclusion">
+<header class="sechead"><span class="tab" aria-hidden="true">END</span><h2 id="conclusion">Conclusion</h2></header>
+<div class="prose"><p>Space law already regulates the relationship between those who watch and those who are watched. Strong nations possess both powers and loan the latter to friendly countries. But most of the sensed states and those below them don&#39;t. The formal rules (Part I), the single exception written into law (Part II), the informal agreements (Part III), and the minimal safeguards for individuals (Part IV) all say the same thing.</p>
+<p>And this, of course, is not permanent. Article VI already requires states to supervise what their companies do in orbit, and states already do it, constantly, whenever their own interests are on the line (Part V). The question is: who is that supervision for? Susan Marks, quoted by Ntina Tzouvala, describes a familiar pattern in international law: &quot;Those who benefit from current arrangements remain comfortably out of view.&quot;<sup class="fnref"><a href="#fn-132" id="fnref-132" aria-label="Note 132">132</a></sup> But in orbit, that is not a metaphor. It is a licensing condition.</p>
+<p>And the stakes are growing. Satellites have already started beaming communications from space, look at the Starlink constellation, and companies are now pitching the idea of putting data centers in orbit.<sup class="fnref"><a href="#fn-133" id="fnref-133" aria-label="Note 133">133</a></sup> That&#39;s the allocation that would follow the data up there, unless the oversight changes. The people beneath will be far more exposed than ever before, but the onlookers will stay concealed.</p>
+</div>
+</section>
+
+<section class="part" aria-labelledby="bibliography">
+<header class="sechead"><h2 id="bibliography">Bibliography</h2></header>
+<div class="prose"><h3 id="cases">Cases</h3>
+<ul>
+<li>Bantam Books, Inc. v. Sullivan, 372 U.S. 58 (1963).</li>
+<li>Carpenter v. United States, 585 U.S. 296 (2018).</li>
+<li>Chatrie v. United States, 609 U.S. 605 (2026).</li>
+<li>Dow Chem. Co. v. United States, 476 U.S. 227 (1986).</li>
+<li>Kyllo v. United States, 533 U.S. 27 (2001).</li>
+<li>Murthy v. Missouri, 603 U.S. 43 (2024).</li>
+<li>Nat&#39;l Rifle Ass&#39;n of Am. v. Vullo, 602 U.S. 175 (2024).</li>
+<li>Nat&#39;l Rifle Ass&#39;n of Am. v. Vullo, 144 F.4th 376 (2d Cir. 2025).</li>
+<li>Sorrell v. IMS Health Inc., 564 U.S. 552 (2011).</li>
+<li>Sosa v. Alvarez-Machain, 542 U.S. 692 (2004).</li>
+<li>United States v. Verdugo-Urquidez, 494 U.S. 259 (1990).</li>
+</ul>
+<h3 id="treaties-and-international-materials">Treaties and International Materials</h3>
+<ul>
+<li>Constitution of the International Telecommunication Union, Dec. 22, 1992, S. Treaty Doc. No. 104-34, 1825 U.N.T.S. 331.</li>
+<li>Convention on International Liability for Damage Caused by Space Objects, Mar. 29, 1972, 24 U.S.T. 2389, 961 U.N.T.S. 187.</li>
+<li>G.A. Res. 37/92, Principles Governing the Use by States of Artificial Earth Satellites for International Direct Television Broadcasting (Dec. 10, 1982).</li>
+<li>G.A. Res. 41/65, Principles Relating to Remote Sensing of the Earth from Outer Space (Dec. 3, 1986).</li>
+<li>International Covenant on Civil and Political Rights, Dec. 16, 1966, 999 U.N.T.S. 171.</li>
+<li>McGill Manual on International Law Applicable to Military Uses of Outer Space (Ram S. Jakhu &amp; Steven Freeland eds., 2022).</li>
+<li>Treaty on Principles Governing the Activities of States in the Exploration and Use of Outer Space, Including the Moon and Other Celestial Bodies, Jan. 27, 1967, 18 U.S.T. 2410, 610 U.N.T.S. 205.</li>
+<li>U.N. Charter arts. 55, 56.</li>
+<li>U.N. Hum. Rts. Comm., Concluding Observations on the Fourth Periodic Report of the United States of America, U.N. Doc. CCPR/C/USA/CO/4 (Apr. 23, 2014).</li>
+<li>U.N. Hum. Rts. Comm., General Comment No. 16: Article 17 (Right to Privacy) (Apr. 8, 1988), <em>reprinted in</em> Compilation of General Comments and General Recommendations Adopted by Human Rights Treaty Bodies, U.N. Doc. HRI/GEN/1/Rev.1, at 21 (1994).</li>
+<li>U.N. Hum. Rts. Comm., General Comment No. 31: The Nature of the General Legal Obligation Imposed on States Parties to the Covenant, U.N. Doc. CCPR/C/21/Rev.1/Add.13 (May 26, 2004).</li>
+<li>U.N. Off. for Outer Space Affs., Dark and Quiet Skies II for Science and Society (Connie Walker &amp; Piero Benvenuti eds., 2022).</li>
+<li>U.S. Reservations, Declarations, and Understandings, International Covenant on Civil and Political Rights, 138 Cong. Rec. S4781-01 (daily ed. Apr. 2, 1992).</li>
+</ul>
+<h3 id="statutes-and-regulations">Statutes and Regulations</h3>
+<ul>
+<li>51 U.S.C. §§ 60121, 60122, 60146.</li>
+<li>15 C.F.R. pt. 960 (2025).</li>
+<li>National Defense Authorization Act for Fiscal Year 1997, Pub. L. No. 104-201, § 1064, 110 Stat. 2422, 2653 (1996) (codified at 51 U.S.C. § 60121 note).</li>
+<li>Licensing of Private Land Remote-Sensing Space Systems, 65 Fed. Reg. 46,822 (July 31, 2000).</li>
+<li>Licensing of Private Remote Sensing Space Systems, 85 Fed. Reg. 30,790 (May 20, 2020).</li>
+<li>Notice of Findings Regarding Commercial Availability of Non-U.S. Satellite Imagery With Respect to Israel, 85 Fed. Reg. 44,059 (July 21, 2020).</li>
+</ul>
+<h3 id="books-articles-and-reports">Books, Articles and Reports</h3>
+<ul>
+<li>Philippe Achilleas, <em>French Remote Sensing Law</em>, 34 J. Space L. 1 (2008).</li>
+<li>Zena Agha, Maps, Technology, and Decolonial Spatial Practices in Palestine (Al-Shabaka Pol&#39;y Brief, Jan. 2020).</li>
+<li>Derek E. Bambauer, <em>The Jawboning Cases End with a Bang Disguised by a Whimper</em>, 2023–2024 Cato Sup. Ct. Rev. 157 (2024).</li>
+<li>Elena Carpanelli &amp; Brendan Cohen, <em>Interpreting &quot;Damage&quot; Caused by Space Objects Under the 1972 Liability Convention</em>, 56 Proc. Int&#39;l Inst. Space L. (2013).</li>
+<li>R. Chakraborty, <em>Article VI and Orbital Data Centres: Supervisory Synchronization</em>, Air &amp; Space L. (forthcoming 2026).</li>
+<li>Bin Cheng, <em>Article VI of the 1967 Space Treaty Revisited: &quot;International Responsibility,&quot; &quot;National Activities,&quot; and &quot;The Appropriate State,&quot;</em> 26 J. Space L. 7 (1998).</li>
+<li>Lauren E. Diaz &amp; Vicenç Feliú, Governing Orbital Data Centers in the New Space Race (Aug. 26, 2026) (unpublished manuscript), <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7343538">https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7343538</a>.</li>
+<li>Heather A. Harrison Dinniss, <em>Cyber Operations in Outer Space</em>, <em>in</em> Outer Space Law: Legal Policy and Practice 461 (Yanal Abul Failat &amp; Anél Ferreira-Snyman eds., 2d ed. 2022).</li>
+<li>Cristian van Eijk, <em>The Exclusive Making of Space Law</em>, 38 Leiden J. Int&#39;l L. 84 (2025).</li>
+<li>Cristian van Eijk, <em>Unstealing the Sky: Third World Equity in the Orbital Commons</em>, 47 Air &amp; Space L. 25 (2022).</li>
+<li>Anél Ferreira-Snyman, <em>Article VI of the Outer Space Treaty: State Responsibility as a Means to Ensure the Protection of Human Rights by Private Companies in Outer Space Settlements</em>, 29 PER/PELJ (2026).</li>
+<li>Anél Ferreira-Snyman &amp; Gerrit Ferreira, <em>The Application of International Human Rights Instruments in Outer Space Settlements: Today&#39;s Science Fiction, Tomorrow&#39;s Reality</em>, 22 PER/PELJ 1 (2019).</li>
+<li>Steven Freeland &amp; Danielle Ireland-Piper, <em>Space Law, Human Rights and Corporate Accountability</em>, 26 UCLA J. Int&#39;l L. &amp; Foreign Aff. 1 (2022).</li>
+<li>Ann M. Florini &amp; Yahya Dehqanzada, <em>Commercial Satellite Imagery Comes of Age</em>, 16 Issues Sci. &amp; Tech. 45 (1999).</li>
+<li>John S. Goehring, <em>Properly Speaking, the United States Does Have an International Obligation to Authorize and Supervise Commercial Space Activity</em>, 78 A.F. L. Rev. 101 (2018).</li>
+<li>John S. Goehring, <em>U.S. Commercial Space Regulation: The Rule of Three</em>, 13 J. Nat&#39;l Sec. L. &amp; Pol&#39;y 337 (2023).</li>
+<li>Donna Haraway, <em>Situated Knowledges: The Science Question in Feminism and the Privilege of Partial Perspective</em>, 14 Feminist Stud. 575 (1988).</li>
+<li>Ray Harris &amp; Ingo Baumann, <em>Satellite Earth Observation and National Data Regulation</em>, 56 Space Pol&#39;y 101422 (2021).</li>
+<li>Danielle Ireland-Piper &amp; Steven Freeland, <em>Human Rights and Space</em>, 9 Groningen J. Int&#39;l L. 101 (2021).</li>
+<li>Ram Jakhu, <em>International Law Governing the Acquisition and Dissemination of Satellite Imagery</em>, 29 J. Space L. 65 (2003).</li>
+<li>Blake Knight, <em>Stakeout from Space: Fourth Amendment Concerns Resulting from the Onset of Satellite Video</em>, 41 J. Space L. 231 (2017).</li>
+<li>Ingrid LaFleur, <em>Sacred Space: Decolonization through the Afrofuture</em>, <em>in</em> Reclaiming Space ch. 13 (2023).</li>
+<li>Francis Lyall &amp; Paul B. Larsen, Space Law: A Treatise (2d ed. 2018).</li>
+<li>Chiara Macchi, <em>Business, Human Rights and International Space Law: Filling the Gaps of Corporate Accountability in the &#39;New Space&#39;</em>, <em>in</em> Regulation of Outer Space: International Space Law and the State 50 (C. Cinelli ed., 2024).</li>
+<li>Sergio Marchisio, <em>The Evolutionary Stages of the Legal Subcommittee of the United Nations Committee on the Peaceful Uses of Outer Space (COPUOS)</em>, 31 J. Space L. 219 (2005).</li>
+<li>Robert P. Merges &amp; Glenn H. Reynolds, <em>News Media Satellites and the First Amendment</em>, 3 High Tech. L.J. 1 (1988).</li>
+<li>Marko Milanovic, <em>Human Rights Treaties and Foreign Surveillance: Privacy in the Digital Age</em>, 56 Harv. Int&#39;l L.J. 81 (2015).</li>
+<li>Craig John Newbery-Jones, <em>Answering the Call of Duty: The Phenomenology of Justice in Twenty-First-Century Video Games</em>, 9 Law &amp; Human. 78 (2015).</li>
+<li><em>On-Orbit Data Processing: Application of Data Privacy Laws Beyond Earth</em>, 51 Air &amp; Space L. (2026).</li>
+<li>Xiran Ren &amp; Qun Zhang, Governing the Ungoverned: Data Localization and the Globalization of Satellite IoT Constellations (2026) (unpublished manuscript) (SSRN).</li>
+<li>Amir Saboorian, Comment, <em>A Brave New World: Using the Outer Space Treaty to Design International Data Protection Standards for Low-Earth Orbit Satellite Operators</em>, 84 J. Air L. &amp; Com. 575 (2019).</li>
+<li>George E. Seay III, <em>Remote Sensing: The Media, the Military, and the National Security Establishment</em>, 59 J. Air L. &amp; Com. 239 (1993).</li>
+<li>Dimitra Stefoudi, <em>Sovereign Privacy and the Evolution of Earth Observation Technology</em>, 63 Proc. Int&#39;l Inst. Space L. (2020).</li>
+<li>Charles Stotler, <em>Interpretation as Creation: Article VI of the Outer Space Treaty</em>, 26 Chi. J. Int&#39;l L. 131 (2025).</li>
+<li>Ntina Tzouvala, Capitalism as Civilisation: A History of International Law (2020).</li>
+<li>Frans G. von der Dunk, <em>Outer Space Law Principles and Privacy</em>, <em>in</em> Evidence from Earth Observation Satellites: Emerging Legal Issues 243 (Denise Leung &amp; Ray Purdy eds., 2013).</li>
+<li>Frans G. von der Dunk, <em>Scoping National Space Law: The True Meaning of &quot;National Activities in Outer Space&quot; of Article VI of the Outer Space Treaty</em>, 62 Proc. Int&#39;l Inst. Space L. 227 (2019).</li>
+<li>Frans von der Dunk, <em>United Nations Principles on Remote Sensing and the User</em>, <em>in</em> Earth Observation Data Policy and Europe 29 (Ray Harris ed., 2002).</li>
+<li>James Robin Walker, Grounding the View from Nowhere: The Role of Remote Sensing Technology in International Human Rights Practice (2021) (Ph.D. dissertation, University of California, Los Angeles).</li>
+<li>Nina Witjes &amp; Philipp Olbrich, <em>A Fragile Transparency: Satellite Imagery Analysis, Non-State Actors, and Visual Representations of Security</em>, 44 Sci. &amp; Pub. Pol&#39;y 524 (2017).</li>
+<li>Andrea Zerbini &amp; Michael Fradley, <em>Higher Resolution Satellite Imagery of Israel and Palestine: Re-assessing the Kyl-Bingaman Amendment</em>, 44-45 Space Pol&#39;y 14 (2018).</li>
+</ul>
+<h3 id="news-company-filings-and-other-sources">News, Company Filings and Other Sources</h3>
+<ul>
+<li>Agence France-Presse, <em>Leading Satellite Firm to Hold Back Gulf State Images</em>, Al-Monitor (Mar. 2026), <a href="https://www.al-monitor.com/originals/2026/03/leading-satellite-firm-hold-back-gulf-state-images">https://www.al-monitor.com/originals/2026/03/leading-satellite-firm-hold-back-gulf-state-images</a>.</li>
+<li>Agence France-Presse, <em>US Satellite Imagery Firm Announces Blackout on Middle East War Pics</em>, Arab News (Apr. 4, 2026), <a href="https://www.arabnews.com/node/2638797/world">https://www.arabnews.com/node/2638797/world</a>.</li>
+<li>Zena Agha, <em>Satellite Imagery and the Palestine-Israel Exception</em>, Al-Shabaka (Aug. 29, 2018), <a href="https://al-shabaka.org/commentaries/satellite-imagery-and-the-palestine-israel-exception/">https://al-shabaka.org/commentaries/satellite-imagery-and-the-palestine-israel-exception/</a>.</li>
+<li>Bill Chappell, <em>The U.S. Has Special Rules for Satellites over One Country: Israel</em>, NPR (Nov. 16, 2023), <a href="https://www.npr.org/2023/11/16/1212889717/satellite-images-us-israel-gaza">https://www.npr.org/2023/11/16/1212889717/satellite-images-us-israel-gaza</a>.</li>
+<li>Audrey Decker, <em>US Says It Won&#39;t Tell Space-Imagery Companies to Stop Showing Gaza Photos</em>, Defense One (Nov. 8, 2023), <a href="https://www.defenseone.com/technology/2023/11/us-says-it-wont-tell-space-imagery-companies-stop-showing-gaza-photos/391851/">https://www.defenseone.com/technology/2023/11/us-says-it-wont-tell-space-imagery-companies-stop-showing-gaza-photos/391851/</a>.</li>
+<li><em>DOD Won&#39;t Release Sat Pix Until Jan. 5</em>, United Press Int&#39;l (Nov. 7, 2001), <a href="https://www.upi.com/Defense-News/2001/11/07/DOD-wont-release-sat-pix-until-Jan-5/84151005153639/">https://www.upi.com/Defense-News/2001/11/07/DOD-wont-release-sat-pix-until-Jan-5/84151005153639/</a>.</li>
+<li>Michael Endrias, <em>Unseen Above</em> (2026) (browser game), <a href="https://mikiend.itch.io/unseen-above">https://mikiend.itch.io/unseen-above</a>.</li>
+<li>Jacqueline Feldscher, <em>Limits on Collecting Satellite Imagery over Israel Continue</em>, Payload (Oct. 11, 2023), <a href="https://payloadspace.com/limits-on-collecting-satellite-imagery-over-israel-continue/">https://payloadspace.com/limits-on-collecting-satellite-imagery-over-israel-continue/</a>.</li>
+<li>Michael Fradley, <em>EAMENA Leads Reform on Satellite Imagery Restrictions in the Levant</em>, EAMENA (June 30, 2020), <a href="https://eamena.org/node/1298636">https://eamena.org/node/1298636</a>.</li>
+<li><em>Govt Mandates Legal Interception of Satcom Services, Bars Data Routing Outside Country</em>, ThePrint (PTI) (May 5, 2025), <a href="https://theprint.in/economy/govt-mandates-legal-interception-of-satcom-services-bars-data-routing-outside-country/2616374">https://theprint.in/economy/govt-mandates-legal-interception-of-satcom-services-bars-data-routing-outside-country/2616374</a>.</li>
+<li>HawkEye 360, Inc., Registration Statement (Form S-1) (Apr. 10, 2026), <a href="https://www.sec.gov/Archives/edgar/data/1750704/000162828026024593/hawkeye360-sx1.htm">https://www.sec.gov/Archives/edgar/data/1750704/000162828026024593/hawkeye360-sx1.htm</a>.</li>
+<li>Pamela Hess, <em>DOD Locks Up Commercial Satellite Pix</em>, United Press Int&#39;l (Oct. 12, 2001), <a href="https://www.globalsecurity.org/org/news/2001/011012-attack05.htm">https://www.globalsecurity.org/org/news/2001/011012-attack05.htm</a>.</li>
+<li>Evan Hill et al., <em>Iran Has Hit Far More U.S. Military Assets Than Reported, Satellite Images Show</em>, Wash. Post (May 6, 2026), <a href="https://www.washingtonpost.com/investigations/2026/05/06/iran-us-bases-satellite-images/">https://www.washingtonpost.com/investigations/2026/05/06/iran-us-bases-satellite-images/</a>.</li>
+<li>Theresa Hitchens, <em>NGA Suspends Ukraine&#39;s Access to Commercial Satellite Imagery</em>, Breaking Defense (Mar. 7, 2025), <a href="https://breakingdefense.com/2025/03/nga-suspends-ukraines-access-to-commercial-satellite-imagery/">https://breakingdefense.com/2025/03/nga-suspends-ukraines-access-to-commercial-satellite-imagery/</a>.</li>
+<li>David Jeans &amp; Joey Roulette, <em>Musk&#39;s Starlink Updates Privacy Policy to Allow Consumer Data to Train AI</em>, Reuters (Jan. 31, 2026), <a href="https://www.thejakartapost.com/business/2026/01/31/musks-starlink-updates-privacy-policy-to-allow-consumer-data-to-train-ai.html">https://www.thejakartapost.com/business/2026/01/31/musks-starlink-updates-privacy-policy-to-allow-consumer-data-to-train-ai.html</a>.</li>
+<li>Krishna Karra, <em>Where Did the Middle East Go? Satellite Imaging in the Fog of War</em>, Bloomberg (2026), <a href="https://www.bloomberg.com/graphics/2026-satellite-imagery-restrictions-iran/">https://www.bloomberg.com/graphics/2026-satellite-imagery-restrictions-iran/</a>.</li>
+<li>John J. Lumpkin, <em>Military Buys Exclusive Rights to Commercial Satellite Pictures of War Zone</em>, Associated Press (Oct. 15, 2001), <a href="https://sgp.fas.org/news/2001/10/ap101501.html">https://sgp.fas.org/news/2001/10/ap101501.html</a>.</li>
+<li>Maxar Techs. Inc., Current Report (Form 8-K) (May 25, 2022), <a href="https://www.sec.gov/Archives/edgar/data/1121142/000155837022009332/maxr-20220525x8k.htm">https://www.sec.gov/Archives/edgar/data/1121142/000155837022009332/maxr-20220525x8k.htm</a>.</li>
+<li>Ministry of Defence of Ukraine, <em>Countering Russian Drones: How to Complete Starlink Verification to Operate Terminals in Ukraine</em> (Feb. 2, 2026), <a href="https://mod.gov.ua/en/news/countering-russian-drones-how-to-complete-starlink-verification-to-operate-terminals-in-ukraine">https://mod.gov.ua/en/news/countering-russian-drones-how-to-complete-starlink-verification-to-operate-terminals-in-ukraine</a>.</li>
+<li>Alex Pasternack, <em>Blind Spots</em>, Colum. Journalism Rev. (May 11, 2026), <a href="https://www.cjr.org/feature/blind-spots-satellite-osint-open-source-middle-east-iran-blackout-planet-labs-vantor-maxar.php">https://www.cjr.org/feature/blind-spots-satellite-osint-open-source-middle-east-iran-blackout-planet-labs-vantor-maxar.php</a>.</li>
+<li>Press Release, Nat&#39;l Reconnaissance Off., NRO Announces Largest Award of Commercial Imagery Contracts (May 25, 2022), <a href="https://www.nro.gov/Portals/65/documents/news/press/2022/press_release_05-22.pdf">https://www.nro.gov/Portals/65/documents/news/press/2022/press_release_05-22.pdf</a>.</li>
+<li>Privacy Int&#39;l, <em>Space: The Final Frontier of Europe&#39;s Migrant Surveillance</em> (July 26, 2021), <a href="https://privacyinternational.org/news-analysis/4601/space-final-frontier-europes-migrant-surveillance">https://privacyinternational.org/news-analysis/4601/space-final-frontier-europes-migrant-surveillance</a>.</li>
+<li>Aprajita Rana, Anubhav Das &amp; Adishree Singh, <em>Update: Security Conditions under the GMPCS License</em>, AZB &amp; Partners (May 29, 2025), <a href="https://www.azbpartners.com/bank/update-security-conditions-under-the-gmpcs-license/">https://www.azbpartners.com/bank/update-security-conditions-under-the-gmpcs-license/</a>.</li>
+<li>Reuters, <em>Israel Feels Exposed as U.S. Drops Satellite-Imaging Cap</em>, Algemeiner (July 6, 2020), <a href="https://www.algemeiner.com/2020/07/06/israel-feels-exposed-as-us-drops-satellite-imaging-cap/">https://www.algemeiner.com/2020/07/06/israel-feels-exposed-as-us-drops-satellite-imaging-cap/</a>.</li>
+<li>Ismail Shakil, <em>Satellite Firm Planet Labs to Indefinitely Withhold Iran War Images</em>, Reuters (Apr. 4, 2026), <em>reprinted in</em> Jerusalem Post (Apr. 5, 2026), <a href="https://jpost.com/defense-and-tech/article-892060">https://jpost.com/defense-and-tech/article-892060</a>.</li>
+<li>Maegan Vazquez, <em>Satellite Companies Restrict Access to Middle East Imagery amid Iran War</em>, Wash. Post (Mar. 11, 2026), <a href="https://www.washingtonpost.com/national-security/2026/03/11/satellite-images-middle-east-iran/">https://www.washingtonpost.com/national-security/2026/03/11/satellite-images-middle-east-iran/</a>.</li>
+</ul>
+</div>
+</section>
+</div>
+
+<section class="part notes" aria-labelledby="notes">
+<header class="sechead"><span class="tab" aria-hidden="true">NOTES</span><h2 id="notes">Notes</h2></header>
+<ol class="fnlist">
+<li id="fn-1" data-n="1"><span class="fnnum" aria-hidden="true">01</span><div class="fntext"><p>Alex Pasternack, <em>Blind Spots</em>, Colum. Journalism Rev. (May 11, 2026), <a href="https://www.cjr.org/feature/blind-spots-satellite-osint-open-source-middle-east-iran-blackout-planet-labs-vantor-maxar.php" target="_blank" rel="noopener">https://www.cjr.org/feature/blind-spots-satellite-osint-open-source-middle-east-iran-blackout-planet-labs-vantor-maxar.php</a> (quoting Planet&#39;s Apr. 4, 2026 customer notice); Ismail Shakil, <em>Satellite Firm Planet Labs to Indefinitely Withhold Iran War Images</em>, Reuters (Apr. 4, 2026), <em>reprinted in</em> Jerusalem Post (Apr. 5, 2026), <a href="https://jpost.com/defense-and-tech/article-892060" target="_blank" rel="noopener">https://jpost.com/defense-and-tech/article-892060</a>. <a class="fnback" href="#fnref-1" aria-label="Back to the text, note 1">BACK</a></p></div></li>
+<li id="fn-2" data-n="2"><span class="fnnum" aria-hidden="true">02</span><div class="fntext"><p>Maegan Vazquez, <em>Satellite Companies Restrict Access to Middle East Imagery amid Iran War</em>, Wash. Post (Mar. 11, 2026), <em>reprinted in</em> Spokesman-Review (Mar. 12, 2026), <a href="https://www.spokesman.com/stories/2026/mar/12/satellite-companies-restrict-access-to-middle-east" target="_blank" rel="noopener">https://www.spokesman.com/stories/2026/mar/12/satellite-companies-restrict-access-to-middle-east</a> (quoting a Planet statement). <a class="fnback" href="#fnref-2" aria-label="Back to the text, note 2">BACK</a></p></div></li>
+<li id="fn-3" data-n="3"><span class="fnnum" aria-hidden="true">03</span><div class="fntext"><p>Krishna Karra, <em>Where Did the Middle East Go? Satellite Imaging in the Fog of War</em>, Bloomberg (2026), <a href="https://www.bloomberg.com/graphics/2026-satellite-imagery-restrictions-iran/" target="_blank" rel="noopener">https://www.bloomberg.com/graphics/2026-satellite-imagery-restrictions-iran/</a> (reporting a Planet spokesperson&#39;s statement). <a class="fnback" href="#fnref-3" aria-label="Back to the text, note 3">BACK</a></p></div></li>
+<li id="fn-4" data-n="4"><span class="fnnum" aria-hidden="true">04</span><div class="fntext"><p>Donna Haraway, <em>Situated Knowledges: The Science Question in Feminism and the Privilege of Partial Perspective</em>, 14 Feminist Stud. 575, 581 (1988). <a class="fnback" href="#fnref-4" aria-label="Back to the text, note 4">BACK</a></p></div></li>
+<li id="fn-5" data-n="5"><span class="fnnum" aria-hidden="true">05</span><div class="fntext"><p>Convention on International Liability for Damage Caused by Space Objects art. I(a), Mar. 29, 1972, 24 U.S.T. 2389, 961 U.N.T.S. 187. <a class="fnback" href="#fnref-5" aria-label="Back to the text, note 5">BACK</a></p></div></li>
+<li id="fn-6" data-n="6"><span class="fnnum" aria-hidden="true">06</span><div class="fntext"><p>Frans G. von der Dunk, <em>Outer Space Law Principles and Privacy</em>, <em>in</em> Evidence from Earth Observation Satellites: Emerging Legal Issues 243 (Denise Leung &amp; Ray Purdy eds., 2013); <em>see generally</em> Elena Carpanelli &amp; Brendan Cohen, <em>Interpreting &quot;Damage&quot; Caused by Space Objects Under the 1972 Liability Convention</em>, 56 Proc. Int&#39;l Inst. Space L. (2013) (on whether &quot;damage&quot; reaches harm to personality or privacy). <a class="fnback" href="#fnref-6" aria-label="Back to the text, note 6">BACK</a></p></div></li>
+<li id="fn-7" data-n="7"><span class="fnnum" aria-hidden="true">07</span><div class="fntext"><p>Ram Jakhu, International Law Governing the Acquisition and Dissemination of Satellite Imagery, 29 J. Space L. 65, 78 (2003). <a class="fnback" href="#fnref-7" aria-label="Back to the text, note 7">BACK</a></p></div></li>
+<li id="fn-8" data-n="8" data-id-of="7"><span class="fnnum" aria-hidden="true">08</span><div class="fntext"><p><em>Id.</em> at 79. <a class="fnback" href="#fnref-8" aria-label="Back to the text, note 8">BACK</a></p></div></li>
+<li id="fn-9" data-n="9"><span class="fnnum" aria-hidden="true">09</span><div class="fntext"><p>G.A. Res. 41/65, Principles Relating to Remote Sensing of the Earth from Outer Space, princs. IV, XII (Dec. 3, 1986). <a class="fnback" href="#fnref-9" aria-label="Back to the text, note 9">BACK</a></p></div></li>
+<li id="fn-10" data-n="10"><span class="fnnum" aria-hidden="true">10</span><div class="fntext"><p>Frans von der Dunk, United Nations Principles on Remote Sensing and the User, in Earth Observation Data Policy and Europe 29, 33 (Ray Harris ed., 2002). <a class="fnback" href="#fnref-10" aria-label="Back to the text, note 10">BACK</a></p></div></li>
+<li id="fn-11" data-n="11" data-id-of="10"><span class="fnnum" aria-hidden="true">11</span><div class="fntext"><p><em>Id.</em> at 31. <a class="fnback" href="#fnref-11" aria-label="Back to the text, note 11">BACK</a></p></div></li>
+<li id="fn-12" data-n="12"><span class="fnnum" aria-hidden="true">12</span><div class="fntext"><p>Francis Lyall &amp; Paul B. Larsen, Space Law: A Treatise 467 (2d ed. 2018). <a class="fnback" href="#fnref-12" aria-label="Back to the text, note 12">BACK</a></p></div></li>
+<li id="fn-13" data-n="13"><span class="fnnum" aria-hidden="true">13</span><div class="fntext"><p>See generally Dimitra Stefoudi, Sovereign Privacy and the Evolution of Earth Observation Technology, 63 Proc. Int&#39;l Inst. Space L. (2020). <a class="fnback" href="#fnref-13" aria-label="Back to the text, note 13">BACK</a></p></div></li>
+<li id="fn-14" data-n="14"><span class="fnnum" aria-hidden="true">14</span><div class="fntext"><p>Constitution of the International Telecommunication Union art. 37, Dec. 22, 1992, S. Treaty Doc. No. 104-34, 1825 U.N.T.S. 331. <a class="fnback" href="#fnref-14" aria-label="Back to the text, note 14">BACK</a></p></div></li>
+<li id="fn-15" data-n="15"><span class="fnnum" aria-hidden="true">15</span><div class="fntext"><p>G.A. Res. 37/92, Principles Governing the Use by States of Artificial Earth Satellites for International Direct Television Broadcasting, princ. A(1) (Dec. 10, 1982). <a class="fnback" href="#fnref-15" aria-label="Back to the text, note 15">BACK</a></p></div></li>
+<li id="fn-16" data-n="16"><span class="fnnum" aria-hidden="true">16</span><div class="fntext"><p>Cristian van Eijk, <em>The Exclusive Making of Space Law</em>, 38 Leiden J. Int&#39;l L. 84 (2025) (assigned in draft as &quot;Globalwashing the Commons&quot;). <a class="fnback" href="#fnref-16" aria-label="Back to the text, note 16">BACK</a></p></div></li>
+<li id="fn-17" data-n="17"><span class="fnnum" aria-hidden="true">17</span><div class="fntext"><p>51 U.S.C. § 60121(b)(1). <a class="fnback" href="#fnref-17" aria-label="Back to the text, note 17">BACK</a></p></div></li>
+<li id="fn-18" data-n="18"><span class="fnnum" aria-hidden="true">18</span><div class="fntext"><p>Ray Harris &amp; Ingo Baumann, Satellite Earth Observation and National Data Regulation, 56 Space Pol&#39;y 101422 (2021) (author manuscript at 3). <a class="fnback" href="#fnref-18" aria-label="Back to the text, note 18">BACK</a></p></div></li>
+<li id="fn-19" data-n="19" data-id-of="18"><span class="fnnum" aria-hidden="true">19</span><div class="fntext"><p><em>Id.</em> (author manuscript at 9). <a class="fnback" href="#fnref-19" aria-label="Back to the text, note 19">BACK</a></p></div></li>
+<li id="fn-20" data-n="20"><span class="fnnum" aria-hidden="true">20</span><div class="fntext"><p>Philippe Achilleas, French Remote Sensing Law, 34 J. Space L. 1, 8 (2008). <a class="fnback" href="#fnref-20" aria-label="Back to the text, note 20">BACK</a></p></div></li>
+<li id="fn-21" data-n="21"><span class="fnnum" aria-hidden="true">21</span><div class="fntext"><p>Harris &amp; Baumann, <em>supra</em> (author manuscript at 14) (discussing Canada, Germany, Japan and the United States). <a class="fnback" href="#fnref-21" aria-label="Back to the text, note 21">BACK</a></p></div></li>
+<li id="fn-22" data-n="22"><span class="fnnum" aria-hidden="true">22</span><div class="fntext"><p>Principles Relating to Remote Sensing of the Earth from Outer Space, G.A. Res. 41/65, princ. XII (Dec. 3, 1986). <a class="fnback" href="#fnref-22" aria-label="Back to the text, note 22">BACK</a></p></div></li>
+<li id="fn-23" data-n="23"><span class="fnnum" aria-hidden="true">23</span><div class="fntext"><p>National Defense Authorization Act for Fiscal Year 1997, Pub. L. No. 104-201, div. A, tit. X, § 1064(a), 110 Stat. 2422, 2653 (1996) (codified at 51 U.S.C. § 60121 note). <a class="fnback" href="#fnref-23" aria-label="Back to the text, note 23">BACK</a></p></div></li>
+<li id="fn-24" data-n="24"><span class="fnnum" aria-hidden="true">24</span><div class="fntext"><p>Notice of Findings Regarding Commercial Availability of Non-U.S. Satellite Imagery With Respect to Israel, 85 Fed. Reg. 44,059, 44,059 (July 21, 2020). <a class="fnback" href="#fnref-24" aria-label="Back to the text, note 24">BACK</a></p></div></li>
+<li id="fn-25" data-n="25"><span class="fnnum" aria-hidden="true">25</span><div class="fntext"><p>Reuters, <em>Israel Feels Exposed as U.S. Drops Satellite-Imaging Cap</em>, Algemeiner (July 6, 2020), <a href="https://www.algemeiner.com/2020/07/06/israel-feels-exposed-as-us-drops-satellite-imaging-cap/" target="_blank" rel="noopener">https://www.algemeiner.com/2020/07/06/israel-feels-exposed-as-us-drops-satellite-imaging-cap/</a>. <a class="fnback" href="#fnref-25" aria-label="Back to the text, note 25">BACK</a></p></div></li>
+<li id="fn-26" data-n="26"><span class="fnnum" aria-hidden="true">26</span><div class="fntext"><p>85 Fed. Reg. at 44,059. <a class="fnback" href="#fnref-26" aria-label="Back to the text, note 26">BACK</a></p></div></li>
+<li id="fn-27" data-n="27"><span class="fnnum" aria-hidden="true">27</span><div class="fntext"><p>Andrea Zerbini &amp; Michael Fradley, <em>Higher Resolution Satellite Imagery of Israel and Palestine: Re-assessing the Kyl-Bingaman Amendment</em>, 44-45 Space Pol&#39;y 14 (2018) (accepted manuscript at 6). <a class="fnback" href="#fnref-27" aria-label="Back to the text, note 27">BACK</a></p></div></li>
+<li id="fn-28" data-n="28"><span class="fnnum" aria-hidden="true">28</span><div class="fntext"><p>Zena Agha, <em>Satellite Imagery and the Palestine-Israel Exception</em>, Al-Shabaka (Aug. 29, 2018), <a href="https://al-shabaka.org/commentaries/satellite-imagery-and-the-palestine-israel-exception/" target="_blank" rel="noopener">https://al-shabaka.org/commentaries/satellite-imagery-and-the-palestine-israel-exception/</a>. <a class="fnback" href="#fnref-28" aria-label="Back to the text, note 28">BACK</a></p></div></li>
+<li id="fn-29" data-n="29"><span class="fnnum" aria-hidden="true">29</span><div class="fntext"><p>Michael Fradley, <em>EAMENA Leads Reform on Satellite Imagery Restrictions in the Levant</em>, EAMENA (June 30, 2020), <a href="https://eamena.org/node/1298636" target="_blank" rel="noopener">https://eamena.org/node/1298636</a>. <a class="fnback" href="#fnref-29" aria-label="Back to the text, note 29">BACK</a></p></div></li>
+<li id="fn-30" data-n="30"><span class="fnnum" aria-hidden="true">30</span><div class="fntext"><p>Jacqueline Feldscher, <em>Limits on Collecting Satellite Imagery over Israel Continue</em>, Payload (Oct. 11, 2023), <a href="https://payloadspace.com/limits-on-collecting-satellite-imagery-over-israel-continue/" target="_blank" rel="noopener">https://payloadspace.com/limits-on-collecting-satellite-imagery-over-israel-continue/</a> (quoting Joe Morrison of Umbra). <a class="fnback" href="#fnref-30" aria-label="Back to the text, note 30">BACK</a></p></div></li>
+<li id="fn-31" data-n="31"><span class="fnnum" aria-hidden="true">31</span><div class="fntext"><p>Zerbini &amp; Fradley, <em>supra</em> (accepted manuscript at 5, 17). <a class="fnback" href="#fnref-31" aria-label="Back to the text, note 31">BACK</a></p></div></li>
+<li id="fn-32" data-n="32"><span class="fnnum" aria-hidden="true">32</span><div class="fntext"><p>Zena Agha, Maps, Technology, and Decolonial Spatial Practices in Palestine 6 (Al-Shabaka Pol&#39;y Brief, Jan. 2020). <a class="fnback" href="#fnref-32" aria-label="Back to the text, note 32">BACK</a></p></div></li>
+<li id="fn-33" data-n="33"><span class="fnnum" aria-hidden="true">33</span><div class="fntext"><p>James Robin Walker, Grounding the View from Nowhere: The Role of Remote Sensing Technology in International Human Rights Practice 42 (2021) (Ph.D. dissertation, University of California, Los Angeles). <a class="fnback" href="#fnref-33" aria-label="Back to the text, note 33">BACK</a></p></div></li>
+<li id="fn-34" data-n="34"><span class="fnnum" aria-hidden="true">34</span><div class="fntext"><p>51 U.S.C. § 60122(b)(2). <a class="fnback" href="#fnref-34" aria-label="Back to the text, note 34">BACK</a></p></div></li>
+<li id="fn-35" data-n="35"><span class="fnnum" aria-hidden="true">35</span><div class="fntext"><p>Licensing of Private Remote Sensing Space Systems, 85 Fed. Reg. 30,790, 30,799 (May 20, 2020); 15 C.F.R. § 960.8(c). <a class="fnback" href="#fnref-35" aria-label="Back to the text, note 35">BACK</a></p></div></li>
+<li id="fn-36" data-n="36"><span class="fnnum" aria-hidden="true">36</span><div class="fntext"><p>85 Fed. Reg. at 30,802. <a class="fnback" href="#fnref-36" aria-label="Back to the text, note 36">BACK</a></p></div></li>
+<li id="fn-37" data-n="37"><span class="fnnum" aria-hidden="true">37</span><div class="fntext"><p>51 U.S.C. § 60121(b)(1). <a class="fnback" href="#fnref-37" aria-label="Back to the text, note 37">BACK</a></p></div></li>
+<li id="fn-38" data-n="38" data-id-of="37"><span class="fnnum" aria-hidden="true">38</span><div class="fntext"><p><em>Id.</em> § 60122(b)(1). <a class="fnback" href="#fnref-38" aria-label="Back to the text, note 38">BACK</a></p></div></li>
+<li id="fn-39" data-n="39"><span class="fnnum" aria-hidden="true">39</span><div class="fntext"><p>International Covenant on Civil and Political Rights arts. 17, 19, Dec. 16, 1966, 999 U.N.T.S. 171. <a class="fnback" href="#fnref-39" aria-label="Back to the text, note 39">BACK</a></p></div></li>
+<li id="fn-40" data-n="40"><span class="fnnum" aria-hidden="true">40</span><div class="fntext"><p>Sosa v. Alvarez-Machain, 542 U.S. 692, 734-35 (2004). <a class="fnback" href="#fnref-40" aria-label="Back to the text, note 40">BACK</a></p></div></li>
+<li id="fn-41" data-n="41"><span class="fnnum" aria-hidden="true">41</span><div class="fntext"><p>51 U.S.C. §§ 60122(b)(1), 60146. <a class="fnback" href="#fnref-41" aria-label="Back to the text, note 41">BACK</a></p></div></li>
+<li id="fn-42" data-n="42"><span class="fnnum" aria-hidden="true">42</span><div class="fntext"><p>Maegan Vazquez, Satellite Companies Restrict Access to Middle East Imagery amid Iran War, Wash. Post (Mar. 11, 2026), <a href="https://www.washingtonpost.com/national-security/2026/03/11/satellite-images-middle-east-iran/" target="_blank" rel="noopener">https://www.washingtonpost.com/national-security/2026/03/11/satellite-images-middle-east-iran/</a>. <a class="fnback" href="#fnref-42" aria-label="Back to the text, note 42">BACK</a></p></div></li>
+<li id="fn-43" data-n="43"><span class="fnnum" aria-hidden="true">43</span><div class="fntext"><p>The notice has not been made public. It is quoted in Alex Pasternack, Blind Spots, Colum. Journalism Rev. (May 11, 2026), <a href="https://www.cjr.org/feature/blind-spots-satellite-osint-open-source-middle-east-iran-blackout-planet-labs-vantor-maxar.php" target="_blank" rel="noopener">https://www.cjr.org/feature/blind-spots-satellite-osint-open-source-middle-east-iran-blackout-planet-labs-vantor-maxar.php</a>, and Ismail Shakil, Satellite Firm Planet Labs to Indefinitely Withhold Iran War Images, Reuters (Apr. 4, 2026), <a href="https://jpost.com/defense-and-tech/article-892060" target="_blank" rel="noopener">https://jpost.com/defense-and-tech/article-892060</a>. <a class="fnback" href="#fnref-43" aria-label="Back to the text, note 43">BACK</a></p></div></li>
+<li id="fn-44" data-n="44"><span class="fnnum" aria-hidden="true">44</span><div class="fntext"><p>15 C.F.R. § 960.9(a) (2025); see also <em>id.</em> § 960.10(a)(1) (same, but &quot;international obligations&quot;). <a class="fnback" href="#fnref-44" aria-label="Back to the text, note 44">BACK</a></p></div></li>
+<li id="fn-45" data-n="45"><span class="fnnum" aria-hidden="true">45</span><div class="fntext"><p>Licensing of Private Remote Sensing Space Systems, 85 Fed. Reg. 30,790, 30,815 (May 20, 2020) (codified at 15 C.F.R. pt. 960, app. D, § IV(D)(3)); see <em>id.</em> § IV(D)(4). <a class="fnback" href="#fnref-45" aria-label="Back to the text, note 45">BACK</a></p></div></li>
+<li id="fn-46" data-n="46" data-id-of="45"><span class="fnnum" aria-hidden="true">46</span><div class="fntext"><p><em>Id.</em> § IV(D)(2). <a class="fnback" href="#fnref-46" aria-label="Back to the text, note 46">BACK</a></p></div></li>
+<li id="fn-47" data-n="47" data-id-of="46"><span class="fnnum" aria-hidden="true">47</span><div class="fntext"><p><em>Id.</em> § IV(F). <a class="fnback" href="#fnref-47" aria-label="Back to the text, note 47">BACK</a></p></div></li>
+<li id="fn-48" data-n="48"><span class="fnnum" aria-hidden="true">48</span><div class="fntext"><p>Pasternack, <em>supra</em>. <a class="fnback" href="#fnref-48" aria-label="Back to the text, note 48">BACK</a></p></div></li>
+<li id="fn-49" data-n="49"><span class="fnnum" aria-hidden="true">49</span><div class="fntext"><p>Pamela Hess, DOD Locks Up Commercial Satellite Pix, United Press Int&#39;l (Oct. 12, 2001), <a href="https://www.globalsecurity.org/org/news/2001/011012-attack05.htm" target="_blank" rel="noopener">https://www.globalsecurity.org/org/news/2001/011012-attack05.htm</a>; John J. Lumpkin, Military Buys Exclusive Rights to Commercial Satellite Pictures of War Zone, Associated Press (Oct. 15, 2001), <a href="https://sgp.fas.org/news/2001/10/ap101501.html" target="_blank" rel="noopener">https://sgp.fas.org/news/2001/10/ap101501.html</a>; Pasternack, <em>supra</em>. <a class="fnback" href="#fnref-49" aria-label="Back to the text, note 49">BACK</a></p></div></li>
+<li id="fn-50" data-n="50"><span class="fnnum" aria-hidden="true">50</span><div class="fntext"><p>Press Release, Nat&#39;l Reconnaissance Off., NRO Announces Largest Award of Commercial Imagery Contracts (May 25, 2022), <a href="https://www.nro.gov/Portals/65/documents/news/press/2022/press_release_05-22.pdf" target="_blank" rel="noopener">https://www.nro.gov/Portals/65/documents/news/press/2022/press_release_05-22.pdf</a>. <a class="fnback" href="#fnref-50" aria-label="Back to the text, note 50">BACK</a></p></div></li>
+<li id="fn-51" data-n="51"><span class="fnnum" aria-hidden="true">51</span><div class="fntext"><p>Maxar Techs. Inc., Current Report (Form 8-K) (May 25, 2022), <a href="https://www.sec.gov/Archives/edgar/data/1121142/000155837022009332/maxr-20220525x8k.htm" target="_blank" rel="noopener">https://www.sec.gov/Archives/edgar/data/1121142/000155837022009332/maxr-20220525x8k.htm</a>. <a class="fnback" href="#fnref-51" aria-label="Back to the text, note 51">BACK</a></p></div></li>
+<li id="fn-52" data-n="52"><span class="fnnum" aria-hidden="true">52</span><div class="fntext"><p>Francis Lyall &amp; Paul B. Larsen, Space Law: A Treatise ch. 16, at 475 (2d ed. 2018). <a class="fnback" href="#fnref-52" aria-label="Back to the text, note 52">BACK</a></p></div></li>
+<li id="fn-53" data-n="53"><span class="fnnum" aria-hidden="true">53</span><div class="fntext"><p>Theresa Hitchens, NGA Suspends Ukraine&#39;s Access to Commercial Satellite Imagery, Breaking Defense (Mar. 7, 2025), <a href="https://breakingdefense.com/2025/03/nga-suspends-ukraines-access-to-commercial-satellite-imagery/" target="_blank" rel="noopener">https://breakingdefense.com/2025/03/nga-suspends-ukraines-access-to-commercial-satellite-imagery/</a>. <a class="fnback" href="#fnref-53" aria-label="Back to the text, note 53">BACK</a></p></div></li>
+<li id="fn-54" data-n="54"><span class="fnnum" aria-hidden="true">54</span><div class="fntext"><p>Audrey Decker, US Says It Won&#39;t Tell Space-Imagery Companies to Stop Showing Gaza Photos, Defense One (Nov. 8, 2023), <a href="https://www.defenseone.com/technology/2023/11/us-says-it-wont-tell-space-imagery-companies-stop-showing-gaza-photos/391851/" target="_blank" rel="noopener">https://www.defenseone.com/technology/2023/11/us-says-it-wont-tell-space-imagery-companies-stop-showing-gaza-photos/391851/</a>. <a class="fnback" href="#fnref-54" aria-label="Back to the text, note 54">BACK</a></p></div></li>
+<li id="fn-55" data-n="55"><span class="fnnum" aria-hidden="true">55</span><div class="fntext"><p>Bill Chappell, The U.S. Has Special Rules for Satellites over One Country: Israel, NPR (Nov. 16, 2023), <a href="https://www.npr.org/2023/11/16/1212889717/satellite-images-us-israel-gaza" target="_blank" rel="noopener">https://www.npr.org/2023/11/16/1212889717/satellite-images-us-israel-gaza</a>. <a class="fnback" href="#fnref-55" aria-label="Back to the text, note 55">BACK</a></p></div></li>
+<li id="fn-56" data-n="56"><span class="fnnum" aria-hidden="true">56</span><div class="fntext"><p>Leading Satellite Firm to Hold Back Gulf State Images, Agence France-Presse (Mar. 2026), <a href="https://www.al-monitor.com/originals/2026/03/leading-satellite-firm-hold-back-gulf-state-images" target="_blank" rel="noopener">https://www.al-monitor.com/originals/2026/03/leading-satellite-firm-hold-back-gulf-state-images</a>; US Satellite Imagery Firm Announces Blackout on Middle East War Pics, Agence France-Presse (Apr. 4, 2026), <a href="https://www.arabnews.com/node/2638797/world" target="_blank" rel="noopener">https://www.arabnews.com/node/2638797/world</a>. <a class="fnback" href="#fnref-56" aria-label="Back to the text, note 56">BACK</a></p></div></li>
+<li id="fn-57" data-n="57"><span class="fnnum" aria-hidden="true">57</span><div class="fntext"><p>Krishna Karra, Where Did the Middle East Go? Satellite Imaging in the Fog of War, Bloomberg (2026), <a href="https://www.bloomberg.com/graphics/2026-satellite-imagery-restrictions-iran/" target="_blank" rel="noopener">https://www.bloomberg.com/graphics/2026-satellite-imagery-restrictions-iran/</a>. <a class="fnback" href="#fnref-57" aria-label="Back to the text, note 57">BACK</a></p></div></li>
+<li id="fn-58" data-n="58"><span class="fnnum" aria-hidden="true">58</span><div class="fntext"><p>Vazquez, <em>supra</em>; see Pasternack, <em>supra</em>. <a class="fnback" href="#fnref-58" aria-label="Back to the text, note 58">BACK</a></p></div></li>
+<li id="fn-59" data-n="59"><span class="fnnum" aria-hidden="true">59</span><div class="fntext"><p>Karra, <em>supra</em>. <a class="fnback" href="#fnref-59" aria-label="Back to the text, note 59">BACK</a></p></div></li>
+<li id="fn-60" data-n="60"><span class="fnnum" aria-hidden="true">60</span><div class="fntext"><p>Evan Hill et al., Iran Has Hit Far More U.S. Military Assets Than Reported, Satellite Images Show, Wash. Post (May 6, 2026), <a href="https://www.washingtonpost.com/investigations/2026/05/06/iran-us-bases-satellite-images/" target="_blank" rel="noopener">https://www.washingtonpost.com/investigations/2026/05/06/iran-us-bases-satellite-images/</a>. <a class="fnback" href="#fnref-60" aria-label="Back to the text, note 60">BACK</a></p></div></li>
+<li id="fn-61" data-n="61"><span class="fnnum" aria-hidden="true">61</span><div class="fntext"><p>DOD Won&#39;t Release Sat Pix Until Jan. 5, United Press Int&#39;l (Nov. 7, 2001), <a href="https://www.upi.com/Defense-News/2001/11/07/DOD-wont-release-sat-pix-until-Jan-5/84151005153639/" target="_blank" rel="noopener">https://www.upi.com/Defense-News/2001/11/07/DOD-wont-release-sat-pix-until-Jan-5/84151005153639/</a>. <a class="fnback" href="#fnref-61" aria-label="Back to the text, note 61">BACK</a></p></div></li>
+<li id="fn-62" data-n="62"><span class="fnnum" aria-hidden="true">62</span><div class="fntext"><p>See generally Nina Witjes &amp; Philipp Olbrich, A Fragile Transparency: Satellite Imagery Analysis, Non-State Actors, and Visual Representations of Security, 44 Sci. &amp; Pub. Pol&#39;y 524 (2017). <a class="fnback" href="#fnref-62" aria-label="Back to the text, note 62">BACK</a></p></div></li>
+<li id="fn-63" data-n="63"><span class="fnnum" aria-hidden="true">63</span><div class="fntext"><p>Leading Satellite Firm to Hold Back Gulf State Images, <em>supra</em>. <a class="fnback" href="#fnref-63" aria-label="Back to the text, note 63">BACK</a></p></div></li>
+<li id="fn-64" data-n="64"><span class="fnnum" aria-hidden="true">64</span><div class="fntext"><p>International Covenant on Civil and Political Rights art. 19(3), Dec. 16, 1966, 999 U.N.T.S. 171. <a class="fnback" href="#fnref-64" aria-label="Back to the text, note 64">BACK</a></p></div></li>
+<li id="fn-65" data-n="65"><span class="fnnum" aria-hidden="true">65</span><div class="fntext"><p>Ann M. Florini &amp; Yahya Dehqanzada, Commercial Satellite Imagery Comes of Age, 16 Issues Sci. &amp; Tech. 45 (1999); see also Robert P. Merges &amp; Glenn H. Reynolds, News Media Satellites and the First Amendment, 3 High Tech. L.J. 1 (1988); George E. Seay III, Remote Sensing: The Media, the Military, and the National Security Establishment, 59 J. Air L. &amp; Com. 239 (1993); Licensing of Private Land Remote-Sensing Space Systems, 65 Fed. Reg. 46,822, 46,823 (July 31, 2000). <a class="fnback" href="#fnref-65" aria-label="Back to the text, note 65">BACK</a></p></div></li>
+<li id="fn-66" data-n="66"><span class="fnnum" aria-hidden="true">66</span><div class="fntext"><p>Bantam Books, Inc. v. Sullivan, 372 U.S. 58, 67–68 (1963). <a class="fnback" href="#fnref-66" aria-label="Back to the text, note 66">BACK</a></p></div></li>
+<li id="fn-67" data-n="67" data-id-of="66"><span class="fnnum" aria-hidden="true">67</span><div class="fntext"><p><em>Id.</em> at 70. <a class="fnback" href="#fnref-67" aria-label="Back to the text, note 67">BACK</a></p></div></li>
+<li id="fn-68" data-n="68"><span class="fnnum" aria-hidden="true">68</span><div class="fntext"><p>Nat&#39;l Rifle Ass&#39;n of Am. v. Vullo, 602 U.S. 175, 191 (2024); see <em>id.</em> at 190–91 (listing guideposts, including word choice and tone, regulatory authority, whether the speech was perceived as a threat, and reference to adverse consequences, and stating that &quot;[n]o one factor is dispositive&quot;). <a class="fnback" href="#fnref-68" aria-label="Back to the text, note 68">BACK</a></p></div></li>
+<li id="fn-69" data-n="69"><span class="fnnum" aria-hidden="true">69</span><div class="fntext"><p>Nat&#39;l Rifle Ass&#39;n of Am. v. Vullo, 144 F.4th 376, 391 (2d Cir. 2025). <a class="fnback" href="#fnref-69" aria-label="Back to the text, note 69">BACK</a></p></div></li>
+<li id="fn-70" data-n="70"><span class="fnnum" aria-hidden="true">70</span><div class="fntext"><p>Sorrell v. IMS Health Inc., 564 U.S. 552, 570 (2011). <a class="fnback" href="#fnref-70" aria-label="Back to the text, note 70">BACK</a></p></div></li>
+<li id="fn-71" data-n="71"><span class="fnnum" aria-hidden="true">71</span><div class="fntext"><p>Murthy v. Missouri, 603 U.S. 43 (2024); see Derek E. Bambauer, The Jawboning Cases End with a Bang Disguised by a Whimper, 2023–2024 Cato Sup. Ct. Rev. 157, 158 (2024). <a class="fnback" href="#fnref-71" aria-label="Back to the text, note 71">BACK</a></p></div></li>
+<li id="fn-72" data-n="72"><span class="fnnum" aria-hidden="true">72</span><div class="fntext"><p>Treaty on Principles Governing the Activities of States in the Exploration and Use of Outer Space, Including the Moon and Other Celestial Bodies art. VI, Jan. 27, 1967, 18 U.S.T. 2410, 610 U.N.T.S. 205. <a class="fnback" href="#fnref-72" aria-label="Back to the text, note 72">BACK</a></p></div></li>
+<li id="fn-73" data-n="73"><span class="fnnum" aria-hidden="true">73</span><div class="fntext"><p>McGill Manual on International Law Applicable to Military Uses of Outer Space r. 123 (Ram S. Jakhu &amp; Steven Freeland eds., 2022). <a class="fnback" href="#fnref-73" aria-label="Back to the text, note 73">BACK</a></p></div></li>
+<li id="fn-74" data-n="74"><span class="fnnum" aria-hidden="true">74</span><div class="fntext"><p>U.N. Off. for Outer Space Affs., Dark and Quiet Skies II for Science and Society § 4.2.6 (Connie Walker &amp; Piero Benvenuti eds., 2022). <a class="fnback" href="#fnref-74" aria-label="Back to the text, note 74">BACK</a></p></div></li>
+<li id="fn-75" data-n="75"><span class="fnnum" aria-hidden="true">75</span><div class="fntext"><p>HawkEye 360, Inc., Registration Statement (Form S-1) (Apr. 10, 2026) (Management&#39;s Discussion and Analysis, &quot;Our Customers&quot;; Risk Factors). <a class="fnback" href="#fnref-75" aria-label="Back to the text, note 75">BACK</a></p></div></li>
+<li id="fn-76" data-n="76" data-id-of="75"><span class="fnnum" aria-hidden="true">76</span><div class="fntext"><p><em>Id.</em> (Risk Factors, &quot;Legal and Regulatory Risks&quot;). <a class="fnback" href="#fnref-76" aria-label="Back to the text, note 76">BACK</a></p></div></li>
+<li id="fn-77" data-n="77"><span class="fnnum" aria-hidden="true">77</span><div class="fntext"><p>15 C.F.R. § 960.4 (2025). <a class="fnback" href="#fnref-77" aria-label="Back to the text, note 77">BACK</a></p></div></li>
+<li id="fn-78" data-n="78"><span class="fnnum" aria-hidden="true">78</span><div class="fntext"><p>John S. Goehring, U.S. Commercial Space Regulation: The Rule of Three, 13 J. Nat&#39;l Sec. L. &amp; Pol&#39;y 337, 351 &amp; n.84 (2023). <a class="fnback" href="#fnref-78" aria-label="Back to the text, note 78">BACK</a></p></div></li>
+<li id="fn-79" data-n="79" data-id-of="78"><span class="fnnum" aria-hidden="true">79</span><div class="fntext"><p><em>Id.</em> <a class="fnback" href="#fnref-79" aria-label="Back to the text, note 79">BACK</a></p></div></li>
+<li id="fn-80" data-n="80"><span class="fnnum" aria-hidden="true">80</span><div class="fntext"><p>Privacy Int&#39;l, Space: The Final Frontier of Europe&#39;s Migrant Surveillance (July 26, 2021), <a href="https://privacyinternational.org/news-analysis/4601/space-final-frontier-europes-migrant-surveillance" target="_blank" rel="noopener">https://privacyinternational.org/news-analysis/4601/space-final-frontier-europes-migrant-surveillance</a>. <a class="fnback" href="#fnref-80" aria-label="Back to the text, note 80">BACK</a></p></div></li>
+<li id="fn-81" data-n="81"><span class="fnnum" aria-hidden="true">81</span><div class="fntext"><p>Aprajita Rana, Anubhav Das &amp; Adishree Singh, Update: Security Conditions under the GMPCS License, AZB &amp; Partners (May 29, 2025) (summarizing Dep&#39;t of Telecomms. Office Memorandum of May 5, 2025); Govt Mandates Legal Interception of Satcom Services, Bars Data Routing Outside Country, ThePrint (PTI) (May 5, 2025). <a class="fnback" href="#fnref-81" aria-label="Back to the text, note 81">BACK</a></p></div></li>
+<li id="fn-82" data-n="82"><span class="fnnum" aria-hidden="true">82</span><div class="fntext"><p>Ministry of Defence of Ukraine, Countering Russian Drones: How to Complete Starlink Verification to Operate Terminals in Ukraine (Feb. 2, 2026). <a class="fnback" href="#fnref-82" aria-label="Back to the text, note 82">BACK</a></p></div></li>
+<li id="fn-83" data-n="83"><span class="fnnum" aria-hidden="true">83</span><div class="fntext"><p>David Jeans &amp; Joey Roulette, Musk&#39;s Starlink Updates Privacy Policy to Allow Consumer Data to Train AI, Reuters (Jan. 31, 2026). <a class="fnback" href="#fnref-83" aria-label="Back to the text, note 83">BACK</a></p></div></li>
+<li id="fn-84" data-n="84"><span class="fnnum" aria-hidden="true">84</span><div class="fntext"><p>See generally Xiran Ren &amp; Qun Zhang, Governing the Ungoverned: Data Localization and the Globalization of Satellite IoT Constellations (2026) (preprint, SSRN). <a class="fnback" href="#fnref-84" aria-label="Back to the text, note 84">BACK</a></p></div></li>
+<li id="fn-85" data-n="85"><span class="fnnum" aria-hidden="true">85</span><div class="fntext"><p>Sergio Marchisio, The Evolutionary Stages of the Legal Subcommittee of the United Nations Committee on the Peaceful Uses of Outer Space (COPUOS), 31 J. Space L. 219, 235 (2005). <a class="fnback" href="#fnref-85" aria-label="Back to the text, note 85">BACK</a></p></div></li>
+<li id="fn-86" data-n="86"><span class="fnnum" aria-hidden="true">86</span><div class="fntext"><p>Dow Chem. Co. v. United States, 476 U.S. 227, 238 (1986). <a class="fnback" href="#fnref-86" aria-label="Back to the text, note 86">BACK</a></p></div></li>
+<li id="fn-87" data-n="87"><span class="fnnum" aria-hidden="true">87</span><div class="fntext"><p>Kyllo v. United States, 533 U.S. 27, 34, 40 (2001). <a class="fnback" href="#fnref-87" aria-label="Back to the text, note 87">BACK</a></p></div></li>
+<li id="fn-88" data-n="88" data-id-of="87"><span class="fnnum" aria-hidden="true">88</span><div class="fntext"><p><em>Id.</em> at 47 (Stevens, J., dissenting); see Blake Knight, Stakeout from Space: Fourth Amendment Concerns Resulting from the Onset of Satellite Video, 41 J. Space L. 231, 249 (2017). <a class="fnback" href="#fnref-88" aria-label="Back to the text, note 88">BACK</a></p></div></li>
+<li id="fn-89" data-n="89"><span class="fnnum" aria-hidden="true">89</span><div class="fntext"><p>Chatrie v. United States, 609 U.S. 605 (2026). <a class="fnback" href="#fnref-89" aria-label="Back to the text, note 89">BACK</a></p></div></li>
+<li id="fn-90" data-n="90"><span class="fnnum" aria-hidden="true">90</span><div class="fntext"><p>Carpenter v. United States, 585 U.S. 296 (2018). <a class="fnback" href="#fnref-90" aria-label="Back to the text, note 90">BACK</a></p></div></li>
+<li id="fn-91" data-n="91"><span class="fnnum" aria-hidden="true">91</span><div class="fntext"><p>United States v. Verdugo-Urquidez, 494 U.S. 259 (1990). <a class="fnback" href="#fnref-91" aria-label="Back to the text, note 91">BACK</a></p></div></li>
+<li id="fn-92" data-n="92"><span class="fnnum" aria-hidden="true">92</span><div class="fntext"><p>Bin Cheng, Article VI of the 1967 Space Treaty Revisited: &quot;International Responsibility&quot;, &quot;National Activities&quot;, and &quot;The Appropriate State&quot;, 26 J. Space L. 7, 9 (1998). <a class="fnback" href="#fnref-92" aria-label="Back to the text, note 92">BACK</a></p></div></li>
+<li id="fn-93" data-n="93"><span class="fnnum" aria-hidden="true">93</span><div class="fntext"><p>Goehring, <em>Rule of Three</em>, <em>supra</em>, at 352 (quoting Letter from HawkEye 360 to the National Space Council (Dec. 15, 2022)). <a class="fnback" href="#fnref-93" aria-label="Back to the text, note 93">BACK</a></p></div></li>
+<li id="fn-94" data-n="94"><span class="fnnum" aria-hidden="true">94</span><div class="fntext"><p>Cristian van Eijk, <em>Unstealing the Sky: Third World Equity in the Orbital Commons</em>, 47 Air &amp; Space L. 25 (2022) (quoting Address by President William V.S. Tubman, U.N. Doc. A/C.1/941 (Dec. 8, 1966)). <a class="fnback" href="#fnref-94" aria-label="Back to the text, note 94">BACK</a></p></div></li>
+<li id="fn-95" data-n="95"><span class="fnnum" aria-hidden="true">95</span><div class="fntext"><p>Treaty on Principles Governing the Activities of States in the Exploration and Use of Outer Space, Including the Moon and Other Celestial Bodies art. VI, Jan. 27, 1967, 18 U.S.T. 2410, 610 U.N.T.S. 205 [hereinafter Outer Space Treaty]. <a class="fnback" href="#fnref-95" aria-label="Back to the text, note 95">BACK</a></p></div></li>
+<li id="fn-96" data-n="96"><span class="fnnum" aria-hidden="true">96</span><div class="fntext"><p>Bin Cheng, Article VI of the 1967 Space Treaty Revisited: &quot;International Responsibility,&quot; &quot;National Activities,&quot; and &quot;The Appropriate State,&quot; 26 J. Space L. 7, 19 (1998). <a class="fnback" href="#fnref-96" aria-label="Back to the text, note 96">BACK</a></p></div></li>
+<li id="fn-97" data-n="97"><span class="fnnum" aria-hidden="true">97</span><div class="fntext"><p>Principles Relating to Remote Sensing of the Earth from Outer Space, G.A. Res. 41/65, princ. I(e) (Dec. 3, 1986) [hereinafter Remote Sensing Principles]; see Frans von der Dunk, United Nations Principles on Remote Sensing and the User, in Earth Observation Data Policy and Europe 29, 31 (Ray Harris ed., 2002) (quoting Principle I(e)). <a class="fnback" href="#fnref-97" aria-label="Back to the text, note 97">BACK</a></p></div></li>
+<li id="fn-98" data-n="98"><span class="fnnum" aria-hidden="true">98</span><div class="fntext"><p>Remote Sensing Principles, <em>supra</em>, princ. XIV; von der Dunk, <em>supra</em>, at 38. <a class="fnback" href="#fnref-98" aria-label="Back to the text, note 98">BACK</a></p></div></li>
+<li id="fn-99" data-n="99"><span class="fnnum" aria-hidden="true">99</span><div class="fntext"><p>Outer Space Treaty, <em>supra</em>, art. III; see Danielle Ireland-Piper &amp; Steven Freeland, Human Rights and Space, 9 Groningen J. Int&#39;l L. 101, 106 (2021) (reading Article III to bring human rights law to bear on space activities that affect &quot;individuals on Earth&quot;). <a class="fnback" href="#fnref-99" aria-label="Back to the text, note 99">BACK</a></p></div></li>
+<li id="fn-100" data-n="100"><span class="fnnum" aria-hidden="true">100</span><div class="fntext"><p>U.N. Charter arts. 55(c), 56. <a class="fnback" href="#fnref-100" aria-label="Back to the text, note 100">BACK</a></p></div></li>
+<li id="fn-101" data-n="101"><span class="fnnum" aria-hidden="true">101</span><div class="fntext"><p>Outer Space Treaty, <em>supra</em>, art. VI; see Cheng, <em>supra</em>, at 16–17. <a class="fnback" href="#fnref-101" aria-label="Back to the text, note 101">BACK</a></p></div></li>
+<li id="fn-102" data-n="102"><span class="fnnum" aria-hidden="true">102</span><div class="fntext"><p>van Eijk, <em>Unstealing the Sky</em>, <em>supra</em>. <a class="fnback" href="#fnref-102" aria-label="Back to the text, note 102">BACK</a></p></div></li>
+<li id="fn-103" data-n="103"><span class="fnnum" aria-hidden="true">103</span><div class="fntext"><p>International Covenant on Civil and Political Rights art. 17, Dec. 16, 1966, 999 U.N.T.S. 171 [hereinafter ICCPR]; Marko Milanovic, Human Rights Treaties and Foreign Surveillance: Privacy in the Digital Age, 56 Harv. Int&#39;l L.J. 81, 83 (2015) (quoting the article). <a class="fnback" href="#fnref-103" aria-label="Back to the text, note 103">BACK</a></p></div></li>
+<li id="fn-104" data-n="104"><span class="fnnum" aria-hidden="true">104</span><div class="fntext"><p>U.N. Hum. Rts. Comm., General Comment No. 16: Article 17 (Right to Privacy), ¶ 1 (Apr. 8, 1988), reprinted in Compilation of General Comments and General Recommendations Adopted by Human Rights Treaty Bodies, U.N. Doc. HRI/GEN/1/Rev.1, at 21 (1994). <a class="fnback" href="#fnref-104" aria-label="Back to the text, note 104">BACK</a></p></div></li>
+<li id="fn-105" data-n="105" data-id-of="104"><span class="fnnum" aria-hidden="true">105</span><div class="fntext"><p><em>Id.</em> ¶ 10. <a class="fnback" href="#fnref-105" aria-label="Back to the text, note 105">BACK</a></p></div></li>
+<li id="fn-106" data-n="106"><span class="fnnum" aria-hidden="true">106</span><div class="fntext"><p>ICCPR, <em>supra</em>, art. 19(2). <a class="fnback" href="#fnref-106" aria-label="Back to the text, note 106">BACK</a></p></div></li>
+<li id="fn-107" data-n="107"><span class="fnnum" aria-hidden="true">107</span><div class="fntext"><p>Cheng, <em>supra</em>, at 15; see John S. Goehring, Properly Speaking, the United States Does Have an International Obligation to Authorize and Supervise Commercial Space Activity, 78 A.F. L. Rev. 101, 104 (2018) (quoting Cheng). <a class="fnback" href="#fnref-107" aria-label="Back to the text, note 107">BACK</a></p></div></li>
+<li id="fn-108" data-n="108"><span class="fnnum" aria-hidden="true">108</span><div class="fntext"><p>Milanovic, <em>supra</em>, at 119. <a class="fnback" href="#fnref-108" aria-label="Back to the text, note 108">BACK</a></p></div></li>
+<li id="fn-109" data-n="109"><span class="fnnum" aria-hidden="true">109</span><div class="fntext"><p>von der Dunk, <em>Outer Space Law Principles and Privacy</em>, <em>supra</em>. <a class="fnback" href="#fnref-109" aria-label="Back to the text, note 109">BACK</a></p></div></li>
+<li id="fn-110" data-n="110"><span class="fnnum" aria-hidden="true">110</span><div class="fntext"><p>Amir Saboorian, Comment, A Brave New World: Using the Outer Space Treaty to Design International Data Protection Standards for Low-Earth Orbit Satellite Operators, 84 J. Air L. &amp; Com. 575, 577, 594 (2019). <a class="fnback" href="#fnref-110" aria-label="Back to the text, note 110">BACK</a></p></div></li>
+<li id="fn-111" data-n="111"><span class="fnnum" aria-hidden="true">111</span><div class="fntext"><p>Anél Ferreira-Snyman &amp; Gerrit Ferreira, The Application of International Human Rights Instruments in Outer Space Settlements: Today&#39;s Science Fiction, Tomorrow&#39;s Reality, 22 PER/PELJ 1, 1 (2019); Anél Ferreira-Snyman, <em>Article VI of the Outer Space Treaty: State Responsibility as a Means to Ensure the Protection of Human Rights by Private Companies in Outer Space Settlements</em>, 29 PER/PELJ (2026). <a class="fnback" href="#fnref-111" aria-label="Back to the text, note 111">BACK</a></p></div></li>
+<li id="fn-112" data-n="112"><span class="fnnum" aria-hidden="true">112</span><div class="fntext"><p>Steven Freeland &amp; Danielle Ireland-Piper, Space Law, Human Rights and Corporate Accountability, 26 UCLA J. Int&#39;l L. &amp; Foreign Aff. 1, 16, 33–34 (2022); Chiara Macchi, Business, Human Rights and International Space Law: Filling the Gaps of Corporate Accountability in the &#39;New Space&#39;, in Regulation of Outer Space: International Space Law and the State 50, 50 (C. Cinelli ed., 2024). <a class="fnback" href="#fnref-112" aria-label="Back to the text, note 112">BACK</a></p></div></li>
+<li id="fn-113" data-n="113"><span class="fnnum" aria-hidden="true">113</span><div class="fntext"><p>R. Chakraborty, Article VI and Orbital Data Centres: Supervisory Synchronization, Air &amp; Space L. (forthcoming 2026); On-Orbit Data Processing: Application of Data Privacy Laws Beyond Earth, 51 Air &amp; Space L. (2026). <a class="fnback" href="#fnref-113" aria-label="Back to the text, note 113">BACK</a></p></div></li>
+<li id="fn-114" data-n="114"><span class="fnnum" aria-hidden="true">114</span><div class="fntext"><p>Remote Sensing Principles, <em>supra</em>, princ. I(a); see von der Dunk, <em>supra</em>, at 31. <a class="fnback" href="#fnref-114" aria-label="Back to the text, note 114">BACK</a></p></div></li>
+<li id="fn-115" data-n="115"><span class="fnnum" aria-hidden="true">115</span><div class="fntext"><p>Francis Lyall &amp; Paul B. Larsen, Space Law: A Treatise ch. 16, at 467 (2d ed. 2018). <a class="fnback" href="#fnref-115" aria-label="Back to the text, note 115">BACK</a></p></div></li>
+<li id="fn-116" data-n="116"><span class="fnnum" aria-hidden="true">116</span><div class="fntext"><p>Charles Stotler, Interpretation as Creation: Article VI of the Outer Space Treaty, 26 Chi. J. Int&#39;l L. 131, 140, 146–47 (2025). <a class="fnback" href="#fnref-116" aria-label="Back to the text, note 116">BACK</a></p></div></li>
+<li id="fn-117" data-n="117" data-id-of="116"><span class="fnnum" aria-hidden="true">117</span><div class="fntext"><p><em>Id.</em> at 138–39; see also Frans G. von der Dunk, Scoping National Space Law: The True Meaning of &quot;National Activities in Outer Space&quot; of Article VI of the Outer Space Treaty, 62 Proc. Int&#39;l Inst. Space L. 227, 229–33 (2019). <a class="fnback" href="#fnref-117" aria-label="Back to the text, note 117">BACK</a></p></div></li>
+<li id="fn-118" data-n="118"><span class="fnnum" aria-hidden="true">118</span><div class="fntext"><p>ICCPR, <em>supra</em>, art. 19(3)(a). <a class="fnback" href="#fnref-118" aria-label="Back to the text, note 118">BACK</a></p></div></li>
+<li id="fn-119" data-n="119"><span class="fnnum" aria-hidden="true">119</span><div class="fntext"><p>U.N. Hum. Rts. Comm., Concluding Observations on the Fourth Periodic Report of the United States of America, ¶¶ 4, 22, U.N. Doc. CCPR/C/USA/CO/4 (Apr. 23, 2014); see Milanovic, <em>supra</em>, at 105–07. <a class="fnback" href="#fnref-119" aria-label="Back to the text, note 119">BACK</a></p></div></li>
+<li id="fn-120" data-n="120"><span class="fnnum" aria-hidden="true">120</span><div class="fntext"><p>U.N. Hum. Rts. Comm., General Comment No. 31, ¶ 10, U.N. Doc. CCPR/C/21/Rev.1/Add.13 (May 26, 2004). <a class="fnback" href="#fnref-120" aria-label="Back to the text, note 120">BACK</a></p></div></li>
+<li id="fn-121" data-n="121"><span class="fnnum" aria-hidden="true">121</span><div class="fntext"><p>U.S. Reservations, Declarations, and Understandings, International Covenant on Civil and Political Rights, 138 Cong. Rec. S4781-01 (daily ed. Apr. 2, 1992). <a class="fnback" href="#fnref-121" aria-label="Back to the text, note 121">BACK</a></p></div></li>
+<li id="fn-122" data-n="122"><span class="fnnum" aria-hidden="true">122</span><div class="fntext"><p>Goehring, <em>Properly Speaking</em>, <em>supra</em>, at 113 (describing Laura Montgomery&#39;s 2017 testimony). <a class="fnback" href="#fnref-122" aria-label="Back to the text, note 122">BACK</a></p></div></li>
+<li id="fn-123" data-n="123" data-id-of="122"><span class="fnnum" aria-hidden="true">123</span><div class="fntext"><p><em>Id.</em> at 118 (quoting Carlos Manuel Vázquez). <a class="fnback" href="#fnref-123" aria-label="Back to the text, note 123">BACK</a></p></div></li>
+<li id="fn-124" data-n="124"><span class="fnnum" aria-hidden="true">124</span><div class="fntext"><p>51 U.S.C. § 60121(b)(1). <a class="fnback" href="#fnref-124" aria-label="Back to the text, note 124">BACK</a></p></div></li>
+<li id="fn-125" data-n="125"><span class="fnnum" aria-hidden="true">125</span><div class="fntext"><p>85 Fed. Reg. at 30,802. <a class="fnback" href="#fnref-125" aria-label="Back to the text, note 125">BACK</a></p></div></li>
+<li id="fn-126" data-n="126"><span class="fnnum" aria-hidden="true">126</span><div class="fntext"><p>Heather A. Harrison Dinniss, <em>Cyber Operations in Outer Space</em>, <em>in</em> Outer Space Law: Legal Policy and Practice 461 (Yanal Abul Failat &amp; Anél Ferreira-Snyman eds., 2d ed. 2022) (noting that peacetime espionage is not prohibited under international law). <a class="fnback" href="#fnref-126" aria-label="Back to the text, note 126">BACK</a></p></div></li>
+<li id="fn-127" data-n="127"><span class="fnnum" aria-hidden="true">127</span><div class="fntext"><p>HawkEye 360, Inc., Registration Statement (Form S-1) (Apr. 10, 2026) (Risk Factors). <a class="fnback" href="#fnref-127" aria-label="Back to the text, note 127">BACK</a></p></div></li>
+<li id="fn-128" data-n="128"><span class="fnnum" aria-hidden="true">128</span><div class="fntext"><p>Michael Endrias, <em>Unseen Above</em> (2026) (browser game), <a href="https://mikiend.itch.io/unseen-above" target="_blank" rel="noopener">https://mikiend.itch.io/unseen-above</a>. <a class="fnback" href="#fnref-128" aria-label="Back to the text, note 128">BACK</a></p></div></li>
+<li id="fn-129" data-n="129"><span class="fnnum" aria-hidden="true">129</span><div class="fntext"><p>Ingrid LaFleur, <em>Sacred Space: Decolonization through the Afrofuture</em>, <em>in</em> Reclaiming Space ch. 13, at 153 (2023). <a class="fnback" href="#fnref-129" aria-label="Back to the text, note 129">BACK</a></p></div></li>
+<li id="fn-130" data-n="130" data-id-of="129"><span class="fnnum" aria-hidden="true">130</span><div class="fntext"><p><em>Id.</em> at 159. <a class="fnback" href="#fnref-130" aria-label="Back to the text, note 130">BACK</a></p></div></li>
+<li id="fn-131" data-n="131"><span class="fnnum" aria-hidden="true">131</span><div class="fntext"><p><em>See generally</em> Craig John Newbery-Jones, <em>Answering the Call of Duty: The Phenomenology of Justice in Twenty-First-Century Video Games</em>, 9 Law &amp; Human. 78 (2015). <a class="fnback" href="#fnref-131" aria-label="Back to the text, note 131">BACK</a></p></div></li>
+<li id="fn-132" data-n="132"><span class="fnnum" aria-hidden="true">132</span><div class="fntext"><p>Ntina Tzouvala, Capitalism as Civilisation: A History of International Law 21 (2020) (quoting Susan Marks, <em>Human Rights and the Bottom Billion</em>, 2009 Eur. Hum. Rts. L. Rev. 37, 48–49). <a class="fnback" href="#fnref-132" aria-label="Back to the text, note 132">BACK</a></p></div></li>
+<li id="fn-133" data-n="133"><span class="fnnum" aria-hidden="true">133</span><div class="fntext"><p><em>See</em> Lauren E. Diaz &amp; Vicenç Feliú, <em>Governing Orbital Data Centers in the New Space Race</em> (Aug. 26, 2026) (unpublished manuscript), <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7343538" target="_blank" rel="noopener">https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7343538</a>. <a class="fnback" href="#fnref-133" aria-label="Back to the text, note 133">BACK</a></p></div></li>
+</ol>
+</section>
+
+<section class="part cite" aria-labelledby="cite">
+<header class="sechead"><span class="tab" aria-hidden="true">CITE</span><h2 id="cite">Cite this paper</h2></header>
+<div class="citeform">
+<div class="citerow" data-format="bluebook"><div class="citelabel px">BLUEBOOK</div><p class="citetext" id="cite-bluebook">Michael Endrias, <i>Unseen Above: Space Law and the Power to See and Not Be Seen</i> (n.d.) (unpublished manuscript), <a href="https://mikeendrias-coder.github.io/unseen-above/paper/">https://mikeendrias-coder.github.io/unseen-above/paper/</a>.</p><button type="button" class="keycap copy" data-copy="cite-bluebook" aria-describedby="cite-bluebook">COPY</button></div>
+<div class="citerow" data-format="plain"><div class="citelabel px">PLAIN</div><p class="citetext" id="cite-plain">Endrias, Michael. “Unseen Above: Space Law and the Power to See and Not Be Seen.” Paper, Intro to Space Law. <a href="https://mikeendrias-coder.github.io/unseen-above/paper/">https://mikeendrias-coder.github.io/unseen-above/paper/</a>.</p><button type="button" class="keycap copy" data-copy="cite-plain" aria-describedby="cite-plain">COPY</button></div>
+</div>
+<p class="copied" role="status" aria-live="polite"></p>
+</section>
+
+    <footer class="eof"><span>END OF FILE · FORM UA-07</span><a class="keycap" href="./" data-back>BACK TO THE GAME</a></footer>
+  </main>
+</div>
+<script>
+  // The index marks the section being read, and on phones the bar names it and closes after a pick.
+  (function () {
+    var links = [].slice.call(document.querySelectorAll('.index a[data-for]'));
+    var heads = links.map(function (a) { return document.getElementById(a.getAttribute('data-for')); }).filter(Boolean);
+    var d = document.getElementById('toc'), now = d.querySelector('.now');
+    var wide = window.matchMedia('(min-width: 1000px)');
+    function mark() {
+      var line = window.innerHeight * 0.3, cur = heads[0], top;
+      for (var i = 0; i < heads.length; i++) if (heads[i].getBoundingClientRect().top <= line) cur = heads[i];
+      // at the very bottom the last section counts, unless the reader just jumped to one that is in view
+      var hit = location.hash && heads.indexOf(document.getElementById(location.hash.slice(1))) >= 0 ? document.getElementById(location.hash.slice(1)) : null;
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) cur = heads[heads.length - 1];
+      if (hit && (top = hit.getBoundingClientRect().top) >= 0 && top < window.innerHeight * 0.5) cur = hit;
+      links.forEach(function (a) {
+        var on = cur && a.getAttribute('data-for') === cur.id;
+        if (on) { a.setAttribute('aria-current', 'true'); now.textContent = a.querySelector('.ttab').textContent.trim() || a.querySelector('.ttext').textContent; }
+        else a.removeAttribute('aria-current');
+      });
+    }
+    var queued = false;
+    window.addEventListener('scroll', function () { if (!queued) { queued = true; requestAnimationFrame(function () { queued = false; mark(); }); } }, { passive: true });
+    window.addEventListener('resize', mark);
+    links.forEach(function (a) { a.addEventListener('click', function (e) { if (wide.matches) return; var t = document.getElementById(a.getAttribute('data-for')); d.open = false; if (!t) return; e.preventDefault(); requestAnimationFrame(function () { t.scrollIntoView(); if (location.hash !== '#' + t.id) history.pushState(null, '', '#' + t.id); }); }); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !wide.matches && d.open) { d.open = false; d.querySelector('summary').focus(); } });
+    mark();
+  })();
+</script>
+<script>
+  // Notes. Wide windows (1280px and up) put each note in the margin, level with its mark
+  // (html.sn); narrower windows open a note in a pop-up slip under its mark, docked to the
+  // bottom of the screen on phones. Without this script every mark still links to #notes.
+  (function () {
+    var root = document.documentElement, body = document.querySelector('.body');
+    if (!body) return;
+    var wideQ = window.matchMedia('(min-width: 1280px)'), dockQ = window.matchMedia('(max-width: 600px)');
+    var fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+    var marks = [].slice.call(document.querySelectorAll('.fnref a'));
+    var items = {}; [].forEach.call(document.querySelectorAll('.fnlist li[data-n]'), function (li) { items[li.getAttribute('data-n')] = li; });
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var numOf = function (a) { return a.getAttribute('href').replace('#fn-', ''); };
+
+    // a note's words without its BACK links, plus a label when it starts with Id.
+    function noteHtml(n, withId) {
+      var li = items[n]; if (!li) return '';
+      var box = li.querySelector('.fntext').cloneNode(true);
+      [].forEach.call(box.querySelectorAll('.fnback'), function (b) { b.remove(); });
+      var html = box.innerHTML.replace(/\s+<\/p>/g, '</p>');
+      var of = li.getAttribute('data-id-of');
+      if (withId && of) html = '<a class="idof" href="#fn-' + of + '" data-note="' + of + '">ID. = NOTE ' + pad(+of) + '</a>' + html;
+      return html;
+    }
+
+    // ---- margin notes: one per note, after the block that holds its first mark
+    var sides = [];
+    marks.forEach(function (a) {
+      if (!/^fnref-\d+$/.test(a.id) || !body.contains(a)) return;  // a second use opens the pop-up
+      var n = numOf(a), blk = a;
+      while (blk.parentElement && !blk.parentElement.classList.contains('prose')) blk = blk.parentElement;
+      if (!blk.parentElement) return;
+      var s = document.createElement('aside');
+      s.className = 'side'; s.id = 'sn-' + n; s.tabIndex = -1;
+      s.setAttribute('aria-label', 'Note ' + n);
+      s.innerHTML = '<div class="snrow"><span class="snnum" aria-hidden="true">' + pad(+n) + '</span><div class="sntext">' + noteHtml(n, true) + '</div></div><button type="button" class="snmore" aria-expanded="false">MORE</button>';
+      var after = blk; while (after.nextElementSibling && after.nextElementSibling.classList.contains('side')) after = after.nextElementSibling;
+      after.after(s);
+      sides.push({ n: n, el: s, mark: a });
+      a.setAttribute('aria-describedby', s.id);
+      s.querySelector('.snmore').addEventListener('click', function () {
+        var open = s.classList.toggle('open');
+        this.textContent = open ? 'LESS' : 'MORE'; this.setAttribute('aria-expanded', String(open));
+        layout();
+      });
+      s.addEventListener('mouseenter', function () { a.classList.add('hot'); });
+      s.addEventListener('mouseleave', function () { a.classList.remove('hot'); });
+    });
+    var sideOf = function (n) { return document.getElementById('sn-' + n); };
+
+    var sn = false;
+    function layout() {
+      if (!sn) { body.style.minHeight = ''; return; }
+      var top0 = body.getBoundingClientRect().top, prev = 22;
+      sides.forEach(function (s) {
+        var want = s.mark.getBoundingClientRect().top - top0 - 4;
+        var at = Math.max(want, prev + 14);
+        s.el.style.top = Math.round(at) + 'px';
+        var t = s.el.querySelector('.sntext');
+        s.el.classList.toggle('long', s.el.classList.contains('open') || t.scrollHeight > t.clientHeight + 2);
+        prev = at + s.el.offsetHeight;
+      });
+      body.style.minHeight = '';
+      if (prev > body.offsetHeight) body.style.minHeight = Math.ceil(prev + 20) + 'px';
+    }
+    function setMode() {
+      sn = wideQ.matches && sides.length > 0;
+      root.classList.toggle('sn', sn);
+      closePop();
+      clearOn();
+      layout();
+    }
+    var queued = false;
+    function relayout() { if (!queued) { queued = true; requestAnimationFrame(function () { queued = false; layout(); }); } }
+
+    // ---- which note is picked
+    function clearOn() {
+      [].forEach.call(document.querySelectorAll('.side.on, .fnref a.on'), function (e) { e.classList.remove('on'); });
+    }
+    function pickSide(n, mark, focus) {
+      var s = sideOf(n); if (!s) return false;
+      var was = s.classList.contains('on');
+      clearOn();
+      if (was && mark) { mark.focus(); return true; }
+      s.classList.add('on');
+      var m = mark || document.getElementById('fnref-' + n); if (m) m.classList.add('on');
+      var r = s.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) s.scrollIntoView({ block: 'center' });
+      if (focus) s.focus({ preventScroll: true });
+      return true;
+    }
+
+    // ---- the pop-up slip
+    var pop = document.createElement('div');
+    pop.className = 'pop'; pop.hidden = true; pop.tabIndex = -1;
+    pop.setAttribute('role', 'dialog');
+    pop.innerHTML = '<div class="pophead"><span class="poplabel"></span><span class="popbtns"><button type="button" class="popback" hidden></button><button type="button" class="popclose" aria-label="Close the note">CLOSE</button></span></div><div class="popbody"></div><div class="popfoot"><a class="popall" href="#notes">IN THE NOTES &gt;</a></div>';
+    body.appendChild(pop);
+    var popMark = null, popPinned = false, popTrail = [], hoverT = 0, leaveT = 0;
+    function fillPop(n) {
+      pop.querySelector('.poplabel').textContent = 'NOTE ' + pad(+n);
+      pop.setAttribute('aria-label', 'Note ' + n);
+      pop.querySelector('.popbody').innerHTML = noteHtml(n, true);
+      pop.querySelector('.popbody').scrollTop = 0;
+      var all = pop.querySelector('.popall'); all.setAttribute('href', '#fn-' + n);
+      var back = pop.querySelector('.popback'), prev = popTrail[popTrail.length - 1];
+      back.hidden = !prev; if (prev) { back.textContent = '< NOTE ' + pad(+prev); back.setAttribute('aria-label', 'Back to note ' + prev); }
+      pop.setAttribute('data-n', n);
+    }
+    function placePop() {
+      var dock = dockQ.matches;
+      pop.classList.toggle('dock', dock);
+      if (dock) {
+        pop.style.left = ''; pop.style.top = '';
+        // keep the mark in sight above the slip
+        var r = popMark.getBoundingClientRect(), room = window.innerHeight - pop.offsetHeight - 12;
+        if (r.bottom > room) window.scrollBy(0, r.bottom - room + 8);
+        else if (r.top < 60) window.scrollBy(0, r.top - 80);
+        return;
+      }
+      var host = pop.offsetParent || document.body, hr = host.getBoundingClientRect(), r = popMark.getBoundingClientRect();
+      var w = pop.offsetWidth, h = pop.offsetHeight, vw = document.documentElement.clientWidth;
+      var left = Math.min(Math.max(16, r.left - 24), vw - w - 16);
+      var top = r.bottom + 10;
+      if (top + h > window.innerHeight - 8 && r.top - h - 10 > 8) top = r.top - h - 10;
+      pop.style.left = Math.round(left - hr.left) + 'px';
+      pop.style.top = Math.round(top - hr.top) + 'px';
+    }
+    function openPop(mark, n, how) {
+      clearTimeout(leaveT);
+      if (popMark && popMark !== mark) popMark.setAttribute('aria-expanded', 'false');
+      popMark = mark; popTrail = [];
+      // the slip lives right after its mark, so Tab goes from the mark into the note and on
+      var sup = mark.parentElement; sup.after(pop);
+      fillPop(n);
+      pop.hidden = false;
+      mark.setAttribute('aria-expanded', 'true');
+      popPinned = how !== 'hover';
+      placePop();
+      if (how === 'key' || how === 'click') pop.focus({ preventScroll: true });
+    }
+    function closePop(back) {
+      if (pop.hidden) return;
+      var had = pop.contains(document.activeElement);
+      pop.hidden = true; popPinned = false; popTrail = [];
+      if (popMark) { popMark.setAttribute('aria-expanded', 'false'); if (back || had) popMark.focus({ preventScroll: true }); }
+      popMark = null;
+    }
+    function swapPop(n) {
+      var cur = pop.getAttribute('data-n'); if (cur === String(n)) return;
+      popTrail.push(cur); fillPop(n); placePop(); pop.focus({ preventScroll: true });
+    }
+    pop.querySelector('.popclose').addEventListener('click', function () { closePop(true); });
+    pop.querySelector('.popall').addEventListener('click', function () { closePop(); });
+    pop.querySelector('.popback').addEventListener('click', function () { var p = popTrail.pop(); if (p) { fillPop(p); placePop(); pop.focus({ preventScroll: true }); } });
+    pop.addEventListener('mouseenter', function () { clearTimeout(leaveT); });
+    pop.addEventListener('mouseleave', function () { if (!popPinned) leaveT = setTimeout(closePop, 250); });
+    pop.addEventListener('focusout', function (e) {
+      var to = e.relatedTarget;
+      if (to && !pop.contains(to) && to !== popMark) closePop();
+    });
+
+    // ---- marks
+    marks.forEach(function (a) {
+      var n = numOf(a), first = /^fnref-\d+$/.test(a.id) && !!sideOf(n);
+      a.setAttribute('aria-expanded', 'false');
+      a.setAttribute('aria-haspopup', 'dialog');
+      a.addEventListener('click', function (e) {
+        if (sn && first) { e.preventDefault(); a.removeAttribute('aria-expanded'); pickSide(n, a, true); return; }
+        e.preventDefault();
+        if (popMark === a && !pop.hidden && popPinned) { closePop(true); return; }
+        openPop(a, n, e.detail === 0 ? 'key' : 'click');
+      });
+      a.addEventListener('mouseenter', function () {
+        if (sn && first) { var s = sideOf(n); if (s) s.classList.add('hot'); return; }
+        if (!fine.matches || (popPinned && !pop.hidden)) return;
+        clearTimeout(leaveT); clearTimeout(hoverT);
+        hoverT = setTimeout(function () { openPop(a, n, 'hover'); }, 140);
+      });
+      a.addEventListener('mouseleave', function () {
+        var s = sideOf(n); if (s) s.classList.remove('hot');
+        clearTimeout(hoverT);
+        if (!pop.hidden && !popPinned) leaveT = setTimeout(closePop, 250);
+      });
+    });
+    // in the margin the mark only marks; aria-expanded belongs to the pop-up
+    function tidyAria() { marks.forEach(function (a) { if (sn && /^fnref-\d+$/.test(a.id) && sideOf(numOf(a))) { a.removeAttribute('aria-expanded'); a.removeAttribute('aria-haspopup'); } else { a.setAttribute('aria-haspopup', 'dialog'); if (!a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', 'false'); } }); }
+
+    // links to other notes (supra note 3, ID. = NOTE 05) from a margin note or the slip
+    document.addEventListener('click', function (e) {
+      var x = e.target.closest && e.target.closest('a[data-note]');
+      if (x && (pop.contains(x) || x.closest('.side'))) {
+        var k = x.getAttribute('data-note');
+        if (pop.contains(x)) { e.preventDefault(); swapPop(k); return; }
+        if (sn && sideOf(k)) { e.preventDefault(); pickSide(k, null, true); return; }
+      }
+      if (!pop.hidden && !pop.contains(e.target) && !(e.target.closest && e.target.closest('.fnref'))) closePop();
+      if (sn && !(e.target.closest && e.target.closest('.side, .fnref'))) clearOn();
+    });
+    window.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (!pop.hidden) { e.stopPropagation(); closePop(true); return; }
+      var on = document.querySelector('.side.on');
+      if (on) { e.stopPropagation(); var m = document.getElementById('fnref-' + on.id.replace('sn-', '')); clearOn(); if (m) m.focus(); }
+    }, true);
+    // a BACK link from the notes lights the margin note too
+    function fromHash() {
+      var m = /^#fnref-(\d+)$/.exec(location.hash);
+      if (m && sn) { clearOn(); var s = sideOf(m[1]); if (s) { s.classList.add('on'); document.getElementById('fnref-' + m[1]).classList.add('on'); } }
+    }
+    window.addEventListener('hashchange', function () { closePop(); fromHash(); });
+
+    // ---- the reading meter: from the top of the TL;DR to the end of the conclusion
+    var meter = document.querySelector('.meter'), cells = meter ? [].slice.call(meter.querySelectorAll('.cells i')) : [], pct = meter && meter.querySelector('.mpct');
+    function readMeter() {
+      if (!meter) return;
+      var r = body.getBoundingClientRect(), line = window.innerHeight * 0.4;
+      var f = Math.max(0, Math.min(1, (line - r.top) / Math.max(1, r.height)));
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) f = 1;
+      var p = Math.round(f * 100), on = Math.round(f * cells.length);
+      cells.forEach(function (c, i) { c.classList.toggle('f', i < on); });
+      if (pct) pct.textContent = p + '%';
+      meter.setAttribute('aria-valuenow', String(p));
+    }
+    var mq = false;
+    window.addEventListener('scroll', function () {
+      if (!mq) { mq = true; requestAnimationFrame(function () { mq = false; readMeter(); if (!pop.hidden && !pop.classList.contains('dock')) placePop(); }); }
+    }, { passive: true });
+
+    var watch = function (q, f) { if (q.addEventListener) q.addEventListener('change', f); else if (q.addListener) q.addListener(f); };
+    watch(wideQ, function () { setMode(); tidyAria(); });
+    watch(dockQ, function () { if (!pop.hidden) placePop(); });
+    window.addEventListener('resize', function () { relayout(); readMeter(); if (!pop.hidden) placePop(); });
+    if (window.ResizeObserver) new ResizeObserver(relayout).observe(body);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { layout(); readMeter(); });
+    window.addEventListener('load', function () { layout(); fromHash(); });
+    setMode(); tidyAria(); readMeter(); fromHash();
+  })();
+</script>
+<script>
+  // Cite this paper: COPY puts the citation on the clipboard with its italics (rich text and
+  // plain text). Where the clipboard is shut (an http page on a LAN, an old browser) it copies
+  // the selected text the old way, and if even that fails it selects the citation so Ctrl+C or
+  // a long press finishes the job.
+  (function () {
+    var status = document.querySelector('.cite .copied');
+    function say(btn, text, done) {
+      if (status) status.textContent = text;
+      if (done) { btn.textContent = 'COPIED'; btn.classList.add('done'); setTimeout(function () { btn.textContent = 'COPY'; btn.classList.remove('done'); }, 2200); }
+    }
+    function selectEl(el) { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+    function oldWay(el) {
+      try { selectEl(el); var ok = document.execCommand('copy'); window.getSelection().removeAllRanges(); return ok; } catch (e) { return false; }
+    }
+    [].forEach.call(document.querySelectorAll('button.copy[data-copy]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var el = document.getElementById(btn.getAttribute('data-copy')); if (!el) return;
+        var name = el.closest('.citerow').querySelector('.citelabel').textContent.trim().toLowerCase();
+        var text = el.textContent.replace(/\s+/g, ' ').trim(), html = el.innerHTML;
+        var good = function () { say(btn, 'The ' + name + ' citation is on the clipboard.', true); };
+        var fallback = function () {
+          if (oldWay(el)) good();
+          else { selectEl(el); say(btn, 'Selected. Press Ctrl+C (or Cmd+C) to copy.', false); }
+        };
+        var cb = navigator.clipboard;
+        if (cb && window.isSecureContext && window.ClipboardItem && cb.write) {
+          cb.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]).then(good, function () {
+            if (cb.writeText) cb.writeText(text).then(good, fallback); else fallback();
+          });
+        } else if (cb && window.isSecureContext && cb.writeText) cb.writeText(text).then(good, fallback);
+        else fallback();
+      });
+    });
+  })();
+</script>
+</body>
+</html>
