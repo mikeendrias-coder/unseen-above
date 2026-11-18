@@ -41,7 +41,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **HP bars** (her, and the boss). Decide with Michael how HP fits with lives and instant restarts.
 - `todo` **Scale:** ceilings can stay high with lots of wall decoration, but most things themselves should be normal size next to her, so the space makes sense.
 ### Satellite puzzles
-- `todo` **One complex 3D puzzle instead of many small ones.** First time: a tutorial version, then the real one. After that, each batch is one complex 3D puzzle with similar dynamics and gimmicks. Example: a 3D maze on a circle (a ring or sphere) that you must turn to complete.
+- `done, check` (Nov 18: ring tutorial + one globe maze per batch: gates, two beads, blur zone and drifting target, game-show Earth; solver-checked) **One complex 3D puzzle instead of many small ones.** First time: a tutorial version, then the real one. After that, each batch is one complex 3D puzzle with similar dynamics and gimmicks. Example: a 3D maze on a circle (a ring or sphere) that you must turn to complete.
 ### Dialogue
 - `todo` **Briefer dialogue.**
 - `todo` **No repeated dialogue on reruns** (lines already heard do not play again on a retry).
