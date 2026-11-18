@@ -4,7 +4,7 @@ import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
 import { initPicker } from './ui/vibe.js';
 import { initPause } from './ui/pause.js';
-import { initKeys } from './ui/keys.js';
+import { initKeys, onKeysChange } from './ui/keys.js';
 import { cg } from './ui/cg.js';
 import { STEPS } from './core/flow.js';
 import { state } from './core/state.js';
@@ -161,6 +161,14 @@ if (go) {
   if (cont) cont.addEventListener('click', resume);
   if (optStory) optStory.addEventListener('click', () => { setStory(!state.immune); syncGuide(); });
   if (optFlash) optFlash.addEventListener('click', () => { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); syncGuide(); });
+  // the key buttons under the picture change the same settings: the title menu follows them
+  onKeysChange(() => { if (!playing) syncGuide(); });
+  // I on the title screen turns immunity on or off, as it does in the show
+  window.addEventListener('keydown', e => {
+    if (playing || e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e.key !== 'i' && e.key !== 'I')) return;
+    e.preventDefault(); setStory(!state.immune); syncGuide();
+    if (window.__keys) window.__keys.sync();
+  });
   // a jump link starts the game at that part (clicked again, it starts that part again)
   document.querySelectorAll('.jump a').forEach(a => a.addEventListener('click', () => {
     const same = a.getAttribute('href') === location.hash;

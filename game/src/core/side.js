@@ -10,7 +10,7 @@ import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath, startTakes, showStatus } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
@@ -85,7 +85,7 @@ export class SideEpisode extends Phaser.Scene {
     this.shadowG = this.add.graphics().setDepth(3.9);
     this.girl = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1).setDepth(4);
     this.puffs = this.add.particles(0, 0, 'dot', { speedX: { min: -22, max: 22 }, speedY: { min: -14, max: -3 }, gravityY: 30, lifespan: { min: 260, max: 520 }, alpha: { start: 0.7, end: 0 }, tint: [hexNum(P.dust), hexNum(P.colLo)], emitting: false }).setDepth(4.2);
-    this.beamG = this.add.graphics().setDepth(5).setBlendMode(Phaser.BlendModes.ADD);
+    this.beamG = this.add.graphics().setDepth(5); // flat light, normal blending (ART_DIRECTION 2)
     this.fxG = this.add.graphics().setDepth(7);
     this.strikeFx = new SatelliteStrike(this, { depth: 8 });
     this.bubbles = new Bubbles(this, 9);
@@ -112,8 +112,9 @@ export class SideEpisode extends Phaser.Scene {
   }
   // whether looks are on offer right now (a scene turns them off while it needs her attention)
   lookable() { return true; }
+  // A retry after the episode set a checkpoint (death.js setCheckpoint) starts there: { x, y }.
   spawn(x) {
-    const s = this.level.start;
+    const cp = checkpointOf(this), s = cp && cp.x != null ? { x: cp.x, y: cp.y != null ? cp.y : this.level.start.y } : this.level.start;
     this.kid = { x: x != null ? x : s.x, y: s.y, w: K.w, h: K.hStand, vx: 0, vy: 0, onGround: true, crouch: false, coyote: 0, buffer: 0, holdT: 0, face: 1, walkT: 0,
       hp: K.hp, inv: 0, airJumps: 1, wall: 0, wallLock: 0, peakY: s.y };
     showStatus(this, this.kid.hp, K.hp);
@@ -288,9 +289,12 @@ export class SideEpisode extends Phaser.Scene {
     beginDeath(this, src, impact, (onImpact, o) => { this.cameras.main.stopFollow(); return this.strikeFx.fire({ view: this.cameras.main.worldView, tx: x, ty: y, P: this.P, onImpact, from: this.satX, short: o && o.short }); });
   }
   groundBelow(x) { for (let ty = 0; ty < this.map.H; ty++) if (this.solidTile(Math.floor(x / TILE), ty) && !this.solidTile(Math.floor(x / TILE), ty - 1)) { if (ty * TILE > this.kid.y) return ty * TILE; } return 160; }
-  // a restart by choice (Backspace, or the pause menu): the next take, no body, no take used up
+  // a retry by choice (Backspace, or the pause menu): the next take, no body, no life used up
+  // a checkpoint for this visit: deaths and retries start here until she runs out of lives.
+  // at: { x, y } (her top-left, as kid.x and kid.y), or null to clear it
+  markCheckpoint(at) { setCheckpoint(this, at); }
   canRestart() { return !this.dead && !this.leaving && !this.done; }
-  restartTake() { if (!this.canRestart()) return false; this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart({ retry: true })); return true; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart(retryData(this))); return true; }
   // Mute, switch look, restart; while she is dying, a key skips the strike. Returns true when the
   // scene is restarting.
   commonKeys() {
@@ -322,12 +326,17 @@ export class SideEpisode extends Phaser.Scene {
     const h = gy - (k.y + k.h), w = Math.max(2, 7 - h / 6);
     sg.fillStyle(0x000000, Math.max(0.08, 0.32 - h / 120) * this.girl.alpha); sg.fillEllipse(Math.round(cx), Math.round(gy), w * 2, 2);
   }
-  // Soft layered cone, red as it locks on.
+  // A light cone, the way ART_DIRECTION section 2 draws light: one flat lighter tone with a hard
+  // edge (a single fill, no stacked layers, no additive blending) and a 1 px rim along its two
+  // sides. It turns red as it locks on; the red steps up in three flat stages, not a fade.
   drawCone(g, src, base, color, limit) {
     const lockMix = Math.min(1, src.lock / (limit || LOCK)), col = lockMix > 0 ? hexNum(this.P.hazard) : hexNum(color);
-    g.fillStyle(col, base + lockMix * 0.12); g.fillPoints(src.cone, true);
-    const inner = [src.cone[0]].concat(src.cone.slice(1).filter((_, j, arr) => j > arr.length * 0.25 && j < arr.length * 0.75));
-    if (inner.length > 2) { g.fillStyle(col, base * 0.8); g.fillPoints(inner, true); }
+    const step = lockMix > 0 ? Math.ceil(lockMix * 3) / 3 : 0, a = Math.min(0.3, base + step * 0.1);
+    g.fillStyle(col, a); g.fillPoints(src.cone, true);
+    const c = src.cone, n = c.length; if (n < 3) return;
+    g.lineStyle(1, col, Math.min(0.55, a * 2.6));
+    g.lineBetween(Math.round(c[0].x), Math.round(c[0].y), Math.round(c[1].x), Math.round(c[1].y));
+    g.lineBetween(Math.round(c[0].x), Math.round(c[0].y), Math.round(c[n - 1].x), Math.round(c[n - 1].y));
   }
   drawLocks(sources, limit) {
     const fx = this.fxG, P = this.P, t = this.clock; fx.clear();

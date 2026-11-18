@@ -5,7 +5,7 @@
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
-import { setStory } from '../core/review.js';
+import { setStory, canSkip } from '../core/review.js';
 import { overlay } from '../core/overlay.js';
 
 const KEYS = [
@@ -19,12 +19,12 @@ const KEYS = [
   { cap: 'K', key: 'k', code: 'KeyK', kc: 75, label: 'throw' },
   { cap: 'L', key: 'l', code: 'KeyL', kc: 76, label: 'glasses', sw: 'glasses' },
   { cap: 'Enter', key: 'Enter', code: 'Enter', kc: 13, label: 'skip line' },
-  { cap: 'Bksp', key: 'Backspace', code: 'Backspace', kc: 8, label: 'restart' },
-  { cap: 'Esc', key: 'Escape', code: 'Escape', kc: 27, label: 'skip scene' },
+  { cap: 'Bksp', key: 'Backspace', code: 'Backspace', kc: 8, label: 'retry' },
+  { cap: 'Esc', key: 'Escape', code: 'Escape', kc: 27, label: 'menu', dyn: 'esc' },
   { cap: 'P', key: 'p', code: 'KeyP', kc: 80, label: 'pause' },
   { cap: 'M', label: 'sound', sw: 'sound' },
   { cap: 'I', label: 'immunity', sw: 'immune' },
-  { cap: 'N', key: 'n', code: 'KeyN', kc: 78, label: 'skip ahead' },
+  { cap: 'N', key: 'n', code: 'KeyN', kc: 78, label: 'skip ahead', dyn: 'skip' },
   { cap: 'Flash', label: 'flashing', sw: 'flash' },
   { cap: 'CH', label: 'chapters', sw: 'chapters' }
 ];
@@ -36,6 +36,17 @@ function send(type, k) {
   window.dispatchEvent(ev);
 }
 const scene = () => window.__game && window.__game.scene;
+// Keys whose job depends on where she is: [label, usable now]. Esc skips the opening and the
+// kids' room and opens the menu everywhere else. N only skips while immunity is on or the
+// scene offers it (stuck, or a screen that allows it); otherwise its cap greys out.
+const playing = () => { const st = document.getElementById('stage'); return !!(st && st.classList.contains('playing')); };
+const DYN = {
+  esc: () => { const sc = scene(), k = sc && sc.sys && sc.sys.settings.key; return [playing() && (k === 'intro' || k === 'kids') ? 'skip scene' : 'menu', true]; },
+  skip: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canSkip(sc); } catch (e) { /* not a scene yet */ } return ['skip ahead', on]; }
+};
+// others (the title screen) listen for changes made here
+const listeners = [];
+export function onKeysChange(fn) { listeners.push(fn); }
 const glasses = () => { const sc = scene(), g = sc && sc.gl; return g && g.has ? g : null; };
 
 // what each switch shows: [pressed, word under it]
@@ -81,6 +92,7 @@ export function initKeys() {
     else if (k.sw === 'chapters') { const n = document.getElementById('jump'); if (n) { n.hidden = !n.hidden; window.dispatchEvent(new Event('resize')); } }
     else { send('keydown', k); if (!k.hold) setTimeout(() => send('keyup', k), 90); }
     sync();
+    if (k.sw) listeners.forEach(fn => fn(k.sw));
   }
   function sync() {
     els.forEach(({ k, b, lbl }) => {
@@ -89,6 +101,12 @@ export function initKeys() {
       if (b.getAttribute('aria-pressed') !== String(on)) b.setAttribute('aria-pressed', String(on));
       if (lbl.textContent !== word) lbl.textContent = word;
       if (k.sw === 'glasses') b.classList.toggle('off', !glasses());
+    });
+    els.forEach(({ k, b, lbl }) => {
+      if (!k.dyn) return;
+      const [word, on] = DYN[k.dyn]();
+      if (lbl.textContent !== word) { lbl.textContent = word; b.setAttribute('aria-label', word + ', key ' + k.cap); }
+      b.classList.toggle('off', !on);
     });
   }
   sync();

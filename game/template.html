@@ -49,6 +49,7 @@
   .tv-menu button i, .tv-menu button b { font-style: normal; font-weight: normal; }
   .tv-menu button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .tv-menu button:hover, .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
+  .tv-menu button[aria-pressed="true"]:hover i, .tv-menu button[aria-pressed="true"]:focus i { color: var(--ground); background: var(--ink); padding: 0 calc(var(--u, 4px) * 2); }
   .tv-menu button:hover::before, .tv-menu button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
   /* the chapter list: every part of the show, on the picture, two columns */
   .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }

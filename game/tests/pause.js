@@ -32,9 +32,9 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__paused === true, null, 3000);
   const c0 = await S(() => window.__game.scene.clock); await p.waitForTimeout(600); const c1 = await S(() => window.__game.scene.clock);
   ok('P opens page 100 and the episode waits (clock ' + c0.toFixed(2) + ' then ' + c1.toFixed(2) + ')', c0 === c1 && (await panel()).includes('Paused') && await S(() => window.__game.scene.sys.isPaused()));
-  ok('the menu lists: ' + (await panel()).slice(0, 160), /resume/.test(await panel()) && /restart this episode/.test(await panel()) && /immunity: off/.test(await panel()) && /title screen/.test(await panel()));
+  ok('the menu lists: ' + (await panel()).slice(0, 160), /resume/.test(await panel()) && /> resume\n?.*retry/.test((await panel()).replace(/\n/g, ' ')) && /immunity: off/.test(await panel()) && /title screen/.test(await panel()));
   await p.keyboard.press('ArrowDown');
-  ok('Down moves to the next row', (await panel()).includes('> restart this episode'));
+  ok('Down moves to the next row', (await panel()).includes('> retry'));
   // to MUSIC, then Left lowers it
   for (let i = 0; i < 2; i++) await p.keyboard.press('ArrowDown');
   ok('three rows down is music', (await panel()).includes('> music'));
@@ -90,7 +90,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.ep.take === 3 && !window.__game.scene.dead, null, 6000);
   const skipMs = Date.now() - tA;
   ok('after that, Space skips the strike (' + skipMs + ' ms) and the body stays (' + await S(() => window.__game.scene.ep.bodies.length) + ' bodies)', skipMs < 1500 && await S(() => window.__game.scene.ep.bodies.length === 2));
-  ok('two takes used: ' + await S(() => window.__game.scene.takesLeft) + ' left', await S(() => window.__game.scene.takesLeft === 3));
+  ok('two lives used: ' + await S(() => window.__game.scene.takesLeft) + ' left', await S(() => window.__game.scene.takesLeft === 3));
   // a third death: now the show offers N
   await p.evaluate(() => window.__game.scene.die({ id: 'pergola drone' }));
   await p.waitForTimeout(200); await p.keyboard.press('Space');

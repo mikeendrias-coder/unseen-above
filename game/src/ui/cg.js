@@ -5,7 +5,7 @@
 // menu is a form, titles are a paper label under a red stamp. Red only ever means the watchers.
 // Flat colors from the one palette, no alpha haze, no slides: things pop on and off.
 //   captions     what is said and heard, bone on black, in the strip under the picture
-//   strip ends   her HP at the left end, the takes left at the right end
+//   strip ends   her HP at the left end, the lives left at the right end
 //   titles       a red stamp (EPISODE 1, TAKE 4) over a paper label
 //   notices      how to play: a numbered slip, three short lines, a red stamp
 //   the form     the pause menu, form 100
@@ -67,7 +67,7 @@ function frame() {
 function drawFlash() { const f = S.flash; if (!f) return; ctx.fillStyle = pattern(f.color, f.kind); ctx.fillRect(0, 0, W, H); }
 
 // ------------------------------------------------------------------ the strip under the picture
-// Captions in the middle (40 columns), her HP at the left end, the takes left at the right end.
+// Captions in the middle (40 columns), her HP at the left end, the lives left at the right end.
 const CAP_COLS = 40, CAP_ROW = 10;
 function drawStrip() {
   const top = H + 5, pipY = H + 15;
@@ -77,7 +77,7 @@ function drawStrip() {
   }
   if (S.lives) {
     const n = S.lives.max, x0 = 316 - (n * 6 - 2);
-    ccText(ctx, 'TAKES', 316 - ccWidth('TAKES'), top, S.lives.n <= 1 ? ASH.red : INK_LO);
+    ccText(ctx, 'LIVES', 316 - ccWidth('LIVES'), top, S.lives.n <= 1 ? ASH.red : INK_LO);
     for (let i = 0; i < n; i++) { const x = x0 + i * 6; if (i < S.lives.n) ccBox(ctx, x, pipY, 4, 6, PAPER); else { ccBox(ctx, x, pipY, 4, 6, INK_LO); ccBox(ctx, x + 1, pipY + 1, 2, 4, INK); } }
   }
 }
@@ -161,10 +161,11 @@ function drawTop(t) {
   if (S.page || S.menu) return; // paperwork has the screen: the set's messages wait
   let y = 4;
   // immunity, top right, on paper so it reads at a glance (the class walkthrough)
-  if (S.immune) { const s = 'IMMUNE · N SKIPS', w = ccWidth(s) + 8; paper(314 - w, 3, w, 11); ccText(ctx, s, 318 - w, 5, INK); y = 18; }
+  if (S.immune) { const s = 'IMMUNE · N SKIPS', w = ccWidth(s) + 8; paper(314 - w, 3, w, 11); ccText(ctx, s, 318 - w, 5, INK); y = 19; }
   if (S.bug) { const w = ccWidth(S.bug.text); ccText(ctx, S.bug.text, 311 - w, y + 1, INK); ccText(ctx, S.bug.text, 310 - w, y, INK_LO); y += 11; }
-  // the set's own messages: gold, with a hard shadow, like an old TV
-  S.osd.forEach(o => { const s = o.text.toUpperCase(), w = ccWidth(s); ccText(ctx, s, 311 - w, y + 1, INK); ccText(ctx, s, 310 - w, y, ASH.lit); y += 11; });
+  // the set's own notes: paper tags like the immunity one, ink on bone, so they read over any
+  // scenery (the immunity tag already says IMMUNITY ON, so that note is not repeated)
+  S.osd.forEach(o => { const s = o.text.toUpperCase(); if (S.immune && s === 'IMMUNITY ON') return; const w = ccWidth(s) + 8; paper(314 - w, y - 1, w, 11); ccText(ctx, s, 318 - w, y + 1, INK); y += 14; });
   if (S.rec) { if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 10, 9, ASH.red); ccText(ctx, 'REC', 17, 9, PAPER); }
 }
 
@@ -278,7 +279,7 @@ export const cg = {
   menuRow(i) { const m = S.menu; if (!m) return null; const g = menuGeom(m); return { x: g.x + g.w / 2, y: g.rowsY + i * FROW + FROW / 2 }; },
   // her HP in the strip (n of max), or null to hide it
   hp(n, max) { S.hp = n == null ? null : { n, max }; kick(); },
-  // takes left in the strip (n of max), or null to hide them
+  // lives left in the strip (n of max), or null to hide them
   lives(n, max) { S.lives = n == null ? null : { n, max }; kick(); },
   clearAll() { S.hp = null; S.lives = null; S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; S.flash = null; }
 };

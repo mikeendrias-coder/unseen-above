@@ -3,13 +3,17 @@
 //   - Fast restarts (Geometry Dash feel). Her first death anywhere is watched in full. After that
 //     the strike is short and the next take starts 0.6 s after the body lands; Space, Enter or J
 //     cuts even that short.
-//   - Takes (lives): 5 per episode visit, shown at the right end of the caption strip. At 0 the
-//     episode starts again from its own start with 5 fresh takes. Bodies stay. Never further
-//     back than the episode's start. Story mode (immunity) hides them; satellite screens, side
-//     rooms and the Moon city have none.
+//   - Lives: 5 per episode visit, shown at the right end of the caption strip as LIVES pips
+//     (the TAKE n stamp is the show's own count of every take, a different thing). A death goes
+//     back to the visit's last checkpoint, if the episode set one (setCheckpoint); losing the
+//     last life clears it, so she starts again from the episode's start with 5. Bodies stay.
+//     Never further back than the episode's start. Story mode (immunity) hides HP and lives;
+//     satellite screens, side rooms and the Moon city have neither.
 //   - What got her is captioned once per cause, never again on a retry.
 // A scene learns why it started from its data: { retry: true } after a death or a restart by
-// choice, { outOfTakes: true } (with the visit's own start data) after the last take.
+// choice, plus { checkpoint } when one is set, and { outOfTakes: true } after the last life.
+// A start without retry is a new visit. Out of lives is still a retry, so entry cards, cut
+// scene captions and first lines do not replay.
 import { state } from './state.js';
 import { overlay } from './overlay.js';
 import { deathLine } from '../data/dialogue.js';
@@ -28,19 +32,24 @@ export const hasTakes = scene => !!scene.epId && !NO_TAKES.includes(keyOf(scene)
 export function startTakes(scene) {
   const id = scene.epId; if (!id) return;
   const data = (scene.sys.settings && scene.sys.settings.data) || {};
-  if (!data.retry || !visits[id]) {
-    const keep = Object.assign({}, data); delete keep.retry; delete keep.outOfTakes;
-    visits[id] = { left: TAKES, data: keep };
-  }
+  if (!data.retry || !visits[id]) visits[id] = { left: TAKES, checkpoint: null };
+  else if (data.outOfTakes) { visits[id].left = TAKES; visits[id].checkpoint = null; }
   scene.takesLeft = visits[id].left;
 }
+// An episode marks a checkpoint (any data it wants back, for example { x: 412 }). Deaths in this
+// visit restart with data.checkpoint set to it; losing the last life clears it.
+export function setCheckpoint(scene, at) { const v = scene.epId && visits[scene.epId]; if (v) v.checkpoint = at || null; }
+// the data a retry restarts with (a death, Backspace, or the pause menu's RETRY)
+export function retryData(scene) { const v = scene.epId && visits[scene.epId]; return Object.assign({ retry: true }, v && v.checkpoint ? { checkpoint: v.checkpoint } : {}); }
+export const checkpointOf = scene => { const d = scene.sys && scene.sys.settings && scene.sys.settings.data; return (d && d.retry && d.checkpoint) || null; };
 export const takesLeft = scene => (scene.epId && visits[scene.epId] ? visits[scene.epId].left : TAKES);
 
-// HP at the left end of the strip and takes at the right: hidden in story mode
+// HP at the left end of the strip and lives at the right: hidden in story mode, and both hidden
+// where nothing can kill her (the Moon city, side rooms)
 export function showStatus(scene, hp, maxHp) {
-  const hide = state.immune;
+  const hide = state.immune || !hasTakes(scene);
   if (hp !== undefined) cg.hp(hide || hp == null ? null : hp, maxHp);
-  cg.lives(hide || !hasTakes(scene) ? null : takesLeft(scene), TAKES);
+  cg.lives(hide ? null : takesLeft(scene), TAKES);
 }
 
 // after immunity changes: show or hide HP and takes for whatever scene is up
@@ -49,15 +58,16 @@ export function refreshStatus(scene) {
   if (scene.epId) showStatus(scene, hp, scene.hpMax || 3);
 }
 
-// The next take: the same visit, or (out of takes) the episode from its start.
+// The next take: back to the visit's checkpoint (or its start), or, out of lives, the episode
+// from its start with 5 again.
 function nextTake(scene, fadeMs) {
   const v = visits[scene.epId], out = hasTakes(scene) && v && v.left <= 0;
-  const go = () => scene.scene.restart(out ? Object.assign({}, v.data, { outOfTakes: true }) : { retry: true });
-  if (!out) { scene.cameras.main.fadeOut(fadeMs, 0, 0, 0); scene.time.delayedCall(fadeMs + 10, go); return; }
-  // out of takes: a stamp on black, then the episode from the top with 5 again
+  const go = () => scene.scene.restart(out ? { retry: true, outOfTakes: true } : retryData(scene));
   scene.cameras.main.fadeOut(fadeMs, 0, 0, 0);
-  scene.time.delayedCall(fadeMs + 10, () => overlay.card('NO TAKES LEFT', 'From the top', 1500, 'center'));
-  scene.time.delayedCall(fadeMs + 1300, go);
+  if (!out) { scene.time.delayedCall(fadeMs + 10, go); return; }
+  // out of lives: a stamp on black, gone before the next take's own stamp
+  scene.time.delayedCall(fadeMs + 10, () => overlay.card('OUT OF LIVES', 'Episode from the top', 1150, 'center'));
+  scene.time.delayedCall(fadeMs + 1200, go);
 }
 
 // impact(quiet): hide her and leave the body (quiet: no burst, flash or sound).
@@ -65,7 +75,7 @@ function nextTake(scene, fadeMs) {
 export function beginDeath(scene, src, impact, fire) {
   const fast = state.bodyCount() > 0;
   const d = scene.death = { impacted: false, skipping: false, skippable: fast, fast };
-  // a take used up (not in story mode, where nothing kills her anyway)
+  // a life used up (not in story mode, where nothing kills her anyway)
   if (hasTakes(scene) && visits[scene.epId]) { visits[scene.epId].left = Math.max(0, visits[scene.epId].left - 1); scene.takesLeft = visits[scene.epId].left; showStatus(scene); }
   d.hit = quiet => {
     if (d.impacted) return; d.impacted = true; impact(!!quiet);

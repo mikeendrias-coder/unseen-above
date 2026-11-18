@@ -22,7 +22,7 @@ const CONTROLS = {
     '{S} crouches. {W} opens doors. {Shift} runs.',
     '{J} uses and talks. {K} throws and swings.',
     '{L} glasses. {Enter} skips a line.',
-    '{Bksp} restarts. {P} pauses. {M} sound.',
+    '{Bksp} retries. {P} pauses. {M} sound.',
     '{I} immunity. {N} skips ahead.'
   ]
 };
@@ -40,7 +40,7 @@ export function initPause(game, hooks) {
   function build() {
     const sc = main, key = keyOf(sc), R = [];
     R.push({ id: 'resume', label: 'RESUME', help: 'Back to the show. P or Esc too.' });
-    if (sc.restartTake && (!sc.canRestart || sc.canRestart())) R.push({ id: 'restart', label: key === 'satellite' ? 'RESTART THIS BATCH' : 'RESTART THIS EPISODE', help: 'From the top. Costs no take.' });
+    if (sc.restartTake && (!sc.canRestart || sc.canRestart())) R.push({ id: 'restart', label: key === 'satellite' ? 'RESTART THIS BATCH' : 'RETRY', help: key === 'satellite' ? 'This batch from the top.' : 'Start this take again. Costs no life.' });
     if (canSkip(sc)) R.push({ id: 'skip', label: 'SKIP AHEAD', help: key === 'satellite' ? 'Solves this screen.' : 'To the next part of this stage.' });
     R.push({ id: 'story', label: 'IMMUNITY', value: state.immune ? 'ON' : 'OFF', adjust: true, help: 'Nothing can kill her. N skips ahead.' });
     R.push({ id: 'music', label: 'MUSIC', value: bars(state.settings.music), adjust: true, help: 'Left and right set the level.' });
