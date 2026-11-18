@@ -3,8 +3,10 @@
 // in a row: it ricochets side to side, bounces off the top of the view, bends in a long curve,
 // circles her before it closes in, skims the floor and comes back up, or splits in two and
 // meets itself at her. Then the beam dies out from the satellite end toward the impact,
-// thinning, flickering and shedding embers, and the scorch fades. Nothing comes from the
-// viewer's side.
+// breaking up and shedding embers, and the scorch cools. Nothing comes from the viewer's side.
+// Final pass (Nov 17): a crisp pixel beam. Every line is laid pixel by pixel on the world grid in
+// solid palette colors (a red band, a pale core); nothing glows, blends or fades by alpha. A short
+// strike (fire({ short: true })) is used after her first death, for fast restarts.
 //
 // Use: const s = new SatelliteStrike(scene, { depth: 8 }); in update: s.update(dt);
 //      s.fire({ view: camera.worldView, tx, ty, P, onImpact, style? }). Pass { parent: container }
@@ -13,6 +15,7 @@ import { hexNum } from './painter.js';
 import { Sound } from '../core/sound.js';
 
 export const STRIKE = { flare: 0.14, travel: 0.24, hold: 0.1, die: 0.52, scorch: 0.9 };
+const SHORT = { flare: 0.05, travel: 0.13, hold: 0.05, die: 0.22, scorch: 0.4 };
 const ease = u => u * u * (3 - 2 * u);
 const STYLES = [['zigzag', 3], ['ceiling', 2], ['bend', 3], ['orbit', 2], ['floor', 1.5], ['split', 2]];
 let lastStyle = null;
@@ -27,7 +30,7 @@ export class SatelliteStrike {
   constructor(scene, opts) {
     opts = opts || {};
     this.scene = scene; this.sound = opts.sound !== false;
-    this.glow = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    this.glow = scene.add.graphics(); // the red band and embers (solid, under the core)
     this.core = scene.add.graphics();
     if (opts.parent) { opts.parent.add(this.glow); opts.parent.add(this.core); }
     else { this.glow.setDepth(opts.depth || 8); this.core.setDepth((opts.depth || 8) + 0.1); }
@@ -85,16 +88,18 @@ export class SatelliteStrike {
     g.fillStyle(hexNum(P.glass), 1); g.fillRect(x - 4, y - 1, 1, 2); g.fillRect(x + 5, y - 1, 1, 2);
     g.fillStyle(hexNum(P.colHi), 1); g.fillRect(x - 1, y - 2, 3, 3);
     g.fillStyle(hexNum(P.hazard), 1); g.fillRect(x, y + 1, 1, 1);
-    if (glowG && flare > 0) { glowG.fillStyle(hexNum(P.hazard), 0.35 * flare); glowG.fillCircle(x + 0.5, y + 1.5, 2 + 4 * flare); glowG.fillStyle(hexNum(P.hazardCore), 0.5 * flare); glowG.fillCircle(x + 0.5, y + 1.5, 1 + 1.5 * flare); }
+    // the emitter flares as a hard pixel cross that grows in whole steps
+    if (glowG && flare > 0.15) { const r = flare > 0.7 ? 3 : flare > 0.4 ? 2 : 1; glowG.fillStyle(hexNum(P.hazard), 1); glowG.fillRect(x - r, y + 1, 2 * r + 1, 1); glowG.fillRect(x, y + 1 - r, 1, 2 * r + 1); glowG.fillStyle(hexNum(P.hazardCore), 1); glowG.fillRect(x, y + 1, 1, 1); }
   }
 
   fire(o) {
     const style = o.style || pickStyle(), list = this.paths(o.view, o.tx, o.ty, o.from, style);
     const paths = list.map(pts => { const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y)); return { pts, cum, L: cum[cum.length - 1], passed: 0 }; });
-    const travel = style === 'orbit' ? 0.4 : style === 'bend' ? 0.3 : STRIKE.travel;
-    this.shot = { paths, style, travel, t: 0, P: o.P, onImpact: o.onImpact, hit: false, sat: { x: list[0][0].x, y: list[0][0].y - 3 }, small: !!o.small };
-    if (this.sound) Sound.tone(2600, 0.22, 'sawtooth', 0.016, 900);
-    return STRIKE.flare + travel + STRIKE.hold + STRIKE.die;
+    const T = o.short ? SHORT : STRIKE, k = o.short ? 0.55 : 1;
+    const travel = (style === 'orbit' ? 0.4 : style === 'bend' ? 0.3 : STRIKE.travel) * k;
+    this.shot = { paths, style, travel, t: 0, T, P: o.P, onImpact: o.onImpact, hit: false, sat: { x: list[0][0].x, y: list[0][0].y - 3 }, small: !!o.small };
+    if (this.sound) Sound.tone(2600, o.short ? 0.12 : 0.22, 'sawtooth', 0.016, 900);
+    return T.flare + travel + T.hold + T.die;
   }
 
   at(p, d) {
@@ -103,13 +108,20 @@ export class SatelliteStrike {
     return pts[pts.length - 1];
   }
   // draw one path between distances a and b
+  // the path between distances a and b, laid pixel by pixel: width 1 (the core) or 3 (the band).
+  // dashed: broken into short pieces with gaps, for a beam that is dying out.
   span(g, p, a, b, width, color, alpha, dashed) {
-    const { pts, cum } = p;
-    g.lineStyle(width, color, alpha);
+    const { pts, cum } = p, w = width >= 2 ? 3 : 1, o = w === 3 ? 1 : 0;
+    g.fillStyle(color, 1);
+    const line = (x0, y0, x1, y1) => {
+      x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+      const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy, n = 0;
+      for (;;) { g.fillRect(x0 - o, y0 - o, w, w); if ((x0 === x1 && y0 === y1) || ++n > 2000) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
+    };
     for (let i = 1; i < pts.length; i++) {
       const lo = Math.max(a, cum[i - 1]), hi = Math.min(b, cum[i]); if (hi <= lo) continue;
-      if (!dashed) { const q0 = this.at(p, lo), q1 = this.at(p, hi); g.lineBetween(q0.x, q0.y, q1.x, q1.y); continue; }
-      for (let d = lo; d < hi; d += 7) { if (Math.random() < 0.35) continue; const q0 = this.at(p, d), q1 = this.at(p, Math.min(hi, d + 4)); g.lineBetween(q0.x, q0.y, q1.x, q1.y); }
+      if (!dashed) { const q0 = this.at(p, lo), q1 = this.at(p, hi); line(q0.x, q0.y, q1.x, q1.y); continue; }
+      for (let d = lo; d < hi; d += 6) { if (((d * 7) | 0) % 3 === 0) continue; const q0 = this.at(p, d), q1 = this.at(p, Math.min(hi, d + 3)); line(q0.x, q0.y, q1.x, q1.y); }
     }
   }
   spark(x, y, n, speed, cols) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = speed * (0.4 + Math.random()); this.bits.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, life: 0.25 + Math.random() * 0.35, t: 0, c: cols[i % cols.length] }); } }
@@ -123,9 +135,9 @@ export class SatelliteStrike {
     if (s) {
       s.t = window.__strikeHold != null ? window.__strikeHold : s.t + dt; // tests can hold a moment
       const P = s.P, red = hexNum(P.hazard), white = hexNum(P.hazardCore), t = s.t;
-      const tTravel = STRIKE.flare, tHit = tTravel + s.travel, tDie = tHit + STRIKE.hold, tEnd = tDie + STRIKE.die;
+      const T = s.T, tTravel = T.flare, tHit = tTravel + s.travel, tDie = tHit + T.hold, tEnd = tDie + T.die;
       // the satellite: a body, two panels, an emitter that flares
-      const sat = s.sat, flare = t < tDie ? Math.min(1, t / STRIKE.flare) : Math.max(0, 1 - (t - tDie) / STRIKE.die);
+      const sat = s.sat, flare = t < tDie ? Math.min(1, t / T.flare) : Math.max(0, 1 - (t - tDie) / T.die);
       SatelliteStrike.drawSat(c, P, sat.x, sat.y, g, flare);
       const tg = s.paths[0].pts[s.paths[0].pts.length - 1];
       if (t >= tTravel && t < tHit) {
@@ -133,34 +145,40 @@ export class SatelliteStrike {
         const u = ease((t - tTravel) / s.travel);
         s.paths.forEach(p => {
           const head = p.L * u;
-          this.span(g, p, 0, head, 3, red, 0.4); this.span(c, p, 0, head, 1, white, 1);
+          this.span(g, p, 0, head, 3, red, 1); this.span(c, p, 0, head, 1, white, 1);
           const h = this.at(p, head); c.fillStyle(0xebe6d8, 1); c.fillRect(Math.round(h.x) - 1, Math.round(h.y) - 1, 2, 2);
           while (p.passed < p.pts.length - 2 && head >= p.cum[p.passed + 1]) { p.passed++; const v = p.pts[p.passed]; if (v.k) { this.spark(v.x, v.y, 6, 70, [white, red]); if (this.sound) Sound.tone(3200 - p.passed * 300, 0.035, 'square', 0.012); } else if (p.passed % 6 === 0) this.spark(v.x, v.y, 1, 20, [red]); }
         });
         // a lock box closes on her while the beam is on its way
         const r = 8 * (1 - (t - tTravel) / s.travel) + 3;
-        c.lineStyle(1, red, 1); c.strokeRect(Math.round(tg.x - r), Math.round(tg.y - r), Math.round(2 * r), Math.round(2 * r));
+        const bx = Math.round(tg.x - r), by = Math.round(tg.y - r), bw = Math.round(2 * r); c.fillStyle(red, 1); c.fillRect(bx, by, bw, 1); c.fillRect(bx, by + bw - 1, bw, 1); c.fillRect(bx, by, 1, bw); c.fillRect(bx + bw - 1, by, 1, bw);
       } else if (t >= tHit && t < tEnd) {
         if (!s.hit) { s.hit = true; this.spark(tg.x, tg.y, s.small ? 8 : 18, s.small ? 70 : 110, [white, red, hexNum(P.lamp)]); if (s.onImpact) s.onImpact(); }
         if (t < tDie) {
-          // full beam, a little wider for a beat
-          const pulse = 1 + 0.6 * Math.sin((t - tHit) * 60);
-          s.paths.forEach(p => { this.span(g, p, 0, p.L, 3 + pulse, red, 0.45); this.span(c, p, 0, p.L, 1, white, 1); });
+          // the full beam: a solid red band with a pale core
+          s.paths.forEach(p => { this.span(g, p, 0, p.L, 3, red, 1); this.span(c, p, 0, p.L, 1, white, 1); });
         } else {
           // dying out: the tail retracts toward her, the beam thins, flickers, breaks up, sheds embers
-          const v = (t - tDie) / STRIKE.die, on = Math.random() > v * 0.5;
+          // dying out: the tail retracts toward her; the band goes first, then the core breaks up
+          const v = (t - tDie) / T.die;
           s.paths.forEach(p => {
             const tail = p.L * ease(v);
-            if (on) { this.span(g, p, tail, p.L, 3 * (1 - v) + 0.5, red, 0.4 * (1 - v)); this.span(c, p, tail, p.L, 1, white, 1 - v * 0.7, v > 0.45); }
-            if (Math.random() < 0.8) { const d = tail + Math.random() * (p.L - tail), q = this.at(p, d); this.bits.push({ x: q.x, y: q.y, vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 15, life: 0.3 + Math.random() * 0.3, t: 0, c: Math.random() < 0.5 ? red : white }); }
+            if (v < 0.4) this.span(g, p, tail, p.L, 3, red, 1);
+            this.span(c, p, tail, p.L, 1, v < 0.4 ? white : red, 1, v > 0.4);
+            if (Math.random() < 0.5) { const d = tail + Math.random() * (p.L - tail), q = this.at(p, d); this.bits.push({ x: q.x, y: q.y, vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 15, life: 0.2 + Math.random() * 0.2, t: 0, c: Math.random() < 0.5 ? red : white }); }
           });
         }
         // a scorch at the impact that cools
-        const k = Math.max(0, 1 - (t - tHit) / STRIKE.scorch);
-        g.fillStyle(red, 0.3 * k); g.fillCircle(tg.x, tg.y, 3 + 5 * (1 - k)); g.fillStyle(white, 0.6 * k * k); g.fillCircle(tg.x, tg.y, 1.5);
-        g.lineStyle(1, red, 0.6 * k); g.strokeCircle(tg.x, tg.y, 4 + 14 * (1 - k));
+        // a scorch at the impact: a ring of pixels that steps outward, a pale spot that goes out
+        const k = Math.max(0, 1 - (t - tHit) / T.scorch);
+        if (k > 0) {
+          const cx = Math.round(tg.x), cy = Math.round(tg.y), R = 4 + 3 * Math.floor((1 - k) * 4);
+          if (k > 0.5) { g.fillStyle(white, 1); g.fillRect(cx - 1, cy - 1, 3, 3); }
+          g.fillStyle(red, 1);
+          for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; g.fillRect(Math.round(cx + Math.cos(a) * R), Math.round(cy + Math.sin(a) * R), 1, 1); }
+        }
       } else if (t >= tEnd) this.shot = null;
     }
-    this.bits.forEach(b => { const a = 1 - b.t / b.life; g.fillStyle(b.c, a); g.fillRect(Math.round(b.x), Math.round(b.y), 1, 1); });
+    this.bits.forEach(b => { g.fillStyle(b.c, 1); g.fillRect(Math.round(b.x), Math.round(b.y), 1, 1); });
   }
 }

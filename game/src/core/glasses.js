@@ -43,27 +43,30 @@ export class Glasses {
   get showing() { return this.on && this.out <= 0; }
   get level() { return this.on ? 0.06 + this.heat * 0.5 + (this.out > 0 ? 0.35 : 0) + (this.cracked ? 0.08 : 0) : 0; }
 
-  // static over the whole view while they are on, in screen space
+  // static over the whole view while they are on, in screen space: single solid pixels, torn
+  // rows laid every other pixel, and when the picture blinks out, every third row goes dark.
+  // Flat palette colors only, nothing faded (Nov 17 final pass).
   drawStatic(g, col) {
     const lv = this.level; if (lv <= 0) return;
-    const n = Math.round(40 + lv * 520);
-    for (let i = 0; i < n; i++) { g.fillStyle(Math.random() < 0.5 ? 0xebe6d8 : col, (0.08 + Math.random() * 0.25) * Math.min(1, lv * 1.6)); g.fillRect(Math.floor(Math.random() * 320), Math.floor(Math.random() * 180), Math.random() < 0.85 ? 1 : 2, 1); }
+    const n = Math.round(20 + lv * 220);
+    for (let i = 0; i < n; i++) { g.fillStyle(Math.random() < 0.5 ? 0xebe6d8 : col, 1); g.fillRect(Math.floor(Math.random() * 320), Math.floor(Math.random() * 180), 1, 1); }
     const tears = Math.floor(lv * 4 + Math.random() * 1.5);
-    for (let i = 0; i < tears; i++) { g.fillStyle(col, 0.06 + lv * 0.12); g.fillRect(0, Math.floor(Math.random() * 180), 320, 1 + Math.floor(Math.random() * 2)); }
-    if (this.out > 0) { g.fillStyle(col, (0.05 + lv * 0.06) * fx.level); g.fillRect(0, 0, 320, 180); }
-    // running hot: a red edge pulses slowly around the view before they cut out
-    if (this.on && this.heat > 0.72) { const a = 0.18 + 0.22 * (0.5 + 0.5 * Math.sin(this.t * 11)); g.fillStyle(0xe3412b, a); g.fillRect(0, 0, 320, 2); g.fillRect(0, 178, 320, 2); g.fillRect(0, 2, 2, 176); g.fillRect(318, 2, 2, 176); }
+    g.fillStyle(col, 1);
+    for (let i = 0; i < tears; i++) { const y = Math.floor(Math.random() * 180), x0 = Math.floor(Math.random() * 2); for (let x = x0; x < 320; x += 2) g.fillRect(x, y, 1, 1); }
+    if (this.out > 0) { g.fillStyle(0x0e0f12, 1); for (let y = Math.floor(this.t * 30) % 4; y < 180; y += fx.reduced ? 8 : 4) g.fillRect(0, y, 320, 1); }
+    // running hot: a red edge blinks around the view before they cut out
+    if (this.on && this.heat > 0.72 && Math.floor(this.t * (fx.reduced ? 2 : 5)) % 2 === 0) { g.fillStyle(0xe3412b, 1); g.fillRect(0, 0, 320, 2); g.fillRect(0, 178, 320, 2); g.fillRect(0, 2, 2, 176); g.fillRect(318, 2, 2, 176); }
   }
   // a small readout in the corner: the key, on or off, and how hot they are
   drawMeter(g, x, y, col) {
     if (!this.has || !overlay.free(x - 3, y - 3, 56, 12)) return; // a caption over it: it steps aside
     const hot = hexNum('#e3412b'), label = this.over > 0 ? 'HOT' : this.on ? 'ON' : 'OFF';
-    g.fillStyle(0x000000, 0.45); g.fillRect(x - 2, y - 2, 52, 9);
-    pixText(g, 'L', x, y, 0xebe6d8, 1, 0.9);
-    pixText(g, label, x + 6, y, this.over > 0 ? hot : this.on ? col : 0x8f8d87, 1, this.over > 0 && Math.floor(this.t * 6) % 2 ? 0.4 : 0.95);
+    g.fillStyle(0x0e0f12, 1); g.fillRect(x - 2, y - 2, 52, 9);
+    pixText(g, 'L', x, y, 0xebe6d8, 1, 1);
+    if (!(this.over > 0 && Math.floor(this.t * 6) % 2)) pixText(g, label, x + 6, y, this.over > 0 ? hot : this.on ? col : 0x8f8d87, 1, 1);
     const bx = x + 22, w = 24;
-    g.fillStyle(0xebe6d8, 0.2); g.fillRect(bx, y + 1, w, 3);
-    g.fillStyle(this.heat > 0.7 ? hot : col, 0.9); g.fillRect(bx, y + 1, Math.round(w * this.heat), 3);
-    if (this.flash > 0) { g.lineStyle(1, 0xebe6d8, this.flash * 2); g.strokeRect(x - 3, y - 3, 54, 11); }
+    g.fillStyle(0x45474d, 1); g.fillRect(bx, y + 1, w, 3);
+    g.fillStyle(this.heat > 0.7 ? hot : col, 1); g.fillRect(bx, y + 1, Math.round(w * this.heat), 3);
+    if (this.flash > 0) { g.fillStyle(0xebe6d8, 1); g.fillRect(x - 3, y - 3, 54, 1); g.fillRect(x - 3, y + 7, 54, 1); g.fillRect(x - 3, y - 3, 1, 11); g.fillRect(x + 50, y - 3, 1, 11); }
   }
 }

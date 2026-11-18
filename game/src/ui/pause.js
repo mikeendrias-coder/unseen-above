@@ -1,4 +1,4 @@
-// The pause menu, page 100 on CH 07 TEXT. P or Esc opens it (in the opening and the kids' room
+// The pause menu, form 100 (ui/cg.js drawMenu). P or Esc opens it (in the opening and the kids' room
 // Esc still skips, so P), and so does the window losing focus or the tab being hidden. Every
 // scene that was running waits, the sound goes quieter (silent while the window is away), and the
 // keys and the mouse belong to the menu until it closes.
@@ -16,13 +16,14 @@ const PLACE = {
 };
 const ESC_SKIPS = ['intro', 'kids'];
 const CONTROLS = {
-  num: 101, title: 'Controls', band: TV.yellow,
+  num: 101, title: 'Controls', stamp: 'FILED',
   lines: [
-    'Left hand: {A} {D} move. {Space} jumps. {S} crouches. {W} goes through a door. {Shift} runs.',
-    'Right hand: {J} uses, looks and talks. {K} or a {click} throws or swings. {L} glasses.',
-    '{Enter} skips a line. {Backspace} restarts the episode. {M} sound.',
-    '{P} or {Esc} pauses. Satellite screens: drag with the mouse.',
-    'Story mode: {N} skips ahead.'
+    '{A} {D} move. {Space} jumps, twice.',
+    '{S} crouches. {W} opens doors. {Shift} runs.',
+    '{J} uses and talks. {K} throws and swings.',
+    '{L} glasses. {Enter} skips a line.',
+    '{Bksp} retries. {P} pauses. {M} sound.',
+    '{I} immunity. {N} skips ahead.'
   ]
 };
 const bars = n => '█'.repeat(n) + '·'.repeat(5 - n);
@@ -39,14 +40,14 @@ export function initPause(game, hooks) {
   function build() {
     const sc = main, key = keyOf(sc), R = [];
     R.push({ id: 'resume', label: 'RESUME', help: 'Back to the show. P or Esc too.' });
-    if (sc.restartTake && (!sc.canRestart || sc.canRestart())) R.push({ id: 'restart', label: key === 'satellite' ? 'RESTART THIS BATCH' : 'RESTART THIS EPISODE', help: 'From the top of this part. A new take.' });
+    if (sc.restartTake && (!sc.canRestart || sc.canRestart())) R.push({ id: 'restart', label: key === 'satellite' ? 'RESTART THIS BATCH' : 'RETRY', help: key === 'satellite' ? 'This batch from the top.' : 'Start this take again. Costs no life.' });
     if (canSkip(sc)) R.push({ id: 'skip', label: 'SKIP AHEAD', help: key === 'satellite' ? 'Solves this screen.' : 'To the next part of this stage.' });
-    R.push({ id: 'story', label: 'STORY MODE', value: state.immune ? 'ON' : 'OFF', adjust: true, help: 'Nothing can kill her. N skips ahead.' });
+    R.push({ id: 'story', label: 'IMMUNITY', value: state.immune ? 'ON' : 'OFF', adjust: true, help: 'Nothing can kill her. N skips ahead.' });
     R.push({ id: 'music', label: 'MUSIC', value: bars(state.settings.music), adjust: true, help: 'Left and right set the level.' });
     R.push({ id: 'sfx', label: 'EFFECTS', value: bars(state.settings.sfx), adjust: true, help: 'Left and right set the level.' });
     R.push({ id: 'flash', label: 'FLASHING', value: state.settings.reduceFlash ? 'REDUCED' : 'FULL', adjust: true, help: 'Reduced: dim, slow, fewer flashes.' });
     R.push({ id: 'shake', label: 'SCREEN SHAKE', value: state.settings.shake ? 'ON' : 'OFF', adjust: true, help: 'Off: the picture holds still.' });
-    R.push({ id: 'controls', label: 'CONTROLS', help: 'Every key, on one page.' });
+    R.push({ id: 'controls', label: 'CONTROLS', help: 'Every key on one notice.' });
     R.push({ id: 'guide', label: 'TITLE SCREEN', help: 'Back to the start. Your place is kept.' });
     return R;
   }
@@ -57,7 +58,7 @@ export function initPause(game, hooks) {
     at = Math.max(0, rows.findIndex(r => r.id === keep));
     cg.menu({ rows, at, where: where(main) });
     if (el) {
-      el.querySelector('.panel-kicker').textContent = 'Page 100';
+      el.querySelector('.panel-kicker').textContent = 'Form 100';
       el.querySelector('.panel-title').textContent = 'Paused';
       el.querySelector('.panel-body').replaceChildren(...rows.map((r, i) => { const p = document.createElement('p'); p.textContent = (i === at ? '> ' : '') + r.label.toLowerCase() + (r.value != null ? ': ' + r.value.replace(/█/g, '#').replace(/·/g, '-').toLowerCase() : ''); return p; }));
       el.classList.add('on');
@@ -124,7 +125,7 @@ export function initPause(game, hooks) {
     else if (r.id === 'skip') { closeMenu(); sc.skipAhead(); }
     else if (r.id === 'controls') {
       sub = 'controls'; cg.page(Object.assign({}, CONTROLS)); Sound.tone(700, 0.05, 'triangle', 0.02);
-      if (el) { el.querySelector('.panel-kicker').textContent = 'Page 101'; el.querySelector('.panel-title').textContent = 'Controls'; el.querySelector('.panel-body').replaceChildren(...CONTROLS.lines.map(l => { const p = document.createElement('p'); p.textContent = l.replace(/[{}]/g, ''); return p; })); }
+      if (el) { el.querySelector('.panel-kicker').textContent = 'Notice 101'; el.querySelector('.panel-title').textContent = 'Controls'; el.querySelector('.panel-body').replaceChildren(...CONTROLS.lines.map(l => { const p = document.createElement('p'); p.textContent = l.replace(/[{}]/g, ''); return p; })); }
     }
     else if (r.id === 'guide') { closeMenu(false); hooks.guide(); }
   }
@@ -153,9 +154,10 @@ export function initPause(game, hooks) {
   }, true);
 
   // the mouse: a row under the pointer is picked; a click uses it
-  const grid = ev => { const c = document.getElementById('cg'), r = c && c.getBoundingClientRect(); return r && r.width ? { x: (ev.clientX - r.left) / r.width * 320, y: (ev.clientY - r.top) / r.height * 180 } : null; };
+  const grid = ev => { const c = document.getElementById('cg'), r = c && c.getBoundingClientRect(); return r && r.width ? { x: (ev.clientX - r.left) / r.width * 320, y: (ev.clientY - r.top) / r.height * 210 } : null; };
   window.addEventListener('pointerdown', ev => {
     if (!open) return;
+    const foot = document.getElementById('chrome-bottom'); if (foot && foot.contains(ev.target)) return; // the keys under the game still work
     ev.preventDefault(); ev.stopPropagation();
     if (sub === 'controls') { sub = null; cg.closePage(); show(); return; }
     const g = grid(ev), i = g ? cg.menuHit(g.x, g.y) : -1;

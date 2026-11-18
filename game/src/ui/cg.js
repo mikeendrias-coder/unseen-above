@@ -1,24 +1,30 @@
 // The show's character generator: every line the viewer reads over the picture, drawn on the
 // same 320 x 180 grid as the game in the caption face, on its own canvas over the game canvas.
-// Four voices, each from television:
-//   captions     what is said and heard, white on black, one box per line (closed captions)
-//   lower thirds the episode and the take, a red tag over a black title (the show's titles)
-//   text pages   how to play, a numbered page with a colored band (teletext)
-//   the set      the viewer's own TV: sound and picture changes in green (on-screen display)
+// Final pass (Nov 17): the show is a bureaucracy (Papers, Please). Everything it hands the viewer
+// is paperwork: how-to pages are NOTICE slips on bone paper with ash ink and key caps, the pause
+// menu is a form, titles are a paper label under a red stamp. Red only ever means the watchers.
+// Flat colors from the one palette, no alpha haze, no slides: things pop on and off.
+//   captions     what is said and heard, bone on black, in the strip under the picture
+//   strip ends   her HP at the left end, the lives left at the right end
+//   titles       a red stamp (EPISODE 1, TAKE 4) over a paper label
+//   notices      how to play: a numbered slip, three short lines, a red stamp
+//   the form     the pause menu, form 100
+//   the set      the viewer's TV: sound and settings, gold with a hard shadow
 // HTML elements beside it carry the same words for screen readers; this canvas is only pixels.
-import { ccText, ccWidth, ccWrap, ccBox, ccRich, ccCaptionBlock, plain, ADV } from '../art/ccfont.js';
+import { ccText, ccWidth, ccWrap, ccBox, ccCaptionBlock, plain, ADV } from '../art/ccfont.js';
+import { ASH } from '../art/palettes.js';
 import { STRIP } from '../core/display.js';
 
 const W = 320, H = 180;
-// a broadcast palette that never changes with her world's look
-// The show's character generator, in the locked Ash and Gold palette: bone on black for words,
-// gold for keys and wealth, red only for what watches her. The old teletext names are kept as roles.
-export const TV = { black: '#0e0f12', white: '#ebe6d8', yellow: '#d6a03c', cyan: '#f2d58c', red: '#e3412b', green: '#f5ce77', magenta: '#b8b2a3', grey: '#8f8d87', salmon: '#ffd9d0' };
+// The old teletext role names, kept because scenes use them, now in Ash and Gold.
+export const TV = { black: ASH.ash0, white: ASH.bone, yellow: ASH.gold, cyan: ASH.goldHi, red: ASH.red, green: ASH.lit, magenta: ASH.boneLo, grey: ASH.ash5, salmon: ASH.redHi };
+// paper and ink
+const PAPER = ASH.bone, PAPER_LO = ASH.boneLo, INK = ASH.ash0, INK_LO = ASH.ash3, RULE = ASH.ash5;
 
-const S = { hp: null, caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null, menu: null };
+const S = { hp: null, lives: null, caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null, menu: null, flash: null };
 let cv = null, ctx = null, running = false;
 const now = () => performance.now() / 1000;
-const ease = u => 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3);
+const pats = new Map();
 
 function ensure() {
   if (ctx) return true;
@@ -28,36 +34,56 @@ function ensure() {
   return true;
 }
 function kick() { if (!ensure() || running) return; running = true; requestAnimationFrame(frame); }
-const busy = () => !!(S.hp || S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page || S.menu);
+const busy = () => !!(S.hp || S.lives || S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page || S.menu || S.flash);
+
+// a two-color-free dither: one palette color on every other pixel (checker) or one in four (q25)
+function pattern(color, kind) {
+  const key = color + kind; if (pats.has(key)) return pats.get(key);
+  const t = document.createElement('canvas'); t.width = 2; t.height = 2; const x = t.getContext('2d'); x.fillStyle = color;
+  if (kind === 'q25') x.fillRect(0, 0, 1, 1); else { x.fillRect(0, 0, 1, 1); x.fillRect(1, 1, 1, 1); }
+  const p = ctx.createPattern(t, 'repeat'); pats.set(key, p); return p;
+}
+function dim(x, y, w, h) { ctx.fillStyle = pattern(INK, 'checker'); ctx.fillRect(x, y, w, h); }
 
 function frame() {
   const t = now();
   if (S.caption && S.caption.until && t > S.caption.until) S.caption = null;
-  S.cards = S.cards.filter(c => !(c.outAt && t > c.outAt + 0.2));
+  S.cards = S.cards.filter(c => t < c.outAt);
   S.osd = S.osd.filter(o => t < o.until);
   if (S.bug && t > S.bug.until) S.bug = null;
   if (S.rec && t > S.rec.until) S.rec = null;
+  if (S.flash && t > S.flash.until) S.flash = null;
+  if (S.page && S.page.closeAt) S.page = null;
   ctx.clearRect(0, 0, W, H + STRIP);
   if (!busy()) { running = false; return; }
-  if (!S.menu) { drawCards(t); drawCaption(t); drawHp(); }
-  drawPage(t); drawMenu(t); drawTop(t); // the set's own messages sit over the picture; pages and the menu cover them
+  drawFlash();
+  if (!S.menu) { drawCards(t); drawCaption(t); drawStrip(); }
+  drawPage(t); drawMenu(t); drawTop(t);
   requestAnimationFrame(frame);
 }
 
-// ------------------------------------------------------------------ captions
-// Captions live in their own strip under the picture (y 180 to 210 on this canvas), so they
-// never cover the game: one line in the middle of the strip, up to three filling it. What she looks at (narration) takes the strip over while it is
-// up, and the scene holds its own lines until it is gone.
-const CAP_COLS = 44, CAP_ROW = 10; // 44 columns leave the strip's left end for her HP
-// her HP: small squares at the left end of the strip, filled for each one left
-function drawHp() {
-  const h = S.hp; if (!h) return;
-  const y = H + Math.round(STRIP / 2) - 3;
-  for (let i = 0; i < h.max; i++) { const x = 6 + i * 8; ctx.fillStyle = TV.grey; ctx.fillRect(x, y, 6, 6); ctx.fillStyle = i < h.n ? TV.white : TV.black; ctx.fillRect(x + 1, y + 1, 4, 4); }
+// ------------------------------------------------------------------ a flash (core/fx.js)
+// Flat: one palette color on a checker over the picture, held a moment, then gone.
+function drawFlash() { const f = S.flash; if (!f) return; ctx.fillStyle = pattern(f.color, f.kind); ctx.fillRect(0, 0, W, H); }
+
+// ------------------------------------------------------------------ the strip under the picture
+// Captions in the middle (40 columns), her HP at the left end, the lives left at the right end.
+const CAP_COLS = 40, CAP_ROW = 10;
+function drawStrip() {
+  const top = H + 5, pipY = H + 15;
+  if (S.hp) {
+    ccText(ctx, 'HP', 6, top, INK_LO);
+    for (let i = 0; i < S.hp.max; i++) { const x = 6 + i * 8; if (i < S.hp.n) ccBox(ctx, x, pipY, 6, 6, PAPER); else { ccBox(ctx, x, pipY, 6, 6, INK_LO); ccBox(ctx, x + 1, pipY + 1, 4, 4, INK); } }
+  }
+  if (S.lives) {
+    const n = S.lives.max, x0 = 316 - (n * 6 - 2);
+    ccText(ctx, 'LIVES', 316 - ccWidth('LIVES'), top, S.lives.n <= 1 ? ASH.red : INK_LO);
+    for (let i = 0; i < n; i++) { const x = x0 + i * 6; if (i < S.lives.n) ccBox(ctx, x, pipY, 4, 6, PAPER); else { ccBox(ctx, x, pipY, 4, 6, INK_LO); ccBox(ctx, x + 1, pipY + 1, 2, 4, INK); } }
+  }
 }
 function drawCaption(t) {
   S.capRect = null;
-  if (S.page) return; // a text page replaces the captions while it is up
+  if (S.page) return; // a notice replaces the captions while it is up
   const d = S.desc, c = S.caption;
   const lines = d ? d.lines : c ? c.lines : null; if (!lines) return;
   const n = Math.min(3, lines.length), bottom = H + STRIP - Math.floor((STRIP - n * CAP_ROW) / 2);
@@ -65,115 +91,153 @@ function drawCaption(t) {
   const x0 = Math.min(...r.boxes.map(b => b.x)), x1 = Math.max(...r.boxes.map(b => b.x + b.w));
   S.capRect = { x0, y0: r.top, x1, y1: bottom };
   // more to say: a small arrow after the last line once it is out
-  if (d && d.more && Math.floor(t * 3) % 2 === 0) { const b = r.boxes[n - 1]; ctx.fillStyle = TV.white; ctx.fillRect(b.x + b.w + 2, bottom - 6, 3, 1); ctx.fillRect(b.x + b.w + 3, bottom - 5, 1, 1); }
+  if (d && d.more && Math.floor(t * 3) % 2 === 0) { const b = r.boxes[n - 1]; ctx.fillStyle = PAPER; ctx.fillRect(b.x + b.w + 2, bottom - 6, 3, 1); ctx.fillRect(b.x + b.w + 3, bottom - 5, 1, 1); }
 }
 
-// ------------------------------------------------------------------ lower thirds and title cards
-// A red tag over a black title in double height. At the start of something it sits lower right,
-// clear of her (she comes in from the left); at an end it sits in the middle as one card.
-// It wipes on from its edge and off the same way.
-function chyron(c, t) {
-  const TAG = 11, TITLE = 21, title = c.title.toUpperCase();
-  let tagW = ccWidth(c.tag) + 8, titleW = title ? ccWidth(title) + 10 : 0;
-  const center = c.place !== 'lower' && c.place !== 'lowerLeft', left = c.place === 'lowerLeft';
-  if (center && title) tagW = titleW = Math.max(tagW, titleW);
-  const y = center ? Math.round(90 - (TAG + (title ? TITLE : 0)) / 2) : 152 - (title ? TITLE : 0) - TAG;
-  const inT = t - c.t0, outU = (t - c.outAt) / 0.16;
-  const grow = (delay, dur) => ease((inT - delay) / dur) * (1 - ease(outU));
-  const box = (w, full, h, yy, color, alpha, text, sy) => {
-    if (w <= 0) return;
-    const x = center ? Math.round(160 - full / 2) : left ? 12 : 308 - full, vx = center || left ? x : 308 - w;
-    ccBox(ctx, vx, yy, w, h, color, alpha);
-    ctx.save(); ctx.beginPath(); ctx.rect(vx, yy, w, h); ctx.clip();
-    const tw = ccWidth(text, 1), tx = center ? Math.round(160 - tw / 2) : x + (sy ? 5 : 4);
-    ccText(ctx, text, tx, yy + (sy ? 3 : 2), TV.white, { sy: sy || 1 });
-    ctx.restore();
-  };
-  box(Math.round(tagW * grow(0, 0.16)), tagW, TAG, y, TV.red, 1, c.tag);
-  if (title) box(Math.round(titleW * grow(0.07, 0.2)), titleW, TITLE, y + TAG, TV.black, 0.9, title, 2);
+// ------------------------------------------------------------------ stamps, key caps, paper
+// A red rubber stamp: a 1 px frame and caps, with a few pixels knocked out where the ink missed.
+function stamp(text, x, y, opts) {
+  opts = opts || {};
+  const sy = opts.sy || 1, w = ccWidth(text) + 8, h = 7 * sy + 6;
+  if (opts.fill) ccBox(ctx, x, y, w, h, opts.fill);
+  ctx.fillStyle = ASH.red;
+  ctx.fillRect(x, y, w, 1); ctx.fillRect(x, y + h - 1, w, 1); ctx.fillRect(x, y, 1, h); ctx.fillRect(x + w - 1, y, 1, h);
+  ccText(ctx, text, x + 4, y + 3, ASH.red, { sy });
+  if (opts.worn !== false) { ctx.fillStyle = opts.fill || PAPER; for (let i = 3; i < w - 2; i += 7) ctx.fillRect(x + i, y + ((i * 5) % 3 === 0 ? 0 : h - 1), 2, 1); }
+  return { w, h };
 }
-function drawCards(t) { S.cards.forEach(c => chyron(c, t)); }
+// A key cap, as on a keyboard: a light face, a dark rim, a deeper bottom edge, the letter on it.
+const CAP_H = 11;
+const capW = s => ccWidth(s) + 6;
+function keyCap(s, x, y) {
+  const w = capW(s);
+  ccBox(ctx, x, y, w, CAP_H, INK); ccBox(ctx, x + 1, y + 1, w - 2, CAP_H - 3, PAPER_LO); ccBox(ctx, x + 1, y + CAP_H - 2, w - 2, 1, INK_LO);
+  ccText(ctx, s, x + 3, y + 1, INK);
+  return w;
+}
+// width in px of a line that may hold {keys}
+const richW = s => String(s).split(/(\{[^}]*\})/).reduce((n, p) => n + (!p ? 0 : p[0] === '{' ? capW(p.slice(1, -1)) + 1 : p.length * ADV), 0);
+function richLine(s, x, y, color) {
+  let cx = x;
+  String(s).split(/(\{[^}]*\})/).forEach(p => {
+    if (!p) return;
+    if (p[0] === '{') { cx += keyCap(p.slice(1, -1), cx, y - 2) + 1; return; }
+    ccText(ctx, p, cx, y, color); cx += p.length * ADV;
+  });
+}
+// wrap by pixel width, counting a key cap as its width
+function wrapPx(text, maxW) {
+  const out = []; let line = '';
+  String(text).split(/\s+/).filter(Boolean).forEach(w => { const next = line ? line + ' ' + w : w; if (richW(next) > maxW && line) { out.push(line); line = w; } else line = next; });
+  if (line) out.push(line);
+  return out;
+}
+// paper: a bone sheet with an ink edge and a ruled line inside the top
+function paper(x, y, w, h) { ccBox(ctx, x - 1, y - 1, w + 2, h + 2, INK); ccBox(ctx, x, y, w, h, PAPER); }
+function rule(x, y, w, color) { ccBox(ctx, x, y, w, 1, color || RULE); }
+
+// ------------------------------------------------------------------ titles
+// A red stamp over a paper label in double height. At the start of something it sits lower
+// right, clear of her (she comes in from the left); an end sits in the middle. They pop on and off.
+function chyron(c) {
+  const title = c.title.toUpperCase(), TAG_H = 13, TITLE_H = 20;
+  const center = c.place !== 'lower' && c.place !== 'lowerLeft', left = c.place === 'lowerLeft';
+  const tagW = ccWidth(c.tag) + 8, titleW = title ? ccWidth(title, 2) + 12 : 0, full = Math.max(tagW, titleW);
+  const h = TAG_H + (title ? TITLE_H + 2 : 0);
+  const y = center ? Math.round(90 - h / 2) : 152 - h;
+  const x = center ? Math.round(160 - full / 2) : left ? 12 : 308 - full;
+  const tx = center ? Math.round(160 - tagW / 2) : left ? x : 308 - tagW;
+  stamp(c.tag, tx, y, { fill: INK });
+  if (title) {
+    const ly = y + TAG_H + 2, lx = center ? Math.round(160 - titleW / 2) : left ? x : 308 - titleW;
+    paper(lx, ly, titleW, TITLE_H); rule(lx + 2, ly + 2, titleW - 4, PAPER_LO);
+    ccText(ctx, title, lx + 6, ly + 4, INK, { sx: 2, sy: 2 });
+  }
+}
+function drawCards() { S.cards.forEach(c => chyron(c)); }
 
 // ------------------------------------------------------------------ the top of the screen
 function drawTop(t) {
-  if (S.page || S.menu) return; // a teletext page has the screen: the set's messages wait
-  let y = 9;
-  // review mode, top right, out of the way of anything the game draws at the top center
-  if (S.immune) { const s = 'STORY MODE · N SKIPS AHEAD', w = ccWidth(s); ccBox(ctx, 314 - w - 4, 2, w + 8, 11, TV.black, 0.85); ccText(ctx, s, 314 - w, 4, TV.salmon); y = 20; }
-  if (S.bug) { const w = ccWidth(S.bug.text); ccText(ctx, S.bug.text, 311 - w, y + 1, TV.black, { alpha: 0.6 }); ccText(ctx, S.bug.text, 310 - w, y, TV.white, { alpha: 0.75 }); y += 11; }
-  // the set's on-screen display: green, with a hard shadow, like an old TV
-  S.osd.forEach(o => { const s = o.text.toUpperCase(), w = ccWidth(s); ccText(ctx, s, 311 - w, y + 1, TV.black, { alpha: 0.85 }); ccText(ctx, s, 310 - w, y, TV.green); y += 11; });
-  if (S.rec) { if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 10, 9, TV.red); ccText(ctx, 'REC', 17, 9, TV.white); }
+  if (S.page || S.menu) return; // paperwork has the screen: the set's messages wait
+  let y = 4;
+  // immunity, top right, on paper so it reads at a glance (the class walkthrough)
+  if (S.immune) { const s = 'IMMUNE · N SKIPS', w = ccWidth(s) + 8; paper(314 - w, 3, w, 11); ccText(ctx, s, 318 - w, 5, INK); y = 19; }
+  if (S.bug) { const w = ccWidth(S.bug.text); ccText(ctx, S.bug.text, 311 - w, y + 1, INK); ccText(ctx, S.bug.text, 310 - w, y, INK_LO); y += 11; }
+  // the set's own notes: paper tags like the immunity one, ink on bone, so they read over any
+  // scenery (the immunity tag already says IMMUNITY ON, so that note is not repeated)
+  S.osd.forEach(o => { const s = o.text.toUpperCase(); if (S.immune && s === 'IMMUNITY ON') return; const w = ccWidth(s) + 8; paper(314 - w, y - 1, w, 11); ccText(ctx, s, 318 - w, y + 1, INK); y += 14; });
+  if (S.rec) { if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 10, 9, ASH.red); ccText(ctx, 'REC', 17, 9, PAPER); }
 }
 
-// ------------------------------------------------------------------ text pages
-// A teletext page in mix mode: 40 columns, a header with the page number and the time, a band
-// with the title in double height, the text, and a flashing prompt at the foot.
-const COLS = 40, ROW = 10, PX = 40;
-function pageRows(p) {
-  const rows = [{ kind: 'head' }, { kind: 'gap' }, { kind: 'band' }, { kind: 'band2' }, { kind: 'gap' }];
-  p.lines.forEach((l, i) => { if (i) rows.push({ kind: 'gap' }); ccWrap(l, COLS - 2).forEach(s => rows.push({ kind: 'text', s })); });
-  rows.push({ kind: 'gap' }, { kind: 'foot' });
-  return rows;
+// ------------------------------------------------------------------ notices
+// A slip: NOTICE and its number, the title in double height, up to three short lines with keys
+// as key caps, and the show's red stamp. The picture behind is dimmed by a dither, not a haze.
+const PAD = 8, LINE = 13;
+function pageLayout(p) {
+  const minW = 200, maxW = 268;
+  let w = Math.max(minW, ccWidth(p.title.toUpperCase(), 2) + PAD * 2, ...p.lines.map(l => richW(l) + PAD * 2));
+  w = Math.min(maxW, w);
+  const lines = []; p.lines.forEach(l => wrapPx(l, w - PAD * 2).forEach(s => lines.push(s)));
+  const h = 12 + 4 + 18 + 4 + lines.length * LINE + 6 + 12;
+  return { w, h, lines };
 }
 function drawPage(t) {
   const p = S.page; if (!p) return;
-  const rows = p.rows || (p.rows = pageRows(p)), n = rows.length, y0 = Math.round((H - n * ROW) / 2), age = t - p.t0;
-  const out = p.closeAt ? Math.min(1, (t - p.closeAt) / 0.12) : 0;
-  if (out >= 1) { S.page = null; return; }
-  ccBox(ctx, PX - 4, y0 - 4, COLS * ADV + 7, n * ROW + 7, TV.black, 0.9 * (1 - out));
-  const searching = age < 0.32;
-  rows.forEach((r, i) => {
-    const y = y0 + i * ROW, shown = i === 0 || (!searching && age > 0.32 + i * 0.028);
-    if (!shown || out > 0.5) return;
-    if (r.kind === 'head') {
-      ccText(ctx, 'P' + p.num, PX, y + 1, TV.white);
-      ccText(ctx, 'CH 07 TEXT', PX + 5 * ADV, y + 1, TV.yellow);
-      const rolling = searching ? p.num - 7 + Math.floor(age / 0.32 * 7) : p.num;
-      ccText(ctx, String(rolling), PX + 16 * ADV, y + 1, searching ? TV.green : TV.white);
-      const d = new Date(), z = v => String(v).padStart(2, '0'), clock = z(d.getHours()) + ':' + z(d.getMinutes()) + '/' + z(d.getSeconds());
-      ccText(ctx, clock, PX + (COLS - clock.length) * ADV, y + 1, TV.yellow);
-    } else if (r.kind === 'band') {
-      ccBox(ctx, PX, y, COLS * ADV - 1, ROW * 2, p.band, 1);
-      ccText(ctx, p.title.toUpperCase(), PX + ADV, y + 3, TV.black, { sy: 2 });
-    } else if (r.kind === 'text') {
-      ccRich(ctx, r.s, PX + ADV, y + 1, TV.white, TV.yellow);
-    } else if (r.kind === 'foot') {
-      const s = 'ANY KEY TO GO ON'; ccText(ctx, s, PX + ADV, y + 1, TV.green);
-      if (Math.floor(age * 2.2) % 2 === 0) ccText(ctx, '█', PX + ADV + (s.length + 1) * ADV, y + 1, TV.green);
-    }
-  });
+  const L = p.layout || (p.layout = pageLayout(p)), x = Math.round(160 - L.w / 2), y = Math.max(4, Math.round((H - L.h) / 2));
+  dim(0, 0, W, H);
+  paper(x, y, L.w, L.h);
+  let yy = y + 3;
+  ccText(ctx, 'NOTICE', x + PAD, yy, INK_LO);
+  const no = 'No. ' + p.num; ccText(ctx, no, x + L.w - PAD - ccWidth(no), yy, INK_LO);
+  yy += 10; rule(x + 4, yy, L.w - 8, INK); yy += 4;
+  ccText(ctx, p.title.toUpperCase(), x + PAD, yy, INK, { sy: 2 });
+  yy += 18; rule(x + 4, yy, L.w - 8, RULE); yy += 6;
+  L.lines.forEach(s => { richLine(s, x + PAD, yy, INK); yy += LINE; });
+  yy += 2; rule(x + 4, yy, L.w - 8, PAPER_LO);
+  const age = t - p.t0;
+  ccText(ctx, 'ANY KEY', x + PAD, yy + 3, INK_LO);
+  // the stamp lands a beat after the slip
+  if (age > 0.3) { const s = p.stamp || 'CH 07', sw = ccWidth(s) + 8; stamp(s, x + L.w - PAD - sw + 2, yy - 6, { fill: PAPER }); }
 }
 
 // ------------------------------------------------------------------ the pause menu
-// Page 100: the show waits while she changes things. rows: [{ label, value, adjust, help }],
-// at: the row picked. The band says where she is; the line under the rows says what a row does.
+// Form 100: the show waits while she changes things. rows: [{ label, value, adjust, help }],
+// at: the row picked. Each row is a ruled field; the picked one is inked in.
+const FX = 52, FW = 216, FROW = 10;
+function menuGeom(m) {
+  const n = m.rows.length, h = 12 + 4 + 18 + 4 + n * FROW + 4 + 12;
+  return { x: FX, y: Math.max(2, Math.round((H - h) / 2)), w: FW, h, rowsY: Math.max(2, Math.round((H - h) / 2)) + 12 + 4 + 18 + 4 };
+}
+function boxes(n, x, y, on) { for (let i = 0; i < 5; i++) { const bx = x + i * 6; if (i < n) ccBox(ctx, bx, y, 4, 5, on); else { ccBox(ctx, bx, y, 4, 5, on); ccBox(ctx, bx + 1, y + 1, 2, 3, on === PAPER ? INK : PAPER); } } }
 function drawMenu(t) {
   const m = S.menu; if (!m || S.page) return;
-  const rows = m.rows, n = rows.length, h = (3 + n + 2) * ROW + 4, y0 = Math.round((H - h) / 2);
-  ccBox(ctx, PX - 4, y0 - 4, COLS * ADV + 7, h + 7, TV.black, 0.92);
-  let y = y0;
-  ccText(ctx, 'P100', PX, y + 1, TV.white); ccText(ctx, 'CH 07 TEXT', PX + 5 * ADV, y + 1, TV.yellow);
-  const d = new Date(), z = v => String(v).padStart(2, '0'), clock = z(d.getHours()) + ':' + z(d.getMinutes()) + '/' + z(d.getSeconds());
-  ccText(ctx, clock, PX + (COLS - clock.length) * ADV, y + 1, TV.yellow);
-  y += ROW;
-  ccBox(ctx, PX, y, COLS * ADV - 1, ROW * 2, TV.cyan, 1);
-  ccText(ctx, 'PAUSED', PX + ADV, y + 3, TV.black, { sy: 2 });
-  if (m.where) ccText(ctx, m.where, PX + (COLS - 1 - m.where.length) * ADV, y + 7, TV.black);
-  y += ROW * 2 + 2;
-  m.hit = [];
-  rows.forEach((r, i) => {
-    const sel = i === m.at;
-    if (sel) ccBox(ctx, PX, y, COLS * ADV - 1, ROW, TV.yellow, 1);
-    ccText(ctx, (sel ? '▶ ' : '  ') + r.label, PX + ADV, y + 1, sel ? TV.black : TV.white);
-    if (r.value != null) { const v = sel && r.adjust ? '< ' + r.value + ' >' : r.value; ccText(ctx, v, PX + (COLS - 1 - v.length) * ADV, y + 1, sel ? TV.black : TV.cyan); }
-    m.hit.push({ y0: y, y1: y + ROW, i });
-    y += ROW;
+  const g = menuGeom(m), x = g.x, w = g.w;
+  dim(0, 0, W, H);
+  paper(x, g.y, w, g.h);
+  let y = g.y + 3;
+  ccText(ctx, 'FORM 100', x + 6, y, INK_LO);
+  if (m.where) ccText(ctx, m.where, x + w - 6 - ccWidth(m.where), y, INK_LO);
+  y += 10; rule(x + 4, y, w - 8, INK); y += 4;
+  ccText(ctx, 'PAUSED', x + 6, y, INK, { sy: 2 });
+  stamp('ON HOLD', x + w - ccWidth('ON HOLD') - 14, y + 1, { fill: PAPER });
+  y += 18; rule(x + 4, y, w - 8, RULE); y += 4;
+  m.hit = []; m.hx0 = x; m.hx1 = x + w;
+  m.rows.forEach((r, i) => {
+    const sel = i === m.at, ink = sel ? PAPER : INK;
+    if (sel) ccBox(ctx, x + 3, y, w - 6, FROW, INK);
+    else rule(x + 6, y + FROW - 1, w - 12, PAPER_LO);
+    ccText(ctx, (sel ? '▶ ' : '  ') + r.label, x + 6, y + 1, ink);
+    if (r.value != null) {
+      const v = String(r.value);
+      if (/^[█·]+$/.test(v)) { const n = (v.match(/█/g) || []).length; boxes(n, x + w - 8 - 28, y + 2, ink); if (sel && r.adjust) { ccText(ctx, '<', x + w - 8 - 38, y + 1, ink); ccText(ctx, '>', x + w - 8, y + 1, ink); } }
+      else { const s = sel && r.adjust ? '< ' + v + ' >' : v; ccText(ctx, s, x + w - 8 - ccWidth(s) + (sel && r.adjust ? 6 : 0), y + 1, sel ? PAPER : r.value === 'ON' ? INK : INK_LO); }
+    }
+    m.hit.push({ y0: y, y1: y + FROW, i });
+    y += FROW;
   });
-  y += 2;
-  const r = rows[m.at];
-  if (r && r.help) ccText(ctx, r.help, PX + ADV, y + ROW / 2 + 1, TV.green);
-  if (Math.floor(t * 2.2) % 2 === 0 && r && r.help) ccText(ctx, '█', PX + ADV + (r.help.length + 1) * ADV, y + ROW / 2 + 1, TV.green);
+  y += 4;
+  const r = m.rows[m.at];
+  if (r && r.help) ccText(ctx, r.help, x + 6, y + 1, INK_LO, { italic: true });
 }
 
 // ------------------------------------------------------------------ the API
@@ -185,31 +249,37 @@ export const cg = {
     kick();
   },
   clearCaption() { S.caption = null; },
-  // narration from a look with E, set every frame while it is up (null clears it)
+  // narration from a look with J, set every frame while it is up (null clears it)
   describe(d) { S.desc = d && d.lines && d.lines.length ? d : null; if (S.desc) kick(); },
   get describing() { return !!S.desc; },
   // where the caption strip is in use right now (pixel grid), or null
   get captionRect() { return S.capRect; },
   card(tag, title, ms, place) {
     const t = now();
-    S.cards.forEach(c => { if (!c.outAt || c.outAt > t) c.outAt = t; });
-    const c = { tag: String(tag).toUpperCase(), title: title || '', place: place || 'center', t0: t, outAt: t + (ms || 3200) / 1000 };
-    S.cards.push(c); kick();
+    S.cards = [{ tag: String(tag).toUpperCase(), title: title || '', place: place || 'center', t0: t, outAt: t + (ms || 3200) / 1000 }];
+    kick();
   },
   // one message at a time, the newest replaces the last, as on a TV
   osd(text, ms) { S.osd = [{ text, until: now() + (ms || 1800) / 1000 }]; kick(); },
   bug(text, ms) { S.bug = { text, until: now() + (ms || 900) / 1000 }; kick(); },
   rec(ms) { S.rec = { until: now() + (ms || 2400) / 1000 }; kick(); },
   immune(on) { S.immune = !!on; kick(); },
-  page(spec) { S.page = Object.assign({ t0: now(), closeAt: 0, band: TV.cyan, num: 701 }, spec); kick(); },
+  // a flash: a palette color as a dither over the picture for ms (kind 'checker' or 'q25')
+  flash(color, ms, kind) { S.flash = { color, kind: kind || 'checker', until: now() + (ms || 80) / 1000 }; kick(); },
+  // a notice: { num, title, lines, stamp } (lines may mark keys as {L})
+  page(spec) { S.page = Object.assign({ t0: now(), closeAt: 0, num: 701 }, spec); delete S.page.layout; kick(); },
   closePage() { if (S.page && !S.page.closeAt) S.page.closeAt = now(); },
   get pageUp() { return !!S.page && !S.page.closeAt; },
   menu(spec) { S.menu = spec; kick(); },
   get menuUp() { return !!S.menu; },
   closeMenu() { S.menu = null; },
   // the row of the menu at this point of the pixel grid, or -1
-  menuHit(x, y) { const m = S.menu; if (!m || !m.hit || S.page || x < PX || x > PX + COLS * ADV) return -1; const h = m.hit.find(r => y >= r.y0 && y < r.y1); return h ? h.i : -1; },
+  menuHit(x, y) { const m = S.menu; if (!m || !m.hit || S.page || x < m.hx0 || x > m.hx1) return -1; const h = m.hit.find(r => y >= r.y0 && y < r.y1); return h ? h.i : -1; },
+  // where row i of the menu is (for tests): { x, y } at its middle, on the pixel grid
+  menuRow(i) { const m = S.menu; if (!m) return null; const g = menuGeom(m); return { x: g.x + g.w / 2, y: g.rowsY + i * FROW + FROW / 2 }; },
   // her HP in the strip (n of max), or null to hide it
   hp(n, max) { S.hp = n == null ? null : { n, max }; kick(); },
-  clearAll() { S.hp = null; S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; }
+  // lives left in the strip (n of max), or null to hide them
+  lives(n, max) { S.lives = n == null ? null : { n, max }; kick(); },
+  clearAll() { S.hp = null; S.lives = null; S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; S.flash = null; }
 };

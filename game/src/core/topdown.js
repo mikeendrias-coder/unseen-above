@@ -12,10 +12,11 @@ import { Painter, hexNum, flat } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
+import { cg } from '../ui/cg.js';
 
 export const T = 16;
 export const LOCK_TD = 0.5;
@@ -50,7 +51,8 @@ export class TopDownEpisode extends Phaser.Scene {
     this.noises = []; this.flight = null; this.pebbles = 0; this.things = []; this.nearThing = null; this.sources = []; this.satX = null; this.floorPebbles = [];
     this.lights = []; this.par = [];
     this.scale.on('rescale', this.onRescale, this);
-    this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
+    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); cg.lives(null); });
+    startTakes(this); showStatus(this, null);
   }
   onRescale() { this.cameras.main.setZoom(pixelZoom()); this.place(); }
   place() { const S = display.S; this.par.forEach(e => e.o.setScrollFactor(0).setPosition(e.x + 160 * (S - 1), e.y + 90 * (S - 1))); }
@@ -78,8 +80,9 @@ export class TopDownEpisode extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ the girl
+  // A retry after the episode set a checkpoint (death.js setCheckpoint) starts there: { tx, ty }.
   spawn() {
-    const [sx, sy] = this.level.start;
+    const cp = checkpointOf(this), [sx, sy] = cp && cp.tx != null ? [cp.tx, cp.ty] : this.level.start;
     this.kid = { tx: sx, ty: sy, fx: sx, fy: sy, p: 1, moving: false, face: 'down', step: 0 };
     this.dead = false;
     this.girl.setVisible(true);
@@ -213,11 +216,14 @@ export class TopDownEpisode extends Phaser.Scene {
       }
       state.addBody(this.epId, tile.x * T + 8, tile.y * T + 13, src && src.id);
     };
-    beginDeath(this, src, impact, onImpact => this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: p.x, ty: p.y - 3, P, onImpact, from: this.satX }));
+    beginDeath(this, src, impact, (onImpact, o) => this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: p.x, ty: p.y - 3, P, onImpact, from: this.satX, short: o && o.short }));
   }
   // a restart by choice (R, or the pause menu): the next take, no body
+  // a checkpoint for this visit: deaths and retries start here until she runs out of lives.
+  // at: { tx, ty } (a tile), or null to clear it
+  markCheckpoint(at) { setCheckpoint(this, at); }
   canRestart() { return !this.dead && !this.leaving && !this.done; }
-  restartTake() { if (!this.canRestart()) return false; this.dead = true; this.ep.take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); return true; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; this.ep.take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart(retryData(this))); return true; }
   skipDeath() { return skipDeath(this); }
   // her bodies from earlier takes; each one can be looked at with E
   drawBodies() {
@@ -275,19 +281,27 @@ export class TopDownEpisode extends Phaser.Scene {
     this.cameras.main.centerOn(cx, cy);
     this.view = { x: cx - 160, y: cy - 90 };
   }
-  // lights: { x, y, r, soft } in world px; the girl always carries a small one
+  // lights: { x, y, r, soft, a } in world px; the girl always carries a small one. Light is cut
+  // out of the dark the way ART_DIRECTION section 2 draws it: a hard-edged hole of full light
+  // in the middle and a ring of 50% checker dither out to r (the dither is pinned to the world,
+  // so it does not crawl as the camera moves). A dim light (a under 0.6) is the dither alone, a
+  // very dim one (under 0.25) is nothing. Circles are whole-pixel rows, so nothing is smoothed.
   drawDark(alpha) {
     const ctx = this.darkCanvas.getContext('2d'), v = this.view, P = this.P;
     ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, 322, 182);
     const n = hexNum(flat(P.void)), rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
     ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`; ctx.fillRect(0, 0, 322, 182);
     ctx.globalCompositeOperation = 'destination-out';
+    if (!this.checker) { const c = document.createElement('canvas'); c.width = c.height = 2; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, 1, 1); x.fillRect(1, 1, 1, 1); this.checker = ctx.createPattern(c, 'repeat'); }
+    const ox = Math.round(v.x) - 1, oy = Math.round(v.y) - 1;
+    if (this.checker.setTransform) this.checker.setTransform(new DOMMatrix().translate(-(ox & 1), -(oy & 1)));
+    const disc = (x, y, r, fill) => { ctx.fillStyle = fill; for (let dy = -r; dy <= r; dy++) { const hw = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35); ctx.fillRect(x - hw, y + dy, 2 * hw + 1, 1); } };
     const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 58, soft: 0.55 }].concat(this.lights);
     all.forEach(l => {
-      const x = l.x - v.x + 1, y = l.y - v.y + 1; if (x < -l.r || y < -l.r || x > 322 + l.r || y > 182 + l.r) return;
-      const g = ctx.createRadialGradient(x, y, l.r * (1 - (l.soft || 0.5)), x, y, l.r);
-      g.addColorStop(0, `rgba(0,0,0,${l.a || 1})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, l.r, 0, Math.PI * 2); ctx.fill();
+      const x = Math.round(l.x - v.x + 1), y = Math.round(l.y - v.y + 1), r = Math.round(l.r), a = l.a == null ? 1 : l.a;
+      if (r < 1 || a < 0.25 || x < -r || y < -r || x > 322 + r || y > 182 + r) return;
+      disc(x, y, r, this.checker);
+      if (a >= 0.6) disc(x, y, Math.round(r * (1 - (l.soft || 0.5) * 0.7)), '#000');
     });
     this.darkTex.refresh();
     this.darkImg.setPosition(v.x - 1, v.y - 1);

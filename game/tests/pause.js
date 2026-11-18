@@ -22,7 +22,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('the guide switch reduces flashing and stops the shake', await S(() => { const s = JSON.parse(localStorage.getItem('unseen-above-v1')).settings; return s.reduceFlash === true && s.shake === false && document.querySelector('#opt-flash i').textContent === 'reduced'; }));
   await p.click('#opt-flash');
   await p.click('#opt-story');
-  ok('the guide switch turns story mode on', await S(() => JSON.parse(localStorage.getItem('unseen-above-v1')).immune === true && document.querySelector('#opt-story i').textContent === 'on'));
+  ok('the guide switch turns immunity on', await S(() => JSON.parse(localStorage.getItem('unseen-above-v1')).immune === true && document.querySelector('#opt-story i').textContent === 'on'));
   await p.click('#opt-story');
   await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'grounds' && window.__game.scene.clock > 0.5);
@@ -32,9 +32,9 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__paused === true, null, 3000);
   const c0 = await S(() => window.__game.scene.clock); await p.waitForTimeout(600); const c1 = await S(() => window.__game.scene.clock);
   ok('P opens page 100 and the episode waits (clock ' + c0.toFixed(2) + ' then ' + c1.toFixed(2) + ')', c0 === c1 && (await panel()).includes('Paused') && await S(() => window.__game.scene.sys.isPaused()));
-  ok('the menu lists: ' + (await panel()).slice(0, 160), /resume/.test(await panel()) && /restart this episode/.test(await panel()) && /story mode: off/.test(await panel()) && /title screen/.test(await panel()));
+  ok('the menu lists: ' + (await panel()).slice(0, 160), /resume/.test(await panel()) && /> resume\n?.*retry/.test((await panel()).replace(/\n/g, ' ')) && /immunity: off/.test(await panel()) && /title screen/.test(await panel()));
   await p.keyboard.press('ArrowDown');
-  ok('Down moves to the next row', (await panel()).includes('> restart this episode'));
+  ok('Down moves to the next row', (await panel()).includes('> retry'));
   // to MUSIC, then Left lowers it
   for (let i = 0; i < 2; i++) await p.keyboard.press('ArrowDown');
   ok('three rows down is music', (await panel()).includes('> music'));
@@ -63,9 +63,9 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.press('Escape');
   await until(() => window.__paused === true, null, 3000);
   const box = await p.evaluate(() => { const r = document.getElementById('cg').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
-  // RESUME is the first row: y0 + 10 + 22 + 5 on the 320 x 180 grid
-  const rowsN = await S(() => document.querySelectorAll('#panel .panel-body p').length), h = (3 + rowsN + 2) * 10 + 4, y0 = Math.round((180 - h) / 2);
-  await p.mouse.click(box.x + box.w * (90 / 320), box.y + box.h * ((y0 + 37) / 180));
+  // RESUME is the first row of the form (cg.menuRow gives its middle on the 320 x 180 grid)
+  const row = await S(() => window.__unseen.cg.menuRow(0));
+  await p.mouse.click(box.x + box.w * (row.x / 320), box.y + box.h * (row.y / 210));
   await until(() => window.__paused === false, null, 3000);
   ok('Esc pauses too, and a click on RESUME resumes', true);
   // clicking away pauses (asked for here, as automation normally turns it off)
@@ -90,6 +90,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.ep.take === 3 && !window.__game.scene.dead, null, 6000);
   const skipMs = Date.now() - tA;
   ok('after that, Space skips the strike (' + skipMs + ' ms) and the body stays (' + await S(() => window.__game.scene.ep.bodies.length) + ' bodies)', skipMs < 1500 && await S(() => window.__game.scene.ep.bodies.length === 2));
+  ok('two lives used: ' + await S(() => window.__game.scene.takesLeft) + ' left', await S(() => window.__game.scene.takesLeft === 3));
   // a third death: now the show offers N
   await p.evaluate(() => window.__game.scene.die({ id: 'pergola drone' }));
   await p.waitForTimeout(200); await p.keyboard.press('Space');
@@ -98,7 +99,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const x0 = await S(() => window.__game.scene.kid.x);
   await p.keyboard.press('KeyN'); await p.waitForTimeout(250);
   const x1 = await S(() => window.__game.scene.kid.x);
-  ok('and N skips ahead without story mode (' + Math.round(x0) + ' to ' + Math.round(x1) + ')', x1 > x0 + 50 && !(await S(() => window.__game.state.immune)));
+  ok('and N skips ahead without immunity (' + Math.round(x0) + ' to ' + Math.round(x1) + ')', x1 > x0 + 50 && !(await S(() => window.__game.state.immune)));
   await p.keyboard.press('KeyP');
   ok('the menu offers SKIP AHEAD now', (await panel()).includes('skip ahead'));
   await p.keyboard.press('KeyP');

@@ -73,7 +73,8 @@ export function ccBox(t, x, y, w, h, color, alpha) {
 
 // The caption look, shared by the TV captions and the speech over people's heads: each line on
 // its own black box, one box per line, so the block steps in and out like real closed captions.
-export const CAPTION = { padX: 4, row: 11, top: 2, ink: 0xffffff, box: 0x000000, alpha: 0.9 };
+// bone ink on ash black, solid (alpha is only ever a whole line fading in or out)
+export const CAPTION = { padX: 4, row: 11, top: 2, ink: 0xebe6d8, box: 0x0e0f12, alpha: 1 };
 export function ccCaptionBlock(t, lines, cx, bottom, opts) {
   opts = opts || {};
   const R = opts.row || CAPTION.row, TOP = opts.top == null ? CAPTION.top : opts.top, padX = opts.padX == null ? CAPTION.padX : opts.padX, a = opts.alpha == null ? 1 : opts.alpha;
