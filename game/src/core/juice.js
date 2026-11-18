@@ -44,7 +44,7 @@ export function makeFrames(scene) {
   const s = rowsOf(scene, 'girl_stand'), W = s.w + 2;
   const keep = s.rows.filter((r, y) => y !== 8 && y !== 12);
   const sq = keep.map((r, y) => {
-    const out = new Array(W).fill(null), legs = y >= 9;
+    const out = new Array(W).fill(null), legs = y >= 10; // her legs: source rows 11, 13, 14
     if (!legs) r.forEach((p, i) => { if (p[3]) out[i + 1] = p; });
     else {
       const mid = Math.floor(s.w / 2);
