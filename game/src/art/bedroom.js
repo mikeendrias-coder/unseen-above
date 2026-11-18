@@ -8,11 +8,8 @@ export const TILE = 16, GROUND = 160;
 const T = TILE, G = GROUND;
 export const BX = 88 * T; // the bedroom's left wall
 
-// a dark red for the trail, made from each look's own hazard red
-export function bloodOf(P) {
-  const h = flat(P.hazard), mix = (i, t) => Math.round(parseInt(h.slice(i, i + 2), 16) * t);
-  return '#' + [1, 3, 5].map(i => mix(i, 0.46).toString(16).padStart(2, '0')).join('');
-}
+// the trail is old blood: near black on the boards (red is kept for what watches her)
+export function bloodOf(P) { return P.crack; }
 
 export const LEVEL = {
   w: 108, h: 12,
@@ -22,17 +19,24 @@ export const LEVEL = {
   // flash cameras: they see only at the flash. Two clicks warn first (lead seconds).
   // kind ceiling turns between 35 and 145 degrees; kind wall between 150 and 200.
   cameras: [
-    { id: 'landing camera', kind: 'ceiling', x: 9 * T + 8, y: 18, aim: 96, half: 17, range: 175, period: 2.8, phase: 1.6 },
-    { id: 'hall camera', kind: 'ceiling', x: 18 * T + 8, y: 18, aim: 98, half: 15, range: 175, period: 2.4, phase: 1.0 },
-    { id: 'arch camera', kind: 'wall', x: 33 * T - 4, y: 116, aim: 170, half: 9, range: 240, period: 3.0, phase: 0.4 },
-    { id: 'clock room camera', kind: 'ceiling', x: 41 * T, y: 18, aim: 90, half: 25, range: 175, period: 3.0, phase: 2.4 },
-    { id: 'billiard camera', kind: 'ceiling', x: 49 * T, y: 18, aim: 90, half: 25, range: 175, period: 3.0, phase: 2.9 }
+    { id: 'landing camera', kind: 'ceiling', x: 9 * T + 8, y: 18, aim: 96, half: 17, range: 175, period: 2.6, phase: 1.6 },
+    { id: 'hall camera', kind: 'ceiling', x: 18 * T + 8, y: 18, aim: 98, half: 15, range: 175, period: 2.3, phase: 1.0 },
+    { id: 'arch camera', kind: 'wall', x: 33 * T - 4, y: 116, aim: 170, half: 9, range: 240, period: 2.8, phase: 0.4 },
+    { id: 'clock room camera', kind: 'ceiling', x: 41 * T, y: 18, aim: 90, half: 25, range: 175, period: 2.8, phase: 2.4 },
+    { id: 'billiard camera', kind: 'ceiling', x: 49 * T, y: 18, aim: 90, half: 25, range: 175, period: 2.7, phase: 2.9 }
   ],
   lead: 0.5,
   caught: 0.5, // seconds from a flash that catches her to the strike
   hear: 230,   // how far a camera hears a noise
   // floors that give her away when she runs on them
-  noisy: [{ x0: 296, x1: 331, kind: 'boards' }, { x0: 37 * T, x1: 53 * T, kind: 'glass' }],
+  noisy: [{ x0: 300, x1: 470, kind: 'boards' }, { x0: 37 * T, x1: 53 * T, kind: 'glass' }],
+  // a music box on the end of the dining table: J winds it, and for 3 s nobody hears her
+  musicBox: { x: 286, y: 132, mask: 3.0 },
+  // three family photos hung low in the hall under a picture lamp; a tall window with the Moon in it
+  photos: { x: 298, y: 104, w: 20, h: 26, gap: 4, span: 68 },
+  hallWindow: { x: 396, y: 40, w: 28, h: 52 },
+  // a form pinned on the wall before the fallen stairs
+  request: { x: 856, y: 108 },
   // the clock: three strokes every six seconds; while it strikes nobody hears her
   clock: { x: 35 * T + 8, y: 92, period: 6.0, strokes: [0, 0.6, 1.2], mask: 1.9 },
   // low and high furniture: under a table a ceiling camera cannot see her; behind a chest a wall
@@ -45,14 +49,18 @@ export const LEVEL = {
     { id: 'long table', x: 628, y: 132, w: 64, h: 5 },
     { id: 'billiard table', x: 756, y: 134, w: 64, h: 7 }
   ],
-  bag: { x: 59 * T, wall: { id: 'fallen stairs', x: 976, y: 92, w: 24, h: 68 }, low: { id: 'rubble', x: 972, y: 150, w: 34, h: 10 } },
+  bag: { x: 59 * T, wall: { id: 'fallen stairs', x: 976, y: 56, w: 24, h: 104 }, low: { id: 'rubble', x: 972, y: 150, w: 34, h: 10 } },
   // the floor gives way behind her once the bag is out
-  collapse: { from: 54 * T, stop: 83 * T, fromTile: 54, lastTile: 82 },
-  // things that happen ahead of her during the run
+  collapse: { from: 54 * T, stop: 79 * T, fromTile: 54, lastTile: 78 },
+  // the run: a gap to jump, a slab to crouch under, a gap too wide for one jump (jump twice),
+  // then the ceiling hanging down to a hand above the floor and a heap past it: climb the gap
+  // between them by jumping from wall to wall
   run: {
-    gaps: [{ t0: 67, t1: 68, at: 67 * T - 76 }, { t0: 79, t1: 80, at: 79 * T - 80 }],
-    slab: { x: 1132, w: 34, top: 96, bottom: 150, at: 1132 - 84, warn: 0.5 },
-    step: { id: 'step', x: 76 * T, y: 146, w: 46, h: 14 }
+    gaps: [{ t0: 66, t1: 67, at: 66 * T - 70 }, { t0: 75, t1: 78, at: 75 * T - 74 }],
+    slab: { x: 1128, w: 34, top: 96, bottom: 150, at: 1128 - 84, warn: 0.5 },
+    hang: { tx: 80, top: 1, bottom: 8 },  // the ceiling, down to y 144: she walks under it
+    heap: { tx: 83, top: 5, bottom: 9 },  // a heap of it, 80 px tall: too high to jump
+    sill: { tx: 84, top: 8, bottom: 9 }   // a step down to the doors
   },
   // the bedroom, all inside one screen
   bed: { x0: BX + 150, x1: BX + 262 },
@@ -72,6 +80,8 @@ export function buildMap() {
   solid(33, 1, 33, 6);       // the arch between the hall and the clock room
   solid(87, 0, 87, 9);       // the wall between the house and the bedroom
   solid(W - 1, 0, W - 1, 9); // the bedroom's far wall
+  const R = LEVEL.run;
+  [R.hang, R.heap, R.sill].forEach(c => solid(c.tx, c.top, c.tx, c.bottom)); // the climb before the doors
   return { W, H, m };
 }
 
@@ -83,9 +93,9 @@ export function trail() {
   while (x < end) {
     const k = x / end, skip = x > LEVEL.bag.wall.x - 4 && x < LEVEL.bag.wall.x + 28; // he climbed over the stairs
     if (!(x > 87 * T - 6 && x < BX + 4) && !skip) {
-      out.push({ x: Math.round(x), y: G - 1, w: 1 + (r() < 0.3 + k * 0.4 ? 1 : 0) });
-      if (r() < 0.12 + k * 0.3) out.push({ x: Math.round(x + 2 + r() * 3), y: G - 1, w: 1 });
-      if (k > 0.85 && r() < 0.3) out.push({ x: Math.round(x - 3), y: G - 1, w: 4 }); // smears
+      out.push({ x: Math.round(x), y: G, w: 1 + (r() < 0.3 + k * 0.4 ? 1 : 0) });
+      if (r() < 0.12 + k * 0.3) out.push({ x: Math.round(x + 2 + r() * 3), y: G, w: 1 });
+      if (k > 0.85 && r() < 0.3) out.push({ x: Math.round(x - 3), y: G, w: 4 }); // smears
     }
     x += 5 + r() * (14 - k * 9);
   }
@@ -208,7 +218,12 @@ export function paintLevel(P) {
   for (let i = 0; i < 40; i++) p.rect(wall.x - 2 + r() * (wall.w + 6), wall.y + 4 + r() * (wall.h - 6), 3 + r() * 5, 2 + r() * 3, r() < 0.4 ? P.rubbleHi : r() < 0.5 ? P.wood : P.crack);
   // ---- the last corridor: bare, the floor sound until the bag comes out
   for (let x = 64 * T; x < 84 * T; x += 40) { p.rect(x, 40, 12, 80, P.wallLine); }
-  crack(p, P.crack, 70 * T, 24, 110, 7); crack(p, P.crack, 80 * T, 30, 100, 9);
+  crack(p, P.crack, 70 * T, 24, 110, 7);
+  // the ceiling come down: a hanging mass of joists and plaster, and the heap under it
+  const RN = LEVEL.run, slabOf = (c, lit) => { const x = c.tx * T, y0 = c.top * T, y1 = (c.bottom + 1) * T; p.rect(x - 1, y0, T + 2, y1 - y0, P.crack); p.rect(x, y0, T, y1 - y0, P.rubble); for (let y = y0 + 3; y < y1; y += 7) { p.rect(x + 1, y, T - 2, 1, P.crack); p.rect(x + 2 + (y % 5), y + 2, 4, 2, P.rubbleHi); } if (lit) p.rect(x, y0, T, 1, P.rubbleHi); };
+  slabOf(RN.hang, false); slabOf(RN.heap, true); slabOf(RN.sill, true);
+  for (let i = 0; i < 5; i++) p.rect(RN.hang.tx * T - 2 + i * 4, (RN.hang.bottom + 1) * T, 2, 2 + (i % 2) * 2, P.wood); // splinters hanging off it
+  p.rect(RN.hang.tx * T + 4, 30, 1, 60, P.wood); p.rect(RN.hang.tx * T + 10, 50, 1, 40, P.wood);
   // the threshold before the bedroom: stone, it does not fall
   p.rect(84 * T, G, 3 * T, 20, P.colLo); p.rect(84 * T, G, 3 * T, 1, P.col); for (let x = 84 * T; x < 87 * T; x += 12) p.rect(x, G + 1, 1, 19, P.crack);
   // the bedroom doors: tall, gilded, a line of cold light under them
@@ -217,7 +232,7 @@ export function paintLevel(P) {
   p.rect(D.x, D.y, D.w, D.h, P.wood); p.rect(D.x + D.w / 2, D.y, 1, D.h, P.crack);
   p.rect(D.x + 2, D.y + 3, 7, 12, P.woodHi); p.rect(D.x + D.w - 9, D.y + 3, 7, 12, P.woodHi); p.rect(D.x + 2, D.y + 18, 7, 12, P.woodHi); p.rect(D.x + D.w - 9, D.y + 18, 7, 12, P.woodHi);
   p.px(D.x + D.w / 2 - 2, D.y + 17, P.gold); p.px(D.x + D.w / 2 + 2, D.y + 17, P.gold);
-  p.glowRect(D.x, G - 1, D.w, 1, P.voidEdge, 0.7);
+  p.rect(D.x + 1, G - 1, D.w - 2, 1, P.voidEdge);
   // the wall between
   p.rect(87 * T, 0, T, G, P.void); p.rect(87 * T, 0, 1, G, P.wallLine); p.rect(88 * T - 1, 0, 1, G, P.wallLine);
 
@@ -266,6 +281,50 @@ export function paintLevel(P) {
   // the camera in the corner
   p.rect(LEVEL.rec.x - 4, 22, 9, 2, P.device); p.rect(LEVEL.rec.x - 1, 22, 2, 3, P.device);
 
+  // ---- the music box on the end of the dining table, lid shut
+  const MB = LEVEL.musicBox;
+  p.rect(MB.x - 1, MB.y - 7, 10, 7, P.crack); p.rect(MB.x, MB.y - 6, 8, 6, P.goldLo); p.rect(MB.x, MB.y - 6, 8, 1, P.gold); p.px(MB.x + 8, MB.y - 3, P.goldHi);
+  // ---- three family photos, hung low under a brass picture lamp: a different rich family in
+  // each, and at the back of every one the same boy in grey, a head taller each time
+  const PH = LEVEL.photos;
+  p.rect(PH.x + 4, PH.y - 8, PH.span - 8, 2, P.goldLo); p.rect(PH.x + 4, PH.y - 8, PH.span - 8, 1, P.gold); // the lamp's bar
+  p.rect(PH.x + PH.span / 2 - 1, PH.y - 11, 2, 3, P.goldLo); for (let x = PH.x + 6; x < PH.x + PH.span - 6; x += 4) p.px(x, PH.y - 6, P.lamp);
+  const families = [
+    [[2, 9, P.gold, 1], [7, 11, P.colHi, 0], [12, 6, P.gold, 0]],          // two parents and a girl
+    [[2, 10, P.colHi, 1], [6, 6, P.goldHi, 0], [11, 10, P.gold, 1]],       // a child between them
+    [[1, 11, P.gold, 0], [6, 10, P.goldHi, 1], [11, 7, P.colHi, 0], [15, 5, P.gold, 0]] // four
+  ];
+  families.forEach((fam, i) => {
+    const x = PH.x + i * (PH.w + PH.gap), y = PH.y, w = PH.w, h = PH.h;
+    p.rect(x - 2, y - 2, w + 4, h + 4, P.crack); p.rect(x - 1, y - 1, w + 2, h + 2, P.goldLo); p.rect(x - 1, y - 1, w + 2, 1, P.gold);
+    p.rect(x, y, w, h, P.wallHi); p.rect(x, y + h - 7, w, 7, P.wall); p.rect(x, y + h - 7, w, 1, P.wallLo); // a sepia room, a floor
+    // him, at the back on the right, grey, older (taller) in each
+    const bh = 7 + i * 3, bx = x + w - 5, by = y + h - 9;
+    p.rect(bx - 1, by - bh - 1, 5, bh + 2, P.crack); p.rect(bx, by - bh + 3, 3, bh - 3, P.sib); p.rect(bx, by - bh, 3, 3, P.kidLo); p.px(bx + 1, by - bh, P.hair);
+    // the family in front of him: heads in bone, clothes in gold
+    fam.forEach(([dx, fh, c, hat]) => {
+      const fx = x + dx, fy = y + h - 3;
+      p.rect(fx - 1, fy - fh - 1, 5, fh + 1, P.crack); p.rect(fx, fy - fh + 3, 3, fh - 3, c); p.rect(fx, fy - fh, 3, 3, P.kid);
+      if (hat) p.rect(fx - 1, fy - fh - 1, 5, 1, P.crack);
+    });
+  });
+  // ---- a tall window with the Moon in it, and its one lit window
+  const HW = LEVEL.hallWindow;
+  p.rect(HW.x - 3, HW.y - 3, HW.w + 6, HW.h + 6, P.crack); p.rect(HW.x - 2, HW.y - 2, HW.w + 4, HW.h + 4, P.goldLo); p.rect(HW.x, HW.y, HW.w, HW.h, P.skyTop);
+  p.rect(HW.x, HW.y + 30, HW.w, 1, P.wood); p.rect(HW.x + HW.w / 2, HW.y + 30, 1, HW.h - 30, P.wood); // the panes: one big one up top
+  [[HW.x + 3, HW.y + 4], [HW.x + 24, HW.y + 26], [HW.x + 5, HW.y + 40], [HW.x + 21, HW.y + 45]].forEach(([x, y]) => p.px(x, y, P.star));
+  const hx = HW.x + 14, hy = HW.y + 15;
+  p.circle(hx, hy, 10, P.crack); p.circle(hx, hy, 9, P.moon);
+  p.rect(hx - 6, hy - 4, 3, 3, P.moonShade); p.rect(hx - 3, hy + 4, 4, 2, P.moonShade); p.px(hx + 5, hy + 5, P.moonShade);
+  // its one lit window: a dark frame on the white, two warm pixels inside
+  p.rect(hx + 1, hy - 4, 5, 5, P.crack); p.rect(hx + 2, hy - 3, 3, 3, P.win); p.px(hx + 3, hy - 3, P.goldHi);
+  p.mark('hallMoonWindow', hx + 3, hy - 2);
+  // ---- the form on the wall: REQUEST, a red stamp, a blank line to sign
+  const RQ = LEVEL.request;
+  p.rect(RQ.x - 1, RQ.y - 1, 14, 18, P.crack); p.rect(RQ.x, RQ.y, 12, 16, P.colHi); p.rect(RQ.x, RQ.y, 12, 3, P.colLo);
+  for (let i = 0; i < 4; i++) p.rect(RQ.x + 2, RQ.y + 5 + i * 2, 8 - (i % 2) * 3, 1, P.device);
+  p.rect(RQ.x + 7, RQ.y + 11, 4, 3, P.hazard); p.rect(RQ.x + 2, RQ.y + 14, 5, 1, P.device); p.px(RQ.x + 5, RQ.y - 2, P.device);
+
   // old remains where the cameras look, from seasons before hers
   [[11 * T, 3], [24 * T + 4, 2], [46 * T, 3]].forEach(([x, s]) => lyingFigure(p, P, x, G, s));
   // camera mounts are painted; the cameras themselves are live
@@ -282,7 +341,7 @@ export function paintWardrobe(P) {
   p.rect(0, 0, 320, 18, P.void); p.rect(0, 18, 320, 2, P.wood);
   for (let x = 0; x < 320; x += 20) p.rect(x, 20, 1, 140, P.wallLine);
   p.rect(0, G, 320, 20, P.wood); p.rect(0, G, 320, 1, P.woodHi); for (let x = 0; x < 320; x += 16) p.rect(x, G + 2, 1, 18, P.crack);
-  p.rect(18, G - 30, 16, 30, P.wall); p.rect(19, G - 29, 14, 29, P.wallHi); p.px(30, G - 15, P.gold); p.glowRect(14, G - 2, 24, 2, P.lamp, 0.15);
+  p.rect(18, G - 30, 16, 30, P.wall); p.rect(19, G - 29, 14, 29, P.wallHi); p.px(30, G - 15, P.gold);
   // a rail of jackets, all hers
   p.rect(56, 56, 118, 2, P.colLo); p.rect(56, 56, 2, 104, P.device); p.rect(172, 56, 2, 104, P.device);
   for (let i = 0; i < 9; i++) {
@@ -301,8 +360,8 @@ export function paintWardrobe(P) {
   p.mark('rec', 287, 56);
   p.rect(248, 112, 54, 4, P.wood); p.rect(248, 112, 54, 1, P.woodHi); p.rect(252, 116, 4, 44, P.wood); p.rect(294, 116, 4, 44, P.wood);
   p.rect(260, 106, 6, 6, P.colHi); p.rect(270, 108, 3, 4, P.fabric); p.rect(280, 107, 8, 5, P.col);
-  // one bulb
-  p.rect(150, 20, 1, 10, P.device); p.circle(150, 32, 3, P.lamp); p.glowPoly([[146, 34], [154, 34], [220, G], [80, G]], P.lamp, 0.06);
+  // one bulb on a cord (Room.js draws its light, and turns it off)
+  p.rect(150, 20, 1, 10, P.device); p.mark('bulb', 150, 32); p.mark('cord', 156, 30);
   r();
   return p;
 }

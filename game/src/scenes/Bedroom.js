@@ -1,14 +1,15 @@
-// Episode 4: the bedroom. The heart of the house, with the lights off. The cameras here only see
-// when they flash, and they click twice first. Noise turns them: old boards creak, glass
-// crunches, unless the big clock is striking. His bag is under the fallen stairs; pulling it
-// free brings the floor down behind her. At the end of the blood, the bedroom: him, and a door
-// that does not match itself.
+// Episode 4: the bedroom. The heart of the house, with the lights off: the only light that moves
+// is red. The cameras here only see when they flash, and they click twice first. Noise turns
+// them: old boards creak, glass crunches, unless the big clock is striking or the music box is
+// playing. His bag is under the fallen stairs; pulling it free brings the floor down behind her,
+// and the run to the doors is real platforming. At the end of the blood, the bedroom: him, and a
+// door that does not match itself. Stay with him long enough and the show cuts to a break.
 import { Music } from '../core/music.js';
-import { hexNum, flat } from '../art/painter.js';
+import { hexNum, flat, Painter } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
-import { pixText, textWidth } from '../art/pixfont.js';
-import { ccText, ccWidth, ccBox } from '../art/ccfont.js';
-import { TILE, GROUND, BX, LEVEL, buildMap, paintLevel, paintBrother, bloodOf, trail } from '../art/bedroom.js';
+import { pixText } from '../art/pixfont.js';
+import { ccText, ccWidth } from '../art/ccfont.js';
+import { TILE, GROUND, BX, LEVEL, buildMap, paintLevel, paintBrother, trail } from '../art/bedroom.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
@@ -19,20 +20,42 @@ import { BEDROOM, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
 import { reviewKeys } from '../core/review.js';
 import { fx } from '../core/fx.js';
+import { darkFill, hardHoles, checker, pxCircle } from '../core/topdown.js';
 
 const ARC = { ceiling: [35, 145], wall: [150, 200] };
+const STAY = 15; // seconds holding on to him before the show cuts away
 const glassesOn = t => (Math.sin(t * 2.3) + Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 13.1) * 0.3) > -0.35;
+const spans = (pts, fn) => Painter.prototype.spans.call(null, pts.map(p => [p.x, p.y]), fn);
+// red patterns for the dark canvas: a flash paints what it touches in red pixels
+const redPats = new WeakMap();
+function redPattern(ctx, dense, parity) {
+  let pr = redPats.get(ctx);
+  if (!pr) {
+    const mk = (n, cells) => { const t = document.createElement('canvas'); t.width = n; t.height = n; const x = t.getContext('2d'); x.fillStyle = '#e3412b'; cells.forEach(([a, b]) => x.fillRect(a, b, 1, 1)); return ctx.createPattern(t, 'repeat'); };
+    pr = { dense: mk(2, [[0, 0], [1, 1]]), sparse: mk(4, [[0, 0], [2, 2]]) }; redPats.set(ctx, pr);
+  }
+  const p = dense ? pr.dense : pr.sparse;
+  if (p.setTransform) p.setTransform(new DOMMatrix([1, 0, 0, 1, ((parity % 2) + 2) % 2, 0]));
+  return p;
+}
+// a pixel line on a Graphics, solid or dotted
+function pxLine(g, x0, y0, x1, y1, color, dot) {
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1); g.fillStyle(color, 1);
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy;
+  for (let n = 0; n < 600; n++) { if (!dot || n % dot === 0) g.fillRect(x0, y0, 1, 1); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
+}
 
 export class Bedroom extends SideEpisode {
   constructor() { super('bedroom'); }
 
   create(data) {
+    data = data || {};
     this.initSide('ep4', LEVEL, buildMap());
     const P = this.P, LW = LEVEL.w * TILE;
     makeSprites(this, P);
     const lvl = paintLevel(P); lvl.toTexture(this, 'bd_level'); this.marks = lvl.marks;
     paintBrother(P, false).toTexture(this, 'bro_sit'); paintBrother(P, false, true).toTexture(this, 'bro_in'); paintBrother(P, true).toTexture(this, 'bro_dead');
-    this.bloodCol = hexNum(bloodOf(P)); this.trail = trail();
+    this.trail = trail();
     this.pixelCamera(LW, P.void);
     this.add.image(0, 0, 'bd_level').setOrigin(0).setDepth(0);
     this.worldG = this.add.graphics().setDepth(0.5);
@@ -40,19 +63,18 @@ export class Bedroom extends SideEpisode {
     this.camG = this.add.graphics().setDepth(3);
     this.bro = this.add.image(LEVEL.brother.x, GROUND, 'bro_sit').setOrigin(0, 1).setDepth(3.2);
     this.commonLayers();
+    this.beamG.setBlendMode(Phaser.BlendModes.NORMAL);
     this.eyeG = this.add.graphics().setDepth(4.5);
-    // the dark: a canvas the size of the view, holes cut where there is light
+    // the dark: a canvas the size of the view; holes cut where there is light, red where a flash is
     this.darkCanvas = document.createElement('canvas'); this.darkCanvas.width = 322; this.darkCanvas.height = 182;
     if (this.textures.exists('bd_dark')) this.textures.remove('bd_dark');
     this.darkTex = this.textures.addCanvas('bd_dark', this.darkCanvas);
     this.darkImg = this.add.image(0, 0, 'bd_dark').setOrigin(0).setDepth(6.4);
-    this.flashG = this.add.graphics().setDepth(6.42).setBlendMode(Phaser.BlendModes.MULTIPLY); // red light: everything it touches goes red
-    this.lightG = this.add.graphics().setDepth(6.5).setBlendMode(Phaser.BlendModes.ADD);
     this.overG = this.add.graphics().setDepth(6.6);
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
     this.debris = this.add.particles(0, 0, 'dot2', { speedX: { min: -20, max: 20 }, speedY: { min: -10, max: 30 }, gravityY: 420, lifespan: { min: 500, max: 1100 }, tint: [hexNum(P.wood), hexNum(P.rubble), hexNum(P.woodHi)], emitting: false }).setDepth(6.45);
-    this.dust = this.add.particles(0, 0, 'dot', { speedY: { min: -14, max: -4 }, speedX: { min: -8, max: 8 }, lifespan: 1400, alpha: { start: 0.6, end: 0 }, tint: [hexNum(flat(P.dust)), hexNum(P.shaft)], emitting: false }).setDepth(6.45);
-    this.motes = this.add.particles(0, 0, 'dot', { speedX: { min: -16, max: -4 }, speedY: { min: -6, max: 6 }, lifespan: 2200, alpha: { start: 0.9, end: 0 }, tint: [hexNum(P.voidEdge), 0xebe6d8], blendMode: 'ADD', emitting: false }).setDepth(6.7);
+    this.dust = this.add.particles(0, 0, 'dot', { speedY: { min: -14, max: -4 }, speedX: { min: -8, max: 8 }, lifespan: 1200, tint: [hexNum(flat(P.dust)), hexNum(P.rubble)], emitting: false }).setDepth(6.45);
+    this.motes = this.add.particles(0, 0, 'dot', { speedX: { min: -16, max: -4 }, speedY: { min: -6, max: 6 }, lifespan: 1600, tint: [hexNum(P.voidEdge), hexNum(P.colLo)], emitting: false }).setDepth(6.7);
 
     // the cameras, each on its own beat
     this.cams = LEVEL.cameras.map(c => { const cm = Object.assign({}, c, { angle: c.aim, cone: null, lock: 0, caught: false, flash: 0, snap: null, clicks: 0, warn: false }); this.resync(cm, 0.6 - 0.9); return cm; });
@@ -60,31 +82,42 @@ export class Bedroom extends SideEpisode {
     this.props = LEVEL.props.map(r => Object.assign({}, r));
     this.wallProp = Object.assign({}, LEVEL.bag.wall); this.props.push(this.wallProp);
     this.lowProp = Object.assign({ falls: true }, LEVEL.bag.low);
-    this.stepProp = Object.assign({ falls: true }, LEVEL.run.step); this.props.push(this.stepProp);
     const S = LEVEL.run.slab; this.slabProp = { id: 'the ceiling', x: S.x, y: S.top, w: S.w, h: S.bottom - S.top, falls: true };
-    this.bag = { have: false, hold: 0 };
+    this.bag = { have: false, hold: 0, note: 0, read: false };
     this.collapse = null; this.runNote = 0; this.glitchT = 0;
     this.run = { gaps: LEVEL.run.gaps.map(g => Object.assign({}, g, { state: 'whole', t: 0 })), slab: { state: 'up', t: 0, y: 16 } };
-    this.mode = 'house'; this.fading = false;
+    this.mode = 'house'; this.fading = false; this.stay = 0;
+    // the scene object is reused on a restart: every one-shot flag starts over here
+    this.broDead = false; this.carded = false; this.went = false; this.breakCard = false; this.breakDone = false; this.rerun = false; this.photo = null; this.coughT = 0;
+    this.box = { t: 0 }; // the music box: seconds left playing
     this.gl = new Glasses({ has: true, on: true, cracked: true });
     this.skipPoints = [12 * TILE + 20, 20 * TILE, 34 * TILE + 8, 56 * TILE + 8];
-    const SD = LEVEL.sideDoor, bx = LEVEL.bag.x;
+    const SD = LEVEL.sideDoor, bx = LEVEL.bag.x, MB = LEVEL.musicBox;
     this.bagThing = { x0: bx - 12, x1: bx + 14, y0: 140, y1: GROUND, label: 'J', use: () => {} };
-    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'J', door: true, use: () => this.enterRoom('wardrobe') }, this.bagThing);
+    this.boxThing = { x0: MB.x - 10, x1: MB.x + 14, y0: 118, y1: GROUND, px: MB.x + 4, py: MB.y - 8, label: 'J', use: () => this.windBox() };
+    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'J', door: true, use: () => this.enterRoom('wardrobe') }, this.bagThing, this.boxThing);
     // things to look at in the dark (not once the floor starts to go)
-    const N = NOTICE.bedroom, look = (x0, x1, py, lines, y0) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 112, py, lines });
-    look(94, 148, 126, N.piano); look(238, 298, 130, N.table); look(556, 580, 50, N.clock, 100); look(626, 694, 130, N.silver); look(754, 822, 132, N.billiards);
+    const N = NOTICE.bedroom, look = (x0, x1, py, lines, y0, clue) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 112, py, lines, clue });
+    look(94, 148, 126, N.piano); look(238, 280, 130, N.table); look(556, 580, 50, N.clock, 100); look(626, 694, 130, N.silver); look(754, 822, 132, N.billiards);
+    const PH = LEVEL.photos, HW = LEVEL.hallWindow, RQ = LEVEL.request;
+    look(PH.x - 2, PH.x + PH.span + 2, PH.y - 4, N.photos, 96);
+    look(HW.x - 4, HW.x + HW.w + 4, HW.y + HW.h + 2, N.window, 100);
+    look(RQ.x - 8, RQ.x + 20, RQ.y - 2, N.request, 96, 'request4');
     this.drawBodies();
     this.spawn(); this.kid.face = 1;
     this.view = { x: 0 }; this.updateView(1);
-    const fromCut = !!(data && data.fromCut);
+    const fromCut = !!data.fromCut;
     this.cameras.main.fadeIn(fromCut ? 1200 : 400);
     this.beds = { hum: Sound.hum(0.012), wind: Sound.wind(0.02), breath: Sound.breath(0.0001) };
     Music.play('dark', { fadeIn: 2.5 });
     this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
     this.onWake = () => { this.updateView(1); this.beds.hum.set(0.012, 0.5); this.beds.wind.set(0.02, 0.5); };
-    this.takeNote({ fromCut }, 4, 'The Bedroom');
-    this.time.delayedCall(fromCut ? 4300 : 500, () => { if (this.mode === 'house' && !this.dead) this.itemPanel('dark'); });
+    // back from the break: the same scene, from the kneel, with nothing left to say
+    if (data.rerun) { this.rerun = true; this.bag.have = true; this.goInside(true); }
+    else {
+      this.takeNote({ fromCut }, 4, 'The Bedroom');
+      this.time.delayedCall(fromCut ? 4300 : 500, () => { if (this.mode === 'house' && !this.dead) this.itemPanel('dark'); });
+    }
     window.__game = { scene: this, state };
   }
 
@@ -103,7 +136,7 @@ export class Bedroom extends SideEpisode {
         if (k.y + k.h > 176) { if (state.immune) this.rescue(); else this.die({ id: 'the fall', direct: true, footY: GROUND }); }
       } else if (this.dead && this.girl.visible) this.settle(dt);
       this.gl.update(dt);
-      this.updateClock(dt); this.updateCams(dt); this.updateCollapse(dt); this.updateRun(dt);
+      this.updateClock(dt); this.updateBox(dt); this.updateCams(dt); this.updateCollapse(dt); this.updateRun(dt);
     } else this.updateBedroom(dt);
     this.updateView(dt);
     this.updateAmbience();
@@ -127,6 +160,9 @@ export class Bedroom extends SideEpisode {
     if (this.mode === 'dying') { this.dyingT = Math.max(this.dyingT, 5.5); return; }
     if (this.mode === 'after') this.openVoid();
   }
+  // the climb before the doors: the floor is solid there, so her own respawn spot finder must not
+  // pick the top of the heap
+  placeAt(x) { super.placeAt(x); const k = this.kid; if (k.y + k.h < GROUND - 1 && x > 79 * TILE && x < 85 * TILE) { k.x = 85 * TILE + 6; k.y = GROUND - k.h; } }
 
   // ------------------------------------------------------------------ the view
   // Followed by hand so the dark layer and the world move together, frame for frame.
@@ -197,40 +233,77 @@ export class Bedroom extends SideEpisode {
   }
   step(landing) {
     const k = this.kid, cx = k.x + k.w / 2, f = LEVEL.noisy.find(n => cx >= n.x0 && cx < n.x1);
-    if (!f) { if (landing) Sound.noise(0.05, 0.02, 600); return; }
+    if (!f || k.y + k.h < GROUND - 1) { if (landing) Sound.noise(0.05, 0.02, 600); return; } // on furniture, the floor is not under her
     if (f.kind === 'boards') { Sound.tone(150 + Math.random() * 40, 0.16, 'sawtooth', 0.018, 90); Sound.noise(0.08, 0.03, 900); }
     else { Sound.noise(0.09, 0.07, 7000); Sound.tone(3600 + Math.random() * 900, 0.04, 'triangle', 0.01); }
     this.noiseAt(cx, k.y + k.h);
   }
 
-  // ------------------------------------------------------------------ the clock
+  // ------------------------------------------------------------------ the clock and the music box
   updateClock() {
     const C = LEVEL.clock, cyc = Math.floor(this.clock / C.period), u = this.clock - cyc * C.period;
     C.strokes.forEach((s, i) => { const id = cyc * 10 + i; if (u >= s && !this.struck.has(id)) { this.struck.add(id); this.strike(); } });
     const tk = Math.floor(this.clock * 2), d = Math.abs(C.x - this.kid.x);
     if (tk !== this.lastTick) { this.lastTick = tk; if (d < 420) Sound.tone(tk % 2 ? 1900 : 1500, 0.02, 'square', 0.007 * (1 - d / 420)); }
   }
-  masked() { const C = LEVEL.clock; return this.clock % C.period < C.mask; }
+  masked() { const C = LEVEL.clock; return this.clock % C.period < C.mask || this.box.t > 0; }
   strike() { const d = Math.abs(LEVEL.clock.x - this.kid.x); Sound.bell(0.075 * Math.max(0.2, 1 - d / 700)); this.rings.push({ t: 0 }); }
+  windBox() {
+    if (this.box.t > 0 || this.bag.have) return;
+    this.box.t = LEVEL.musicBox.mask; this.box.note = 0;
+    Sound.tone(900, 0.05, 'square', 0.01); // the key turns
+    if (state.hear('bd:musicbox')) overlay.sfx('[A MUSIC BOX PLAYS]', 1800);
+  }
+  updateBox(dt) {
+    const B = this.box; if (B.t <= 0) return;
+    const before = B.t; B.t = Math.max(0, B.t - dt);
+    // a small tune of its own, a note every 0.25 s, fainter the further she is from it
+    const tune = [784, 659, 587, 659, 523, 587, 659, 784, 880, 784, 659, 523];
+    const n = Math.floor((LEVEL.musicBox.mask - B.t) / 0.25), d = Math.abs(LEVEL.musicBox.x - this.kid.x);
+    if (n !== B.note && n < tune.length) { B.note = n; Sound.tone(tune[n], 0.22, 'triangle', 0.02 * Math.max(0.25, 1 - d / 400)); }
+    if (before > 0 && B.t === 0) Sound.tone(392, 0.12, 'triangle', 0.01);
+  }
 
   // ------------------------------------------------------------------ his bag
+  // Hold J: at the end of the pull the bag comes free. Keep holding (the full pull) and she finds
+  // his note in it. The floor goes when she lets go, or when the note is read.
   updateBag(dt) {
     const B = this.bag;
-    if (B.have) return;
+    if (B.have) {
+      if (this.collapse || B.letGo) return;
+      if (B.read) {
+        // the floor waits for his line: it goes once the note has been read out (or put away),
+        // so the collapse's caption never cuts it off
+        B.wait += dt;
+        if (B.wait > 0.4 && (!this.bubbles.busy('item') || B.wait > 7)) this.bringDown();
+        return;
+      }
+      if (this.ctl.useHeld()) {
+        B.note += dt / 1.1;
+        if (B.note >= 1) { B.read = true; B.wait = 0; this.readNote(); }
+      } else { B.letGo = true; this.time.delayedCall(250, () => this.bringDown()); }
+      return;
+    }
     if (this.nearThing === this.bagThing && this.ctl.useHeld()) {
       B.hold += dt / 1.2;
       if (Math.random() < dt * 5) Sound.noise(0.07, 0.02, 900);
-      if (B.hold >= 1) this.pullBag();
+      if (B.hold >= 1) this.pullBag(true);
     } else B.hold = Math.max(0, B.hold - dt * 2);
   }
-  pullBag() {
+  pullBag(held) {
     const B = this.bag; B.have = true; B.hold = 0; this.bagThing.off = true;
     Sound.tone(150, 0.2, 'triangle', 0.04, 90); Sound.noise(0.3, 0.06, 700);
-    this.say('His bag. Still heavy.');
-    this.time.delayedCall(800, () => this.bringDown());
+    if (state.hear('bd:bag')) this.say('His bag. Still heavy.'); // said once, not on every take
+    fx.shake(this.cameras.main, 160, 0.004); Sound.tone(70, 0.6, 'sawtooth', 0.03, 50); // the beam above shifts
+    if (!held) { B.letGo = true; this.time.delayedCall(800, () => this.bringDown()); }
+  }
+  readNote() {
+    if (state.clue('bagNote')) overlay.note('NOTED (' + state.clueCount() + ')', 1600);
+    this.bubbles.look('item', { lines: NOTICE.bedroom.bagNote }, () => ({ x: LEVEL.bag.x + 2, y: GROUND - 14 }));
+    Sound.tone(520, 0.3, 'sine', 0.015);
   }
   bringDown() {
-    if (this.dead || this.collapse) return;
+    if (this.dead || this.collapse || this.mode !== 'house') return;
     // the beam shifts, the stairs slump, and the floor behind her starts to go
     this.props = this.props.filter(r => r !== this.wallProp); this.props.push(this.lowProp);
     fx.shake(this.cameras.main, 450, 0.012); Sound.noise(0.9, 0.22, 1500); Sound.tone(70, 1.2, 'sawtooth', 0.05, 40);
@@ -244,7 +317,7 @@ export class Bedroom extends SideEpisode {
   updateCollapse(dt) {
     const C = this.collapse; if (!C || C.done) return;
     C.t += dt;
-    const sp = C.t < 0.8 ? 46 : 58 + Math.min(10, (C.t - 0.8) * 2);
+    const sp = C.t < 0.8 ? 44 : 52 + Math.min(8, (C.t - 0.8) * 1.5);
     C.x = Math.min(LEVEL.collapse.stop, C.x + sp * dt);
     const m = this.map.m;
     for (let tx = LEVEL.collapse.fromTile; tx <= LEVEL.collapse.lastTile; tx++) {
@@ -293,17 +366,18 @@ export class Bedroom extends SideEpisode {
     this.leaving = true;
     Sound.tone(220, 0.3, 'triangle', 0.03, 180); Sound.noise(0.4, 0.05, 900);
     this.cameras.main.fadeOut(500, 0, 0, 0);
-    this.time.delayedCall(520, () => {
-      this.mode = 'bedroom'; this.leaving = false;
-      const k = this.kid; k.x = BX + 26; k.y = GROUND - K.hStand; k.h = K.hStand; k.crouch = false; k.vx = 0; k.vy = 0; k.face = 1;
-      this.cams.forEach(cm => { cm.caught = false; cm.lock = 0; });
-      if (this.beds.rumble) this.beds.rumble.set(0.0001, 0.4);
-      this.beds.breath.set(0.08, 1.5);
-      Music.play('bedroom', { fade: 1, fadeIn: 4 });
-      this.updateView(0);
-      this.cameras.main.fadeIn(1100);
-      overlay.hint('');
-    });
+    this.time.delayedCall(520, () => this.goInside(false));
+  }
+  goInside(rerun) {
+    this.mode = 'bedroom'; this.leaving = false;
+    const k = this.kid; k.x = rerun ? LEVEL.brother.kneel - k.w / 2 : BX + 26; k.y = GROUND - K.hStand; k.h = K.hStand; k.crouch = false; k.vx = 0; k.vy = 0; k.face = 1; k.onGround = true;
+    this.cams.forEach(cm => { cm.caught = false; cm.lock = 0; });
+    if (this.beds.rumble) this.beds.rumble.set(0.0001, 0.4);
+    this.beds.breath.set(0.08, 1.5);
+    Music.play('bedroom', { fade: 1, fadeIn: 4 });
+    this.updateView(0);
+    this.cameras.main.fadeIn(rerun ? 600 : 1100);
+    overlay.hint('');
   }
   updateBedroom(dt) {
     const k = this.kid, c = this.ctl;
@@ -317,11 +391,15 @@ export class Bedroom extends SideEpisode {
       if (this.dyingT > 3.4 && !this.broDead) { this.broDead = true; this.bro.setTexture('bro_dead'); Sound.tone(98, 1.8, 'sine', 0.02); }
       if (this.dyingT > 5.6) {
         this.mode = 'after';
-        const V = LEVEL.voidDoor; this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'J', use: () => this.openVoid() };
-        this.things = [this.voidThing];
+        const V = LEVEL.voidDoor, B = LEVEL.brother;
+        this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'J', use: () => this.openVoid() };
+        this.broThing = { x0: B.x - 14, x1: B.x + 20, y0: 130, y1: GROUND, px: B.x + 14, py: GROUND - 24, label: 'J', use: () => this.holdOn() };
+        this.things = [this.voidThing, this.broThing];
       }
     }
+    if (this.mode === 'after') this.updateStay(dt);
     if (this.mode === 'void') this.updateVoid(dt);
+    if (this.mode === 'break') this.updateBreak(dt);
   }
   startTalk() {
     const k = this.kid;
@@ -331,6 +409,8 @@ export class Bedroom extends SideEpisode {
   }
   nextLine() {
     this.talkI++;
+    // after the break the scene runs again with nothing said: he just goes
+    if (this.rerun) this.talkI = BEDROOM.length;
     if (this.talkI >= BEDROOM.length) return this.endTalk();
     const l = BEDROOM[this.talkI];
     this.talkT = lineSeconds(l.text) + (l.who ? 0.4 : 0.8);
@@ -342,9 +422,31 @@ export class Bedroom extends SideEpisode {
     this.mode = 'dying'; this.dyingT = 0; Music.stop(5);
     this.beds.breath.slow(1.7); this.beds.breath.set(0.0001, 3.2);
   }
+  // holding on to him: a tap says so once; held, the red lights close in, and at 15 s the show
+  // cuts to a break (a false ending), then runs the scene again from the kneel
+  holdOn() {
+    if (state.hear('bd:holdon')) this.bubbles.look('item', { lines: NOTICE.bedroom.hold }, () => ({ x: LEVEL.brother.x + 12, y: GROUND - 22 }));
+  }
+  updateStay(dt) {
+    const held = this.nearThing === this.broThing && this.ctl.useHeld();
+    this.stay = held ? this.stay + dt : Math.max(0, this.stay - dt * 3);
+    if (held && Math.floor(this.stay) !== Math.floor(this.stay - dt)) Sound.tone(110 - Math.floor(this.stay) * 3, 0.25, 'sine', 0.012 + this.stay * 0.002);
+    if (this.stay >= STAY) this.rightBack();
+  }
+  rightBack() {
+    this.mode = 'break'; this.breakT = 0; this.stay = STAY;
+    state.sawEnding('rightBack');
+    this.beds.breath.set(0.0001, 0.2); Music.stop(0.2);
+    Sound.tone(1000, 0.9, 'sine', 0.03); // the tone of a show going to a break
+  }
+  updateBreak(dt) {
+    this.breakT += dt;
+    if (this.breakT > 0.5 && !this.breakCard) { this.breakCard = true; this.cameras.main.fadeOut(10, 0, 0, 0); overlay.card('CH 07', "WE'LL BE RIGHT BACK.", 3000); }
+    if (this.breakT > 4.0 && !this.breakDone) { this.breakDone = true; this.scene.restart({ rerun: true }); }
+  }
   openVoid() {
     if (this.mode !== 'after') return;
-    this.mode = 'void'; this.voidT = 0; this.voidThing.off = true;
+    this.mode = 'void'; this.voidT = 0; this.voidThing.off = true; this.stay = 0;
     Sound.swell(4.5, 0.07); Sound.tone(55, 3.2, 'sine', 0.06, 38);
     state.finish(this.epId);
   }
@@ -356,7 +458,7 @@ export class Bedroom extends SideEpisode {
       if (k.crouch) { k.y -= K.hStand - K.hCrouch; k.h = K.hStand; k.crouch = false; }
       const d = target - k.x; k.x += Math.sign(d) * Math.min(Math.abs(d), 26 * dt); k.face = d < 0 ? -1 : 1; k.walkT = Math.abs(d) > 0.5 ? k.walkT + dt : 0;
     }
-    if (this.voidT > 2.4) this.girl.setAlpha(Math.max(0, 1 - (this.voidT - 2.4) / 0.9));
+    if (this.voidT > 2.4) this.girl.setVisible(Math.floor(this.voidT * 8) % 2 === 0 && this.voidT < 3.3); // she blinks out, no fade
     if (this.voidT > 3.0 && !this.fading) { this.fading = true; this.cameras.main.fadeOut(1500, 0, 0, 0); this.beds.hum.set(0.0001, 1.2); this.beds.wind.set(0.0001, 1.2); }
     if (this.voidT > 4.7 && !this.carded) { this.carded = true; overlay.card('END OF EPISODE 4', 'Take ' + this.ep.take, 3400); overlay.bug('CH 07', 1400); }
     if (this.voidT > 8.4 && !this.went) { this.went = true; goNext(this, 'ep4'); }
@@ -375,80 +477,81 @@ export class Bedroom extends SideEpisode {
 
   // ------------------------------------------------------------------ drawing
   draw(dt) {
-    const P = this.P, t = this.clock, red = hexNum(P.hazard), vx = Math.round(this.view.x);
+    const P = this.P, t = this.clock, vx = Math.round(this.view.x);
     this.drawGirl();
+    if (this.mode === 'void' && this.voidT > 2.4) this.girl.setVisible(Math.floor(this.voidT * 8) % 2 === 0 && this.voidT < 3.3);
     this.drawWorld(); this.drawProps(); this.drawCams();
     // her bag on her back, and a glint off the cracked glasses
     const eg = this.eyeG; eg.clear();
     if (this.girl.visible && !this.dead) {
       const k = this.kid, cx = Math.round(k.x + k.w / 2), top = Math.round(k.y + k.h) - (k.crouch ? 9 : 14);
-      if (this.bag.have) { const bx = k.face > 0 ? cx - 5 : cx + 2; eg.fillStyle(hexNum(P.sibLo), this.girl.alpha); eg.fillRect(bx, top + 5, 3, 5); eg.fillStyle(hexNum(P.sib), this.girl.alpha); eg.fillRect(bx, top + 5, 3, 1); }
-      if (Math.floor(t * 3) % 4 === 0) { eg.fillStyle(hexNum(P.overlay), 0.8 * this.girl.alpha); eg.fillRect(cx + (k.face < 0 ? -3 : 1), top + (k.crouch ? 1 : 2), 2, 1); }
+      if (this.bag.have) { const bx = k.face > 0 ? cx - 5 : cx + 2; eg.fillStyle(hexNum(P.crack), 1); eg.fillRect(bx - 1, top + 4, 5, 7); eg.fillStyle(hexNum(P.sibLo), 1); eg.fillRect(bx, top + 5, 3, 5); eg.fillStyle(hexNum(P.sib), 1); eg.fillRect(bx, top + 5, 3, 1); }
+      if (Math.floor(t * 3) % 4 === 0) { eg.fillStyle(hexNum(P.overlay), 1); eg.fillRect(cx + (k.face < 0 ? -3 : 1), top + (k.crouch ? 1 : 2), 2, 1); }
     }
-    // the dark and what lights it
-    const lights = this.lights = [];
-    const k = this.kid;
-    if (!this.dead && this.girl.visible) lights.push({ x: k.x + k.w / 2, y: k.y + 6, r: 34, soft: 0.8, a: 0.72 * this.girl.alpha });
-    const lg = this.lightG, fg = this.flashG; lg.clear(); fg.clear();
+    // the light: hard holes in solid dark (a lit middle, a checker rim; a weak light is only the
+    // checker), flat shapes for windows and broken ceilings, and red where a flash lands
+    const lights = this.lights = [], reds = [];
+    const k = this.kid, quad = (x0, x1, y0, x2, x3, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x3, y: y1 }, { x: x2, y: y1 }];
+    if (!this.dead && this.girl.visible) lights.push({ x: k.x + k.w / 2, y: k.y + 6, r: 30 });
     if (this.mode === 'house') {
       this.cams.forEach(cm => {
-        lights.push({ x: cm.x, y: cm.y, r: 8, soft: 0.8, a: cm.warn ? 0.6 : 0.3 });
+        lights.push({ x: cm.x, y: cm.y, r: 6, a: cm.warn ? 1 : 0.5 });
         if (cm.flash > 0 && cm.cone) {
-          const f = cm.flash * cm.flash, r = cm.angle * Math.PI / 180;
-          const fl = f * fx.level * (cm.lit == null ? 1 : cm.lit); // reduced flashing: a dimmer flash
-          lights.push({ poly: cm.cone, a: 0.9 * fl });
-          lights.push({ x: cm.x + Math.cos(r) * cm.range * 0.55, y: cm.y + Math.sin(r) * cm.range * 0.55, r: cm.range * 0.6, soft: 0.9, a: 0.4 * fl });
-          fg.fillStyle(0xe3412b, 0.85 * fl); fg.fillPoints(cm.cone, true);
-          lg.fillStyle(red, 0.08 * f); lg.fillPoints(cm.cone, true);
+          const fl = cm.flash * fx.level * (cm.lit == null ? 1 : cm.lit); // reduced flashing: a dimmer flash
+          if (fl > 0.25) { lights.push({ poly: cm.cone }); reds.push({ poly: cm.cone, dense: fl > 0.6 }); }
         }
       });
-      const C = LEVEL.clock, striking = this.masked();
-      lights.push({ x: C.x, y: 76, r: striking ? 30 : 18, soft: 0.8, a: striking ? 0.7 : 0.45 });
-      lg.fillStyle(hexNum(P.lamp), striking ? 0.12 : 0.05); lg.fillCircle(C.x, 76, striking ? 12 : 8);
+      const C = LEVEL.clock, striking = this.clock % C.period < C.mask;
+      lights.push({ x: C.x, y: 76, r: striking ? 26 : 14 });
+      if (this.box.t > 0) lights.push({ x: LEVEL.musicBox.x + 4, y: LEVEL.musicBox.y - 6, r: 12 });
+      // the picture lamp over the family photos: a flat wedge down the wall
+      const PH = LEVEL.photos; lights.push({ poly: quad(PH.x - 2, PH.x + PH.span + 2, PH.y - 7, PH.x - 8, PH.x + PH.span + 8, PH.y + 30) });
+      // the hall window: the window itself, lit, and a checker of moonlight on the floor
+      const HW = LEVEL.hallWindow;
+      lights.push({ poly: quad(HW.x - 3, HW.x + HW.w + 3, HW.y - 3, HW.x - 3, HW.x + HW.w + 3, HW.y + HW.h + 3) });
+      lights.push({ poly: quad(HW.x, HW.x + HW.w, HW.y + HW.h, HW.x + 10, HW.x + HW.w + 26, GROUND), dither: true });
       if (this.collapse) {
+        // the ceiling goes with the floor: night sky over the gone part, a checker of it below
         const x0 = LEVEL.collapse.from, x1 = this.collapse.x;
-        for (let x = x0 + 20; x < x1; x += 44) lights.push({ x, y: 96, r: 72, soft: 0.6, a: 0.82 });
-        if (x1 - x0 > 8) { lg.fillStyle(hexNum(P.shaft), 0.06); lg.fillPoints([{ x: x0, y: 0 }, { x: x1, y: 0 }, { x: x1 + 30, y: GROUND }, { x: x0 + 10, y: GROUND }], true); }
+        if (x1 - x0 > 8) lights.push({ poly: quad(x0, x1, 0, x0 + 10, x1 + 30, GROUND), dither: true });
       }
-      // where the ceiling came down with the floor or the slab, moonlight
+      // where the ceiling came down with the floor or the slab: a flat shaft of moonlight
       const holes = this.run.gaps.filter(q => q.state === 'open').map(q => ({ x: q.t0 * TILE, w: (q.t1 - q.t0 + 1) * TILE }));
       if (this.run.slab.state === 'down' || this.run.slab.state === 'fall') holes.push({ x: LEVEL.run.slab.x, w: LEVEL.run.slab.w });
-      holes.forEach(h => { lights.push({ x: h.x + h.w / 2, y: 110, r: 58, soft: 0.6, a: 0.8 }); lg.fillStyle(hexNum(P.shaft), 0.07); lg.fillPoints([{ x: h.x, y: 0 }, { x: h.x + h.w, y: 0 }, { x: h.x + h.w + 10, y: GROUND }, { x: h.x - 4, y: GROUND }], true); });
+      holes.forEach(h => lights.push({ poly: quad(h.x, h.x + h.w, 0, h.x - 4, h.x + h.w + 10, GROUND) }));
+      // light through the broken ceiling over the climb, so the walls she jumps between show
+      if (this.collapse) { const x0 = (LEVEL.run.hang.tx + 1) * TILE, x1 = LEVEL.run.heap.tx * TILE; lights.push({ poly: quad(x0 - 6, x1 + 6, 0, x0 - 12, x1 + 12, GROUND) }); }
       // the line of cold light under the bedroom doors
-      const D = LEVEL.door; lights.push({ x: D.x + D.w / 2, y: GROUND - 2, r: 14, soft: 0.8, a: 0.35 + 0.1 * Math.sin(t * 2) });
+      const D = LEVEL.door; lights.push({ x: D.x + D.w / 2, y: GROUND - 2, r: 14, a: Math.floor(t * 1.5) % 3 ? 0.5 : 1 });
     } else {
-      const Wn = LEVEL.window, V = LEVEL.voidDoor, pulse = 0.5 + 0.5 * Math.sin(t * 1.7);
-      lights.push({ x: Wn.x + Wn.w / 2, y: Wn.y + Wn.h / 2, r: 52, soft: 0.6, a: 0.6 });
-      lights.push({ poly: [{ x: Wn.x, y: Wn.y + Wn.h }, { x: Wn.x + Wn.w, y: Wn.y + Wn.h }, { x: Wn.x + 20, y: GROUND + 2 }, { x: Wn.x - 70, y: GROUND + 2 }], a: 0.5 });
-      lg.fillStyle(hexNum(P.shaft), 0.05); lg.fillPoints([{ x: Wn.x, y: Wn.y + Wn.h }, { x: Wn.x + Wn.w, y: Wn.y + Wn.h }, { x: Wn.x + 20, y: GROUND }, { x: Wn.x - 70, y: GROUND }], true);
+      const Wn = LEVEL.window, V = LEVEL.voidDoor;
+      lights.push({ poly: quad(Wn.x - 4, Wn.x + Wn.w + 4, Wn.y - 4, Wn.x - 4, Wn.x + Wn.w + 4, Wn.y + Wn.h + 4) });
+      lights.push({ poly: quad(Wn.x, Wn.x + Wn.w, Wn.y + Wn.h, Wn.x - 70, Wn.x + 20, GROUND + 2), dither: true });
       const open = this.mode === 'void' ? Math.min(1, this.voidT / 0.8) : 0;
-      lights.push({ x: V.x + V.w / 2, y: V.y + V.h / 2, r: 22 + pulse * 6 + open * 40, soft: 0.7, a: 0.4 + open * 0.5 });
-      lg.fillStyle(hexNum(P.voidEdge), 0.12 + 0.1 * pulse + open * 0.3); lg.fillRect(V.x - 2, V.y - 2, V.w + 4, 2); lg.fillRect(V.x - 2, V.y, 2, V.h); lg.fillRect(V.x + V.w, V.y, 2, V.h); lg.fillRect(V.x, GROUND - 1, V.w, 1);
-      lights.push({ x: LEVEL.rec.x, y: LEVEL.rec.y, r: 7, soft: 0.8, a: 0.5 });
+      lights.push({ x: V.x + V.w / 2, y: V.y + V.h / 2, r: 24 + Math.round(open * 40), a: open > 0.3 ? 1 : 0.5 });
+      lights.push({ x: LEVEL.rec.x, y: LEVEL.rec.y, r: 7, a: 0.5 });
     }
-    this.drawDark(vx, this.mode === 'house' ? 0.91 : 0.84);
+    this.drawDark(vx, reds);
     this.drawOver(dt);
     this.drawLocks(this.cams, LEVEL.caught);
     this.drawThings();
     this.drawHud(dt);
   }
 
-  drawDark(vx, alpha) {
-    const ctx = this.darkCanvas.getContext('2d'), n = hexNum(this.P.void);
-    ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, 322, 182);
-    ctx.fillStyle = `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`; ctx.fillRect(0, 0, 322, 182);
+  drawDark(vx, reds) {
+    const ctx = this.darkCanvas.getContext('2d');
+    darkFill(ctx);
+    const toC = p => ({ x: p.x - vx + 1, y: p.y + 1 });
+    hardHoles(ctx, this.lights.filter(l => !l.poly).map(l => Object.assign(toC(l), { r: l.r, a: l.a })), vx);
+    // shapes of light (a flash's cone, a window, moonlight through a hole): row by row, lit or checker
     ctx.globalCompositeOperation = 'destination-out';
-    this.lights.forEach(l => {
-      if (l.poly) {
-        ctx.fillStyle = `rgba(0,0,0,${l.a})`; ctx.beginPath();
-        l.poly.forEach((p, i) => { const x = p.x - vx + 1, y = p.y + 1; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
-        ctx.closePath(); ctx.fill(); return;
-      }
-      const x = l.x - vx + 1, y = l.y + 1; if (x < -l.r || x > 322 + l.r) return;
-      const g = ctx.createRadialGradient(x, y, l.r * (1 - (l.soft || 0.5)), x, y, l.r);
-      g.addColorStop(0, `rgba(0,0,0,${l.a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, l.r, 0, Math.PI * 2); ctx.fill();
+    this.lights.filter(l => l.poly).forEach(l => {
+      ctx.fillStyle = l.dither ? checker(ctx, vx) : '#000';
+      spans(l.poly.map(toC), (x, y, w) => ctx.fillRect(x, y, w, 1));
     });
+    ctx.globalCompositeOperation = 'source-over';
+    // the flash itself: everything in the cone, her too, picked out in red pixels
+    (reds || []).forEach(r => { ctx.fillStyle = redPattern(ctx, r.dense, vx); spans(r.poly.map(toC), (x, y, w) => ctx.fillRect(x, y, w, 1)); });
     this.darkTex.refresh();
     this.darkImg.setPosition(vx - 1, -1);
   }
@@ -460,12 +563,12 @@ export class Bedroom extends SideEpisode {
       const x0 = LEVEL.collapse.from, w = C.x - x0;
       if (w > 0) {
         g.fillStyle(hexNum(P.void), 1); g.fillRect(x0, GROUND, w, 20);
-        g.fillStyle(hexNum(P.skyTop), 1); g.fillRect(x0, 0, w, 16); g.fillStyle(hexNum(P.skyMid), 1); g.fillRect(x0, 9, w, 7);
+        g.fillStyle(hexNum(P.skyTop), 1); g.fillRect(x0, 0, w, 16);
         for (let x = x0 + 5; x < C.x; x += 23) { g.fillStyle(hexNum(P.star), 1); g.fillRect(x, 3 + (x * 7) % 9, 1, 1); }
         for (let i = 0; i < 5; i++) { g.fillStyle(hexNum(P.wood), 1); g.fillRect(Math.round(C.x) - 2 - i * 3, GROUND + 1 + (i % 2) * 2, 2, 3 + i); }
       }
     }
-    const sky = (x, w) => { g.fillStyle(hexNum(P.skyTop), 1); g.fillRect(x, 0, w, 16); g.fillStyle(hexNum(P.skyMid), 1); g.fillRect(x, 9, w, 7); g.fillStyle(hexNum(P.star), 1); g.fillRect(x + 5, 4, 1, 1); g.fillRect(x + w - 7, 7, 1, 1); };
+    const sky = (x, w) => { g.fillStyle(hexNum(P.skyTop), 1); g.fillRect(x, 0, w, 16); g.fillStyle(hexNum(P.star), 1); g.fillRect(x + 5, 4, 1, 1); g.fillRect(x + w - 7, 7, 1, 1); };
     this.run.gaps.forEach(gp => {
       const x = gp.t0 * TILE, w = (gp.t1 - gp.t0 + 1) * TILE;
       if (gp.state === 'open') { g.fillStyle(hexNum(P.void), 1); g.fillRect(x, GROUND, w, 20); sky(x, w); g.fillStyle(hexNum(P.wood), 1); g.fillRect(x - 1, GROUND, 2, 6); g.fillRect(x + w - 1, GROUND, 2, 5); }
@@ -474,21 +577,30 @@ export class Bedroom extends SideEpisode {
   }
 
   drawProps() {
-    const g = this.propG, P = this.P; g.clear();
+    const g = this.propG, P = this.P, ash0 = hexNum(P.crack); g.clear();
     // the bag, under the beam, until she pulls it
     if (!this.bag.have) {
-      const bx = LEVEL.bag.x - 5, shake = this.bag.hold > 0 ? Math.round(Math.sin(this.clock * 50)) : 0;
+      const bx = LEVEL.bag.x - 5, shake = this.bag.hold > 0 ? (Math.floor(this.clock * 30) % 2) : 0;
+      g.fillStyle(ash0, 1); g.fillRect(bx - 1 + shake, GROUND - 9, 14, 9);
       g.fillStyle(hexNum(P.sibLo), 1); g.fillRect(bx + shake, GROUND - 8, 12, 8); g.fillStyle(hexNum(P.sib), 1); g.fillRect(bx + 1 + shake, GROUND - 8, 10, 2); g.fillStyle(hexNum(P.colLo), 1); g.fillRect(bx + 4 + shake, GROUND - 5, 4, 1);
       g.fillStyle(hexNum(P.device), 1); g.fillRect(bx + 10, GROUND - 11, 1, 4); // the strap, caught
     }
     // the stairs after they slump: a low heap to climb over
-    if (this.props.includes(this.lowProp)) { const r = this.lowProp; g.fillStyle(hexNum(P.rubble), 1); g.fillRect(r.x, r.y, r.w, r.h); g.fillStyle(hexNum(P.rubbleHi), 1); g.fillRect(r.x + 2, r.y, r.w - 6, 2); g.fillStyle(hexNum(P.wood), 1); g.fillRect(r.x + 6, r.y + 3, 14, 2); }
-    if (this.props.includes(this.stepProp)) { const r = this.stepProp; g.fillStyle(hexNum(P.rubble), 1); g.fillRect(r.x, r.y, r.w, r.h); g.fillStyle(hexNum(P.rubbleHi), 1); g.fillRect(r.x, r.y, r.w, 2); g.fillStyle(hexNum(P.crack), 1); g.fillRect(r.x + 8, r.y + 4, 1, 8); }
+    if (this.props.includes(this.lowProp)) { const r = this.lowProp; g.fillStyle(ash0, 1); g.fillRect(r.x - 1, r.y - 1, r.w + 2, r.h + 1); g.fillStyle(hexNum(P.rubble), 1); g.fillRect(r.x, r.y, r.w, r.h); g.fillStyle(hexNum(P.rubbleHi), 1); g.fillRect(r.x + 2, r.y, r.w - 6, 1); g.fillStyle(hexNum(P.wood), 1); g.fillRect(r.x + 6, r.y + 3, 14, 2); }
     // the slab of ceiling that comes down
     const S = this.run.slab, L = LEVEL.run.slab;
     if (S.state !== 'down' || this.props.includes(this.slabProp)) {
-      const y = S.state === 'down' ? L.top : S.state === 'fall' ? S.y : 16 + (S.state === 'warn' ? Math.round(Math.sin(S.t * 70)) : 0), h = S.state === 'up' || S.state === 'warn' ? 6 : L.bottom - L.top;
-      g.fillStyle(hexNum(P.wallLo), 1); g.fillRect(L.x, y, L.w, h); g.fillStyle(hexNum(P.wood), 1); g.fillRect(L.x, y + h - 3, L.w, 3); g.fillStyle(hexNum(P.crack), 1); g.fillRect(L.x + 10, y, 1, h);
+      const y = Math.round(S.state === 'down' ? L.top : S.state === 'fall' ? S.y : 16 + (S.state === 'warn' ? Math.floor(S.t * 30) % 2 : 0)), h = S.state === 'up' || S.state === 'warn' ? 6 : L.bottom - L.top;
+      g.fillStyle(ash0, 1); g.fillRect(L.x - 1, y, L.w + 2, h + 1);
+      g.fillStyle(hexNum(P.wallLo), 1); g.fillRect(L.x, y, L.w, h); g.fillStyle(hexNum(P.wood), 1); g.fillRect(L.x, y + h - 3, L.w, 3); g.fillStyle(ash0, 1); g.fillRect(L.x + 10, y, 1, h);
+    }
+    // the music box: lid up while it plays, the little drum turning
+    const MB = LEVEL.musicBox;
+    if (this.box.t > 0) {
+      g.fillStyle(ash0, 1); g.fillRect(MB.x - 1, MB.y - 13, 10, 7); g.fillStyle(hexNum(P.goldLo), 1); g.fillRect(MB.x, MB.y - 12, 8, 6); g.fillStyle(hexNum(P.goldHi), 1); g.fillRect(MB.x + 2, MB.y - 5, 4, 1);
+      const f = Math.floor(this.clock * 4) % 2; g.fillStyle(hexNum(P.gold), 1); g.fillRect(MB.x + 2 + f * 2, MB.y - 4, 1, 1);
+      // notes rising, square, two frames
+      g.fillStyle(hexNum(P.gold), 1); for (let i = 0; i < 2; i++) { const u = ((this.clock * 0.9 + i * 0.5) % 1); g.fillRect(MB.x + 3 + i * 4 + (f ? 1 : 0), Math.round(MB.y - 16 - u * 14), 2, 2); }
     }
   }
 
@@ -496,71 +608,68 @@ export class Bedroom extends SideEpisode {
     const g = this.camG, P = this.P, t = this.clock; g.clear();
     this.cams.forEach(cm => {
       const r = cm.angle * Math.PI / 180, lx = Math.round(cm.x + Math.cos(r) * 3), ly = Math.round(cm.y + Math.sin(r) * 3);
+      g.fillStyle(hexNum(P.crack), 1); g.fillRect(cm.x - 4, cm.y - 3, 9, 7);
       g.fillStyle(hexNum(P.device), 1); g.fillRect(cm.x - 3, cm.y - 2, 7, 5);
       g.fillStyle(hexNum(P.glass), 1); g.fillRect(lx - 1, ly - 1, 3, 3);
-      g.fillStyle(0xebe6d8, 0.3 + cm.flash * 0.7); g.fillRect(lx, ly - 1, 1, 1);
+      g.fillStyle(cm.flash > 0.3 ? 0xebe6d8 : hexNum(P.rubbleHi), 1); g.fillRect(lx, ly - 1, 1, 1);
     });
     // the clock's pendulum and hands
-    const C = LEVEL.clock, sw = Math.sin(t * Math.PI) * 3;
+    const C = LEVEL.clock, sw = Math.round(Math.sin(t * Math.PI) * 3);
     g.fillStyle(hexNum(P.goldLo), 1); g.fillRect(Math.round(C.x + sw * 0.3), 92, 1, 30); g.fillStyle(hexNum(P.gold), 1); g.fillRect(Math.round(C.x + sw) - 2, 122, 5, 5);
     const hr = t / 60 * Math.PI * 2, mn = t / 6 * Math.PI * 2;
-    g.lineStyle(1, hexNum(P.device), 1); g.lineBetween(C.x, 76, C.x + Math.sin(hr) * 3, 76 - Math.cos(hr) * 3); g.lineBetween(C.x, 76, C.x + Math.sin(mn) * 5, 76 - Math.cos(mn) * 5);
-    // the bedroom's own camera, and the door when it opens
+    pxLine(g, C.x, 76, C.x + Math.sin(hr) * 3, 76 - Math.cos(hr) * 3, hexNum(P.device)); pxLine(g, C.x, 76, C.x + Math.sin(mn) * 5, 76 - Math.cos(mn) * 5, hexNum(P.device));
+    // the door when it opens
     if (this.mode === 'void') {
-      const V = LEVEL.voidDoor, u = Math.min(1, this.voidT / 0.8), half = V.w / 2, w = Math.max(1, Math.round(half * (1 - u * 0.85)));
+      const V = LEVEL.voidDoor, u = Math.min(1, this.voidT / 0.8), half = V.w / 2, w = Math.max(1, Math.round(half * (1 - Math.floor(u * 4) / 4 * 0.85)));
       g.fillStyle(hexNum(P.void), 1); g.fillRect(V.x, V.y, V.w, V.h);
       g.fillStyle(hexNum(P.wood), 1); g.fillRect(V.x, V.y, w, V.h); g.fillStyle(hexNum(P.woodHi), 1); g.fillRect(V.x, V.y, 1, V.h);
       g.fillStyle(hexNum(P.colHi), 1); g.fillRect(V.x + V.w - w, V.y, w, V.h);
     }
   }
 
-  // what sits over the dark: the glasses' view, LEDs, the blood, noise, the clock's strokes
+  // what sits over the dark: the glasses' view, LEDs, the trail, noise, the clock's strokes
   drawOver(dt) {
-    const g = this.overG, P = this.P, t = this.clock, red = hexNum(P.hazard), vx = this.view.x; g.clear();
-    // the blood, faint in the dark, a little brighter just ahead of her
+    const g = this.overG, P = this.P, t = this.clock, red = hexNum(P.hazard), vx = this.view.x, bone = 0xebe6d8; g.clear();
+    // the trail: the drops just ahead of her catch what light there is
     const kx = this.kid.x;
+    g.fillStyle(hexNum(P.goldLo), 1);
     this.trail.forEach(d => {
-      if (d.x < vx - 4 || d.x > vx + 324) return;
+      if (d.x < kx || d.x > kx + 110 || d.x < vx - 4 || d.x > vx + 324) return;
       if (this.collapse && d.x > LEVEL.collapse.from && d.x < this.collapse.x) return;
-      const gp = this.run.gaps.find(q => q.state === 'open' && d.x >= q.t0 * TILE && d.x < (q.t1 + 1) * TILE); if (gp) return;
-      const ahead = d.x > kx && d.x < kx + 110 ? 0.16 : 0;
-      g.fillStyle(red, 0.13 + ahead); g.fillRect(d.x, d.y, d.w, 1);
+      if (this.run.gaps.some(q => q.state === 'open' && d.x >= q.t0 * TILE && d.x < (q.t1 + 1) * TILE)) return;
+      g.fillRect(d.x, d.y, d.w, 1);
     });
     if (this.mode === 'house') {
-      // the cones exist only in the glasses; off, she has the LEDs and the two clicks
+      // the cones exist only in the glasses: two dotted edges; when it is about to flash, solid
+      // edges and a blinking grid of dots inside. Off, she has the LEDs and the two clicks.
       const on = this.gl.showing && glassesOn(t);
       this.cams.forEach(cm => {
         if (!cm.cone) return;
         const o = cm.cone[0], a = cm.cone[1], b = cm.cone[cm.cone.length - 1];
         if (cm.warn && !cm.caught && this.gl.showing) {
-          const blink = Math.floor(t * 16) % 2 === 0;
-          g.fillStyle(red, blink ? 0.12 : 0.05); g.fillPoints(cm.cone, true);
-          g.lineStyle(1, red, blink ? 0.85 : 0.4); g.lineBetween(o.x, o.y, a.x, a.y); g.lineBetween(o.x, o.y, b.x, b.y);
-        } else if (on) {
-          g.fillStyle(hexNum(P.overlay), 0.045); g.fillPoints(cm.cone, true);
-          g.lineStyle(1, hexNum(P.overlay), 0.22); g.lineBetween(o.x, o.y, a.x, a.y); g.lineBetween(o.x, o.y, b.x, b.y);
-          if (Math.floor(t * 9) % 5 === 0) { g.lineStyle(1, red, 0.15); g.lineBetween(o.x + 1, o.y, a.x + 1, a.y); }
-        }
+          pxLine(g, o.x, o.y, a.x, a.y, red); pxLine(g, o.x, o.y, b.x, b.y, red);
+          if (Math.floor(t * 16) % 2 === 0) { g.fillStyle(red, 1); spans(cm.cone, (x, y, w) => { if (y % 6) return; for (let i = x + ((y / 6) % 2 ? 3 : 0); i < x + w; i += 6) g.fillRect(i, y, 1, 1); }); }
+        } else if (on) { pxLine(g, o.x, o.y, a.x, a.y, red, 3); pxLine(g, o.x, o.y, b.x, b.y, red, 3); }
         const led = cm.warn ? Math.floor(t * 16) % 2 === 0 : Math.floor(t * 1.5) % 2 === 0;
         if (led || cm.caught) { g.fillStyle(red, 1); g.fillRect(cm.x - 2, cm.y - 1, 1, 1); }
-        if (cm.flash > 0.6) { g.fillStyle(0xebe6d8, cm.flash); g.fillCircle(cm.x, cm.y + 1, 3); }
+        if (cm.flash > 0.6) { g.fillStyle(bone, 1); g.fillRect(cm.x - 1, cm.y, 3, 3); }
       });
-      // noise rings: white when heard, gold when the clock covers it
+      // noise rings: white when heard, gold (and small) when the clock or the music box covers it
       this.noises.forEach(n => n.t += dt); this.noises = this.noises.filter(n => n.t < 0.6);
-      this.noises.forEach(n => { const u = n.t / 0.6; g.lineStyle(1, n.masked ? hexNum(P.gold) : 0xebe6d8, (n.masked ? 0.35 : 0.7) * (1 - u)); g.strokeCircle(n.x, n.y - 3, 3 + u * (n.masked ? 14 : 30)); });
+      this.noises.forEach(n => { const u = n.t / 0.6; pxCircle(g, n.x, n.y - 3, Math.round((3 + u * (n.masked ? 14 : 30)) / 3) * 3, n.masked ? hexNum(P.gold) : bone, 3); });
       const C = LEVEL.clock;
       this.rings.forEach(r => r.t += dt); this.rings = this.rings.filter(r => r.t < 1.2);
-      this.rings.forEach(r => { const u = r.t / 1.2; g.lineStyle(1, hexNum(P.gold), 0.28 * (1 - u)); g.strokeCircle(C.x, 76, 8 + u * 56); if (u > 0.15) g.strokeCircle(C.x, 76, 8 + (u - 0.15) * 56); });
+      this.rings.forEach(r => { const u = r.t / 1.2; pxCircle(g, C.x, 76, Math.round((8 + u * 56) / 4) * 4, hexNum(P.goldLo), 4); });
       // the moment a flash catches her: a white frame, like a viewfinder
       if (this.photo && this.photo.t < 0.5) {
-        const ph = this.photo; ph.t += dt; const s = 10 + ph.t * 10, a = 1 - ph.t / 0.5;
-        g.lineStyle(1, 0xebe6d8, a); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { g.lineBetween(ph.x + sx * s, ph.y + sy * s, ph.x + sx * (s - 4), ph.y + sy * s); g.lineBetween(ph.x + sx * s, ph.y + sy * s, ph.x + sx * s, ph.y + sy * (s - 4)); });
+        const ph = this.photo; ph.t += dt; const s = Math.round(10 + ph.t * 10), x = Math.round(ph.x), y = Math.round(ph.y);
+        g.fillStyle(bone, 1); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { g.fillRect(sx < 0 ? x - s : x + s - 3, y + sy * s, 4, 1); g.fillRect(x + sx * s, sy < 0 ? y - s : y + s - 3, 1, 4); });
       }
-      // floor about to open: a glowing crack across it
+      // floor about to open: a crack across it that blinks
       this.run.gaps.forEach(gp => {
         if (gp.state !== 'crack') return;
-        const x = gp.t0 * TILE, w = (gp.t1 - gp.t0 + 1) * TILE, a = 0.55 + 0.45 * Math.sin(gp.t * 60);
-        g.fillStyle(hexNum(P.lamp), a); for (let i = 0; i < w; i += 3) g.fillRect(x + i, GROUND + ((i * 5) % 3), 2, 1); g.fillRect(x, GROUND, 1, 5); g.fillRect(x + w - 1, GROUND, 1, 5);
+        const x = gp.t0 * TILE, w = (gp.t1 - gp.t0 + 1) * TILE;
+        if (Math.floor(gp.t * 20) % 2 === 0) { g.fillStyle(hexNum(P.lamp), 1); for (let i = 0; i < w; i += 3) g.fillRect(x + i, GROUND + ((i * 5) % 3), 2, 1); g.fillRect(x, GROUND, 1, 5); g.fillRect(x + w - 1, GROUND, 1, 5); }
       });
       // a warning over her head while the slab creaks
       if (this.run.slab.state === 'warn' && !this.dead) this.bubbles.showPrompt(LEVEL.run.slab.x + LEVEL.run.slab.w / 2, 30, '!');
@@ -570,7 +679,7 @@ export class Bedroom extends SideEpisode {
       if (blink) { g.fillStyle(red, 1); g.fillRect(R.x + 2, R.y, 1, 1); }
       if (this.mode === 'talk' || this.mode === 'dying') {
         if (!this.broDead) { const pace = this.mode === 'dying' ? 3.6 : 2.3, inhale = (this.clock % pace) < pace * 0.42 && !(this.mode === 'dying' && this.dyingT > 2.6); this.bro.setTexture(inhale ? 'bro_in' : 'bro_sit'); }
-      if (this.coughT > 0) { this.coughT -= dt; this.bro.setX(LEVEL.brother.x + (Math.floor(t * 30) % 2)); } else this.bro.setX(LEVEL.brother.x);
+        if (this.coughT > 0) { this.coughT -= dt; this.bro.setX(LEVEL.brother.x + (Math.floor(t * 30) % 2)); } else this.bro.setX(LEVEL.brother.x);
       }
       if (this.mode === 'after' || this.mode === 'void') { const V = LEVEL.voidDoor; if (Math.random() < 0.08) this.motes.emitParticleAt(V.x + Math.random() * V.w, V.y + Math.random() * V.h, 1); }
     }
@@ -579,46 +688,58 @@ export class Bedroom extends SideEpisode {
   doorReady() { return this.mode === 'house' && !this.dead && !this.leaving; }
   drawThings() {
     const t = this.nearThing, d = this.level.door;
-    if (!t && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(d.x + d.w / 2, d.y, 'E');
-    if (t && !t.noPrompt) { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0 - 2, t.label); }
-    if (t === this.bagThing && this.bag.hold > 0) {
-      const g = this.fxG, x = LEVEL.bag.x + 1, y = GROUND - 26;
-      g.lineStyle(2, 0xebe6d8, 0.9); g.beginPath(); g.arc(x, y, 5, -Math.PI / 2, -Math.PI / 2 + this.bag.hold * Math.PI * 2); g.strokePath();
-    }
+    if (!t && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(d.x + d.w / 2, d.y, 'J');
+    if (t && !t.noPrompt && this.mode !== 'break') { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0 - 2, t.label); }
+    // a hold bar under the key while she pulls the bag, then while she reads what is in it
+    const bar = (x, y, u) => { const g = this.fxG; x = Math.round(x - 7); g.fillStyle(hexNum(this.P.crack), 1); g.fillRect(x - 1, y - 1, 16, 4); g.fillStyle(hexNum(this.P.device), 1); g.fillRect(x, y, 14, 2); g.fillStyle(0xebe6d8, 1); g.fillRect(x, y, Math.round(14 * Math.min(1, u)), 2); };
+    if (t === this.bagThing && this.bag.hold > 0) bar(LEVEL.bag.x + 1, GROUND - 30, this.bag.hold);
+    if (this.bag.have && !this.collapse && !this.bag.letGo && this.bag.note > 0) bar(LEVEL.bag.x + 1, GROUND - 30, this.bag.note);
     this.bubbles.update(this.game.loop.delta / 1000, this.clock);
   }
 
-  // the cracked glasses, fixed to the screen
+  // the cracked glasses, fixed to the screen; and the red closing in while she stays with him
   drawHud(dt) {
     const g = this.hudG, P = this.P, col = hexNum(P.overlay); g.clear();
+    if (this.stay > 0.6 || this.mode === 'break') {
+      // red bars from the edges inward, every other row, in steps of four pixels
+      const u = this.mode === 'break' ? 1 : Math.min(1, (this.stay - 0.6) / (STAY - 0.6)), d = Math.round(u * 92 / 4) * 4;
+      g.fillStyle(col, 1);
+      if (this.mode === 'break' && this.breakT > 0.15) g.fillRect(0, 0, 320, 180);
+      else for (let y = 0; y < 180; y += 2) { if (y < d || y >= 180 - d) g.fillRect(0, y, 320, 1); else if (d > 0) { g.fillRect(0, y, d * 1.6, 1); g.fillRect(320 - d * 1.6, y, d * 1.6, 1); } }
+      if (this.mode === 'break') return;
+    }
     if (this.fading) return;
     this.glitchT += dt;
-    const dim = this.mode === 'house' ? 1 : 0.4, a = (this.glitchT < 2 ? fx.flicker(0.9, 0.1, 0.5) : 0.45) * dim, m = 5, s = 8;
+    const show = this.glitchT >= 2 || Math.floor(this.glitchT * 8) % 3 !== 0, m = 5, s = 8, dim = this.mode !== 'house';
     if (this.runNote > 0) {
       this.runNote -= dt;
       // the glasses flash one word at her, in the caption face, in their own color
-      if (Math.floor(this.runNote * 6) % 2 === 0) { const w = ccWidth('RUN'); ccBox(g, 160 - w / 2 - 4, 26, w + 8, 11, 0x000000, 0.85); ccText(g, 'RUN', 160 - w / 2, 28, col); }
+      if (Math.floor(this.runNote * 6) % 2 === 0) { const w = ccWidth('RUN'); g.fillStyle(0x000000, 1); g.fillRect(160 - w / 2 - 4, 26, w + 8, 11); ccText(g, 'RUN', 160 - w / 2, 28, col); }
     }
     if (this.mode === 'house') this.gl.drawMeter(g, 18, 166, col);
     if (!this.gl.on && this.mode === 'house') return;
     if (this.mode === 'house') this.gl.drawStatic(g, col);
-    g.fillStyle(col, a);
-    [[320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
-    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineStyle(1, 0xebe6d8, 0.45 * dim); g.lineBetween(px, py, x, y); } });
-    g.lineStyle(1, 0xebe6d8, 0.35 * dim); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19);
-    if (Math.floor(this.clock * 3) % 5) pixText(g, this.glitchT < 3 && Math.random() < 0.3 ? 'V1EW' : 'VIEW', 44, m + 3, col, 1, a);
-    if (overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
+    if (dim) return; // in the bedroom the glasses sit low; only the red light in the corner
+    if (show) {
+      g.fillStyle(col, 1);
+      [[320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
+    }
+    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) pxLine(g, arr[i - 1][0], arr[i - 1][1], x, y, 0xb8b2a3); });
+    pxLine(g, 13, 6, 15, 1, 0x6b6c70); pxLine(g, 24, 12, 22, 19, 0x6b6c70);
+    if (Math.floor(this.clock * 3) % 5) pixText(g, this.glitchT < 3 && Math.floor(this.glitchT * 10) % 4 === 0 ? 'V1EW' : 'VIEW', 44, m + 3, col, 1, 1);
+    if (show && overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, 1);
   }
 
   hint() {
     if (this.mode !== 'house' || this.leaving) return overlay.hint('');
     const k = this.kid, x = (k.x + k.w / 2) / TILE;
-    if (this.collapse && !this.collapse.done) return overlay.hint('Run. Jump where the floor opens. Crouch under what comes down.');
-    if (this.bag.have) return overlay.hint('The doors at the end of the hall. W or J.');
-    if (x < 12) return overlay.hint('Follow the blood. These cameras only see when they flash, and they click twice first.');
-    if (x < 20) return overlay.hint('Under a table, a ceiling camera cannot see you.');
-    if (x < 34) return overlay.hint('Old boards creak when you run: crouch across them. Behind the chest, the camera on the arch cannot see you.');
-    if (x < 55) return overlay.hint('Glass on the floor: running is loud. While the clock strikes, nobody hears you.');
-    return overlay.hint('His bag, under the fallen stairs. Hold J to pull it free.');
+    if (this.collapse && !this.collapse.done && x < 79) return overlay.hint('Run. Space twice over the wide gap. Crouch under the slab.');
+    if (this.collapse && x >= 78) return overlay.hint('Jump from wall to wall to climb. Then the doors.');
+    if (this.bag.have) return overlay.hint(this.collapse ? 'Go. The doors are at the end of the hall.' : 'Keep holding J. Something else is in the bag.');
+    if (x < 12) return overlay.hint('Cameras click twice, then flash. Hide when they click.');
+    if (x < 19) return overlay.hint('Under a table, a ceiling camera cannot see you.');
+    if (x < 34) return overlay.hint('Boards creak. Crouch, or wind the music box with J.');
+    if (x < 55) return overlay.hint('Glass is loud. Nobody hears you while the clock strikes.');
+    return overlay.hint('His bag. Hold J to pull it free.');
   }
 }

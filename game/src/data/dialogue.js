@@ -155,16 +155,25 @@ export const NOTICE = {
     emitter: ['The laser port is still warm.', 'That sound again. Like a prize.']
   },
   eastwing: {
-    body: ['An old body in a jacket like hers.', 'Nobody ever took it away.'],
+    body: ['An old body in her jacket. Nobody took it away.'],
     books: ['The books are painted on a board.'],
-    desk: ['A desk. On it, a map of this wing.', 'Her way through is drawn on it in red.']
+    desk: ['A map of this wing. Her way is drawn in red.'],
+    calendar: ['A wall calendar. Every day on it is the 7th.'],
+    radio: ['A radio. By the sensors it plays the satellite notes.'],
+    hatch: ['The dumbwaiter comes out here.'],
+    dumbwaiter: ['A dumbwaiter. A pebble in it rattles to the study.']
   },
   bedroom: {
-    piano: ['A grand piano with the lid down.', 'Nobody here has ever played it.'],
-    table: ['A table laid for twelve.', 'The food is wax.'],
-    clock: ['A grandfather clock. It strikes every six seconds.', 'While it strikes, nobody can hear her.'],
+    piano: ['A grand piano. Nobody here has ever played it.'],
+    table: ['A table laid for twelve. The food is wax.'],
+    clock: ['While the clock strikes, nobody can hear her.'],
     silver: ['Silver on a long table, polished today.'],
-    billiards: ['A billiard table. The balls are glued down.']
+    billiards: ['A billiard table. The balls are glued down.'],
+    photos: ['Three families. At the back, him, older each time.'],
+    window: ['The Moon, low and white. One window on it is lit.'],
+    request: ['REQUEST: VOLUNTARY. Locate the subject. Unsigned.'],
+    bagNote: ['A note in his hand: "Don\'t let her follow."'],
+    hold: ['She holds on to him.']
   },
   moon: {
     fountain: ['A gold fountain, the twin of the one on the grounds.', 'Up here, the water is the expensive part.'],
@@ -196,7 +205,7 @@ export const BODY_SEEN = {
     [/cradle/, 'The cradle caught her.'],
     [/crush/, 'Something heavy caught her.'],
     [/fall/, 'She fell.'],
-    [/ceiling/, 'The ceiling came down.'],
+    [/ceiling|debris/, 'The ceiling came down.'],
     [/creator/, 'One cut.'],
     [/sensor/, 'A sensor caught her moving.'],
     [/robot/, 'The robot heard her.']
