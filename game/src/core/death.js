@@ -26,10 +26,11 @@ import { results } from './results.js';
 import { juice } from './juice.js';
 
 export const TAKES = 5;
-const TAKE_AFTER = 0.28; // seconds from the body landing to the next take, after the first death
+const TAKE_AFTER = 0.22; // seconds from the body landing to the next take, after the first death
 // scenes with no takes: nothing up there hunts her (the city, the playroom) or it is a side room
 const NO_TAKES = ['moon', 'room'];
 const visits = {}; // per episode id, this page visit only: { left, data }
+const cuts = {};   // per episode id: the next start is a cut from a death (no fade in)
 
 const keyOf = scene => scene.sys && scene.sys.settings && scene.sys.settings.key;
 export const hasTakes = scene => !!scene.epId && !NO_TAKES.includes(keyOf(scene)) && !scene.noTakes;
@@ -45,12 +46,21 @@ export function startTakes(scene) {
   // the broadcast bar runs in side episodes with takes (not the fight's arena, which has the
   // creator's HP; not the top-down east wing)
   results.begin(scene, fresh, hasTakes(scene) && !!scene.map && keyOf(scene) !== 'hallway');
+  // once the scene is built: a take that follows a death cuts straight in (the scene's own fade
+  // in is dropped), and the take goes on the floor (every scene, the fight included)
+  const cut = !fresh && cuts[id]; delete cuts[id];
+  scene.events.once('create', () => {
+    const f = scene.cameras && scene.cameras.main && scene.cameras.main.fadeEffect;
+    if (cut && f && f.isRunning) f.reset();
+    tapeTake(scene);
+  });
 }
 // The take, taped to the floor where it starts (from the second take on). Side: her feet;
 // top-down: under her start tile. Scenes call this through takeNote.
 export function tapeTake(scene) {
   juice.prime(scene); // her squash and stretch frames, ready before the first landing
   const n = scene.ep && scene.ep.take, k = scene.kid; if (!k || !(n > 1) || !hasTakes(scene)) return;
+  if (scene.__tape && scene.__tape.g && scene.__tape.g.scene && scene.__tape.take === n) return; // already down
   if (k.x != null) juice.tape(scene, n, { x: k.x + k.w / 2, y: k.y + k.h });
   else if (scene.kidPx) { const c = scene.kidPx(); juice.tape(scene, n, { x: c.x, y: c.y + 4, topDown: true }); }
 }
@@ -82,7 +92,7 @@ export function refreshStatus(scene) {
 function nextTake(scene, fadeMs) {
   const v = visits[scene.epId], out = hasTakes(scene) && v && v.left <= 0;
   const go = () => scene.scene.restart(out ? { retry: true, outOfTakes: true } : retryData(scene));
-  if (!out && !fadeMs) { go(); return; }
+  if (!out && !fadeMs) { cuts[scene.epId] = true; go(); return; }
   scene.cameras.main.fadeOut(fadeMs || 140, 0, 0, 0);
   if (!out) { scene.time.delayedCall(fadeMs + 10, go); return; }
   // out of lives: a stamp on black, gone before the next take's own stamp
@@ -101,7 +111,7 @@ export function beginDeath(scene, src, impact, fire) {
   d.hit = quiet => {
     if (d.impacted) return; d.impacted = true; impact(!!quiet);
     // the strike lands: a hit-stop and a 2 px kick (not when a key cut it short)
-    if (!quiet) juice.hit(scene, 2, 80);
+    if (!quiet) juice.hit(scene, 2, 70);
     if (d.fast && !d.skipping) d.restart = scene.time.delayedCall(TAKE_AFTER * 1000, () => { d.skipping = true; nextTake(scene, 0); });
   };
   const line = deathLine(src && src.id, src && src.direct);

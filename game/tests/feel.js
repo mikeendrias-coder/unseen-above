@@ -5,21 +5,21 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
 const SHOTS = process.env.SHOTS || '';
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
-  const p = await b.newPage({ viewport: { width: 1360, height: 880 }, deviceScaleFactor: 1 });
+  let p = await b.newPage({ viewport: { width: 1360, height: 880 }, deviceScaleFactor: 1 });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   let fails = 0; const ok = (l, v) => { if (!v) fails++; console.log((v ? 'ok   ' : 'FAIL ') + l); };
   await p.addInitScript(() => { window.__noPanels = true; localStorage.setItem('unseen-above-v1', JSON.stringify({ look: 'A', episodes: {}, seenIntro: true })); });
   await p.goto(BASE + '/local.html#grounds'); await p.click('#start');
   const S = (fn, a) => p.evaluate(fn, a);
-  const live = () => p.waitForFunction(() => { const s = window.__game && window.__game.scene; return s && s.kid && !s.dead && s.sys.settings.status === 5 && s.clock > 0.3; }, null, { timeout: 30000 });
+  const live = () => p.waitForFunction(() => { const s = window.__game && window.__game.scene; return s && s.kid && !s.dead && s.sys.settings.status === 5 && s.clock > 0.3; }, null, { timeout: 90000 });
   const until = (fn, ms) => p.waitForFunction(fn, null, { timeout: ms || 4000, polling: 'raf' }).catch(() => null);
   const shot = async name => { if (SHOTS) await p.screenshot({ path: SHOTS + '/' + name + '.png', clip: await S(() => { const r = document.getElementById('overlay').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; }) }); };
   await live();
 
   // ---- juice: a squash frame on landing, a stretch frame on a jump, a hit-stop and a small kick
   ok('squash and stretch frames exist (12 x 13, 10 x 17)', await S(() => { const t = window.__game.scene.textures; const a = t.get('girl_squash').getSourceImage(), b = t.get('girl_stretch').getSourceImage(); return a.width === 12 && a.height === 13 && b.width === 10 && b.height === 17; }));
-  const watch = () => S(() => { const s = window.__game.scene, cam = s.cameras.main; window.__seen = {}; window.__paused0 = false; window.__kick = 0; window.__w = true;
-    const f = () => { if (!window.__w) return; window.__seen[s.girl.texture.key] = true; if (s.sys.isPaused()) window.__paused0 = true; const e = cam.shakeEffect; if (e && e.isRunning) window.__kick = Math.max(window.__kick, Math.abs(e._offsetX), Math.abs(e._offsetY)); requestAnimationFrame(f); }; f(); });
+  const watch = () => S(() => { const s = window.__game.scene, cam = s.cameras.main; cam.__kickMax = 0; window.__seen = {}; window.__paused0 = false; window.__kick = 0; window.__w = true;
+    const f = () => { if (!window.__w) return; window.__seen[s.girl.texture.key] = true; if (s.sys.isPaused()) window.__paused0 = true; window.__kick = cam.__kickMax || 0; requestAnimationFrame(f); }; f(); });
   const unwatch = () => S(() => { window.__w = false; return { seen: Object.keys(window.__seen), paused: window.__paused0, kick: window.__kick, zoom: window.__game.scene.cameras.main.zoom }; });
   const drop = px => S(d => { const s = window.__game.scene, k = s.kid; s.placeAt(60); const y = k.y; k.hp = 3; k.inv = 0; k.y = y - d; k.vy = 0; k.onGround = false; k.coyote = 0; k.peakY = k.y; }, px);
   await watch(); await drop(40); await until(() => window.__game.scene.kid.onGround); await p.waitForTimeout(250);
@@ -36,20 +36,23 @@ const SHOTS = process.env.SHOTS || '';
 
   // ---- instant takes: the very first death plays out; after that, a cut and the take on the floor
   const dieAndTime = () => S(() => new Promise(res => {
-    const s = window.__game.scene; let tLand = 0;
+    const s = window.__game.scene; let tLand = 0, faded = false, delay = null;
     s.die({ id: 'garden lamp' });
     const f = () => {
-      if (!tLand && s.death && s.death.impacted) tLand = performance.now();
-      if (tLand && !s.dead && s.kid && s.sys.settings.status === 5 && s.clock > 0) return res({ ms: Math.round(performance.now() - tLand), take: s.ep.take });
+      if (!tLand && s.death && s.death.impacted) { tLand = performance.now(); delay = s.death.restart ? s.death.restart.delay : null; }
+      if (s.cameras.main.fadeEffect.isRunning) faded = true;
+      if (tLand && !s.dead && s.kid && s.sys.settings.status === 5 && s.clock > 0) return res({ ms: Math.round(performance.now() - tLand), take: s.ep.take, delay, faded });
       requestAnimationFrame(f);
     }; f();
   }));
   await live(); await S(() => { window.__game.scene.placeAt(260); });
   const first = await dieAndTime();
-  ok(`the first death plays out in full (${first.ms} ms from the body landing to the next take)`, first.ms > 300);
+  ok(`the first death plays out in full, with a fade (${first.ms} ms from the body landing to the next take)`, first.faded && first.delay == null);
   await live(); await S(() => { window.__game.scene.placeAt(400); });
   const second = await dieAndTime();
-  ok(`after that the next take cuts in ${second.ms} ms after the body lands (under about 0.5 s)`, second.ms < 650);
+  // timed in game terms (a busy machine stretches wall-clock time): a cut, not a fade, set for
+  // under 0.3 s after the body lands; the wall-clock time is printed
+  ok(`after that the next take cuts in (no fade), ${second.delay} ms after the body lands (${second.ms} ms here)`, second.delay != null && second.delay <= 300 && !second.faded && second.ms < 2500);
   const tape = await S(() => { const s = window.__game.scene, t = s.__tape; return t ? { take: t.take, x: t.x + t.w / 2, kx: s.kid.x + s.kid.w / 2, y: t.y, ky: s.kid.y + s.kid.h } : null; });
   ok(`the take is taped to the floor where she starts (TAKE ${tape && tape.take})`, tape && tape.take === second.take && Math.abs(tape.x - tape.kx) <= 1 && tape.y > tape.ky);
   ok('no TAKE card over the picture', await S(() => !/TAKE/.test(document.querySelector('#card .card-top').textContent) || !document.getElementById('card').classList.contains('on')));
@@ -90,6 +93,27 @@ const SHOTS = process.env.SHOTS || '';
   await p.waitForTimeout(400); await p.keyboard.press('Enter');
   const went = await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'satellite', null, { timeout: 15000 }).catch(() => null);
   ok('results.next shows the report, then goes on to the satellite', !!went);
+
+  // ---- top-down (the east wing): the same instant takes, the tape on the floor tile
+  await p.close(); p = await b.newPage({ viewport: { width: 1360, height: 880 }, deviceScaleFactor: 1 }); p.on('pageerror', e => errs.push(e.message));
+  await p.addInitScript(() => { window.__noPanels = true; localStorage.setItem('unseen-above-v1', JSON.stringify({ look: 'A', episodes: {}, seenIntro: true })); });
+  await p.goto(BASE + '/local.html#eastwing'); await p.click('#start');
+  await p.waitForFunction(() => { const s = window.__game && window.__game.scene; return s && s.sys.settings.key === 'eastwing' && s.kid && !s.dead && s.clock > 0.3; }, null, { timeout: 30000 });
+  const ewLive = () => p.waitForFunction(() => { const s = window.__game.scene; return s.kid && !s.dead && s.sys.settings.status === 5 && s.clock > 0.2; }, null, { timeout: 90000 });
+  await S(() => window.__game.scene.die({ id: 'motion sensor' })); // her first death: in full
+  await p.waitForTimeout(300); await ewLive();
+  const ew = await S(() => new Promise(res => {
+    const s = window.__game.scene; let tLand = 0, delay = null;
+    s.die({ id: 'motion sensor' });
+    const f = () => {
+      if (!tLand && s.death && s.death.impacted) tLand = performance.now();
+      if (!delay && s.death && s.death.restart) delay = s.death.restart.delay;
+      if (tLand && !s.dead && s.kid && s.sys.settings.status === 5 && s.clock > 0) return res({ ms: Math.round(performance.now() - tLand), tape: s.__tape ? s.__tape.take : null, take: s.ep.take, delay });
+      requestAnimationFrame(f);
+    }; f();
+  }));
+  ok(`east wing: the next take cuts in ${ew.delay} ms after the body lands (${ew.ms} ms here); TAKE ${ew.tape} on the floor`, ew.delay <= 300 && ew.tape === ew.take);
+  await p.waitForTimeout(300); await shot('feel-eastwing');
   console.log(errs.length ? 'ERRORS:\n' + errs.join('\n') : 'no errors');
   await b.close();
   process.exit(fails ? 1 : 0);

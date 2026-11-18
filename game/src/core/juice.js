@@ -105,7 +105,7 @@ export const juice = {
   // she jumped: one stretch frame
   jump(scene) { const r = rig(scene); r.pose = 'girl_stretch'; r.until = performance.now() + STRETCH_MS; },
   // She lost HP, or the strike hit her: freeze, then a small kick. px 1 or 2.
-  hit(scene, px, ms) { juice.stop(scene, ms || 70); fx.kick(scene.cameras && scene.cameras.main, px || 1, 120); },
+  hit(scene, px, ms) { const stop = ms || 70; juice.stop(scene, stop); fx.kick(scene.cameras && scene.cameras.main, px || 1, 110, false, stop); },
   // Hit-stop: the scene holds still for ms. The pause menu wins: if it opened meanwhile, the
   // scene stays paused until the menu lets it go (pause.js only resumes what it paused).
   stop(scene, ms) {
