@@ -8,6 +8,7 @@
 import { RIDGE, HALL_IN, HALL_TOSS, BEDROOM, PLAYROOM } from '../data/dialogue.js';
 import { state } from '../core/state.js';
 import { CREST, ridgeY } from '../art/title.js';
+import { GROUND as STAGE_FLOOR } from '../art/hallway.js';
 
 const T = 16;
 const bar = bpm => 240 / bpm;               // one bar of 4/4, in seconds
@@ -29,7 +30,7 @@ function aim(sc, at) {
   const sys = sc.sys, own = sys.sceneUpdate;
   sys.sceneUpdate = function (...a) { own.apply(this, a); const [x, y] = at(sc); sc.cameras.main.centerOn(Math.round(x), Math.round(y)); };
 }
-const between = sc => [(sc.kid.x + sc.kid.w / 2 + sc.cr.x) / 2, sc.kid.y + sc.kid.h - 34];
+const between = sc => [(sc.kid.x + sc.kid.w / 2 + sc.cr.x) / 2, STAGE_FLOOR - 30];
 function snap(sc) {
   const cam = sc.cameras.main; if (!cam._follow) return;
   cam.setLerp(1, 1); sc.time.delayedCall(120, () => cam.setLerp(0.15, 0.15));
@@ -61,7 +62,7 @@ const DRONE = (() => { let t = lineAt(RIDGE.length) + 0.4; t += 4.2 + 4 + 0.3; r
 const shots = [
   // ---- cold open: the ridge, the lit house, a line of dialogue; the show's camera finds her
   { id: 'ridge', len: 7.2, scene: ['intro', {}], music: ['opening', { fadeIn: 2.5 }],
-    onShow: sc => { sc.t = 1.7; },
+    onShow: sc => { sc.t = 1.7; if (sc.wind) sc.wind.set(0.06, 0.2); },
     dim: t => Math.max(0, 1 - t / 1.4),
     subs: [[0.7, 'SISTER', RIDGE[0].text, 3.1], [3.8, 'BROTHER', RIDGE[1].text, 3.0]] },
   { id: 'ridge2', len: 6.0, keep: true,
@@ -134,7 +135,7 @@ const shots = [
     frame: (sc, t, D) => D.keys.only('right') },
   { id: 'collapse', len: 3 * RB, scene: ['bedroom', {}],
     stage: sc => { safe(true); place(sc, 59 * T - 6, 160); sc.pullBag(); },
-    frame: (sc, t, D) => run(sc, t, D) },
+    frame: (sc, t, D) => { if (sc.beds.rumble && !D.b.quiet) { D.b.quiet = true; sc.beds.rumble.set(0.1, 0.4); } run(sc, t, D); } },
 
   // ---- a breath: the bedroom, him
   { id: 'brother', len: 6.4, scene: ['bedroom', {}], music: ['bedroom', { fadeIn: 0.6 }],

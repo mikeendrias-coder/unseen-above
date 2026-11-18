@@ -2,21 +2,32 @@
 // picture, the show's caption canvas (its picture part) and the trailer's own canvas are drawn
 // into one canvas at 1920 x 1080 (or 1280 x 720 with &size=720); that canvas and the game's sound
 // go to a MediaRecorder. The sound: the game's master gain connects to the speakers
-// (core/sound.js); tapAudio() makes every connection to the speakers also feed a stream, so the
+// (core/sound.js); routeAudio() sends every connection to the speakers through one bus that also feeds a stream, so the
 // recording hears exactly what a viewer hears. At the end the video is handed over as a download
-// (tests/trailer-record.js saves it).
-let tap = null;
-export function tapAudio() {
+// (src/trailer/record-run.js saves it).
+// The sound, louder: the game is mixed quietly to sit under a room (its music at a few percent
+// of full scale); a trailer plays loud. Whatever connects to the speakers goes through a gain and
+// a compressor first (one bus per audio context; Phaser makes a context of its own, silent here).
+// With record on, the bus also feeds a stream for the recording.
+const BOOST = 5.5, buses = new Map();
+export function routeAudio(record) {
   const real = AudioNode.prototype.connect;
+  const busFor = c => {
+    if (buses.has(c)) return buses.get(c);
+    const g = c.createGain(), k = c.createDynamicsCompressor();
+    g.gain.value = BOOST;
+    k.threshold.value = -12; k.knee.value = 6; k.ratio.value = 6; k.attack.value = 0.004; k.release.value = 0.2;
+    real.call(g, k); real.call(k, c.destination);
+    const bus = { in: g, tap: record ? c.createMediaStreamDestination() : null };
+    if (bus.tap) real.call(k, bus.tap);
+    buses.set(c, bus); return bus;
+  };
   AudioNode.prototype.connect = function (dest, ...rest) {
-    const r = real.call(this, dest, ...rest);
-    if (typeof AudioDestinationNode !== 'undefined' && dest instanceof AudioDestinationNode) {
-      if (!tap || tap.context !== this.context) tap = this.context.createMediaStreamDestination();
-      real.call(this, tap);
-    }
-    return r;
+    if (typeof AudioDestinationNode !== 'undefined' && dest instanceof AudioDestinationNode) return real.call(this, busFor(this.context).in, ...rest);
+    return real.call(this, dest, ...rest);
   };
 }
+const tapOf = c => (buses.get(c) || {}).tap;
 
 export class Recorder {
   constructor() {
@@ -28,7 +39,8 @@ export class Recorder {
     this.ctx = this.cv.getContext('2d'); this.ctx.imageSmoothingEnabled = false;
     this.chunks = []; this.frames = 0;
   }
-  async start(gameCanvas, cgCanvas, trCanvas) {
+  async start(gameCanvas, cgCanvas, trCanvas, audioCtx) {
+    const tap = tapOf(audioCtx);
     this.g = gameCanvas; this.cg = cgCanvas; this.tr = trCanvas;
     this.frame();
     const stream = this.cv.captureStream(30);

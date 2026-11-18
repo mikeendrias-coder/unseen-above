@@ -15,13 +15,14 @@ import { cg } from '../ui/cg.js';
 import { display } from '../core/display.js';
 import { drawLayer } from './cards.js';
 import { SHOTS, PIECES_EXTRA } from './shots.js';
-import { Recorder, tapAudio } from './record.js';
+import { Recorder, routeAudio } from './record.js';
 import { PIECES } from '../core/music.js';
 
 const params = new URLSearchParams(location.search);
 const RECORD = params.has('record');
 const FROM = params.get('from'), ONLY = params.has('only');
-if (RECORD) { document.body.classList.add('rec'); tapAudio(); }
+routeAudio(RECORD);
+if (RECORD) document.body.classList.add('rec');
 Object.assign(PIECES, PIECES_EXTRA);
 
 // ---------------------------------------------------------------- the game's music and cards
@@ -171,7 +172,7 @@ async function begin() {
   }
   stage().classList.add('shown');
   fit();
-  if (rec) await rec.start(game.canvas, document.getElementById('cg'), trCv);
+  if (rec) await rec.start(game.canvas, document.getElementById('cg'), trCv, Sound.ctx);
   t0 = clock() - SHOTS[startIndex].start; cur = startIndex - 1; done = false; window.__trailerDone = false;
 }
 function setPaused(on) {

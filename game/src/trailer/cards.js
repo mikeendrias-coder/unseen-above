@@ -99,7 +99,7 @@ function form(ctx, c, t) {
     if (i < FORM_ROWS.length - 1) ccBox(ctx, x + 6, yy - 4, w - 12, 1, PAPER_LO);
   });
   const at = c.stampAt || 3.2;
-  if (t > at) stamp(ctx, 'APPROVED', x + w - 111, y + 84, 2);
+  if (t > at) stamp(ctx, 'APPROVED', x + w - 110, y + 92, 2);
   if (t > at + 0.9) ccText(ctx, 'FILED.', x + w - 8 - ccWidth('FILED.'), y + h - 12, ASH.ash4);
 }
 
