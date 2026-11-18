@@ -69,8 +69,8 @@ export class Bedroom extends SideEpisode {
     this.gl = new Glasses({ has: true, on: true, cracked: true });
     this.skipPoints = [12 * TILE + 20, 20 * TILE, 34 * TILE + 8, 56 * TILE + 8];
     const SD = LEVEL.sideDoor, bx = LEVEL.bag.x;
-    this.bagThing = { x0: bx - 12, x1: bx + 14, y0: 140, y1: GROUND, label: 'E', use: () => {} };
-    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'E', door: true, use: () => this.enterRoom('wardrobe') }, this.bagThing);
+    this.bagThing = { x0: bx - 12, x1: bx + 14, y0: 140, y1: GROUND, label: 'J', use: () => {} };
+    this.things.push({ x0: SD.x, x1: SD.x + SD.w, y0: SD.y, y1: GROUND, label: 'J', door: true, use: () => this.enterRoom('wardrobe') }, this.bagThing);
     // things to look at in the dark (not once the floor starts to go)
     const N = NOTICE.bedroom, look = (x0, x1, py, lines, y0) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 112, py, lines });
     look(94, 148, 126, N.piano); look(238, 298, 130, N.table); look(556, 580, 50, N.clock, 100); look(626, 694, 130, N.silver); look(754, 822, 132, N.billiards);
@@ -317,7 +317,7 @@ export class Bedroom extends SideEpisode {
       if (this.dyingT > 3.4 && !this.broDead) { this.broDead = true; this.bro.setTexture('bro_dead'); Sound.tone(98, 1.8, 'sine', 0.02); }
       if (this.dyingT > 5.6) {
         this.mode = 'after';
-        const V = LEVEL.voidDoor; this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'E', use: () => this.openVoid() };
+        const V = LEVEL.voidDoor; this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'J', use: () => this.openVoid() };
         this.things = [this.voidThing];
       }
     }
@@ -614,11 +614,11 @@ export class Bedroom extends SideEpisode {
     if (this.mode !== 'house' || this.leaving) return overlay.hint('');
     const k = this.kid, x = (k.x + k.w / 2) / TILE;
     if (this.collapse && !this.collapse.done) return overlay.hint('Run. Jump where the floor opens. Crouch under what comes down.');
-    if (this.bag.have) return overlay.hint('The doors at the end of the hall. Up or E.');
+    if (this.bag.have) return overlay.hint('The doors at the end of the hall. W or J.');
     if (x < 12) return overlay.hint('Follow the blood. These cameras only see when they flash, and they click twice first.');
     if (x < 20) return overlay.hint('Under a table, a ceiling camera cannot see you.');
     if (x < 34) return overlay.hint('Old boards creak when you run: crouch across them. Behind the chest, the camera on the arch cannot see you.');
     if (x < 55) return overlay.hint('Glass on the floor: running is loud. While the clock strikes, nobody hears you.');
-    return overlay.hint('His bag, under the fallen stairs. Hold E to pull it free.');
+    return overlay.hint('His bag, under the fallen stairs. Hold J to pull it free.');
   }
 }

@@ -70,18 +70,18 @@ export class Hallway extends SideEpisode {
     this.skipPoints = [8 * T, 15 * T, 21 * T];
 
     // things to look at on the way in
-    LEVEL.things.forEach(th => { const it = {}; this.things.push({ x0: th.x0, x1: th.x1, y0: 60, y1: G, label: 'E', use: () => this.describe(HALL_THINGS[th.id], it, (th.x0 + th.x1) / 2, 60) }); });
+    LEVEL.things.forEach(th => { const it = {}; this.things.push({ x0: th.x0, x1: th.x1, y0: 60, y1: G, label: 'J', use: () => this.describe(HALL_THINGS[th.id], it, (th.x0 + th.x1) / 2, 60) }); });
     // the stage, to look at once the fight is over
     const N = NOTICE.hallway, D = LEVEL.desk, it = {};
     this.addLook({ x0: 20 * T + 6, x1: 23 * T + 2, y0: 100, py: 70, lines: N.gallery });
     this.addLook({ x0: 27 * T + 8, x1: 29 * T, y0: 100, py: 70, lines: N.gate });
     this.addLook({ x0: 37 * T + 8, x1: 39 * T + 12, y0: 100, py: 70, lines: N.door });
     LEVEL.crates.forEach(c => this.addLook({ x0: c.x - 2, x1: c.x + c.w + 2, y0: c.y - 6, py: c.y, lines: N.crate }));
-    this.things.push({ x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'E', look: true, use: () => this.describe(HALL_THINGS.console, it, D.x + D.w / 2, D.y - 17) });
-    this.swordThing = { x0: 0, x1: 0, y0: G - 6, y1: G, label: 'E', off: true, use: () => this.pickUp() };
+    this.things.push({ x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'J', look: true, use: () => this.describe(HALL_THINGS.console, it, D.x + D.w / 2, D.y - 17) });
+    this.swordThing = { x0: 0, x1: 0, y0: G - 6, y1: G, label: 'J', off: true, use: () => this.pickUp() };
     this.things.push(this.swordThing);
     // in round two the desk is the laser's console: E fires one high shot across the stage
-    this.consoleThing = { x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'E', off: true, use: () => this.pressConsole() };
+    this.consoleThing = { x0: D.x, x1: D.x + D.w, y0: 100, y1: G, py: D.y - 17, label: 'J', off: true, use: () => this.pressConsole() };
     this.things.push(this.consoleThing); this.consoleAt = 0;
 
     this.drawBodies();
@@ -627,10 +627,10 @@ export class Hallway extends SideEpisode {
 
   hint() {
     if (this.leaving || this.done) return;
-    if (this.mode === 'walk') return overlay.hint(this.kid.x < 4 * T ? 'E looks at things.' : '');
-    if (this.mode === 'toss') return overlay.hint(this.sword.floor ? 'The sword. E picks it up.' : '');
-    if (this.mode === 'fight') return overlay.hint(['F or a click swings. Hit when they are open: right after they attack. A high lunge, crouch. A low one, jump. Hide from the light behind a crate or under the desk. The light blinds them too.', 'The laser: a high beep and the top lights, crouch; a low one, jump. G shows it too. While they are out on the stage, E at the desk fires it at them.', 'Two clicks, then a flash: get under the desk or behind a crate. The flash blinds them too.'][this.cr.round]);
-    if (this.mode === 'after') return overlay.hint('The playroom. Up or E.');
+    if (this.mode === 'walk') return overlay.hint(this.kid.x < 4 * T ? 'J looks at things.' : '');
+    if (this.mode === 'toss') return overlay.hint(this.sword.floor ? 'The sword. J picks it up.' : '');
+    if (this.mode === 'fight') return overlay.hint(['K or a click swings. Hit when they are open: right after they attack. A high lunge, crouch. A low one, jump. Hide from the light behind a crate or under the desk. The light blinds them too.', 'The laser: a high beep and the top lights, crouch; a low one, jump. L shows it too. While they are out on the stage, J at the desk fires it at them.', 'Two clicks, then a flash: get under the desk or behind a crate. The flash blinds them too.'][this.cr.round]);
+    if (this.mode === 'after') return overlay.hint('The playroom. W or J.');
     overlay.hint('');
   }
 }

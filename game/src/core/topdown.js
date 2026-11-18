@@ -144,7 +144,7 @@ export class TopDownEpisode extends Phaser.Scene {
       this.flight = null; Sound.tone(1600, 0.03, 'square', 0.02); Sound.noise(0.08, 0.05, 4000);
       // it stays where it lands; E picks it up again
       const fp = { x: f.ex, y: f.ey, dx: Math.round((Math.random() - 0.5) * 6), dy: Math.round((Math.random() - 0.5) * 6) };
-      fp.thing = { tx: f.ex, ty: f.ey, reach: 1, label: 'E', use: () => this.pickPebble(fp) };
+      fp.thing = { tx: f.ex, ty: f.ey, reach: 1, label: 'J', use: () => this.pickPebble(fp) };
       this.floorPebbles.push(fp); this.things.push(fp.thing);
       this.noise(f.ex, f.ey, 4, 'pebble');
     }
@@ -231,7 +231,7 @@ export class TopDownEpisode extends Phaser.Scene {
   }
   // Things she looks at with E: narration at the foot of the screen. spec: { tx, ty, lines, reach }
   addLook(spec) {
-    const src = { lines: spec.lines }, th = { tx: spec.tx, ty: spec.ty, reach: spec.reach || 1, label: 'E', look: true, body: !!spec.body, src };
+    const src = { lines: spec.lines }, th = { tx: spec.tx, ty: spec.ty, reach: spec.reach || 1, label: 'J', look: true, body: !!spec.body, src };
     th.use = () => this.bubbles.look('item', src, () => ({ x: th.tx * T + 8, y: th.ty * T }));
     this.things.push(th); return th;
   }

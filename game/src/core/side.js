@@ -92,13 +92,13 @@ export class SideEpisode extends Phaser.Scene {
       const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take));
       this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1));
       const src = { lines: bodyLines(b, age) };
-      this.things.push({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 8, y1: b.y + 2, label: 'E', look: true, body: true, src, use: () => this.bubbles.look('item', src, () => ({ x: b.x, y: b.y - 6 })) });
+      this.things.push({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 8, y1: b.y + 2, label: 'J', look: true, body: true, src, use: () => this.bubbles.look('item', src, () => ({ x: b.x, y: b.y - 6 })) });
     });
   }
   // Things she looks at with E: what she notices, as narration at the foot of the screen.
   // spec: { x0, x1, y0, y1 (the reach, in world px), lines, px, py (where the E key shows) }
   addLook(spec) {
-    const src = { lines: spec.lines }, th = Object.assign({ y1: 180, label: 'E', look: true }, spec);
+    const src = { lines: spec.lines }, th = Object.assign({ y1: 180, label: 'J', look: true }, spec);
     th.use = () => this.bubbles.look('item', src, () => ({ x: th.px != null ? th.px : (th.x0 + th.x1) / 2, y: th.py != null ? th.py : th.y0 }));
     delete th.lines; th.src = src; this.things.push(th); return th;
   }

@@ -204,7 +204,7 @@ export class Satellite extends Phaser.Scene {
       return;
     }
     this.final = true;
-    overlay.hint('That is the end of this build. K shows how this screen changes in later batches. Enter watches the opening again. R replays this batch.');
+    overlay.hint('That is the end of this build. O shows how this screen changes in later batches. Enter watches the opening again. Backspace replays this batch.');
   }
 
   update(time, delta) {

@@ -33,7 +33,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.waitForTimeout(900); await shot('glasses-on');
   // the staff room and back
   await p.evaluate(() => { const s = window.__game.scene; s.robot.x = 205; s.robot.dir = 1; s.kid.x = 8 * 16 + 4; s.kid.y = 146; });
-  await until(() => { const s = window.__game.scene; return s.nearThing && s.nearThing.label === 'E' && s.nearThing !== s.cabinetThing; });
+  await until(() => { const s = window.__game.scene; return s.nearThing && s.nearThing.label === 'J' && s.nearThing !== s.cabinetThing; });
   await press('KeyE');
   await until(() => window.__game.scene.sys.settings.key === 'room' && window.__game.scene.clock > 0.5);
   ok('the staff door opens the staff room', true);

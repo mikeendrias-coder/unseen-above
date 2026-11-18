@@ -76,15 +76,15 @@ export class Moon extends SideEpisode {
     this.mode = 'walk'; this.view = { x: 0 }; this.heard = new Set(); this.vest = 0;
     this.robot = { x: LEVEL.robot.x0 + 30, dir: 1, line: 0 };
     this.robotProp = { id: 'robot', x: 0, y: GROUND - 6, w: 10, h: 6 }; this.props.push(this.robotProp);
-    this.robotThing = { x0: 0, x1: 0, y0: GROUND - 8, y1: GROUND, label: 'E', use: () => this.robotTalk() };
+    this.robotThing = { x0: 0, x1: 0, y0: GROUND - 8, y1: GROUND, label: 'J', use: () => this.robotTalk() };
     this.things.push(this.robotThing);
-    LEVEL.rooms.forEach((R, i) => { const it = { n: 0 }; this.things.push({ x0: R.x0 + 10, x1: R.x1 - 10, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(ROOM_TEXT[i], it, (R.x0 + R.x1) / 2, 118) }); });
+    LEVEL.rooms.forEach((R, i) => { const it = { n: 0 }; this.things.push({ x0: R.x0 + 10, x1: R.x1 - 10, y0: 120, y1: GROUND, label: 'J', use: () => this.describe(ROOM_TEXT[i], it, (R.x0 + R.x1) / 2, 118) }); });
     const V = LEVEL.vote, A = LEVEL.arrive;
     const lookLine = { n: 0 }, doorLine = { n: 0 }, holeLine = { n: 0 };
-    this.things.push({ x0: A.x - 4, x1: A.x + A.w + 4, y0: A.y, y1: GROUND, label: 'E', use: () => this.describe(['The door she came out of.', 'On this side it has a number: 07.'], doorLine, A.x + A.w / 2, A.y - 12) });
+    this.things.push({ x0: A.x - 4, x1: A.x + A.w + 4, y0: A.y, y1: GROUND, label: 'J', use: () => this.describe(['The door she came out of.', 'On this side it has a number: 07.'], doorLine, A.x + A.w / 2, A.y - 12) });
     const VW = LEVEL.viewer, LV = LEVEL.live, liveLine = { n: 0 };
-    this.things.push({ x0: VW.x - 8, x1: VW.x + 10, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(['Earth, on its dark side.', 'Small fires everywhere.'], holeLine, VW.x, GROUND - 40) });
-    this.things.push({ x0: LV.x, x1: LV.x + LV.w, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(['Channel seven, live.', 'A girl on a street on the Moon.'], liveLine, LV.x + LV.w / 2, LV.y + LV.h + 4) });
+    this.things.push({ x0: VW.x - 8, x1: VW.x + 10, y0: 120, y1: GROUND, label: 'J', use: () => this.describe(['Earth, on its dark side.', 'Small fires everywhere.'], holeLine, VW.x, GROUND - 40) });
+    this.things.push({ x0: LV.x, x1: LV.x + LV.w, y0: 120, y1: GROUND, label: 'J', use: () => this.describe(['Channel seven, live.', 'A girl on a street on the Moon.'], liveLine, LV.x + LV.w / 2, LV.y + LV.h + 4) });
 
     // the street furniture is solid: benches, planters, the fountain's rim, basin and tiers
     // (the stem is behind her), the crates at the service end. She can stand on all of it.
@@ -99,7 +99,7 @@ export class Moon extends SideEpisode {
     this.npcs.forEach((Nn, i) => {
       Nn.i = i; Nn.prop = { id: 'person', x: Nn.x - 4, y: G - 23, w: 8, h: 23 }; this.props.push(Nn.prop);
       Nn.src = { lines: () => MOON_PEOPLE[i].lines.slice(), i: 0, loop: true };
-      Nn.thing = { x0: 0, x1: 0, y0: G - 24, y1: G, py: G - 25, label: 'E', use: () => this.npcTalk(Nn) };
+      Nn.thing = { x0: 0, x1: 0, y0: G - 24, y1: G, py: G - 25, label: 'J', use: () => this.npcTalk(Nn) };
       this.things.push(Nn.thing);
     });
     this.slide = null;
@@ -429,8 +429,8 @@ export class Moon extends SideEpisode {
   hint() {
     if (this.mode !== 'walk' || this.leaving) return overlay.hint('');
     const x = (this.kid.x + this.kid.w / 2) / TILE;
-    if (x < 6) return overlay.hint('E looks at things and talks to things.');
-    if (x > 96) return overlay.hint('A staff door. Up or E.');
+    if (x < 6) return overlay.hint('J looks at things and talks to things.');
+    if (x > 96) return overlay.hint('A staff door. W or J.');
     return overlay.hint('');
   }
 }

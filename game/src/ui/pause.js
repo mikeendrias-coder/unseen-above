@@ -18,10 +18,9 @@ const ESC_SKIPS = ['intro', 'kids'];
 const CONTROLS = {
   num: 101, title: 'Controls', band: TV.yellow,
   lines: [
-    '{Arrows} or {A} {D} move. {Space} jumps. {Down} crouches.',
-    '{E} uses, looks and talks. {Up} or {E} goes through a door.',
-    '{G} glasses. {F} or a {click} throws or swings.',
-    '{Enter} skips a line. {R} restarts the episode. {L} switches the look. {M} sound.',
+    'Left hand: {A} {D} move. {Space} jumps. {S} crouches. {W} goes through a door. {Shift} runs.',
+    'Right hand: {J} uses, looks and talks. {K} or a {click} throws or swings. {L} glasses.',
+    '{Enter} skips a line. {Backspace} restarts the episode. {M} sound.',
     '{P} or {Esc} pauses. Satellite screens: drag with the mouse.',
     'Story mode: {N} skips ahead.'
   ]

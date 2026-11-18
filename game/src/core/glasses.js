@@ -1,4 +1,4 @@
-// The glasses: G puts them on and takes them off. On, they show what the cameras see, but not
+// The glasses: L puts them on and takes them off. On, they show what the cameras see, but not
 // cleanly: the picture blinks out, static crawls over everything, and they run hot. The longer
 // they stay on, the worse it gets, until they cut out and need a few seconds to cool. Cracked
 // (after the fall in episode 3) they fail sooner and blink more. So they are worth wearing in
@@ -59,7 +59,7 @@ export class Glasses {
     if (!this.has || !overlay.free(x - 3, y - 3, 56, 12)) return; // a caption over it: it steps aside
     const hot = hexNum('#e3412b'), label = this.over > 0 ? 'HOT' : this.on ? 'ON' : 'OFF';
     g.fillStyle(0x000000, 0.45); g.fillRect(x - 2, y - 2, 52, 9);
-    pixText(g, 'G', x, y, 0xebe6d8, 1, 0.9);
+    pixText(g, 'L', x, y, 0xebe6d8, 1, 0.9);
     pixText(g, label, x + 6, y, this.over > 0 ? hot : this.on ? col : 0x8f8d87, 1, this.over > 0 && Math.floor(this.t * 6) % 2 ? 0.4 : 0.95);
     const bx = x + 22, w = 24;
     g.fillStyle(0xebe6d8, 0.2); g.fillRect(bx, y + 1, w, 3);

@@ -18,10 +18,10 @@ import { NOTICE } from '../data/dialogue.js';
 import { fx } from '../core/fx.js';
 
 const ROOMS = [
-  { x0: 0, y0: 18, x1: 12, y1: 29, hint: 'The glasses are cracked: they show what watches you only now and then. E picks up pebbles, F or a click throws one. Shift runs, but running is loud.' },
+  { x0: 0, y0: 18, x1: 12, y1: 29, hint: 'The glasses are cracked: they show what watches you only now and then. J picks up pebbles, K or a click throws one. Shift runs, but running is loud.' },
   { x0: 12, y0: 12, x1: 27, y1: 24, hint: 'Motion sensors see movement, not you: stand still while they pulse. A pebble near one sets it off, and it needs a moment to recharge.' },
   { x0: 14, y0: 1, x1: 29, y1: 11, hint: 'A patrol robot goes to look at any noise. Debris is loud underfoot. Shelves block its view and the camera’s.' },
-  { x0: 30, y0: 0, x1: 44, y1: 13, hint: 'The chandelier is watching. Hold E near a chained pillar to cut its chain; the far side of a pillar is out of its sight. A noise turns its eyes.' }
+  { x0: 30, y0: 0, x1: 44, y1: 13, hint: 'The chandelier is watching. Hold J near a chained pillar to cut its chain; the far side of a pillar is out of its sight. A noise turns its eyes.' }
 ];
 
 export class EastWing extends TopDownEpisode {
@@ -62,8 +62,8 @@ export class EastWing extends TopDownEpisode {
     this.pile = this.marks.find(mk => mk.kind === 'pile'); this.pileTaken = false;
     this.pileThing = { tx: 9, ty: 21, use: () => this.takePile() };
     this.things.push(this.pileThing);
-    C.chains.forEach(([px, py], i) => this.things.push({ tx: px, ty: py, reach: 2, hold: true, chain: i, label: 'E' }));
-    this.things.push({ tx: 4, ty: 18, label: 'E', use: () => this.enterRoom('workshop') }); // optional
+    C.chains.forEach(([px, py], i) => this.things.push({ tx: px, ty: py, reach: 2, hold: true, chain: i, label: 'J' }));
+    this.things.push({ tx: 4, ty: 18, label: 'J', use: () => this.enterRoom('workshop') }); // optional
     // things to look at: old bodies that were here before her, the study's shelves and desk
     const N = NOTICE.eastwing;
     m.forEach((row, ty) => row.forEach((ch, tx) => { if (ch === 'b') this.addLook({ tx, ty, lines: N.body }); }));
@@ -259,7 +259,7 @@ export class EastWing extends TopDownEpisode {
     this.leaving = true; state.finish(this.epId);
     Sound.chime(); this.cameras.main.fadeOut(900, 0, 0, 0);
     this.time.delayedCall(1000, () => { this.done = true; overlay.card('END OF EPISODE 3', 'Take ' + this.ep.take, 3400); overlay.bug('CH 07', 1400); overlay.hint(''); });
-    this.time.delayedCall(4700, () => { if (!goNext(this, 'ep3b')) { overlay.card('TO BE CONTINUED', 'Episode 4 is next', 4000); overlay.hint('That is the end of this build. R plays episode 3 again.'); } });
+    this.time.delayedCall(4700, () => { if (!goNext(this, 'ep3b')) { overlay.card('TO BE CONTINUED', 'Episode 4 is next', 4000); overlay.hint('That is the end of this build. Backspace plays episode 3 again.'); } });
   }
 
   // ------------------------------------------------------------------ drawing

@@ -274,12 +274,12 @@ export class Grounds extends SideEpisode {
   hint() {
     const x = this.kid.x / TILE;
     if (this.leaving || this.done) return;
-    if (x < 14) return overlay.hint('Arrows or A/D move. Space jumps. Down crouches. E uses things. R restarts the episode.');
+    if (x < 14) return overlay.hint('A and D move. Space jumps. S crouches. J uses things. Backspace restarts the episode.');
     if (x < 39) return overlay.hint('A lamp sweeps the garden. Hedges block its light: wait in their shadow, move when it swings away.');
     if (x < 56) return overlay.hint('A drone patrols the fountain. Its light cannot reach under the upper bowl.');
     if (x < 77) return overlay.hint('Two lamps on the wall. The statue plinths cast shadows.');
     if (x < 95) return overlay.hint('A faster drone. The pergolas are cover.');
-    if (this.scan) return overlay.hint('The grounds are being scanned. Keep moving: if the light reaches you, the strike comes. Up or E at the door.');
-    return overlay.hint('Two lamps cross over the stairs. Find the gap, then press Up or E at the door.');
+    if (this.scan) return overlay.hint('The grounds are being scanned. Keep moving: if the light reaches you, the strike comes. W or J at the door.');
+    return overlay.hint('Two lamps cross over the stairs. Find the gap, then press W or J at the door.');
   }
 }

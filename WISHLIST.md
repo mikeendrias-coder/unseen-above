@@ -31,7 +31,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 
 ## 4. Requests from Nov 17 (evening), in Michael's words where possible
 ### Controls
-- `doing` **WASD to move, Space to jump, everything else on the right side of the keyboard**, so she can do several things at once besides jumping.
+- `done, check` **WASD to move, Space to jump, everything else on the right side of the keyboard**, so she can do several things at once besides jumping. Nov 17: A D move, W doors, S crouch, Space jump (only), Shift run; J use/talk, K throw/swing, L glasses, Backspace restart, Enter skip, P pause, M sound. Arrows and the old E F G R still work quietly. Every on-screen key name updated.
 ### Levels and movement
 - `todo` **Build out levels: more interactive stages, more competitive** (harder, more to do).
 - `todo` **New sprites.**
@@ -49,7 +49,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 ### Endings
 - `todo` **Boss mercy ending:** if you die to the creator enough times, the creator gives up: stands there screaming "end it all" and does nothing while you slowly deplete their HP. (Michael also floated the creator killing themself; building the give-up version first, his call.) Part of the multiple endings.
 ### Creative pass
-- `doing` **A dedicated agent thinks through the plot and new elements** that fit the aesthetic, do not extend runtime, and add story, feeling, and more things to do and interact with, based on games in this genre (deep research). Output for Michael to pick from; story calls stay his.
+- `done, check` **A dedicated agent thinks through the plot and new elements** that fit the aesthetic, do not extend runtime, and add story, feeling, and more things to do and interact with, based on games in this genre (deep research). Output for Michael to pick from; story calls stay his. Written Nov 17: research/design_pass_nov17.md.
 
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).
