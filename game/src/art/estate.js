@@ -49,6 +49,13 @@ export const LEVEL = {
   // where N puts her in story mode: the start of each section, out of the light (E: flush with
   // the crate, in its shadow, wherever it now stands; F: in the cradle, under its roof; the last:
   // by the door, past the east lamp)
+  // the show's tape marks (checkpoints), [x where she stands, the floor's y]: the foot of the hedge
+  // wall, the fountain terrace, flush with the crate (in its shadow), the balcony before the scan
+  marks: [[36 * T, GROUND], [39 * T, TERRACE], [57 * T - 8, TERRACE], [75 * T, BALCONY]],
+  // gold left out on the path, [x, the floor's y]: the car roof, the hedge tops, the hedge wall,
+  // the fountain's bowl under the drone, the terrace in the lamp's sweep, the loggia under the
+  // drone, the first foam slab, the balcony
+  gold: [[108, GROUND - 15], [21 * T, 22 * T], [26 * T, 22 * T], [35 * T + 8, TERRACE], [44 * T + 8, 14 * T], [60 * T, TERRACE], [69 * T, LOGGIA], [80 * T, BALCONY], [89 * T, BALCONY]],
   skip: [[16, ROWS.lawn], [36, ROWS.lawn], [39, ROWS.terrace], [56, ROWS.terrace, 'crate'], [65, ROWS.loggia, 'cradle'], [75, ROWS.balcony], [95, ROWS.balcony]]
 };
 

@@ -81,15 +81,16 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
       const k = s.kid, x = k.x + k.w;
       set('r', true);
       const near = (a, b) => x > a && x < b;
-      const jumpAt = [[958, 970], [1046, 1057], [1190, 1201]];
-      if (k.onGround && jumpAt.some(([a, b]) => near(a, b))) { jumpNow = true; set('j', true); s.__dj = near(1190, 1201); }
-      else if (s.__dj && !k.onGround && k.vy > -40) { jumpNow = true; s.__dj = false; }
-      else if (k.vy > 0 && !s.__dj) set('j', false);
+      // with his bag she has no double jump: the wide gap is one long jump from its very edge
+      const jumpAt = [[958, 970], [1046, 1057], [1213, 1223]];
+      if (k.onGround && jumpAt.some(([a, b]) => near(a, b))) { jumpNow = true; set('j', true); }
+      else if (k.vy > 0) set('j', false);
       set('d', x > 1120 && x < 1172);
     });
   });
   await until(() => { const s = window.__game.scene; return s.dead || (s.kid.x > 79 * 16 + 2 && s.kid.onGround); }, null, 20000);
   const ran = await p.evaluate(() => { const s = window.__game.scene; return { dead: s.dead, x: Math.round(s.kid.x), front: Math.round(s.collapse.x), slab: s.run.slab.state, cause: s.ep.bodies.length ? s.ep.bodies[s.ep.bodies.length - 1].cause : '' }; });
+  ok('carrying the bag: no double jump, half the steering in the air', await p.evaluate(() => { const s = window.__game.scene; return s.heavy() && s.noDoubleJump === true; }));
   ok('the run can be made: she reaches the climb ahead of the floor (x ' + ran.x + ', floor ' + ran.front + (ran.dead ? ', died: ' + ran.cause : '') + ')', !ran.dead);
   // the climb: jump from wall to wall between the hanging ceiling and the heap
   await p.evaluate(() => {

@@ -12,6 +12,7 @@ import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { SideEpisode, TILE } from '../core/side.js';
+import { Marks, Gold } from '../core/props.js';
 import { goNext } from '../core/flow.js';
 import { fx } from '../core/fx.js';
 
@@ -76,6 +77,12 @@ const LANES = [
 ];
 const WARN = 0.9; // dust trickles down the whole lane this long before a chunk comes down
 // N in story mode: the next ledge down
+// the show's tape marks (checkpoints), where she stands and the floor's y: the third floor down
+// (clear of the falling bits), the ledge over the shaft, the stub halfway down it
+const MARKS = [{ x: 176, y: 320 }, { x: 250, y: 432 }, { x: 162, y: 528 }];
+// gold left out on the way down: under the first falling bits, on a floor, on the one that
+// crumbles, and against the shaft's right wall where the bits come down
+const GOLD = [{ x: 150, y: 192 }, { x: 272, y: 256 }, { x: 240, y: 384 }, { x: 203, y: 610 }];
 const SKIP = [{ x: 120, y: 192 }, { x: 240, y: 256 }, { x: 140, y: 320 }, { x: 250, y: 432 }, { x: 162, y: 528 }, { x: 180, y: 672 }];
 
 function buildMap() {
@@ -173,6 +180,8 @@ export class Fall extends SideEpisode {
     // falling debris, one lane at a time; each lane knows where it lands
     this.lanes = LANES.map(L => { const x = L.col * TILE + 4; let y1 = (L.from + 1) * TILE; while (y1 < H * TILE && !this.solidTile(L.col, Math.floor(y1 / TILE))) y1 += TILE; return Object.assign({ x, y0: L.from * TILE, y1: Math.floor(y1 / TILE) * TILE, next: L.phase + L.period, warned: false, rock: null }, L); });
     this.crumble = { t: 0, on: false, gone: false, bits: [] };
+    this.markG = this.add.graphics().setDepth(1.2);
+    this.tape = new Marks(this, MARKS); this.gold = new Gold(this, GOLD);
     this.drawBodies();
     this.spawn(); this.kid.face = 1;
     this.followGirl();
@@ -201,7 +210,7 @@ export class Fall extends SideEpisode {
     if (this.phase === 'walk') {
       if (!this.dead && !this.leaving) {
         const lockWas = k.wallLock;
-        this.moveKid(dt); this.updateThings();
+        this.moveKid(dt); this.updateThings(); this.tape.update(dt); this.gold.update(dt);
         // here a fall is measured from where she left the floor (or a wall she slid on or jumped
         // off), not from the top of her jump: jumping down to the next floor never hurts more than
         // stepping off it. Brushing past a wall in a free fall does not count.
@@ -346,8 +355,14 @@ export class Fall extends SideEpisode {
     const lg = this.ledG; lg.clear();
     [[40, 30], [300, 52], [9 * TILE + 4, 29 * TILE], [13 * TILE + 2, 36 * TILE], [11 * TILE, 48 * TILE]].forEach(([x, y], i) => { if (Math.sin(t * 2 + i * 1.7) > 0) { lg.fillStyle(hexNum(P.led), 1); lg.fillRect(x, y, 1, 1); } });
     // the black she falls into
+    const mg = this.markG; mg.clear(); this.tape.draw(mg); this.gold.draw(mg);
     const kg = this.blackG; kg.clear();
-    if (this.black > 0) { kg.fillStyle(0x000000, this.black); kg.fillRect(-2, -2, 324, 184); }
+    // in hard steps of whole rows, not a see-through veil: a quarter, half, three quarters, all
+    if (this.black > 0) {
+      const n = this.black >= 0.9 ? 4 : this.black >= 0.6 ? 3 : this.black >= 0.3 ? 2 : 1;
+      kg.fillStyle(0x000000, 1);
+      if (n === 4) kg.fillRect(-2, -2, 324, 184); else for (let y = -2; y < 182; y++) if ((y & 3) < n && (n !== 2 || (y & 1) === 0)) kg.fillRect(-2, y, 324, 1);
+    }
     this.drawLocks([]);
     this.drawHud();
   }

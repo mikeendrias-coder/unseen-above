@@ -226,6 +226,10 @@ export const NOTICE = {
     bagNote: ['A note in his hand: "Don\'t let her follow."'],
     hold: ['She holds on to him.']
   },
+  // the first gold piece she ever picks up (core/props.js Gold); never again after that
+  gold: {
+    first: ['Gold, set right on her path.']
+  },
   moon: {
     fountain: ['A gold fountain, the twin of the one on the grounds.', 'Up here, the water is the expensive part.'],
     bench: ['A bench. Nobody up here sits outside.'],

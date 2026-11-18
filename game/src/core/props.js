@@ -29,6 +29,10 @@ import { Sound } from './sound.js';
 import { K } from './side.js';
 import { hexNum } from '../art/painter.js';
 import { ASH } from '../art/palettes.js';
+import { pixText } from '../art/pixfont.js';
+import { state } from './state.js';
+import { checkpointOf } from './death.js';
+import { NOTICE } from '../data/dialogue.js';
 
 const GRAV = 690, MAXF = 260;
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -260,4 +264,108 @@ export function hardCone(g, pts, col, view) {
   }
   const o = pts[0], line = (a, b) => { const n = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)); for (let i = 0; i <= n; i += 1) g.fillRect(Math.round(a.x + (b.x - a.x) * i / n), Math.round(a.y + (b.y - a.y) * i / n), 1, 1); };
   line(o, pts[1]); line(o, pts[pts.length - 1]);
+}
+
+// ------------------------------------------------------------------ the show's marks on the floor
+// Checkpoints (Nov 18). Each section of an episode starts at a strip of gaffer tape on the floor
+// with a take mark (a small number), the way a crew marks where an actor starts. Standing on it
+// sets the visit's checkpoint (death.js): a death or Backspace starts her there; running out of
+// lives clears it and the episode starts from the top. A mark she has reached is bone white, the
+// next ones are dull; the one just reached blinks twice.
+//   this.marks = new Marks(this, [{ x, y }, ...]);          // side view: x her left edge, y the floor
+//   this.marks = new Marks(this, [{ tx, ty }, ...], { top: true });   // top-down tiles
+//   opts.carry(): extra data a retry from a mark needs (glasses on, pebbles in her pocket)
+//   this.marks.from: the mark this take started at ({ i, ...carry }), or null
+//   update(dt) every frame she can move; draw(g, seen?) on a layer under her (seen(x, y): is it lit)
+export class Marks {
+  constructor(scene, list, opts) {
+    this.scene = scene; this.list = list; this.opts = opts || {}; this.top = !!this.opts.top;
+    const cp = checkpointOf(scene);
+    this.from = cp && cp.i != null ? cp : null;
+    this.active = this.from ? this.from.i : -1; this.blink = 0;
+  }
+  reached(m, k) {
+    if (this.top) return !k.moving && Math.max(Math.abs(k.tx - m.tx), Math.abs(k.ty - m.ty)) <= 1;
+    return k.onGround && Math.abs(k.y + k.h - m.y) < 2 && k.x + k.w > m.x - 2 && k.x < m.x + (m.reach || 64);
+  }
+  update(dt) {
+    this.blink = Math.max(0, this.blink - dt);
+    const s = this.scene, k = s.kid; if (!k || s.dead || s.leaving || s.done) return;
+    for (let i = this.list.length - 1; i > this.active; i--) if (this.reached(this.list[i], k)) { this.set(i); break; }
+  }
+  set(i) {
+    const m = this.list[i]; this.active = i; this.blink = 0.5;
+    const at = this.top ? { tx: m.tx, ty: m.ty, i } : { x: m.x, y: m.y - K.hStand, i };
+    if (this.opts.carry) Object.assign(at, this.opts.carry());
+    this.scene.markCheckpoint(at);
+    Sound.noise(0.03, 0.04, 3200); Sound.tone(1250, 0.03, 'square', 0.01); // a slate clack, quiet
+    if (this.opts.onMark) this.opts.onMark(i);
+  }
+  draw(g, seen) {
+    this.list.forEach((m, i) => {
+      const x = this.top ? m.tx * 16 + 3 : Math.round(m.x) - 2, y = this.top ? m.ty * 16 + 11 : Math.round(m.y);
+      if (seen && !seen(x + 6, y)) return;
+      const on = i <= this.active, lit = on && !(this.blink > 0 && i === this.active && Math.floor(this.blink * 8) % 2);
+      const tape = C(lit ? 'bone' : 'boneLo'), dark = C('ash0');
+      // a strip of tape across the floor, torn at both ends, and a short leg down the floor's face
+      g.fillStyle(tape, 1); g.fillRect(x, y, 12, 2); g.fillRect(x + 5, y + 2, 2, 2);
+      g.fillStyle(dark, 1); g.fillRect(x, y + 1, 1, 1); g.fillRect(x + 11, y, 1, 1);
+      // the take mark: the section's number, in marker on the floor face beside the leg
+      pixText(g, String(i + 1), x + 8, y + 3, lit ? C('bone') : C('ash4'), 1, 1);
+    });
+  }
+}
+
+// ------------------------------------------------------------------ gold left out on the path
+// Gold bait (research/features_nov17.md item 8): small gold pieces the show set out along the
+// best line and the risky one (near a light's edge, over a gap, on a board that gives way). She
+// picks one up by touching it. Picked pieces stay picked for this page visit, take after take.
+// The count is kept in the story for the results paperwork:
+//   state.story.gold       = { ep1: 3, ep2: 5, ... }  pieces she has picked up, per episode id
+//   state.story.goldPlaced = { ep1: 8, ep2: 8, ... }  pieces the show set out, per episode id
+// (episode ids: ep1 grounds, ep2 gallery, ep3fall the fall, ep3 east wing, ep4 bedroom.) The
+// first piece she ever finds says one line; after that, only a two-note chime.
+//   this.gold = new Gold(this, [{ x, y }, ...]);              // side view: y is the floor under it
+//   this.gold = new Gold(this, [{ tx, ty }, ...], { top: true });
+//   update(dt) every frame she can move; draw(g, seen?)
+const TAKEN = {};
+export class Gold {
+  constructor(scene, list, opts) {
+    this.scene = scene; this.list = list; this.opts = opts || {}; this.top = !!this.opts.top;
+    this.key = scene.epId; this.taken = TAKEN[this.key] || (TAKEN[this.key] = new Set()); this.pops = []; this.t = 0;
+    const placed = Object.assign({}, state.story.goldPlaced || {}); if (placed[this.key] !== list.length) { placed[this.key] = list.length; state.storySet('goldPlaced', placed); }
+  }
+  get count() { return this.taken.size; }
+  at(m) { return this.top ? { x: m.tx * 16 + 8, y: m.ty * 16 + 11 } : { x: Math.round(m.x), y: Math.round(m.y) }; }
+  update(dt) {
+    this.t += dt; this.pops.forEach(p => { p.t += dt; }); this.pops = this.pops.filter(p => p.t < 0.24);
+    const s = this.scene, k = s.kid; if (!k || s.dead || s.leaving || s.done) return;
+    this.list.forEach((m, i) => {
+      if (this.taken.has(i)) return;
+      const hit = this.top ? (!k.moving && k.tx === m.tx && k.ty === m.ty) : (k.x < m.x + 4 && k.x + k.w > m.x - 3 && k.y < m.y && k.y + k.h > m.y - 6);
+      if (hit) this.take(i);
+    });
+  }
+  take(i) {
+    this.taken.add(i);
+    const p = this.at(this.list[i]); this.pops.push({ x: p.x, y: p.y - 2, t: 0 });
+    Sound.tone(1568, 0.05, 'square', 0.01); setTimeout(() => Sound.tone(2093, 0.08, 'square', 0.009), 60);
+    const all = Object.assign({}, state.story.gold || {}); all[this.key] = Math.max(all[this.key] || 0, this.taken.size); state.storySet('gold', all);
+    const s = this.scene;
+    if (state.hear('gold:first') && s.bubbles && !s.bubbles.busy('item')) s.bubbles.look('item', { lines: NOTICE.gold.first }, () => ({ x: p.x, y: p.y - 6 }));
+  }
+  draw(g, seen) {
+    this.list.forEach((m, i) => {
+      if (this.taken.has(i)) return;
+      const { x, y } = this.at(m); if (seen && !seen(x, y)) return;
+      // a gold ring lying flat: dark rim, gold body, one bright pixel; now and then a hard glint
+      g.fillStyle(C('ash0'), 1); g.fillRect(x - 2, y - 4, 5, 4);
+      g.fillStyle(C('gold'), 1); g.fillRect(x - 1, y - 3, 3, 2);
+      g.fillStyle(C('goldLo'), 1); g.fillRect(x, y - 2, 1, 1);
+      const glint = (this.t * 0.45 + i * 0.37) % 1 < 0.06;
+      g.fillStyle(C(glint ? 'bone' : 'goldHi'), 1); g.fillRect(x - 1, y - 3, 1, 1);
+      if (glint) { g.fillStyle(C('goldHi'), 1); g.fillRect(x - 1, y - 6, 1, 2); g.fillRect(x - 4, y - 3, 2, 1); }
+    });
+    this.pops.forEach(p => { const r = p.t < 0.12 ? 2 : 4; g.fillStyle(C(p.t < 0.12 ? 'bone' : 'goldHi'), 1); g.fillRect(p.x - r, p.y, 1, 1); g.fillRect(p.x + r, p.y, 1, 1); g.fillRect(p.x, p.y - r, 1, 1); g.fillRect(p.x, p.y + r, 1, 1); });
+  }
 }

@@ -11,6 +11,7 @@ import { LOOKS } from '../art/palettes.js';
 import { T, W, H, LEVEL, buildMap, paintMap, isSolid, isOpaque } from '../art/eastwing.js';
 import { Glasses } from '../core/glasses.js';
 import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle } from '../core/topdown.js';
+import { Marks, Gold } from '../core/props.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
@@ -94,8 +95,13 @@ export class EastWing extends TopDownEpisode {
     this.cutChains = new Set();
     this.lights = [];
     this.input.on('pointerdown', ptr => { if (this.dead || this.done) return; const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y); this.throwTo(Math.floor(wp.x / T), Math.floor(wp.y / T)); });
+    // the show's tape marks (checkpoints): a retry from one keeps her pebbles and the pile taken
+    this.tape = new Marks(this, LEVEL.marks.map(([tx, ty]) => ({ tx, ty })), { top: true, carry: () => ({ pebbles: this.pebbles, pile: this.pileTaken }) });
+    this.gold = new Gold(this, LEVEL.gold.map(([tx, ty]) => ({ tx, ty })).filter(q => !isSolid(m[q.ty][q.tx])), { top: true });
     this.drawBodies();
     this.spawn();
+    const from = this.tape.from;
+    if (from) { this.pebbles = from.pebbles || 0; if (from.pile) { this.pileTaken = true; this.pileThing.off = true; } }
     this.cameras.main.fadeIn(data.fromFall ? 1400 : 400);
     this.glitchT = data.fromFall ? 0 : 3;
     this.beds = { hum: Sound.hum(0.012), wind: Sound.wind(0.03) };
@@ -131,10 +137,10 @@ export class EastWing extends TopDownEpisode {
       this.moveKid(dt);
       if (c.throwP()) this.throwAhead();
       if (c.glasses()) this.gl.toggle();
-      this.updateThings();
+      this.updateThings(); this.tape.update(dt);
       this.holdChain(dt);
     }
-    this.gl.update(dt);
+    this.gl.update(dt); this.gold.update(dt);
     this.updateFlight(dt);
     this.updateSensors(dt);
     this.updateRattle(dt);
@@ -395,6 +401,7 @@ export class EastWing extends TopDownEpisode {
     if (this.pile && !this.pileTaken) this.pile.stones.forEach(([x, y], i) => { fg.fillStyle(hexNum(i % 2 ? P.rubbleHi : P.col), 1); fg.fillRect(x, y, 2, 2); });
     if (this.pocket) { const k = this.kidPx(); this.pocket.forEach((s, i) => { s.t += dt; const u = Math.min(1, s.t / (0.25 + i * 0.04)); if (u < 1) { fg.fillStyle(hexNum(P.colHi), 1); fg.fillRect(Math.round(s.x + (k.x - s.x) * u), Math.round(s.y + (k.y - 4 - s.y) * u - Math.sin(u * Math.PI) * 8), 2, 2); } }); if (this.pocket.every((s, i) => s.t > 0.25 + i * 0.04)) this.pocket = null; }
     this.drawFloorPebbles(fg, dt);
+    this.tape.draw(fg); this.gold.draw(fg);
     // the open door: dark, with a line of lamplight on the sill that blinks
     if (this.doorOpen) { const [ex, ey] = LEVEL.exit; fg.fillStyle(hexNum(P.void), 1); fg.fillRect(ex * T + 2, ey * T + 4, 12, 12); if (Math.floor(t * 3) % 2) { fg.fillStyle(lamp, 1); fg.fillRect(ex * T + 4, ey * T + 14, 8, 1); } }
     // LEDs that survive the dark: sensors, the camera, the robot, the radio

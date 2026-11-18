@@ -21,6 +21,7 @@ import { Glasses } from '../core/glasses.js';
 import { reviewKeys } from '../core/review.js';
 import { fx } from '../core/fx.js';
 import { darkFill, hardHoles, checker, pxCircle } from '../core/topdown.js';
+import { Marks, Gold } from '../core/props.js';
 
 const ARC = { ceiling: [35, 145], wall: [150, 200] };
 const STAY = 15; // seconds holding on to him before the show cuts away
@@ -63,7 +64,6 @@ export class Bedroom extends SideEpisode {
     this.camG = this.add.graphics().setDepth(3);
     this.bro = this.add.image(LEVEL.brother.x, GROUND, 'bro_sit').setOrigin(0, 1).setDepth(3.2);
     this.commonLayers();
-    this.beamG.setBlendMode(Phaser.BlendModes.NORMAL);
     this.eyeG = this.add.graphics().setDepth(4.5);
     // the dark: a canvas the size of the view; holes cut where there is light, red where a flash is
     this.darkCanvas = document.createElement('canvas'); this.darkCanvas.width = 322; this.darkCanvas.height = 182;
@@ -103,6 +103,10 @@ export class Bedroom extends SideEpisode {
     look(PH.x - 2, PH.x + PH.span + 2, PH.y - 4, N.photos, 96);
     look(HW.x - 4, HW.x + HW.w + 4, HW.y + HW.h + 2, N.window, 100);
     look(RQ.x - 8, RQ.x + 20, RQ.y - 2, N.request, 96, 'request4');
+    // the show's tape marks (checkpoints): under the dining table, under the long table, by the
+    // bag. A death in the run goes back to the bag, and the floor is whole again.
+    this.tape = new Marks(this, LEVEL.marks.map(x => ({ x, y: GROUND })));
+    this.gold = new Gold(this, LEVEL.gold.map(([x, y]) => ({ x, y })));
     this.drawBodies();
     this.spawn(); this.kid.face = 1;
     this.view = { x: 0 }; this.updateView(1);
@@ -129,7 +133,7 @@ export class Bedroom extends SideEpisode {
     if (this.mode === 'house') {
       if (!this.dead && !this.leaving) {
         const k = this.kid, wasGround = k.onGround, vy = k.vy;
-        this.moveKid(dt); this.updateThings();
+        this.moveKid(dt); this.updateThings(); this.tape.update(dt); this.gold.update(dt);
         if (k.onGround && !wasGround && vy > 150) this.step(true);
         this.footsteps(dt); this.updateBag(dt);
         if (c.glasses()) this.gl.toggle();
@@ -146,6 +150,15 @@ export class Bedroom extends SideEpisode {
   }
 
   lookable() { return this.mode === 'house' && !this.bag.have; }
+  // The heavy bag (research/features_nov17.md item 12): carrying his bag out, she has no double
+  // jump and half her steering in the air. Every jump in the run is a committed one.
+  heavy() { return this.mode === 'house' && this.bag.have; }
+  moveKid(dt) {
+    const heavy = this.heavy(); this.noDoubleJump = heavy;
+    if (!heavy) return super.moveKid(dt);
+    const air = K.accA; K.accA = air / 2;
+    try { super.moveKid(dt); } finally { K.accA = air; }
+  }
   // review: N moves her section by section; at the stairs it pulls the bag; after the bag, the
   // doors; in the bedroom it moves the scene on
   canRestart() { return this.mode === 'house' && super.canRestart(); }
@@ -233,6 +246,7 @@ export class Bedroom extends SideEpisode {
   }
   step(landing) {
     const k = this.kid, cx = k.x + k.w / 2, f = LEVEL.noisy.find(n => cx >= n.x0 && cx < n.x1);
+    if (landing && this.heavy()) Sound.tone(70, 0.14, 'triangle', 0.035, 45); // the bag lands with her
     if (!f || k.y + k.h < GROUND - 1) { if (landing) Sound.noise(0.05, 0.02, 600); return; } // on furniture, the floor is not under her
     if (f.kind === 'boards') { Sound.tone(150 + Math.random() * 40, 0.16, 'sawtooth', 0.018, 90); Sound.noise(0.08, 0.03, 900); }
     else { Sound.noise(0.09, 0.07, 7000); Sound.tone(3600 + Math.random() * 900, 0.04, 'triangle', 0.01); }
@@ -533,6 +547,8 @@ export class Bedroom extends SideEpisode {
     }
     this.drawDark(vx, reds);
     this.drawOver(dt);
+    // tape marks and gold show only in her own light
+    if (this.mode === 'house') { const kc = this.kid.x + this.kid.w / 2, ky = this.kid.y + 6, near = (x, y) => Math.abs(x - kc) < 26 && Math.abs(y - ky) < 28; this.tape.draw(this.overG, near); this.gold.draw(this.overG, near); }
     this.drawLocks(this.cams, LEVEL.caught);
     this.drawThings();
     this.drawHud(dt);
@@ -733,7 +749,7 @@ export class Bedroom extends SideEpisode {
   hint() {
     if (this.mode !== 'house' || this.leaving) return overlay.hint('');
     const k = this.kid, x = (k.x + k.w / 2) / TILE;
-    if (this.collapse && !this.collapse.done && x < 79) return overlay.hint('Run. Space twice over the wide gap. Crouch under the slab.');
+    if (this.collapse && !this.collapse.done && x < 79) return overlay.hint('Run. With the bag, no double jump. Crouch under the slab.');
     if (this.collapse && x >= 78) return overlay.hint('Jump from wall to wall to climb. Then the doors.');
     if (this.bag.have) return overlay.hint(this.collapse ? 'Go. The doors are at the end of the hall.' : 'Keep holding J. Something else is in the bag.');
     if (x < 12) return overlay.hint('Cameras click twice, then flash. Hide when they click.');

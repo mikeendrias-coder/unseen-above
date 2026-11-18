@@ -84,13 +84,15 @@ export class SideEpisode extends Phaser.Scene {
     this.bodyLayer = this.add.layer().setDepth(2);
     this.shadowG = this.add.graphics().setDepth(3.9);
     this.girl = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1).setDepth(4);
-    this.puffs = this.add.particles(0, 0, 'dot', { speedX: { min: -22, max: 22 }, speedY: { min: -14, max: -3 }, gravityY: 30, lifespan: { min: 260, max: 520 }, alpha: { start: 0.7, end: 0 }, tint: [hexNum(P.dust), hexNum(P.colLo)], emitting: false }).setDepth(4.2);
-    this.beamG = this.add.graphics().setDepth(5); // flat light, normal blending (ART_DIRECTION 2)
+    // dust where she lands or kicks off a wall: solid square pixels that just stop (no fade)
+    this.puffs = this.add.particles(0, 0, 'dot', { speedX: { min: -22, max: 22 }, speedY: { min: -14, max: -3 }, gravityY: 30, lifespan: { min: 160, max: 340 }, tint: [hexNum(P.dust), hexNum(P.colLo)], emitting: false }).setDepth(4.2);
+    this.beamG = this.add.graphics().setDepth(5).setBlendMode(Phaser.BlendModes.NORMAL); // flat light only (ART_DIRECTION 2)
     this.fxG = this.add.graphics().setDepth(7);
     this.strikeFx = new SatelliteStrike(this, { depth: 8 });
     this.bubbles = new Bubbles(this, 9);
     this.bubbles.player = () => this.kid ? { x: this.kid.x + this.kid.w / 2, y: this.kid.y } : null;
-    this.burst = this.add.particles(0, 0, 'dot2', { speed: { min: 25, max: 95 }, lifespan: { min: 260, max: 560 }, scale: { start: 1, end: 0 }, tint: [0xebe6d8, hexNum(P.lamp), hexNum(P.hazard)], emitting: false }).setDepth(8);
+    // the strike's burst: 2 px squares, solid, no scaling down (ART_DIRECTION 2)
+    this.burst = this.add.particles(0, 0, 'dot2', { speed: { min: 25, max: 95 }, lifespan: { min: 200, max: 420 }, tint: [0xebe6d8, hexNum(P.lamp), hexNum(P.hazard)], emitting: false }).setDepth(8);
   }
   // her bodies from earlier takes; each one can be looked at with E
   drawBodies() {

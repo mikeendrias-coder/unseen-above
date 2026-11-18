@@ -6,14 +6,14 @@
 import { Music } from '../core/music.js';
 import { hexNum, Painter } from '../art/painter.js';
 import { makeSprites, girlFrame } from '../art/sprites.js';
-import { TILE, VIEW_W, GROUND, TERRACE, BALCONY, LEVEL, CITY_GROUND, buildMap, paintSky, paintMoon, paintCity, paintLevel } from '../art/estate.js';
+import { TILE, VIEW_W, GROUND, TERRACE, LOGGIA, BALCONY, LEVEL, CITY_GROUND, buildMap, paintSky, paintMoon, paintCity, paintLevel } from '../art/estate.js';
 import { ASH } from '../art/palettes.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, inPoly } from '../core/side.js';
-import { Props, hardCone } from '../core/props.js';
+import { Props, Marks, Gold, hardCone } from '../core/props.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
 import { SatelliteStrike } from '../art/strike.js';
@@ -97,9 +97,16 @@ export class Grounds extends SideEpisode {
     this.lights = LEVEL.lights.map(l => Object.assign({}, l, { lock: 0, cone: null, u: 0, hold: 0, cd: 0 }));
     this.drones = LEVEL.drones.map(d => Object.assign({}, d, { x: d.x0 + (d.x1 - d.x0) * 0.3, dir: 1, lock: 0, cone: null }));
     this.skipPoints = LEVEL.skip.map(([x]) => x * T);
+    // the show's tape marks: a death goes back to the last one she stood on (core/props.js)
+    this.markG = this.add.graphics().setDepth(1.3);
+    this.tapeHintT = 0;
+    this.tape = new Marks(this, LEVEL.marks.map(([x, y]) => ({ x, y })), { onMark: () => { if (state.hear('hint:tape')) this.tapeHintT = 4; } });
+    this.gold = new Gold(this, LEVEL.gold.map(([x, y]) => ({ x, y })));
     this.drawBodies();
     this.drawFloor();
     this.spawn(data && data.fromIntro ? 1 * T : null);
+    // back at a mark: a beat to get her bearings before a light can lock on
+    if (this.tape.from) this.safeT = 1;
     this.followGirl();
     this.cameras.main.fadeIn(data && data.fromIntro ? 900 : 350);
     this.beds = { wind: Sound.wind(0.14), lounge: Sound.lounge(0.0001) };
@@ -171,8 +178,10 @@ export class Grounds extends SideEpisode {
     this.clock += dt; this.safeT = Math.max(0, (this.safeT || 0) - dt);
     if (this.commonKeys()) { c.endFrame(); return; }
     if (this.done) { c.endFrame(); return; }
-    if (!this.dead && !this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); }
+    this.tapeHintT = Math.max(0, this.tapeHintT - dt);
+    if (!this.dead && !this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); this.tape.update(dt); }
     else { this.dyn.update(dt); if (this.dead && this.girl.visible) this.settle(dt); }
+    this.gold.update(dt);
     this.updateScan(dt);
     this.updateLights(dt);
     this.updateDrones(dt);
@@ -338,6 +347,7 @@ export class Grounds extends SideEpisode {
     const lit = s => s.cone && hardCone(g, s.cone, s.lock > 0 ? C('red') : C('ash5'), v);
     this.lights.forEach(lit); this.drones.forEach(lit);
     this.drawLocks([...this.lights, ...this.drones]);
+    const mg = this.markG; mg.clear(); this.tape.draw(mg); this.gold.draw(mg);
     this.dyn.draw();
     this.drawScan();
     this.drawThings();
@@ -347,6 +357,7 @@ export class Grounds extends SideEpisode {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
     if (this.scan) return overlay.hint(x > 93 ? 'W or J at the door.' : 'Run. If the scan reaches you, the strike comes.');
+    if (this.tapeHintT > 0) return overlay.hint('Tape on the floor: a new start. Backspace retries.');
     if (x < 15) return overlay.hint('A and D move. Space jumps. J looks at things.');
     if (x < 34) return overlay.hint('Hide in the hedges’ shadow. Space twice jumps higher.');
     if (x < 38) return overlay.hint('Jump from wall to wall to climb.');

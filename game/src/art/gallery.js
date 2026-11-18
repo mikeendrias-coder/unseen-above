@@ -51,6 +51,13 @@ export const LEVEL = {
     first: 1.2, idle: 0.9, tell: 0.7, charge: 0.5, fire: 0.4
   },
   hole: { x0: 58 * T, x1: 63 * T },
+  // the show's tape marks (checkpoints), [x where she stands, the floor's y]: under the desk on
+  // the landing, past the atrium, past the boards and the broken camera, before the laser hall
+  marks: [[24 * T, 18 * T], [54 * T, ROWS.mezz * T], [67 * T, ROWS.mezz * T], [75 * T, 18 * T]],
+  // gold left out on the path, [x, the floor's y]: the sideboard, the landing desk (in the stair
+  // camera's sweep), the bottom of each chandelier's swing, the dust sheets, by the polisher, on
+  // the boards that give way, under the chandelier that drops, in the laser hall
+  gold: [[15 * T + 8, 20 * T], [25 * T, 16 * T], [41 * T, 194], [50 * T + 6, 194], [46 * T, ROWS.floor * T], [57 * T, ROWS.mezz * T], [61 * T, ROWS.mezz * T], [69 * T + 8, ROWS.mezz * T], [82 * T, ROWS.floor * T]],
   // where N puts her in story mode: just short of each section's hazard
   // (B: under the desk on the landing; D: on the far wall's top, then past the broken camera)
   skip: [[19, ROWS.floor], [24, 18], [54, ROWS.mezz], [67, ROWS.mezz], [75, 18]]
