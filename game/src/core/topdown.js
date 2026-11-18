@@ -59,14 +59,22 @@ export function darkFill(ctx) {
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
+// A canvas the CPU draws on. The dark layers are drawn and uploaded to the GPU whenever they
+// change; a GPU canvas would be read back for every upload (Nov 18 perf pass: the stalls).
+export function cpuCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d', { willReadFrequently: true }); return c; }
 const checkers = new WeakMap();
-// a 2 x 2 checker pattern for this canvas, lined up with the world (parity = (view x + view y) % 2)
+// a 2 x 2 checker pattern for this canvas, lined up with the world (parity = (view x + view y) % 2).
+// Both parities are made once per canvas (no transform set on every use).
 export function checker(ctx, parity) {
-  let pat = checkers.get(ctx);
-  if (!pat) { const t = document.createElement('canvas'); t.width = 2; t.height = 2; const x = t.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, 1, 1); x.fillRect(1, 1, 1, 1); pat = ctx.createPattern(t, 'repeat'); checkers.set(ctx, pat); }
-  if (pat.setTransform) pat.setTransform(new DOMMatrix([1, 0, 0, 1, ((parity % 2) + 2) % 2, 0]));
-  return pat;
+  let pats = checkers.get(ctx);
+  if (!pats) {
+    const mk = (a, b) => { const t = cpuCanvas(2, 2), x = t.getContext('2d'); x.fillStyle = '#000'; x.fillRect(a, 0, 1, 1); x.fillRect(b, 1, 1, 1); return ctx.createPattern(t, 'repeat'); };
+    pats = [mk(0, 1), mk(1, 0)]; checkers.set(ctx, pats);
+  }
+  return pats[((parity % 2) + 2) % 2];
 }
+// a key for a set of lights (canvas px), to tell whether the dark has to be drawn again
+export function lightsKey(lights) { let k = ''; for (const l of lights) k += Math.round(l.x) + ',' + Math.round(l.y) + ',' + l.r + ',' + (l.a == null ? 1 : l.a) + ';'; return k; }
 // Cut lights out of the dark: each light { x, y, r, a } (canvas px). A strong light (a >= 0.75,
 // the default) clears a solid disc of 60% of its radius and a checker ring out to its full
 // radius; a weak one is only the checker, out to 80% of its radius. Rows of rects, edges hard.
@@ -110,7 +118,7 @@ export class TopDownEpisode extends Phaser.Scene {
     cam.setZoom(pixelZoom()); cam.setRoundPixels(true); cam.setBackgroundColor(hexNum(bg));
     this.view = { x: 0, y: 0 };
     // darkness: a small canvas redrawn each frame, with holes cut where there is light
-    this.darkCanvas = document.createElement('canvas'); this.darkCanvas.width = 322; this.darkCanvas.height = 182;
+    this.darkCanvas = cpuCanvas(322, 182); this.darkKey = null;
     if (this.textures.exists('td_dark')) this.textures.remove('td_dark');
     this.darkTex = this.textures.addCanvas('td_dark', this.darkCanvas);
     this.darkImg = this.add.image(0, 0, 'td_dark').setOrigin(0).setDepth(5.5);
@@ -349,13 +357,18 @@ export class TopDownEpisode extends Phaser.Scene {
   }
   // lights: { x, y, r, a } in world px; the girl always carries a small one. Hard light (Nov 17
   // art pass): a solid hole, then a ring of checker dither, nothing soft, no alpha.
+  // Drawn again (and sent to the GPU) only when the view or a light changed.
   drawDark() {
     const ctx = this.darkCanvas.getContext('2d'), v = this.view;
-    darkFill(ctx);
     const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 52 }].concat(this.lights);
-    hardHoles(ctx, all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a })), v.x + v.y);
-    this.darkTex.refresh();
+    const holes = all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a }));
     this.darkImg.setPosition(v.x - 1, v.y - 1);
+    const key = v.x + ',' + v.y + '|' + lightsKey(holes);
+    if (key === this.darkKey) return;
+    this.darkKey = key;
+    darkFill(ctx);
+    hardHoles(ctx, holes, v.x + v.y);
+    this.darkTex.refresh();
   }
   drawGirl() {
     const k = this.kid, c = this.kidPx(), f = k.moving ? (k.step % 2 ? 'b' : 'a') : 'a';

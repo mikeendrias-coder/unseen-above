@@ -722,15 +722,40 @@ export class Hallway extends SideEpisode {
   }
   // Lights off: solid dark with hard holes where there is light (her, the console, the creator).
   // A flash lights the whole stage for its moment.
+  // The dark of the last round: solid, hard round holes where there is light, a checker ring at
+  // their edge (the look of PixLayer.dark). Nov 18 perf pass: worked out only inside each hole's
+  // box (no square root for the whole picture), drawn on a canvas the CPU owns, and drawn and
+  // uploaded only when the view or a hole moved. Round three ran at 20 frames a second before.
   drawDarkness() {
     const D = this.darkL, flash = Math.max(0, ...this.cams.map(cm => cm.flash * (cm.lit == null ? 1 : cm.lit) * fx.level));
-    D.begin(this.view.x);
-    if (this.dark && flash < 0.45) {
-      const k = this.kid, c = this.cr, holes = [{ x: LEVEL.desk.x + 17, y: LEVEL.desk.y - 9, r: 16 }, { x: c.x, y: G - 16, r: 9 }];
-      if (this.girl.visible) holes.push({ x: k.x + k.w / 2, y: k.y + 6, r: 24 });
-      D.dark('#0e0f12', holes);
+    if (!this.darkI || !this.darkI.scene) {
+      const c = document.createElement('canvas'); c.width = 322; c.height = 182;
+      this.darkC = c; this.darkX = c.getContext('2d', { willReadFrequently: true });
+      if (this.textures.exists('hw_dark_cpu')) this.textures.remove('hw_dark_cpu');
+      this.darkT = this.textures.addCanvas('hw_dark_cpu', c);
+      this.darkI = this.add.image(0, 0, 'hw_dark_cpu').setOrigin(0).setDepth(D.img.depth).setVisible(false);
+      this.darkData = this.darkX.createImageData(322, 182); this.darkM = new Float32Array(322 * 182); this.darkKey = null;
+      const d = this.darkData.data; for (let i = 0; i < d.length; i += 4) { d[i] = 0x0e; d[i + 1] = 0x0f; d[i + 2] = 0x12; d[i + 3] = 255; }
+      D.img.setVisible(false); // the old layer stays empty
     }
-    D.end();
+    const ox = Math.round(this.view.x) - 1, on = this.dark && flash < 0.45;
+    this.darkI.setVisible(on).setPosition(ox, -1);
+    if (!on) return;
+    const k = this.kid, c = this.cr, holes = [{ x: LEVEL.desk.x + 17, y: LEVEL.desk.y - 9, r: 16 }, { x: c.x, y: G - 16, r: 9 }];
+    if (this.girl.visible) holes.push({ x: k.x + k.w / 2, y: k.y + 6, r: 24 });
+    const key = ox + '|' + holes.map(h => h.x + ',' + h.y + ',' + h.r).join(';');
+    if (key === this.darkKey) return;
+    this.darkKey = key;
+    // m: how far each pixel is outside the nearest hole's edge (99: nowhere near one)
+    const W = 322, Hh = 182, m = this.darkM, d = this.darkData.data; m.fill(99);
+    holes.forEach(h0 => {
+      const hx = h0.x - ox, hy = h0.y + 1, r = h0.r, R = r + 3;
+      const x0 = Math.max(0, Math.floor(hx - R)), x1 = Math.min(W - 1, Math.ceil(hx + R)), y0 = Math.max(0, Math.floor(hy - R)), y1 = Math.min(Hh - 1, Math.ceil(hy + R));
+      for (let y = y0; y <= y1; y++) { const dy = y - hy, row = y * W; for (let x = x0; x <= x1; x++) { const dx = x - hx, v = Math.sqrt(dx * dx + dy * dy) - r; if (v < m[row + x]) m[row + x] = v; } }
+    });
+    for (let y = 0, i = 0; y < Hh; y++) for (let x = 0; x < W; x++, i++) { const v = m[i]; d[i * 4 + 3] = v >= 3 || (v >= 0 && ((x + y) & 1) === 0) ? 255 : 0; }
+    this.darkX.putImageData(this.darkData, 0, 0);
+    this.darkT.refresh();
   }
   // the creator's HP, as part of the show's paperwork: a slip at the top of the picture, a box
   // for each of the nine. A box empties from the top when a hit drains it.

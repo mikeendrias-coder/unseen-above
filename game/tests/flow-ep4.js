@@ -126,8 +126,9 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.down('ArrowRight'); await until(() => window.__game.scene.mode === 'talk', null, 10000); await p.keyboard.up('ArrowRight');
   ok('she reaches him and they talk', await p.evaluate(() => document.getElementById('cc').textContent.length > 0));
   ok('presenting, N does not cut his lines short', await p.evaluate(() => { const s = window.__game.scene, st = window.__game.state, was = st.settings.presenter, i = s.talkI; st.settings.presenter = true; s.skipAhead(); const kept = s.mode === 'talk' && s.talkI === i; st.settings.presenter = was; return kept; }));
-  for (let i = 0; i < 20 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(120); }
-  await until(() => window.__game.scene.mode === 'after', null, 15000);
+  // a press finishes a line, the next moves on: two a line, eleven lines (and some to spare)
+  for (let i = 0; i < 40 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(120); }
+  await until(() => window.__game.scene.mode === 'after', null, 20000);
   ok('after the last line he is gone (' + await p.evaluate(() => window.__game.scene.bro.texture.key) + ')', await p.evaluate(() => window.__game.scene.bro.texture.key === 'bro_dead'));
   ok('after, the hint names both ways (' + await p.evaluate(() => document.getElementById('h-hint').textContent) + ')', await p.evaluate(() => /Hold J/.test(document.getElementById('h-hint').textContent)));
   // the false ending: she holds on to him (J) instead of going to the door

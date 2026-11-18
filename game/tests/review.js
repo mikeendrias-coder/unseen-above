@@ -47,6 +47,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'gallery' && window.__game.scene.kid && window.__game.scene.clock > 0.6);
   ok('the mode is kept: IMMUNE', (await rec()).mode === 'immune');
   const under = hp => S(h => { const s = window.__game.scene, k = s.kid, X = s.level.dropper; k.x = X.x - 4; k.y = 208 - k.h; k.vx = 0; k.vy = 0; k.onGround = true; k.hp = h; k.inv = 0; s.markCheckpoint({ x: X.x - 60, y: 208 - 14 }); }, hp);
+  // every line the strip shows from here on, so a short one is not missed between polls
+  await S(() => { const seen = window.__ccSeen = new Set(); clearInterval(window.__ccPoll); window.__ccPoll = setInterval(() => seen.add(document.getElementById('cc').textContent), 40); });
   await under(3);
   await until(() => window.__game.scene.drop.phase === 'down', null, 8000);
   await p.waitForTimeout(700);
@@ -54,7 +56,10 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.down('KeyA'); await p.waitForTimeout(500); await p.keyboard.up('KeyA');
   const moved = await S(x => window.__game.scene.kid.x < x - 8, hurt.x);
   ok(`chandelier at 3 HP: HP ${hurt.hp}, thrown clear (inside the wreck: ${hurt.inside}), she walks away (${moved})`, hurt.hp === 1 && !hurt.dead && !hurt.inside && moved);
-  ok('the first HP lost explains HP in the strip', await until(() => /HP: hits\. Lights and lasers/.test(document.getElementById('cc').textContent), null, 6000).then(() => true, () => false));
+  // the line depends on the mode (core/death.js EXPLAIN): IMMUNE says lights and lasers reset her
+  const hpLine = { normal: 'HP: hits. Lights and lasers take a life.', endless: 'HP: hits. Lights and lasers take a life.', immune: 'HP: hits. Lights and lasers reset you.' }[(await rec()).mode];
+  ok('the first HP lost explains HP in the strip (' + hpLine + ')', await until(t => [...window.__ccSeen].some(c => c.includes(t)), hpLine, 6000).then(() => true, async () => { console.log('     strip showed: ' + JSON.stringify(await S(() => [...window.__ccSeen]))); return false; }));
+  await S(() => clearInterval(window.__ccPoll));
   await p.keyboard.press('Backspace'); await back();
   const g0 = await rec();
   await under(2);

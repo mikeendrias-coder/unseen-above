@@ -37,18 +37,31 @@ export const Sound = (() => {
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g); out(g, wet); o.start(t0); o.stop(t0 + dur + 0.05);
   };
+  // Noise bursts: the buffers are made once per length (two takes of each, used in turn) instead
+  // of on every call (Nov 18 perf pass: a flash, a crash or a run of footsteps made dozens).
+  const bursts = new Map();
+  const burst = (c, dur) => {
+    const key = Math.round(dur * 1000); let e = bursts.get(key);
+    if (!e) {
+      const mk = () => { const n = Math.max(1, Math.floor(c.sampleRate * dur)), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) { const u = 1 - i / n; d[i] = (Math.random() * 2 - 1) * u * u; } return buf; };
+      e = { bufs: [mk(), mk()], i: 0 }; bursts.set(key, e);
+    }
+    e.i ^= 1; return e.bufs[e.i];
+  };
   const noise = (dur, vol, cutoff) => {
     const c = ensure(); if (!c) return;
-    const n = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    const buf = burst(c, dur);
     const s = c.createBufferSource(), g = c.createGain(), f = c.createBiquadFilter();
     f.type = 'lowpass'; f.frequency.value = cutoff || 4000;
     s.buffer = buf; g.gain.value = vol || 0.12; s.connect(f); f.connect(g); out(g, 0.2); s.start();
   };
+  // brown noise for the beds, made once per length and shared (a bed starts on a random offset)
+  const browns = new Map();
   const noiseBuffer = secs => {
+    if (browns.has(secs)) return browns.get(secs);
     const n = Math.floor(ctx.sampleRate * secs), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
     let b = 0; for (let i = 0; i < n; i++) { b = 0.97 * b + 0.03 * (Math.random() * 2 - 1); d[i] = b * 6; }
-    return buf;
+    browns.set(secs, buf); return buf;
   };
   const fadeStop = (g, nodes, secs) => {
     if (!ctx) return;
@@ -64,7 +77,7 @@ export const Sound = (() => {
     const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = 0.7;
     const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 0.09; lg.gain.value = 260; lfo.connect(lg); lg.connect(f.frequency);
     const g = c.createGain(); g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(vol || 0.16, c.currentTime + 2);
-    s.connect(f); f.connect(g); out(g, 0.1); s.start(); lfo.start();
+    s.connect(f); f.connect(g); out(g, 0.1); s.start(c.currentTime, Math.random() * 3); lfo.start();
     return { stop: secs => fadeStop(g, [s, lfo], secs), set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
   };
 
@@ -169,7 +182,7 @@ export const Sound = (() => {
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 160;
     const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 3.1; lg.gain.value = 70; lfo.connect(lg); lg.connect(f.frequency);
     const g = c.createGain(); g.gain.value = 0.0001; g.gain.linearRampToValueAtTime(vol || 0.3, c.currentTime + 0.3);
-    s.connect(f); f.connect(g); out(g, 0.3); s.start(); lfo.start();
+    s.connect(f); f.connect(g); out(g, 0.3); s.start(c.currentTime, Math.random() * 3); lfo.start();
     return { stop: secs => fadeStop(g, [s, lfo], secs), set: (v, secs) => { const t = c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + (secs || 1)); } };
   };
 

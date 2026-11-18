@@ -5,7 +5,7 @@
 // and the run to the doors is real platforming. At the end of the blood, the bedroom: him, and a
 // door that does not match itself. Stay with him long enough and the show cuts to a break.
 import { Music } from '../core/music.js';
-import { hexNum, flat, Painter } from '../art/painter.js';
+import { hexNum, flat } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText } from '../art/pixfont.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
@@ -28,19 +28,45 @@ import { ASH } from '../art/palettes.js';
 const ARC = { ceiling: [35, 145], wall: [150, 200] };
 const STAY = 15; // seconds holding on to him before the show cuts away
 const glassesOn = t => (Math.sin(t * 2.3) + Math.sin(t * 5.7 + 1) * 0.6 + Math.sin(t * 13.1) * 0.3) > -0.35;
-const spans = (pts, fn) => Painter.prototype.spans.call(null, pts.map(p => [p.x, p.y]), fn);
-// red patterns for the dark canvas: a flash paints what it touches in red pixels
+// A polygon's rows, as Painter.spans makes them (the same rounding), without its per-row arrays.
+// Points are { x, y }. fn(x, y, w) for each lit run.
+const xsRow = [];
+function spans(pts, fn) {
+  const n = pts.length; let y0 = Infinity, y1 = -Infinity;
+  for (let i = 0; i < n; i++) { const y = pts[i].y; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) {
+    const yc = y + 0.5; xsRow.length = 0;
+    for (let i = 0, j = n - 1; i < n; j = i++) { const a = pts[i], b = pts[j]; if ((a.y > yc) !== (b.y > yc)) xsRow.push(a.x + (yc - a.y) * (b.x - a.x) / (b.y - a.y)); }
+    if (xsRow.length > 2) xsRow.sort((a, b) => a - b); else if (xsRow.length === 2 && xsRow[0] > xsRow[1]) { const t = xsRow[0]; xsRow[0] = xsRow[1]; xsRow[1] = t; }
+    for (let k = 0; k + 1 < xsRow.length; k += 2) { const a = Math.round(xsRow[k]), b = Math.round(xsRow[k + 1]); if (b > a) fn(a, y, b - a); }
+  }
+}
+// A light's rows in world pixels, kept with the points (a camera's cone is cached by side.js
+// cone, so its rows are worked out once per shape): a flat list x, y, w, x, y, w ...
+const rowCache = new WeakMap();
+function rowsOf(pts) {
+  let r = rowCache.get(pts); if (r) return r;
+  r = []; spans(pts, (x, y, w) => r.push(x, y, w));
+  if (pts.length > 6) rowCache.set(pts, r);
+  return r;
+}
+// a canvas the CPU draws on (the dark layer is drawn and uploaded every time it changes; a GPU
+// canvas would have to be read back for each upload, which is what stalled the flashes)
+function cpuCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d', { willReadFrequently: true }); return c; }
+// red patterns for the dark canvas: a flash paints what it touches in red pixels. One pattern per
+// view parity, made once (no transform on every use).
 const redPats = new WeakMap();
 function redPattern(ctx, dense, parity) {
   let pr = redPats.get(ctx);
   if (!pr) {
-    const mk = (n, cells) => { const t = document.createElement('canvas'); t.width = n; t.height = n; const x = t.getContext('2d'); x.fillStyle = '#e3412b'; cells.forEach(([a, b]) => x.fillRect(a, b, 1, 1)); return ctx.createPattern(t, 'repeat'); };
-    pr = { dense: mk(2, [[0, 0], [1, 1]]), sparse: mk(4, [[0, 0], [2, 2]]) }; redPats.set(ctx, pr);
+    const mk = (n, cells) => { const t = cpuCanvas(n, n), x = t.getContext('2d'); x.fillStyle = '#e3412b'; cells.forEach(([a, b]) => x.fillRect(a, b, 1, 1)); return ctx.createPattern(t, 'repeat'); };
+    pr = { dense: [mk(2, [[0, 0], [1, 1]]), mk(2, [[1, 0], [0, 1]])], sparse: [mk(4, [[0, 0], [2, 2]]), mk(4, [[1, 0], [3, 2]])] }; redPats.set(ctx, pr);
   }
-  const p = dense ? pr.dense : pr.sparse;
-  if (p.setTransform) p.setTransform(new DOMMatrix([1, 0, 0, 1, ((parity % 2) + 2) % 2, 0]));
-  return p;
+  return (dense ? pr.dense : pr.sparse)[((parity % 2) + 2) % 2];
 }
+// a short key for a light's shape: a cached cone by its identity, anything else by its points
+const polyIds = new WeakMap(); let polyN = 0;
+const polyKey = pts => { if (pts.length <= 6) return pts.map(q => Math.round(q.x * 4) + ' ' + Math.round(q.y * 4)).join(' '); let id = polyIds.get(pts); if (!id) { id = ++polyN; polyIds.set(pts, id); } return '#' + id; };
 // a pixel line on a Graphics, solid or dotted
 function pxLine(g, x0, y0, x1, y1, color, dot) {
   x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1); g.fillStyle(color, 1);
@@ -68,7 +94,7 @@ export class Bedroom extends SideEpisode {
     this.commonLayers();
     this.eyeG = this.add.graphics().setDepth(4.5);
     // the dark: a canvas the size of the view; holes cut where there is light, red where a flash is
-    this.darkCanvas = document.createElement('canvas'); this.darkCanvas.width = 322; this.darkCanvas.height = 182;
+    this.darkCanvas = cpuCanvas(322, 182); this.darkKey = null; this.edgeC = null; this.edgeKey = null; this.breathV = null;
     if (this.textures.exists('bd_dark')) this.textures.remove('bd_dark');
     this.darkTex = this.textures.addCanvas('bd_dark', this.darkCanvas);
     this.darkImg = this.add.image(0, 0, 'bd_dark').setOrigin(0).setDepth(6.4);
@@ -206,8 +232,11 @@ export class Bedroom extends SideEpisode {
       if (s) { s.t += dt; if (s.t >= s.end) { cm.snap = null; this.resync(cm); } }
       const want = cm.snap ? cm.snap.aim : cm.aim;
       cm.angle += (want - cm.angle) * Math.min(1, dt * (cm.snap ? 16 : 2.5));
+      if (Math.abs(want - cm.angle) < 0.05) cm.angle = want;
       const near = Math.abs(cm.x - k.x) < 380;
-      cm.cone = near || cm.flash > 0 ? this.cone(cm.x, cm.y, cm.angle, cm.half, cm.range) : null;
+      // the cone follows the aim in half degrees, so a camera at rest (or easing the last bit of
+      // the way) keeps the same cached cone (side.js cone)
+      cm.cone = near || cm.flash > 0 ? this.cone(cm.x, cm.y, Math.round(cm.angle * 2) / 2, cm.half, cm.range) : null;
       const until = cm.snap ? (cm.snap.fired ? Infinity : cm.snap.fireAt - cm.snap.t) : cm.next - t;
       cm.warn = until <= LEVEL.lead;
       if (until <= LEVEL.lead && cm.clicks === 0) { cm.clicks = 1; this.camSound(cm, 'click'); }
@@ -221,7 +250,7 @@ export class Bedroom extends SideEpisode {
     cm.flash = 1; cm.clicks = 0; cm.lit = fx.allowFlash() ? 1 : 0.15; // three flashes a second at most
     if (cm.snap) cm.snap.fired = true; else cm.next += cm.period;
     this.camSound(cm, 'shutter');
-    if (!cm.cone) cm.cone = this.cone(cm.x, cm.y, cm.angle, cm.half, cm.range);
+    if (!cm.cone) cm.cone = this.cone(cm.x, cm.y, Math.round(cm.angle * 2) / 2, cm.half, cm.range);
     if (this.mode === 'house' && !this.dead && !this.leaving && !window.__noDeath && this.probes().some(p => inPoly(cm.cone, p.x, p.y))) {
       cm.caught = true; cm.lock = 0.0001; Sound.charge();
       const k = this.kid; this.photo = { x: k.x + k.w / 2, y: k.y + k.h / 2, t: 0 };
@@ -504,8 +533,9 @@ export class Bedroom extends SideEpisode {
   // ------------------------------------------------------------------ sound beds
   updateAmbience() {
     if (this.mode !== 'house' || this.dead) return;
-    const near = Math.max(0, 1 - (LEVEL.brother.x - this.kid.x) / 1300);
-    this.beds.breath.set(0.0001 + 0.06 * near * near, 0.4);
+    const near = Math.max(0, 1 - (LEVEL.brother.x - this.kid.x) / 1300), v = 0.0001 + 0.06 * near * near;
+    // a new ramp only when the level has moved (not a fresh audio ramp every frame)
+    if (this.breathV == null || Math.abs(v - this.breathV) > 0.0015) { this.breathV = v; this.beds.breath.set(v, 0.4); }
   }
 
   // once: a key; said until it has been shown in full once
@@ -571,34 +601,54 @@ export class Bedroom extends SideEpisode {
     this.drawHud(dt);
   }
 
+  // The dark layer is drawn again (and sent to the GPU) only when something in it changed: the
+  // view, a light, a flash, the floor or the props. Standing still in the dark it is left alone.
   drawDark(vx, reds) {
     const ctx = this.darkCanvas.getContext('2d');
-    darkFill(ctx);
-    const toC = p => ({ x: p.x - vx + 1, y: p.y + 1 });
-    if (this.mode !== 'house') { ctx.clearRect(0, 0, 322, 182); ctx.drawImage(this.nightRoom(), 0, 0); this.darkTex.refresh(); this.darkImg.setPosition(vx - 1, -1); return; }
-    this.houseEdges(ctx, vx);
-    hardHoles(ctx, this.lights.filter(l => !l.poly).map(l => Object.assign(toC(l), { r: l.r, a: l.a })), vx);
+    if (this.mode !== 'house') {
+      if (this.darkKey !== 'night') { this.darkKey = 'night'; darkFill(ctx); ctx.clearRect(0, 0, 322, 182); ctx.drawImage(this.nightRoom(), 0, 0); this.darkTex.refresh(); }
+      this.darkImg.setPosition(vx - 1, -1); return;
+    }
+    const pres = presenting(), sig = this.worldSig(), parts = [vx, pres ? 1 : 0, sig];
+    this.lights.forEach(l => { if (l.poly) parts.push('p' + (l.dither ? 'd' : ''), polyKey(l.poly)); else parts.push(Math.round(l.x), Math.round(l.y), l.r, l.a == null ? 1 : l.a); });
+    (reds || []).forEach(r => parts.push('r' + (r.dense ? 'd' : ''), polyKey(r.poly)));
+    const key = parts.join(',');
+    this.darkImg.setPosition(vx - 1, -1);
+    if (key === this.darkKey) return;
+    this.darkKey = key;
+    // the house's edges in the dark, for the whole level at once (made again when the floor or the
+    // props change); the view's slice of it is the base of the layer
+    const ek = sig + ',' + (pres ? 1 : 0);
+    if (ek !== this.edgeKey) { this.edgeKey = ek; this.houseEdges(pres); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, 322, 182); ctx.drawImage(this.edgeC, vx, 0, 322, 182, 0, 0, 322, 182);
+    const ox = 1 - vx, oy = 1;
+    hardHoles(ctx, this.lights.filter(l => !l.poly).map(l => ({ x: l.x + ox, y: l.y + oy, r: l.r, a: l.a })), vx);
     // shapes of light (a flash's cone, a window, moonlight through a hole): row by row, lit or checker
     ctx.globalCompositeOperation = 'destination-out';
-    this.lights.filter(l => l.poly).forEach(l => {
+    this.lights.forEach(l => {
+      if (!l.poly) return;
       ctx.fillStyle = l.dither ? checker(ctx, vx) : '#000';
-      spans(l.poly.map(toC), (x, y, w) => ctx.fillRect(x, y, w, 1));
+      const r = rowsOf(l.poly); for (let i = 0; i < r.length; i += 3) ctx.fillRect(r[i] + ox, r[i + 1] + oy, r[i + 2], 1);
     });
     ctx.globalCompositeOperation = 'source-over';
     // the flash itself: everything in the cone, her too, picked out in red pixels
-    (reds || []).forEach(r => { ctx.fillStyle = redPattern(ctx, r.dense, vx); spans(r.poly.map(toC), (x, y, w) => ctx.fillRect(x, y, w, 1)); });
+    (reds || []).forEach(rd => { ctx.fillStyle = redPattern(ctx, rd.dense, vx); const r = rowsOf(rd.poly); for (let i = 0; i < r.length; i += 3) ctx.fillRect(r[i] + ox, r[i + 1] + oy, r[i + 2], 1); });
     this.darkTex.refresh();
-    this.darkImg.setPosition(vx - 1, -1);
   }
 
   // The house in the dark: the shape of the rooms in one or two greys outside her light, so a
   // projector still shows where the floor, the furniture and the walls are. Presenting, the
-  // dark itself is ash1, not black.
-  houseEdges(ctx, vx) {
-    const m = this.map.m, x0 = Math.floor(vx / TILE), put = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x - vx + 1), Math.round(y + 1), Math.round(w), Math.round(h)); };
-    if (presenting()) put(vx - 1, -1, 322, 182, ASH.ash1);
+  // dark itself is ash1, not black. Drawn for the whole level into this.edgeC (world x at canvas
+  // x + 1, world y at canvas y + 1), and only again when the floor or the props change.
+  houseEdges(pres) {
+    const LW = LEVEL.w * TILE;
+    if (!this.edgeC) this.edgeC = cpuCanvas(LW + 330, 182);
+    const ctx = this.edgeC.getContext('2d'), m = this.map.m, put = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x + 1), Math.round(y + 1), Math.round(w), Math.round(h)); };
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    ctx.fillStyle = pres ? ASH.ash1 : '#000'; ctx.fillRect(0, 0, this.edgeC.width, 182);
     // the floor line and the ceiling line, where they are still there
-    for (let tx = x0; tx <= x0 + 21 && tx < LEVEL.w; tx++) {
+    for (let tx = 0; tx < LEVEL.w; tx++) {
       if (m[10][tx]) put(tx * TILE, GROUND, TILE, 1, ASH.ash3);
       if (m[0][tx]) put(tx * TILE, 16, TILE, 1, ASH.ash2);
       // walls and fallen ceiling inside the house: a light top, darker sides
@@ -613,7 +663,6 @@ export class Bedroom extends SideEpisode {
     }
     // furniture and rubble: a light top edge; the tall ones get their sides too
     this.props.forEach(r => {
-      if (r.x + r.w < vx - 2 || r.x > vx + 322) return;
       put(r.x, r.y, r.w, 1, ASH.ash3);
       if (r.h > 12) { put(r.x, r.y, 1, r.h, ASH.ash2); put(r.x + r.w - 1, r.y, 1, r.h, ASH.ash2); }
     });
@@ -629,7 +678,7 @@ export class Bedroom extends SideEpisode {
   // greys with dark outlines, the window and the mismatched door shown as they are. Built once.
   nightRoom() {
     if (this.nightC) return this.nightC;
-    const c = this.nightC = document.createElement('canvas'); c.width = 322; c.height = 182;
+    const c = this.nightC = cpuCanvas(322, 182);
     const ctx = c.getContext('2d'), put = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x - BX + 1), Math.round(y + 1), Math.round(w), Math.round(h)); };
     const out = (x, y, w, h, col, edge) => { put(x - 1, y - 1, w + 2, h + 2, ASH.ash0); put(x, y, w, h, col); if (edge) put(x, y, w, 1, edge); };
     const poly = (pts, col) => { ctx.fillStyle = col; spans(pts.map(([x, y]) => ({ x: x - BX + 1, y: y + 1 })), (x, y, w) => ctx.fillRect(x, y, w, 1)); };
@@ -770,7 +819,7 @@ export class Bedroom extends SideEpisode {
         const o = cm.cone[0], a = cm.cone[1], b = cm.cone[cm.cone.length - 1];
         if (cm.warn && !cm.caught && this.gl.showing) {
           pxLine(g, o.x, o.y, a.x, a.y, red); pxLine(g, o.x, o.y, b.x, b.y, red);
-          if (Math.floor(t * 16) % 2 === 0) { g.fillStyle(red, 1); spans(cm.cone, (x, y, w) => { if (y % 6) return; for (let i = x + ((y / 6) % 2 ? 3 : 0); i < x + w; i += 6) g.fillRect(i, y, 1, 1); }); }
+          if (Math.floor(t * 16) % 2 === 0) { g.fillStyle(red, 1); const r = rowsOf(cm.cone); for (let j = 0; j < r.length; j += 3) { const x = r[j], y = r[j + 1], w = r[j + 2]; if (y % 6) continue; for (let i = x + ((y / 6) % 2 ? 3 : 0); i < x + w; i += 6) g.fillRect(i, y, 1, 1); } }
         } else if (on) { pxLine(g, o.x, o.y, a.x, a.y, red, 3); pxLine(g, o.x, o.y, b.x, b.y, red, 3); }
         const led = cm.warn ? Math.floor(t * 16) % 2 === 0 : Math.floor(t * 1.5) % 2 === 0;
         if (led || cm.caught) { g.fillStyle(red, 1); g.fillRect(cm.x - 2, cm.y - 1, 1, 1); }

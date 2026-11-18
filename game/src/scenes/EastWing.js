@@ -12,7 +12,7 @@ import { pixText } from '../art/pixfont.js';
 import { LOOKS, ASH } from '../art/palettes.js';
 import { T, W, H, LEVEL, buildMap, paintMap, isSolid, isOpaque, isWall, isNoisy, roomAt, nightCanvas } from '../art/eastwing.js';
 import { Glasses } from '../core/glasses.js';
-import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle, darkFill, hardHoles, MAX_PEBBLES } from '../core/topdown.js';
+import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle, darkFill, hardHoles, lightsKey, cpuCanvas, MAX_PEBBLES } from '../core/topdown.js';
 import { Marks, Gold } from '../core/props.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -55,6 +55,7 @@ export function laserPhase(L, row, t) {
 // a sensor that hears her tells this long, then pulses this long out of turn
 const SENSOR_TELL = 0.35, SENSOR_BURST = 0.45;
 let NIGHT_CV = null; // the night picture of the wing, made once (the map paints the same every time)
+let NIGHT_CPU = null; // its copy on a CPU canvas, for the dark layer (drawDark)
 
 export class EastWing extends TopDownEpisode {
   constructor() { super('eastwing'); }
@@ -552,14 +553,21 @@ export class EastWing extends TopDownEpisode {
 
   // The dark: the wing at night (every color stepped down the palette), with holes cut where
   // there is light. Outside the map it is black.
+  // Drawn again (and sent to the GPU) only when the view or a light changed (Nov 18 perf pass).
   drawDark() {
     const ctx = this.darkCanvas.getContext('2d'), v = this.view;
-    darkFill(ctx);
-    ctx.drawImage(NIGHT_CV, 1 - v.x, 1 - v.y);
     const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 52 }].concat(this.lights);
-    hardHoles(ctx, all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a })), v.x + v.y);
-    this.darkTex.refresh();
+    const holes = all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a }));
     this.darkImg.setPosition(v.x - 1, v.y - 1);
+    const key = v.x + ',' + v.y + '|' + lightsKey(holes);
+    if (key === this.darkKey) return;
+    this.darkKey = key;
+    // the night picture, copied once to a canvas the CPU draws from (no GPU read back per frame)
+    if (!NIGHT_CPU || NIGHT_CPU.src !== NIGHT_CV) { NIGHT_CPU = cpuCanvas(NIGHT_CV.width, NIGHT_CV.height); NIGHT_CPU.getContext('2d').drawImage(NIGHT_CV, 0, 0); NIGHT_CPU.src = NIGHT_CV; }
+    darkFill(ctx);
+    ctx.drawImage(NIGHT_CPU, 1 - v.x, 1 - v.y);
+    hardHoles(ctx, holes, v.x + v.y);
+    this.darkTex.refresh();
   }
 
   // the cracked glasses, fixed to the screen

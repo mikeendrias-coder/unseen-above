@@ -265,14 +265,43 @@ export class SideEpisode extends Phaser.Scene {
   probes() { const k = this.kid, cx = k.x + k.w / 2; return [{ x: cx, y: k.y + 2 }, { x: cx, y: k.y + k.h / 2 }, { x: cx, y: k.y + k.h - 2 }, { x: k.x + 1, y: k.y + k.h / 2 }, { x: k.x + k.w - 1, y: k.y + k.h / 2 }]; }
 
   // ------------------------------------------------------------------ lights that lock on
+  // A light's shape: a ray every degree, stopped by walls and props. Cached (Nov 18 perf pass):
+  // the same light in the same place over the same world gives back the same points (callers
+  // must not change them), and it is only worked out again when the light or the world moves.
+  // The world is the tile map and the solid props, summed on each call (worldSig).
   cone(x, y, angle, half, range) {
+    const sig = this.worldSig(), key = x + ',' + y + ',' + angle + ',' + half + ',' + range;
+    const cache = this.coneCache || (this.coneCache = new Map()), hit = cache.get(key);
+    if (hit && hit.sig === sig) return hit.pts;
+    // only the props that could be in reach, and the tile test inline
+    const M = this.map, m = M.m, W = M.W, H = M.H, near = [];
+    for (const r of this.props) if (r.solid !== false && r.x < x + range && r.x + r.w > x - range && r.y < y + range && r.y + r.h > y - range) near.push(r);
+    const solid = (px, py) => {
+      const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE);
+      if (tx < 0 || tx >= W || ty >= H) return true;
+      if (ty >= 0 && m[ty][tx] === 1) return true;
+      for (let i = 0; i < near.length; i++) { const r = near[i]; if (px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h) return true; }
+      return false;
+    };
     const pts = [{ x, y }];
     for (let a = angle - half; a <= angle + half + 0.001; a += 1) {
       const r = a * Math.PI / 180, dx = Math.cos(r), dy = Math.sin(r);
-      let d = 0; while (d < range) { d += 2; if (this.solidPx(x + dx * d, y + dy * d)) { d -= 1; break; } }
+      let d = 0; while (d < range) { d += 2; if (solid(x + dx * d, y + dy * d)) { d -= 1; break; } }
       pts.push({ x: x + dx * Math.min(d, range), y: y + dy * Math.min(d, range) });
     }
+    if (cache.size > 256) cache.clear();
+    cache.set(key, { sig, pts });
     return pts;
+  }
+  // a number that changes when anything a light could hit changes (tiles, solid props); cheap
+  // next to a cone (a few thousand adds), so it is worked out on every call and never goes stale
+  worldSig() {
+    let h = 7;
+    const m = this.map.m;
+    for (let ty = 0; ty < m.length; ty++) { const row = m[ty]; for (let tx = 0; tx < row.length; tx++) h = (h * 31 + (row[tx] | 0)) | 0; }
+    h = (h * 31 + this.props.length) | 0;
+    for (const r of this.props) h = (((((h * 31 + (r.x * 4 | 0)) * 31 + (r.y * 4 | 0)) * 31 + (r.w * 4 | 0)) * 31 + (r.h * 4 | 0)) * 31 + (r.solid === false ? 1 : 2)) | 0;
+    return h;
   }
   watch(src, dt, lockTime) {
     const limit = lockTime || LOCK;
