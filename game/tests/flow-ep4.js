@@ -1,6 +1,8 @@
 // Episode 4 flow: a flash catches her in the open and the strike comes; running on the creaky
-// boards turns a camera; the clock covers noise; the bag brings the floor down and the floor
-// takes her; the bedroom: him, the lines, the door; then satellite batch 4.
+// boards turns a camera; the clock covers noise, and so does the music box; the bag brings the
+// floor down and the floor takes her; held longer, the bag gives up his note; the run (two gaps,
+// the slab) and the climb between two walls; the bedroom: him, the lines; holding on to him is
+// the false ending (CH 07, we'll be right back) and the scene runs again; the door; batch 4.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -39,6 +41,13 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => window.__game.scene.noiseAt(310, 160));
   ok('while the clock strikes, the same noise turns nothing', await p.evaluate(() => window.__game.scene.cams.every(c => !c.snap)));
 
+  // the music box: J winds it, and for a few seconds no noise turns a camera
+  await until(() => !window.__game.scene.masked(), null, 8000);
+  await put(282); await until(() => window.__game.scene.nearThing === window.__game.scene.boxThing, null, 4000);
+  await p.keyboard.press('KeyJ'); await p.waitForTimeout(100);
+  await p.evaluate(() => window.__game.scene.noiseAt(320, 160));
+  ok('the music box plays and covers a noise', await p.evaluate(() => window.__game.scene.box.t > 0 && window.__game.scene.cams.every(c => !c.snap)));
+
   // the bag: hold E under the stairs; the floor starts to go
   await put(59 * 16 - 4); await until(() => window.__game.scene.nearThing === window.__game.scene.bagThing, null, 4000);
   await p.keyboard.down('KeyE'); await until(() => window.__game.scene.bag.have, null, 6000); await p.keyboard.up('KeyE');
@@ -50,10 +59,12 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('standing still, the floor takes her (' + await p.evaluate(() => window.__game.scene.ep.bodies.map(b => b.cause).join()) + ')', await p.evaluate(() => window.__game.scene.ep.bodies.some(b => b.cause === 'the fall')));
   ok('the new take starts whole: no bag, the stairs back, the floor back', await p.evaluate(() => { const s = window.__game.scene; return !s.bag.have && !s.collapse && s.props.includes(s.wallProp) && s.map.m[10][60] === 1; }));
 
-  // the run, played: from the bag to the doors, with the keyboard
+  // the run, played: from the bag to the doors, with the keyboard. This time she keeps holding
+  // J after the bag comes free: his note
   await p.evaluate(() => { window.__noDeath = true; });
   await put(59 * 16 - 4); await until(() => window.__game.scene.nearThing === window.__game.scene.bagThing, null, 4000);
-  await p.keyboard.down('KeyE'); await until(() => window.__game.scene.bag.have, null, 6000); await p.keyboard.up('KeyE');
+  await p.keyboard.down('KeyJ'); await until(() => window.__game.scene.bag.read, null, 8000); await p.keyboard.up('KeyJ');
+  ok('the full pull finds his note (clue ' + await p.evaluate(() => window.__game.state.hasClue('bagNote')) + ')', await p.evaluate(() => window.__game.state.hasClue('bagNote') && !window.__game.scene.collapse));
   await until(() => !!window.__game.scene.collapse, null, 4000);
   await p.evaluate(() => { window.__noDeath = false; });
   // a small autopilot: run right, jump the rubble and the gaps, crouch under the slab
@@ -67,14 +78,30 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
       const k = s.kid, x = k.x + k.w;
       set('r', true);
       const near = (a, b) => x > a && x < b;
-      const jumpAt = [[960, 972.5], [1062, 1072], [1204, 1216.5], [1252, 1262.5]];
-      if (k.onGround && jumpAt.some(([a, b]) => near(a, b))) { jumpNow = true; set('j', true); } else if (k.vy > 0) set('j', false);
-      set('d', x > 1120 && x < 1180);
+      const jumpAt = [[958, 970], [1046, 1057], [1190, 1201]];
+      if (k.onGround && jumpAt.some(([a, b]) => near(a, b))) { jumpNow = true; set('j', true); s.__dj = near(1190, 1201); }
+      else if (s.__dj && !k.onGround && k.vy > -40) { jumpNow = true; s.__dj = false; }
+      else if (k.vy > 0 && !s.__dj) set('j', false);
+      set('d', x > 1120 && x < 1172);
     });
   });
-  await until(() => { const s = window.__game.scene; return s.dead || (s.collapse && s.collapse.done && s.kid.x > 84 * 16); }, null, 20000);
+  await until(() => { const s = window.__game.scene; return s.dead || (s.kid.x > 79 * 16 + 2 && s.kid.onGround); }, null, 20000);
   const ran = await p.evaluate(() => { const s = window.__game.scene; return { dead: s.dead, x: Math.round(s.kid.x), front: Math.round(s.collapse.x), slab: s.run.slab.state, cause: s.ep.bodies.length ? s.ep.bodies[s.ep.bodies.length - 1].cause : '' }; });
-  ok('the run can be made: she reaches the doors ahead of the floor (x ' + ran.x + ', floor ' + ran.front + (ran.dead ? ', died: ' + ran.cause : '') + ')', !ran.dead);
+  ok('the run can be made: she reaches the climb ahead of the floor (x ' + ran.x + ', floor ' + ran.front + (ran.dead ? ', died: ' + ran.cause : '') + ')', !ran.dead);
+  // the climb: jump from wall to wall between the hanging ceiling and the heap
+  await p.evaluate(() => {
+    window.__noDeath = true;
+    const s = window.__game.scene, c = s.ctl, k = s.kid; k.x = 1302; k.y = 146; k.vx = 0; k.vy = 0; s.__orig.left = c.left;
+    s.events.off('update', s.__auto);
+    let dir = 1, jumpNow = false; const jp = s.__orig.jumpPressed;
+    c.right = () => dir > 0; c.left = () => dir < 0; c.down = () => false; c.jumpHeld = () => true; c.jumpPressed = () => { const j = jumpNow; jumpNow = false; return j || jp(); };
+    s.events.on('update', s.__auto = () => {
+      if (k.onGround && k.y + k.h <= 81) { dir = 0; return; }
+      if (k.onGround) { jumpNow = true; dir = 1; } else if (k.wall === 1) { jumpNow = true; dir = -1; } else if (k.wall === -1) { jumpNow = true; dir = 1; }
+    });
+  });
+  await until(() => { const k = window.__game.scene.kid; return k.onGround && k.y + k.h <= 81; }, null, 8000).catch(() => {});
+  ok('wall to wall, she climbs onto the heap (feet at y ' + await p.evaluate(() => Math.round(window.__game.scene.kid.y + window.__game.scene.kid.h)) + ')', await p.evaluate(() => { const k = window.__game.scene.kid; return k.onGround && k.y + k.h <= 81; }));
   await p.evaluate(() => { const s = window.__game.scene; s.events.off('update', s.__auto); Object.assign(s.ctl, s.__orig); });
 
   // the bedroom
@@ -93,6 +120,14 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   for (let i = 0; i < 20 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(120); }
   await until(() => window.__game.scene.mode === 'after', null, 15000);
   ok('after the last line he is gone (' + await p.evaluate(() => window.__game.scene.bro.texture.key) + ')', await p.evaluate(() => window.__game.scene.bro.texture.key === 'bro_dead'));
+  // the false ending: she holds on to him (J) instead of going to the door
+  await until(() => window.__game.scene.nearThing === window.__game.scene.broThing, null, 4000);
+  await p.keyboard.down('KeyJ'); await p.waitForTimeout(600); await p.evaluate(() => { window.__game.scene.stay = 14; });
+  await until(() => window.__game.scene.mode === 'break', null, 8000); await p.keyboard.up('KeyJ');
+  await until(() => /RIGHT BACK/.test(document.querySelector('#card').textContent), null, 4000);
+  ok('holding on to him: CH 07. WE\'LL BE RIGHT BACK. (ending seen: ' + await p.evaluate(() => !!window.__game.state.story.endings.rightBack) + ')', await p.evaluate(() => !!window.__game.state.story.endings.rightBack));
+  await until(() => window.__game.scene.rerun && window.__game.scene.mode === 'after', null, 20000);
+  ok('back from the break: the bedroom again from the kneel, no lines, and he is gone', await p.evaluate(() => window.__game.scene.bro.texture.key === 'bro_dead'));
   await p.keyboard.down('ArrowRight'); await until(() => window.__game.scene.nearThing === window.__game.scene.voidThing, null, 10000); await p.keyboard.up('ArrowRight');
   await p.keyboard.press('KeyE');
   await until(() => window.__game.scene.mode === 'void', null, 4000);

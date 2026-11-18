@@ -79,7 +79,7 @@ export class EastWing extends TopDownEpisode {
     // the dumbwaiter: J drops a pebble in
     const DW = LEVEL.dumbwaiter;
     this.dumbThing = { tx: DW.hatch[0], ty: DW.hatch[1], label: 'J', use: () => this.dropPebble() };
-    this.things.push(this.dumbThing); this.rattle = null;
+    this.things.push(this.dumbThing); this.rattle = null; this.pocket = null; this.dust = null; this.fxBurst = null;
     // things to look at: old bodies that were here before her, the study's shelves and desk, the
     // calendar, the radio, where the dumbwaiter comes out
     const N = NOTICE.eastwing;

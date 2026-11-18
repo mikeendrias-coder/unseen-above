@@ -165,7 +165,7 @@ export class Fall extends SideEpisode {
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
     this.dust = this.add.particles(0, 0, 'dot', { lifespan: 900, speedY: { min: 20, max: 60 }, speedX: { min: -10, max: 10 }, tint: [hexNum(P.dust), hexNum(P.rubbleHi)], emitting: false }).setDepth(5);
     this.splinters = this.add.particles(0, 0, 'dot2', { lifespan: { min: 500, max: 1100 }, speed: { min: 40, max: 160 }, angle: { min: 200, max: 340 }, gravityY: 500, tint: [hexNum(P.wood), hexNum(P.woodHi), hexNum(P.rubble)], emitting: false }).setDepth(5);
-    this.phase = 'walk'; this.t = 0; this.cracked = false; this.spin = 0; this.chunks = []; this.black = 0;
+    this.phase = 'walk'; this.t = 0; this.cracked = false; this.landed = false; this.whoosh = null; this.spin = 0; this.chunks = []; this.black = 0;
     // falling debris, one lane at a time; each lane knows where it lands
     this.lanes = LANES.map(L => { const x = L.col * TILE + 4; let y1 = (L.from + 1) * TILE; while (y1 < H * TILE && !this.solidTile(L.col, Math.floor(y1 / TILE))) y1 += TILE; return Object.assign({ x, y0: L.from * TILE, y1: Math.floor(y1 / TILE) * TILE, next: L.phase + L.period, warned: false, rock: null }, L); });
     this.crumble = { t: 0, on: false, gone: false, bits: [] };

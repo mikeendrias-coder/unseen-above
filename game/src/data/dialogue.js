@@ -164,7 +164,12 @@ export const NOTICE = {
     table: ['A table laid for twelve.', 'The food is wax.'],
     clock: ['A grandfather clock. It strikes every six seconds.', 'While it strikes, nobody can hear her.'],
     silver: ['Silver on a long table, polished today.'],
-    billiards: ['A billiard table. The balls are glued down.']
+    billiards: ['A billiard table. The balls are glued down.'],
+    photos: ['Three family photos. A different family in each.', 'At the back of every one, the same boy. Him.', 'A little older in each.'],
+    window: ['A tall window. The Moon, low and white.', 'One window on it is lit.'],
+    request: ['A form. REQUEST: VOLUNTARY.', 'Please locate the subject. Thank you.', 'The line to sign it is blank.'],
+    bagNote: ['A note in the bag, in his hand:', '"Don\'t let her follow."'],
+    hold: ['She holds on to him.']
   },
   moon: {
     fountain: ['A gold fountain, the twin of the one on the grounds.', 'Up here, the water is the expensive part.'],
