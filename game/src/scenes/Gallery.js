@@ -285,7 +285,7 @@ export class Gallery extends SideEpisode {
       if (st.phase === 'fire') { Sound.tone(1500, 0.35, 'sawtooth', 0.03, 1200); Sound.noise(0.3, 0.05, 7000); if (!z.fired) { z.fired = true; this.things.push(this.emitterLook); } }
       z.phase = st.phase; z.n = st.n;
     }
-    if (st.phase === 'fire' && !this.dead && !this.leaving && !window.__noDeath && k.x + k.w > L.x0 && k.x < L.x1) {
+    if (st.phase === 'fire' && !this.dead && !this.leaving && !window.__noDeath && !(this.safeT > 0) && k.x + k.w > L.x0 && k.x < L.x1) {
       const y = L.shots[st.shot].find(yy => beamHits(k.y, k.y + k.h, yy));
       if (y != null) this.die({ x: L.x1 - 2, y, id: L.id, direct: true }); // the house's own laser, not the satellite
     }
@@ -345,13 +345,24 @@ export class Gallery extends SideEpisode {
     });
     this.time.delayedCall(5600, () => goNext(this, 'ep2'));
   }
+  // N never leaves her without the glasses: the first press opens the drawer for her (as J would)
+  // before it moves her. The last point is the door itself; one more N goes through it.
   skipAhead() {
     const k = this.kid; if (!k || this.dead || this.leaving) return;
-    const at = LEVEL.skip.find(([x]) => x * T > k.x + 12); if (!at) return;
-    k.x = at[0] * T; k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null; this.pitPeak = null;
+    if (!this.glasses) this.giveGlasses();
+    const at = LEVEL.skip.find(([x]) => x * T > k.x + 12);
+    if (!at) { if (k.x > 84 * T && k.y + k.h > GROUND - 4) this.enterDoor(); return; }
+    k.x = Math.round(at[0] * T); k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null; this.pitPeak = null;
     // a beat to get her bearings: nothing locks on and nothing hurts her (she blinks) for 2 s
     this.safeT = SKIP_SAFE; k.inv = Math.max(k.inv, SKIP_SAFE);
   }
+  giveGlasses() {
+    const D = this.drawer; if (this.glasses || D.fly >= 0) return;
+    D.open = 1; D.opening = true; D.fly = 1; this.cabinetThing.off = true; this.glassesSprite.setVisible(false);
+    this.putOnGlasses();
+  }
+  // the door counts from its left post to the end wall, so a run that slides past it still gets in
+  atDoor() { const k = this.kid, d = LEVEL.door; return k.x + k.w > d.x + 2 && k.x < d.x + d.w + 12 && Math.abs(k.y + k.h - (d.y + d.h)) < 4; }
   rescue() { this.skipAhead(); }
   drawGirl() {
     super.drawGirl();
@@ -496,12 +507,13 @@ export class Gallery extends SideEpisode {
   hint() {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
+    if (this.atDoor()) return overlay.hint('W or J at the door.');
+    if (x > 73) return overlay.hint('Low beam: jump it. Two beams: crouch. Door at the end.');
     if (!this.glasses && x < 20) return overlay.hint('A and D move. Space jumps. J uses things and talks.');
     if (!this.glasses) return overlay.hint('Something here is watching you. You cannot see it yet.');
     if (x < 20) return overlay.hint('L puts the glasses on and off. They show what sees you.');
     if (x < 37 && k.y > MEZZ + 8) return overlay.hint('A camera sweeps the stair. Wait under the desk.');
     if (x < 54) return overlay.hint('Jump to a chandelier. Space lets go.');
-    if (x < 73) return overlay.hint('The boards give way. The camera keeps looking up.');
-    return overlay.hint('One low beam: jump it. Two beams: crouch. W at the door.');
+    return overlay.hint('The boards give way. The camera keeps looking up.');
   }
 }

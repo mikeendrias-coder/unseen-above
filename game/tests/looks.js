@@ -36,6 +36,9 @@ const norm = s => String(s).replace(/\s+/g, ' ').trim();
         await p.evaluate(([i, dx]) => {
           const s = window.__game.scene, t = s.things.filter(t => t.look && !t.body)[i], k = s.kid;
           s.bubbles.clear('item');
+          // let go of any swing and park the chandeliers hanging straight down, so a drop is
+          // never caught by a swing passing through (riding pins her to it every frame)
+          if (s.dyn) { s.dyn.riding = null; s.dyn.list.forEach(q => { if (q.kind === 'swing') q.amp = 0; }); }
           k.x = (t.x0 + t.x1) / 2 + dx - k.w / 2; k.y = Math.max(2, t.y0 - 30); k.h = 14; k.crouch = false; k.vx = 0; k.vy = 0; k.onGround = false;
         }, [i, dx]);
         // she drops onto it; a slow first frame or two can make that take a while, so wait for

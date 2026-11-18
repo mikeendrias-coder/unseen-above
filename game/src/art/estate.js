@@ -48,7 +48,7 @@ export const LEVEL = {
   ],
   // where N puts her in story mode: the start of each section, out of the light (E: flush with
   // the crate, in its shadow, wherever it now stands; F: in the cradle, under its roof; the last:
-  // by the door, past the east lamp)
+  // at the door itself, past the east lamp, where W goes in; one more N goes through it)
   // the show's tape marks (checkpoints), [x where she stands, the floor's y]: inside the gate, the
   // foot of the hedge wall, the top of the hedge wall (clear of the fountain drone's turn and below
   // the garden lamp), flush with the crate (in its shadow), the balcony before the scan. Each one
@@ -60,10 +60,11 @@ export const LEVEL = {
   // edge under the fountain drone's turn, the fountain's bowl under the drone, the terrace in the lamp's sweep, the loggia under the
   // drone, the first foam slab, the balcony
   gold: [[108, GROUND - 15], [21 * T, 22 * T], [26 * T, 22 * T], [38 * T + 6, TERRACE], [44 * T + 8, 14 * T], [60 * T, TERRACE], [69 * T, LOGGIA], [80 * T, BALCONY], [89 * T, BALCONY]],
-  skip: [[16, ROWS.lawn], [36, ROWS.lawn], [39, ROWS.terrace], [56, ROWS.terrace, 'crate'], [65, ROWS.loggia, 'cradle'], [75, ROWS.balcony], [95, ROWS.balcony]]
+  skip: [[16, ROWS.lawn], [36, ROWS.lawn], [39, ROWS.terrace], [56, ROWS.terrace, 'crate'], [65, ROWS.loggia, 'cradle'], [75, ROWS.balcony], [96.25, ROWS.balcony]]
 };
 
-// Materials: a ash ground, g lawn, h hedge, s pale stone, w house base, b balcony slab.
+// Materials: a ash ground, g lawn, h hedge, s pale stone, w house base, b balcony slab,
+// n the end pier past the door (painted on its own, after the tiles).
 export function buildMap() {
   const W = LEVEL.w, H = LEVEL.h, m = [], mat = [];
   for (let y = 0; y < H; y++) { m.push(new Array(W).fill(0)); mat.push(new Array(W).fill('.')); }
@@ -78,6 +79,7 @@ export function buildMap() {
   solid(64, R.loggia, 71, 16, 's');                                                      // E/F: the loggia
   solid(74, 11, W - 1, 16, 'w');                                                         // the house's base
   solid(74, R.balcony, 78, R.balcony, 'b'); solid(81, R.balcony, 84, R.balcony, 'b'); solid(87, R.balcony, W - 1, R.balcony, 'b'); // G
+  solid(98, 0, W - 1, R.balcony - 1, 'n');                                               // the portico's end pier: no running past the door
   return { W, H, m, mat };
 }
 
@@ -113,21 +115,45 @@ function window(p, P, x, y, w, h, lit, arch) {
   if (lit) { p.rect(x + 1, y + 1, 1, Math.floor(h / 3) - 1, P.winHi); }
 }
 
+// One hedge tile, drawn by hand: '#' a lit leaf, 'o' the shadow under a clump, '.' the hedge.
+const HEDGE = [
+  '.##.....',
+  '####..#.',
+  '.oo..###',
+  '.....#oo',
+  '..##..o.',
+  '.####...',
+  '#.oo..##',
+  'o.....oo'
+];
+// a few ground marks per screen, placed by tile, not scattered: a crack, a pebble, a tuft of ash
+const MARKS = { 3: 'crack', 7: 'pebble', 12: 'tuft', 18: 'crack', 23: 'pebble', 29: 'tuft', 34: 'crack' };
 // Solid tiles, painted by material: a light top edge where she can stand, a dark face, and an
 // ash0 outline on every edge that meets open air.
 function paintTiles(p, P, map) {
   const O = '#0e0f12', open = (x, y) => y >= 0 && y < map.H && x >= 0 && x < map.W && !map.m[y][x];
   for (let ty = 0; ty < map.H; ty++) for (let tx = 0; tx < map.W; tx++) {
     if (!map.m[ty][tx]) continue;
-    const c = map.mat[ty][tx], x = tx * T, y = ty * T, up = open(tx, ty - 1), dn = open(tx, ty + 1), lf = open(tx - 1, ty), rt = open(tx + 1, ty), r = rng(tx * 131 + ty * 17);
-    if (c === 'a') { p.rect(x, y, T, T, P.ground); if (up) { p.rect(x, y, T, 2, P.groundTop); for (let i = 0; i < 3; i++) p.px(x + r() * T, y + 3 + r() * 8, P.rubbleHi); } else for (let i = 0; i < 2; i++) p.px(x + r() * T, y + r() * T, P.groundTop); }
+    const c = map.mat[ty][tx], x = tx * T, y = ty * T, up = open(tx, ty - 1), dn = open(tx, ty + 1), lf = open(tx - 1, ty), rt = open(tx + 1, ty);
+    if (c === 'a') {
+      p.rect(x, y, T, T, P.ground);
+      if (up) {
+        p.rect(x, y, T, 2, P.groundTop);
+        const mk = MARKS[tx % 36];
+        if (mk === 'crack') { p.px(x + 5, y + 2, O); p.px(x + 6, y + 3, O); p.px(x + 6, y + 4, O); p.px(x + 7, y + 5, O); p.px(x + 9, y + 3, O); p.px(x + 8, y + 4, O); }
+        else if (mk === 'pebble') { p.rect(x + 9, y - 1, 3, 1, P.rubbleHi); p.rect(x + 8, y, 5, 1, P.rubble); }
+        else if (mk === 'tuft') { p.px(x + 4, y - 1, P.dust); p.px(x + 6, y - 2, P.dust); p.px(x + 6, y - 1, P.dust); p.px(x + 8, y - 1, P.dust); }
+      }
+    }
     else if (c === 'g') {
       p.rect(x, y, T, T, P.hedge);
-      if (up) { p.rect(x, y, T, 1, P.hedgeHi); for (let i = 0; i < T; i += 3) p.px(x + i + (tx & 1), y - 1, P.hedgeHi); p.rect(x, y + 5, T, 5, P.path); p.rect(x, y + 5, T, 1, P.pathHi); for (let i = 0; i < 3; i++) p.px(x + r() * T, y + 6 + r() * 4, P.rubbleHi); }
+      // the lawn's edge and a gravel path with a joint every other tile (no scattered specks)
+      if (up) { p.rect(x, y, T, 1, P.hedgeHi); for (let i = 0; i < T; i += 3) p.px(x + i + (tx & 1), y - 1, P.hedgeHi); p.rect(x, y + 5, T, 5, P.path); p.rect(x, y + 5, T, 1, P.pathHi); if (tx & 1) p.rect(x + 11, y + 6, 1, 4, P.groundTop); }
     } else if (c === 'h') {
+      // clipped hedge: an 8 x 8 tile of leaf clumps (bronze on bronzeLo, a dark pixel under each)
       p.rect(x, y, T, T, P.hedge);
-      for (let i = 0; i < 9; i++) p.px(x + r() * T, y + r() * T, r() < 0.55 ? P.hedgeHi : '#1b1c21');
-      if (up) { p.rect(x, y, T, 2, P.hedgeHi); p.rect(x, y, T, 1, P.goldLo); }
+      for (let yy = 0; yy < T; yy++) for (let xx = 0; xx < T; xx++) { const ch = HEDGE[(yy & 7)][(xx + (ty & 1) * 4) & 7]; if (ch === '#') p.px(x + xx, y + yy, P.hedgeHi); else if (ch === 'o') p.px(x + xx, y + yy, O); }
+      if (up) { p.rect(x, y, T, 1, P.hedgeHi); for (let i = 1; i < T; i += 4) p.px(x + i + (tx & 1), y - 1, P.hedgeHi); }
       if (lf) p.rect(x, y, 1, T, O); if (rt) p.rect(x + T - 1, y, 1, T, O); if (dn) { p.rect(x, y + T - 1, T, 1, O); }
     } else if (c === 'f') {
       p.rect(x, y, T, T, P.col); p.rect(x, y + T - 4, T, 4, P.colLo); p.rect(x, y + 4, T, 1, P.colHi);
@@ -224,7 +250,7 @@ export function paintLevel(P, map) {
   p.poly([[tx0 - 8, 22], [tc, 0], [tx1 + 40, 22]], P.gold); p.poly([[tx0 - 2, 21], [tc, 3], [tx1 + 34, 21]], P.colHi);
   p.rect(tx0 - 8, 22, tx1 - tx0 + 8, 6, P.colHi); p.rect(tx0 - 8, 22, tx1 - tx0 + 8, 1, P.gold); p.rect(tx0 - 8, 27, tx1 - tx0 + 8, 1, P.goldLo);
   p.circle(tc, 14, 5, P.gold); p.circle(tc, 14, 3, P.goldHi); glint(p, P, tc, 14);
-  [88, 91, 94, 99].forEach(t => column(p, P, t * T, 31, BALCONY, 8));
+  [88, 91, 94].forEach(t => column(p, P, t * T, 31, BALCONY, 8));
   // the door itself, lit from inside
   const D = LEVEL.door;
   p.rect(D.x - 4, D.y - 6, D.w + 8, D.h + 6, P.goldLo); p.rect(D.x - 3, D.y - 5, D.w + 6, 1, P.gold);
@@ -261,6 +287,11 @@ export function paintLevel(P, map) {
 
   // ---------------- the solid world ----------------
   paintTiles(p, P, map);
+  // the portico's end pier just past the door: pale stone, a recessed panel, gold top and foot
+  const nx = 98 * T, ny = 28;
+  p.rect(nx, ny, W - nx, BALCONY - ny, P.col); p.rect(nx, ny, 1, BALCONY - ny, O); p.rect(nx + 1, ny, 1, BALCONY - ny, P.colHi);
+  p.rect(nx + 6, ny + 6, W - nx - 10, BALCONY - ny - 14, P.colLo); p.rect(nx + 7, ny + 7, W - nx - 12, BALCONY - ny - 16, P.col); p.rect(nx + 7, ny + 7, 1, BALCONY - ny - 16, P.colHi);
+  p.rect(nx - 1, ny, W - nx + 1, 2, P.gold); p.rect(nx, BALCONY - 3, W - nx, 3, P.colLo); p.rect(nx, BALCONY - 1, W - nx, 1, P.goldLo);
   // the loggia: an arcade with dark arches, gold keystones
   const lx0 = 64 * T, lx1 = 72 * T;
   for (let x = lx0 + 10; x < lx1 - 16; x += 38) { p.rect(x, LOGGIA + 22, 24, TR - LOGGIA - 22, O); p.circle(x + 12, LOGGIA + 22, 12, O); p.rect(x + 11, LOGGIA + 8, 3, 4, P.gold); }

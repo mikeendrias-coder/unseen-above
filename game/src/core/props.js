@@ -23,8 +23,8 @@
 // delay s after she stands on it, then drops; back: s later it is there again (0: never).
 // Swing: a chandelier or rope on a fixed swing; touching its end in the air, she holds on;
 // Space lets go with the swing's speed plus a jump, S drops straight off.
-// hardCone(g, cone points, color, view) draws a watcher's light the final-pass way: every other
-// pixel row of the cone in one flat color, its two edges solid (no alpha, no blending).
+// hardCone(g, cone points, color, view) draws a light the final-pass way: a 50% checker of one
+// flat color, its two edges solid (no alpha, no blending, no hatched rows).
 import { Sound } from './sound.js';
 import { K } from './side.js';
 import { hexNum } from '../art/painter.js';
@@ -247,21 +247,29 @@ export class Props {
   }
 }
 
-// Draw a light's cone as hard light: every other pixel row of it, in one flat tone, with its two
-// edges drawn solid. No alpha, no blending (docs/ART_DIRECTION.md section 2).
-export function hardCone(g, pts, col, view) {
+// Draw a light's cone as hard light, the one rule for light in the whole game: a 50% checker of
+// one flat tone, lined up with the world's pixels, with its two edges drawn solid (fill 'solid'
+// lays every pixel instead, for thin beams in the sky). No alpha, no blending, no hatching
+// (docs/ART_DIRECTION.md section 2). view (optional) clips it to what is on screen.
+export function hardCone(g, pts, col, view, fill) {
   if (!pts || pts.length < 3) return;
+  const solid = fill === 'solid';
   let y0 = Infinity, y1 = -Infinity; pts.forEach(p => { y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); });
-  if (view) { y0 = Math.max(y0, view.y - 1); y1 = Math.min(y1, view.y + view.height + 1); }
+  let vx0 = -Infinity, vx1 = Infinity;
+  if (view) { y0 = Math.max(y0, view.y - 1); y1 = Math.min(y1, view.y + view.height + 1); vx0 = Math.floor(view.x) - 1; vx1 = Math.ceil(view.x + view.width) + 1; }
   g.fillStyle(col, 1);
   for (let y = Math.ceil(y0); y <= y1; y++) {
-    if (y & 1) continue;
     const yc = y + 0.5, xs = [];
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a.y > yc) !== (b.y > yc)) xs.push(a.x + (yc - a.y) * (b.x - a.x) / (b.y - a.y)); }
     xs.sort((a, b) => a - b);
-    for (let k = 0; k + 1 < xs.length; k += 2) { const a = Math.round(xs[k]), b = Math.round(xs[k + 1]); if (b > a) g.fillRect(a, y, b - a, 1); }
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const a = Math.max(vx0, Math.round(xs[k])), b = Math.min(vx1, Math.round(xs[k + 1]));
+      if (b <= a) continue;
+      if (solid) { g.fillRect(a, y, b - a, 1); continue; }
+      for (let x = a + ((a + y) & 1); x < b; x += 2) g.fillRect(x, y, 1, 1);
+    }
   }
-  const o = pts[0], line = (a, b) => { const n = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)); for (let i = 0; i <= n; i += 1) g.fillRect(Math.round(a.x + (b.x - a.x) * i / n), Math.round(a.y + (b.y - a.y) * i / n), 1, 1); };
+  const o = pts[0], line = (a, b) => { const n = Math.max(1, Math.abs(b.x - a.x), Math.abs(b.y - a.y)); for (let i = 0; i <= n; i += 1) g.fillRect(Math.round(a.x + (b.x - a.x) * i / n), Math.round(a.y + (b.y - a.y) * i / n), 1, 1); };
   line(o, pts[1]); line(o, pts[pts.length - 1]);
 }
 
