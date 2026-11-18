@@ -51,6 +51,16 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 ### Creative pass
 - `done, check` **A dedicated agent thinks through the plot and new elements** that fit the aesthetic, do not extend runtime, and add story, feeling, and more things to do and interact with, based on games in this genre (deep research). Output for Michael to pick from; story calls stay his. Written Nov 17: research/design_pass_nov17.md.
 
+## 5. Nov 17 (late): "do everything", polish for Nov 18 night (Michael walks the class through it)
+- Claude makes all decisions from Michael's preferences. No deploying or publishing (no `npm run publish`, no push) until Michael says. Quick tests only, or tests in a side agent.
+- `todo` **Look less generated, more like a real pixel game** in Ash and Gold. References Michael named: **Jump King** (character size, scale, jump dynamics), **Geometry Dash / Jetpack Joyride** (pace, restarts), **Papers, Please** (black and white, monotonous, bureaucratic tone). See docs/ART_DIRECTION.md.
+- `todo` **Go to a final design: build out every level** and everything on this list.
+- `todo` **Endings crafted by Claude**, including a **secret ending** where she does not blow herself up (for example she sits on the couch with the kids).
+- `todo` **Remake the Moon city people and the kids** (they looked weird): big, clear pixel characters, not the smooth animated style of the old opening.
+- `todo` **Immunity mode** stays easy to reach for the class walkthrough.
+- `todo` **Instructions under the game become key buttons:** keys drawn like keyboard keys, what they do written under each, clickable, and toggles show on or off.
+- `doing` Movement done Nov 17 (double jump, wall slide and wall jump, fall damage by distance, 3 HP, sword costs HP). Fixed train of lines before the fight; dialogue cuts.
+
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).
 

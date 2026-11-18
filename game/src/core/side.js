@@ -14,9 +14,16 @@ import { beginDeath, skipDeath } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
+import { cg } from '../ui/cg.js';
 
 export const TILE = 16;
-export const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2 };
+export const K = { w: 8, hStand: 14, hCrouch: 9, run: 72, crouchRun: 34, accG: 900, accA: 585, jumpV: 236, g: 690, maxFall: 260, coyote: 0.1, buffer: 0.1, hold: 0.2,
+  // Nov 17 movement (research/design_pass_nov17.md section 4): one double jump, wall slides and
+  // wall jumps (from up to 2 px off a wall; touching a wall gives the double jump back).
+  dj: 0.8, wallReach: 2, slide: 60, wallVy: 210, wallVx: 110, wallLock: 0.15,
+  // HP: the house hurts her, what watches her kills her. Falls are measured by distance (from the
+  // highest point since she last stood or touched a wall): 1 HP from 5 tiles, 2 from 8, death from 11.
+  hp: 3, fall1: 80, fall2: 128, fallDie: 176, inv: 1.0 };
 export const LOCK = 0.42; // seconds inside a light before the strike
 export const inPoly = (pts, x, y) => { let inside = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside; } return inside; };
 
@@ -32,7 +39,7 @@ export class SideEpisode extends Phaser.Scene {
     this.props = [];  // solid rectangles off the tile grid: low debris, furniture, a robot
     this.things = []; // things she can use with E
     this.scale.on('rescale', this.onRescale, this);
-    this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
+    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); cg.hp(null); });
     syncImmunity();
   }
   itemPanel(kind) { return itemPanel(this, kind); }
@@ -106,7 +113,9 @@ export class SideEpisode extends Phaser.Scene {
   lookable() { return true; }
   spawn(x) {
     const s = this.level.start;
-    this.kid = { x: x != null ? x : s.x, y: s.y, w: K.w, h: K.hStand, vx: 0, vy: 0, onGround: true, crouch: false, coyote: 0, buffer: 0, holdT: 0, face: 1, walkT: 0 };
+    this.kid = { x: x != null ? x : s.x, y: s.y, w: K.w, h: K.hStand, vx: 0, vy: 0, onGround: true, crouch: false, coyote: 0, buffer: 0, holdT: 0, face: 1, walkT: 0,
+      hp: K.hp, inv: 0, airJumps: 1, wall: 0, wallLock: 0, peakY: s.y };
+    cg.hp(state.immune ? null : this.kid.hp, K.hp);
     this.dead = false; this.leaving = false; this.done = false;
     this.girl.setVisible(true);
   }
@@ -142,7 +151,7 @@ export class SideEpisode extends Phaser.Scene {
     this.time.delayedCall(260, () => {
       this.leaving = false; this.kid.vx = 0;
       Object.values(this.beds || {}).forEach(b => b.set(0.0001, 0.3));
-      this.events.once('wake', () => { this.ctl.endFrame(); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
+      this.events.once('wake', () => { this.ctl.endFrame(); if (this.kid) cg.hp(state.immune ? null : this.kid.hp, K.hp); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
       this.scene.launch('room', { id, from: this.scene.key, take: this.ep.take });
       this.scene.sleep();
     });
@@ -158,7 +167,12 @@ export class SideEpisode extends Phaser.Scene {
 
   moveKid(dt) {
     const k = this.kid, c = this.ctl;
-    const dir = (c.right() ? 1 : 0) - (c.left() ? 1 : 0);
+    let dir = (c.right() ? 1 : 0) - (c.left() ? 1 : 0);
+    if (k.inv > 0) k.inv = Math.max(0, k.inv - dt);
+    if (k.wallLock > 0) { k.wallLock -= dt; if (dir === k.lockSide) dir = 0; }
+    // a wall beside her (within reach) while she is in the air
+    const wallAt = s => { for (let d = 1; d <= K.wallReach + 1; d++) if (this.boxHits(k.x + s * d, k.y, k.w, k.h)) return true; return false; };
+    k.wall = k.onGround ? 0 : wallAt(1) ? 1 : wallAt(-1) ? -1 : 0;
     if (c.down() && k.onGround && !k.crouch) { k.y += K.hStand - K.hCrouch; k.h = K.hCrouch; k.crouch = true; }
     else if (!c.down() && k.crouch && !this.boxHits(k.x, k.y - (K.hStand - K.hCrouch), k.w, K.hStand)) { k.y -= K.hStand - K.hCrouch; k.h = K.hStand; k.crouch = false; }
     const top = k.crouch ? K.crouchRun : K.run, target = dir * top, acc = k.onGround ? K.accG : K.accA;
@@ -166,10 +180,23 @@ export class SideEpisode extends Phaser.Scene {
     if (dir) k.face = dir;
     if (c.jumpPressed() && !this.atDoor()) k.buffer = K.buffer; else k.buffer = Math.max(0, k.buffer - dt);
     k.coyote = k.onGround ? K.coyote : Math.max(0, k.coyote - dt);
+    if (k.onGround || k.wall) k.airJumps = 1;
     if (k.buffer > 0 && k.coyote > 0 && !k.crouch) { k.vy = -K.jumpV; k.buffer = 0; k.coyote = 0; k.holdT = K.hold; k.onGround = false; Sound.tone(480, 0.07, 'square', 0.02, 720); }
+    else if (k.buffer > 0 && k.wall && !this.noWallJump) {
+      // off the wall: up and away, and pushing back into the wall is ignored for a moment
+      k.vy = -K.wallVy; k.vx = -k.wall * K.wallVx; k.face = -k.wall; k.lockSide = k.wall; k.wallLock = K.wallLock;
+      k.buffer = 0; k.holdT = K.hold * 0.6; k.peakY = k.y; Sound.tone(420, 0.06, 'square', 0.02, 760);
+      if (this.puffs) this.puffs.explode(3, k.wall > 0 ? k.x + k.w : k.x, k.y + k.h - 3);
+    } else if (k.buffer > 0 && k.airJumps > 0 && !k.crouch && !this.noDoubleJump) {
+      k.vy = -K.jumpV * K.dj; k.airJumps--; k.buffer = 0; k.holdT = K.hold * 0.6; Sound.tone(620, 0.06, 'square', 0.018, 940);
+      if (this.puffs) this.puffs.explode(4, k.x + k.w / 2, k.y + k.h);
+    }
     if (k.holdT > 0) { k.holdT -= dt; if (!c.jumpHeld()) { if (k.vy < 0) k.vy *= 0.5; k.holdT = 0; } }
     const apex = Math.abs(k.vy) < 40 && c.jumpHeld();
     k.vy = Math.min(K.maxFall, k.vy + K.g * (apex ? 0.5 : 1) * dt);
+    // sliding down a wall she is pushing into: slow, and the fall starts over from here
+    if (k.wall && dir === k.wall && k.vy > K.slide) k.vy = K.slide;
+    if (k.wall && dir === k.wall) k.peakY = k.y;
     // move a pixel at a time, so props off the tile grid stop her exactly where they are
     let dx = k.vx * dt;
     while (dx !== 0) { const st = Math.abs(dx) >= 1 ? Math.sign(dx) : dx; if (this.boxHits(k.x + st, k.y, k.w, k.h)) { k.vx = 0; break; } k.x += st; dx -= st; }
@@ -186,6 +213,9 @@ export class SideEpisode extends Phaser.Scene {
       k.y += st; dy -= st;
     }
     if (!k.onGround && k.vy >= 0 && this.boxHits(k.x, k.y + 0.5, k.w, k.h)) k.onGround = true;
+    // a long fall hurts when she lands (Fall.js and other scripted drops turn this off)
+    if (!k.onGround) k.peakY = Math.min(k.peakY, k.y);
+    else { if (wasAir && !this.noFallDamage) { const d = k.y - k.peakY; if (d >= K.fallDie) this.hurt(K.hp, 'fall'); else if (d >= K.fall2) this.hurt(2, 'fall'); else if (d >= K.fall1) this.hurt(1, 'fall'); } k.peakY = k.y; }
     // a little dust where she lands
     if (wasAir && k.onGround && fallV > 140 && this.puffs) this.puffs.explode(Math.min(9, 3 + Math.round(fallV / 60)), k.x + k.w / 2, k.y + k.h - 1);
     k.walkT = k.onGround && Math.abs(k.vx) > 8 ? k.walkT + dt : 0;
@@ -223,6 +253,17 @@ export class SideEpisode extends Phaser.Scene {
       src.lock += dt;
       if (src.lock >= limit) this.die(src);
     } else src.lock = Math.max(0, src.lock - dt * 2);
+  }
+
+  // ------------------------------------------------------------------ HP
+  // The house hurts her (falls, debris, a robot, the creator's sword): HP, a blink, a moment safe.
+  // What watches her (lights, lasers, cameras, the strike) still kills outright, through die().
+  hurt(n, id) {
+    const k = this.kid; if (!k || this.dead || k.inv > 0 || state.immune || window.__noDeath) return;
+    k.hp = Math.max(0, k.hp - n); k.inv = K.inv; cg.hp(k.hp, K.hp);
+    Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800);
+    fx.shake(this.cameras.main, 120, 0.006);
+    if (k.hp <= 0) this.die({ id, direct: true });
   }
 
   // ------------------------------------------------------------------ death, takes, the door
@@ -270,6 +311,7 @@ export class SideEpisode extends Phaser.Scene {
     this.idleT = still ? (this.idleT || 0) + this.game.loop.delta / 1000 : 0;
     const glance = this.idleT > 4 && (this.idleT % 3.4) > 2.8;
     this.girl.setTexture(tex).setPosition(Math.round(k.x + k.w / 2), Math.round(k.y + k.h)).setFlipX(glance ? k.face > 0 : k.face < 0);
+    this.girl.setAlpha(k.inv > 0 && Math.floor(k.inv * 14) % 2 ? 0.3 : 1); // hurt: she blinks while safe
     // her shadow on whatever is under her, smaller the higher she is
     const sg = this.shadowG; if (!sg) return; sg.clear();
     if (!this.girl.visible || this.dead) return;

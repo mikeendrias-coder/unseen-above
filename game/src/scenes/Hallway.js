@@ -110,7 +110,8 @@ export class Hallway extends SideEpisode {
     if (this.done) { c.endFrame(); return; }
     if (!this.dead && !this.leaving) {
       this.consoleThing.off = !this.consoleReady();
-      this.moveKid(dt); this.updateThings();
+      // the fixed train of lines before the fight holds her where she stands until the sword lands
+      if (this.train && !this.sword.floor && !this.sword.have) this.settle(dt); else { this.moveKid(dt); this.updateThings(); }
       if (c.glasses()) this.gl.toggle();
       if (c.throwP() && this.mode === 'fight') this.swing();
     } else if (this.dead && this.girl.visible) this.settle(dt);
@@ -166,8 +167,6 @@ export class Hallway extends SideEpisode {
 
   // ------------------------------------------------------------------ the walk in and the toss
   walkIn() {
-    const x = this.kid.x / T, marks = [2, 6, 10, 14];
-    if (this.heardIn < marks.length && x > marks[this.heardIn]) { this.say([HALL_IN[this.heardIn]], null, true); this.heardIn++; }
     if (this.kid.x > ARENA.x0 + 10 && !this.dead) this.startToss(false);
   }
   startToss(retry) {
@@ -175,8 +174,9 @@ export class Hallway extends SideEpisode {
     Sound.tone(90, 0.35, 'sawtooth', 0.04, 60); Sound.noise(0.3, 0.06, 900);
     Music.play('boss', { fadeIn: 1.5 });
     const toss = { who: null, text: '[A SWORD CLATTERS]', on: () => this.throwSword() };
-    if (retry) this.say([HALL_AGAIN[(this.ep.take - 2) % HALL_AGAIN.length], toss]);
-    else this.say(HALL_TOSS.slice(0, 3).concat([toss]));
+    // the first two retries get one line; after that, silence (Nov 17: no repeats)
+    if (retry) this.say(this.ep.take <= 3 ? [HALL_AGAIN[(this.ep.take - 2) % HALL_AGAIN.length], toss] : [toss]);
+    else { this.train = true; this.say(HALL_IN.concat(HALL_TOSS.slice(0, 3), [toss]), () => { this.train = false; }); }
     this.cr.st = 'talk'; this.cr.walkTo = 30 * T; if (retry) this.cr.x = 30 * T;
   }
   throwSword() {
@@ -373,7 +373,7 @@ export class Hallway extends SideEpisode {
   bladeHits() {
     if (this.dead || window.__noDeath) return;
     const k = this.kid, b = this.blade(), y = b.ty, x0 = Math.min(b.hx, b.tx), x1 = Math.max(b.hx, b.tx);
-    if (k.x + k.w > x0 && k.x < x1 && y >= k.y && y <= k.y + k.h) this.die({ id: 'creator', direct: true });
+    if (k.x + k.w > x0 && k.x < x1 && y >= k.y && y <= k.y + k.h) this.hurt(1, 'creator'); // the sword is the house: HP
   }
   chopHits() {
     if (this.dead || window.__noDeath) return;
@@ -381,7 +381,7 @@ export class Hallway extends SideEpisode {
     if (!(k.x + k.w > x0 && k.x < x1 && k.y + k.h > G - 30)) return;
     // under the desk, the blade bites the tabletop instead
     if (k.x + k.w > D.x + 2 && k.x < D.x + D.w - 2 && k.y > D.y) { this.sparks.explode(8, Math.max(D.x, Math.min(D.x + D.w, k.x + 4)), D.y); Sound.tone(1700, 0.1, 'square', 0.03, 900); return; }
-    this.die({ id: 'creator', direct: true });
+    this.hurt(1, 'creator');
   }
   yieldFight() {
     const c = this.cr;

@@ -15,7 +15,7 @@ const W = 320, H = 180;
 // gold for keys and wealth, red only for what watches her. The old teletext names are kept as roles.
 export const TV = { black: '#0e0f12', white: '#ebe6d8', yellow: '#d6a03c', cyan: '#f2d58c', red: '#e3412b', green: '#f5ce77', magenta: '#b8b2a3', grey: '#8f8d87', salmon: '#ffd9d0' };
 
-const S = { caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null, menu: null };
+const S = { hp: null, caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null, menu: null };
 let cv = null, ctx = null, running = false;
 const now = () => performance.now() / 1000;
 const ease = u => 1 - Math.pow(1 - Math.max(0, Math.min(1, u)), 3);
@@ -28,7 +28,7 @@ function ensure() {
   return true;
 }
 function kick() { if (!ensure() || running) return; running = true; requestAnimationFrame(frame); }
-const busy = () => !!(S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page || S.menu);
+const busy = () => !!(S.hp || S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page || S.menu);
 
 function frame() {
   const t = now();
@@ -39,7 +39,7 @@ function frame() {
   if (S.rec && t > S.rec.until) S.rec = null;
   ctx.clearRect(0, 0, W, H + STRIP);
   if (!busy()) { running = false; return; }
-  if (!S.menu) { drawCards(t); drawCaption(t); }
+  if (!S.menu) { drawCards(t); drawCaption(t); drawHp(); }
   drawPage(t); drawMenu(t); drawTop(t); // the set's own messages sit over the picture; pages and the menu cover them
   requestAnimationFrame(frame);
 }
@@ -48,7 +48,13 @@ function frame() {
 // Captions live in their own strip under the picture (y 180 to 210 on this canvas), so they
 // never cover the game: one line in the middle of the strip, up to three filling it. What she looks at (narration) takes the strip over while it is
 // up, and the scene holds its own lines until it is gone.
-const CAP_COLS = 50, CAP_ROW = 10;
+const CAP_COLS = 44, CAP_ROW = 10; // 44 columns leave the strip's left end for her HP
+// her HP: small squares at the left end of the strip, filled for each one left
+function drawHp() {
+  const h = S.hp; if (!h) return;
+  const y = H + Math.round(STRIP / 2) - 3;
+  for (let i = 0; i < h.max; i++) { const x = 6 + i * 8; ctx.fillStyle = TV.grey; ctx.fillRect(x, y, 6, 6); ctx.fillStyle = i < h.n ? TV.white : TV.black; ctx.fillRect(x + 1, y + 1, 4, 4); }
+}
 function drawCaption(t) {
   S.capRect = null;
   if (S.page) return; // a text page replaces the captions while it is up
@@ -203,5 +209,7 @@ export const cg = {
   closeMenu() { S.menu = null; },
   // the row of the menu at this point of the pixel grid, or -1
   menuHit(x, y) { const m = S.menu; if (!m || !m.hit || S.page || x < PX || x > PX + COLS * ADV) return -1; const h = m.hit.find(r => y >= r.y0 && y < r.y1); return h ? h.i : -1; },
-  clearAll() { S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; }
+  // her HP in the strip (n of max), or null to hide it
+  hp(n, max) { S.hp = n == null ? null : { n, max }; kick(); },
+  clearAll() { S.hp = null; S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; }
 };

@@ -5,10 +5,8 @@ export const RIDGE = [
   { who: 'BROTHER', text: 'Nobody has lights anymore.' },
   { who: 'SISTER', text: 'Somebody does.' },
   { who: 'BROTHER', text: 'Not one broken window. Not one.', bro: { point: 1 } },
-  { who: 'SISTER', text: "That's what scares me. Places like that don't stay clean by accident.", sis: { face: -1 } },
+  { who: 'SISTER', text: "Places like that don't stay clean by accident.", sis: { face: -1 } },
   { who: 'BROTHER', text: 'Places like that have food. Medicine. Maybe a filter that still works.', bro: { face: -1 } },
-  { who: 'SISTER', text: 'You said we stay away from the untouched ones.', sis: { face: -1 } },
-  { who: 'BROTHER', text: 'Until we had no choice. We have no choice.', bro: { face: 1 } },
   { who: 'SISTER', text: "Then I'm coming with you." },
   { who: 'BROTHER', text: "No. Watch the lights. If they turn toward me, you'll see it first.", bro: { face: -1 } },
   { who: 'SISTER', text: "And if you don't come back?", sis: { face: -1 } },
@@ -29,12 +27,9 @@ export const BEDROOM = [
   { who: null, text: '[COUGHING]' },
   { who: 'SISTER', text: 'Your leg.' },
   { who: 'BROTHER', text: "Don't look at it. Look at me." },
-  { who: 'SISTER', text: 'We have the bag. We can stop the bleeding.' },
   { who: 'BROTHER', text: "I don't want to die." },
   { who: 'SISTER', text: "You won't. You always come back." },
   { who: 'BROTHER', text: "That's what I'm afraid of." },
-  { who: 'SISTER', text: 'What does that mean?' },
-  { who: null, text: '[COUGHING]' },
   { who: 'BROTHER', text: "Don't open that door." }
 ];
 
@@ -70,11 +65,11 @@ export const PLAYROOM = [
 //   * "The kids aim it" says outright who aims the satellite in the batches.
 //   * The ending of the fight (the creator yields and lets her pass) is a placeholder.
 // Walking in: the creator talks while she comes down the hallway.
+// (Nov 17) The walk in is quiet now. At the edge of the stage the creator speaks these two, then
+// HALL_TOSS: one fixed train of lines, the same on every arrival. Retries skip it.
 export const HALL_IN = [
-  { who: 'CREATOR', text: 'There you are. Mind the cables. Those are mine too.' },
-  { who: 'CREATOR', text: 'Every room you walked through, I built. The lights. The lasers. The cameras that click.' },
-  { who: 'CREATOR', text: 'I keep the front of the house perfect. Nobody up here pays to watch the back.' },
-  { who: 'CREATOR', text: 'I put the glasses back in the drawer after every take. Forty-one seasons.' }
+  { who: 'CREATOR', text: 'Every room you walked through, I built.' },
+  { who: 'CREATOR', text: 'I put the glasses back in the drawer after every take.' }
 ];
 // At the edge of the stage: the toss.
 export const HALL_TOSS = [
@@ -87,20 +82,21 @@ export const HALL_TOSS = [
 // Each round opens with the set it comes from.
 export const HALL_ROUND = [
   ['The grounds were my first set. Lights in the dark. Simple.'],
-  ['The gallery. I put the laser where the money is.', 'They loved that.'],
-  ['Lights off. My cameras click twice before they flash.', 'A warning. The only kind thing I was allowed to build.']
+  ['The gallery. I put the laser where the money is.'],
+  ['Lights off. My cameras click twice before they flash.']
 ];
 // Each time she lands a hit, in order.
+// (Nov 17) Only hits 2, 4, 6 and 8 speak; the HP bar carries the rest.
 export const HALL_HIT = [
-  'Good. They can see that from the cheap seats.',
+  null,
   'Do you know what they call this up here? Content.',
-  'Being seen is the one thing they cannot buy. So they buy it from us.',
-  'I have never been on screen. Not once. I am the reason you are.',
-  'They did not build any of this. They bought the Moon, then they bought us.',
-  'The satellite is not mine. The kids aim it. They think it is a puzzle.',
-  'You want the point of it all? So they never have to look at anything real.',
-  'They are watching me lose. It is the first time anyone has watched me at all.',
-  'Enough. That is enough.'
+  null,
+  'Being seen is the one thing they cannot buy.',
+  null,
+  'The satellite is not mine. The kids aim it.',
+  null,
+  'They are watching me lose. First time anyone watched me.',
+  null
 ];
 // Her next take: the first thing the creator says.
 export const HALL_AGAIN = [
@@ -217,7 +213,7 @@ export const DEATH_SAID = [
   [/chandelier/, '[THE CHANDELIER SAW HER]', '[THE CHANDELIER CAME DOWN ON HER]'],
   [/fall/, '[SHE FELL]'],
   [/ceiling/, '[THE CEILING CAME DOWN]'],
-  [/creator/, '[ONE CUT]'],
+  [/creator/, '[THE LAST CUT]'],
   [/sensor/, '[A MOTION SENSOR CAUGHT HER MOVING]'],
   [/robot/, '[THE {WHAT} SAW HER]']
 ];

@@ -81,7 +81,7 @@ export class Fall extends SideEpisode {
 
   create(data) {
     data = data || {};
-    this.initSide('ep3fall', LEVEL, buildMap());
+    this.initSide('ep3fall', LEVEL, buildMap()); this.noFallDamage = true; // the long scripted tumble is the point here
     const P = this.P;
     makeSprites(this, P);
     paint(P).toTexture(this, 'fall_art');
