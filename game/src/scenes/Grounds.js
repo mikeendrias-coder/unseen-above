@@ -232,11 +232,16 @@ export class Grounds extends SideEpisode {
     });
     this.time.delayedCall(5600, () => goNext(this, 'ep1'));
   }
+  // The balcony ends in a wall just past the door, and anywhere from the door to that wall
+  // counts as at the door: a run with Shift that slides past it still gets her in.
+  atDoor() { const k = this.kid, d = LEVEL.door; return k.x + k.w > d.x + 2 && k.x < d.x + d.w + 12 && Math.abs(k.y + k.h - (d.y + d.h)) < 4; }
   // story mode N: the start of the next section
   skipAhead() {
     const k = this.kid; if (!k || this.dead || this.leaving) return;
-    const at = LEVEL.skip.find(([x]) => x * T > k.x + 12); if (!at) return;
-    k.x = at[0] * T; k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null;
+    const at = LEVEL.skip.find(([x]) => x * T > k.x + 12);
+    // nothing left to skip to: she is at the door (the last point), so N takes her through it
+    if (!at) { if (k.x > 93 * T && k.y + k.h <= BALCONY + 2) this.enterDoor(); return; }
+    k.x = Math.round(at[0] * T); k.h = 14; k.crouch = false; k.y = at[1] * T - 14; k.vx = 0; k.vy = 0; k.peakY = k.y; this.dyn.riding = null;
     const cr = this.crate.r, cd = this.cradle.r;
     if (at[2] === 'crate' && Math.abs(cr.y + cr.h - TERRACE) < 1 && cr.x > k.x) k.x = Math.round(cr.x) - k.w;
     if (at[2] === 'cradle') { k.x = Math.round(cd.x + (cd.w - k.w) / 2); k.y = Math.round(cd.y) - k.h; k.peakY = k.y; }
@@ -274,12 +279,11 @@ export class Grounds extends SideEpisode {
     const g = this.scanG; g.clear();
     if (!this.scan) return;
     const v = this.cameras.main.worldView, x = Math.round(this.scan.x), t = this.clock, y0 = Math.floor(v.y), h = Math.ceil(v.height) + 1;
-    // a hard band: dithered rows behind the edge, a solid red edge, a bone core line
-    g.fillStyle(C('red'), 1);
-    for (let y = y0 + ((y0 + Math.floor(t * 30)) & 1); y < y0 + h; y += 2) g.fillRect(x - 10, y, 8, 1);
-    g.fillRect(x - 2, y0, 2, h);
+    // a hard band, the game's one light rule: a 50% checker of red behind a solid red edge and a
+    // pale core line (no hatched rows, no moving ticks)
+    hardCone(g, [{ x: x - 10, y: y0 }, { x: x - 2, y: y0 }, { x: x - 2, y: y0 + h }, { x: x - 10, y: y0 + h }], C('red'), null);
+    g.fillStyle(C('red'), 1); g.fillRect(x - 2, y0, 2, h);
     g.fillStyle(C('redHi'), 1); g.fillRect(x, y0, 1, h);
-    for (let y = (t * 120) % 12; y < h; y += 12) { g.fillStyle(C('red'), 1); g.fillRect(x - 16, y0 + Math.round(y), 6, 1); }
     if (!this.dead) SatelliteStrike.drawSat(this.fxG, this.P, x, v.y + 3, null, 0);
   }
 
@@ -314,12 +318,12 @@ export class Grounds extends SideEpisode {
   draw() {
     const P = this.P, t = this.clock, v = this.cameras.main.worldView;
     this.drawGirl();
-    // searchlights over the dead city, behind everything: thin dithered beams
+    // searchlights over the dead city, behind everything: thin flat beams, one tone on the sky
     const sf = this.skyFx; sf.clear();
     [[80, 0.21, 0], [210, 0.17, 1.7], [350, 0.23, 3.1], [480, 0.19, 4.4]].forEach(([x, sp, ph]) => {
       const a = (-90 + Math.sin(t * sp * 2 + ph) * 26) * Math.PI / 180, len = 190, w = 4;
       const ex = x + Math.cos(a) * len, ey = 170 + Math.sin(a) * len, nx = -Math.sin(a) * w, ny = Math.cos(a) * w;
-      hardCone(sf, [{ x, y: 170 }, { x: ex + nx, y: ey + ny }, { x: ex - nx, y: ey - ny }], C('ash2'));
+      hardCone(sf, [{ x, y: 170 }, { x: ex + nx, y: ey + ny }, { x: ex - nx, y: ey - ny }], C('ash2'), null, 'solid');
     });
     // the drone show: one gold pixel a drone
     const sg = this.showG; sg.clear();
@@ -356,13 +360,14 @@ export class Grounds extends SideEpisode {
   hint() {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
-    if (this.scan) return overlay.hint(x > 93 ? 'W or J at the door.' : 'Run. If the scan reaches you, the strike comes.');
+    if (this.atDoor()) return overlay.hint('W or J at the door.');
+    if (this.scan) return overlay.hint(x > 90 ? 'The door is just ahead.' : 'Run. If the scan reaches you, the strike comes.');
     if (x < 15) return overlay.hint('A and D move. Space jumps. J looks at things.');
     if (x < 34) return overlay.hint('Hide in the hedges’ shadow. Space twice jumps higher.');
     if (x < 38) return overlay.hint('Jump from wall to wall to climb.');
     if (x < 56) return overlay.hint('The drone looks straight down. Wait under the bowl.');
     if (x < 64 && k.y > 200) return overlay.hint('Push the crate. Stay in its shadow. Then climb it.');
-    if (x < 74 && k.y > 120) return overlay.hint('Ride the cradle. Its roof hides you from the drone.');
+    if (x < 74) return overlay.hint('Ride the cradle. Its roof hides you from the drone.');
     return overlay.hint('Foam slabs drop when you stand on them.');
   }
 }

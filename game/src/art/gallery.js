@@ -61,8 +61,9 @@ export const LEVEL = {
   // chandelier that drops, in the laser hall
   gold: [[15 * T + 8, 20 * T], [25 * T, 16 * T], [36 * T + 8, MEZZ], [53 * T, GROUND], [46 * T, ROWS.floor * T], [57 * T, ROWS.mezz * T], [61 * T, ROWS.mezz * T], [69 * T + 8, ROWS.mezz * T], [82 * T, ROWS.floor * T]],
   // where N puts her in story mode: just short of each section's hazard
-  // (B: under the desk on the landing; D: on the far wall's top, then past the broken camera)
-  skip: [[19, ROWS.floor], [24, 18], [54, ROWS.mezz], [67, ROWS.mezz], [75, 18]]
+  // (B: under the desk on the landing; D: on the far wall's top, then past the broken camera;
+  // the last: at the door itself, where W goes in; one more N goes through it)
+  skip: [[19, ROWS.floor], [24, 18], [54, ROWS.mezz], [67, ROWS.mezz], [75, 18], [87.25, ROWS.floor]]
 };
 
 // Where a camera points t seconds into the take. The broken one snaps to each aim, then holds.
@@ -110,16 +111,81 @@ export function buildMap() {
 }
 
 function glint(p, P, x, y) { p.px(x, y, P.glint); p.px(x - 1, y, P.goldHi); p.px(x + 1, y, P.goldHi); p.px(x, y - 1, P.goldHi); p.px(x, y + 1, P.goldHi); p.mark('glint', x, y); }
-function portrait(p, P, x, y, w, h, seed, worn) {
-  const r = rng(seed);
-  p.rect(x - 3, y - 3, w + 6, h + 6, '#0e0f12'); p.rect(x - 2, y - 2, w + 4, h + 4, P.goldLo); p.rect(x - 1, y - 1, w + 2, 1, P.gold); p.rect(x - 1, y - 1, 1, h + 2, P.gold);
-  p.rect(x, y, w, h, worn ? P.wallLo : P.wallLine);
-  p.rect(x + 1, y + 1, w - 2, Math.round(h * 0.5), r() < 0.5 ? P.glass : P.wallLo);
-  const cx = Math.round(x + w / 2), hy = Math.round(y + h * 0.36), hr = Math.max(2, Math.round(w * 0.15));
-  p.circle(cx, hy, hr, P.kidLo); p.rect(cx - hr, hy - hr, hr * 2 + 1, Math.max(1, Math.round(hr / 2)), r() < 0.5 ? P.hair : P.goldLo);
-  p.rect(Math.round(x + w * 0.2), Math.round(y + h * 0.56), Math.round(w * 0.6), Math.round(h * 0.44) - 1, r() < 0.5 ? P.fabric : P.wood);
-  p.rect(cx - 1, Math.round(y + h * 0.62), 2, 3, P.goldHi);
-  if (worn) for (let i = 0; i < 6; i++) p.px(x + r() * w, y + r() * h, P.crack);
+// The sitters, drawn by hand: each is 3 tones on its own ground with a 1 px ash0 outline, and a
+// frame gets one by its place in the hang list (never at random), so no two neighbors match.
+//   man: a man in profile   lady: a woman with a tall hairdo   dog: the family dog, sitting
+//   house: a landscape with this house in it (and the Moon)   empty: an empty frame, only a nail
+//   gold: the man in gold, front on (his eyes are drawn live, they follow her)
+const SITTERS = ['man', 'lady', 'house', 'dog', 'lady', 'man', 'empty'];
+function parts(p, list) { const O = '#0e0f12'; list.forEach(([x, y, w, h]) => p.rect(x - 1, y - 1, w + 2, h + 2, O)); list.forEach(([x, y, w, h, c]) => p.rect(x, y, w, h, c)); }
+function portrait(p, P, x, y, w, h, kind, worn, flip) {
+  const O = '#0e0f12', R = Math.round, cx = R(x + w / 2), hy = R(y + h * 0.36), hr = Math.max(3, R(w * 0.16));
+  p.rect(x - 3, y - 3, w + 6, h + 6, O); p.rect(x - 2, y - 2, w + 4, h + 4, P.goldLo); p.rect(x - 1, y - 1, w + 2, 1, P.gold); p.rect(x - 1, y - 1, 1, h + 2, P.gold);
+  const head = (hx, c) => { p.circle(hx, hy, hr + 1, O); p.circle(hx, hy, hr, c); };
+  // a disc of pixels inside the head where test(dx, dy) holds (hair that keeps to the head's edge)
+  const within = (hx, c, test) => { for (let dy = -hr; dy <= hr; dy++) for (let dx = -hr; dx <= hr; dx++) if (dx * dx + dy * dy <= hr * hr + hr && test(dx, dy)) p.px(hx + dx, hy + dy, c); };
+  if (kind === 'man') {
+    // profile: a black coat lit on one side, a white shirt front, dark hair over the top and back
+    const d = flip ? -1 : 1, sy = R(y + h * 0.58), sx = R(x + w * 0.16), sw = R(w * 0.68);
+    p.rect(x, y, w, h, P.glass);
+    parts(p, [[sx + 2, sy, sw - 4, 2, P.hair], [sx, sy + 2, sw, y + h - sy - 2, P.hair]]);
+    p.rect(d > 0 ? sx + sw - 2 : sx + 1, sy + 3, 1, y + h - sy - 3, P.rubble);
+    p.rect(cx - 1 + d, sy, 3, 3, P.colHi); p.px(cx + d, sy + 3, P.colHi); p.px(cx + d, sy + 1, P.goldLo);
+    head(cx, P.kidLo);
+    within(cx, P.hair, (dx, dy) => dy < -hr / 2 || (dx * d < 0 && dy < 2));
+    p.px(cx - d, hy + 1, P.colLo);                                   // the ear
+    p.px(cx + d * (hr - 1), hy - 1, O);                              // the eye
+    p.px(cx + d * (hr + 1), hy, P.kidLo); p.px(cx + d * (hr + 2), hy, O); // the nose
+    p.rect(cx - 1, hy + hr, 3, Math.max(1, sy - hy - hr), P.kidLo);
+  } else if (kind === 'lady') {
+    // a woman with her hair piled high, pearls, a gold gown
+    p.rect(x, y, w, h, P.wallLine);
+    const top = Math.max(y + hr + 1, R(y + h * 0.06) + hr), bx = R(x + w * 0.3), bw = R(w * 0.4), sy = R(y + h * 0.66), kx = R(x + w * 0.2), kw = R(w * 0.6);
+    p.circle(cx, top, hr + 1, O); p.rect(cx - hr - 1, top, hr * 2 + 3, hy - top, O);
+    parts(p, [[bx, sy - 2, bw, 3, P.gold], [kx, sy + 1, kw, y + h - sy - 1, P.gold]]);
+    p.rect(kx, sy + 1, 2, y + h - sy - 1, P.goldLo); p.rect(bx, sy - 2, bw, 1, P.goldHi);
+    p.circle(cx, top, hr, P.rubbleHi); p.rect(cx - hr, top, hr * 2 + 1, hy - top, P.rubbleHi); p.rect(cx + hr - 1, top, 2, hy - top, P.rubble);
+    head(cx, P.kidLo); within(cx, P.rubbleHi, (dx, dy) => dy < -hr / 2);
+    p.px(cx - 1, hy, O); p.px(cx + 2, hy, O);
+    p.rect(cx - 1, hy + hr, 3, Math.max(1, sy - 2 - hy - hr), P.kidLo);
+    for (let i = -2; i <= 2; i += 2) p.px(cx + i, sy - 3, P.colHi);
+  } else if (kind === 'dog') {
+    // the family dog, sitting, facing left: a grey coat, a pale chest and legs, a dark ear,
+    // a gold collar
+    p.rect(x, y, w, h, P.glass);
+    const hx = R(x + w * 0.62), hyy = R(y + h * 0.78), rr = Math.max(3, R(w * 0.2));
+    const chest = [R(x + w * 0.28), R(y + h * 0.42), Math.max(4, R(w * 0.24)), y + h - 1 - R(y + h * 0.42)];
+    const headR = [R(x + w * 0.24), R(y + h * 0.22), Math.max(5, R(w * 0.28)), Math.max(4, R(h * 0.2))];
+    const snout = [R(x + w * 0.1), R(y + h * 0.3), Math.max(3, R(w * 0.16)), Math.max(2, R(h * 0.08))];
+    p.circle(hx, hyy, rr + 1, O);
+    parts(p, [[...chest, P.colLo], [...headR, P.colLo], [...snout, P.col]]);
+    p.circle(hx, hyy, rr, P.colLo); p.rect(hx - rr, hyy, rr * 2 + 1, y + h - 1 - hyy, P.colLo);
+    p.rect(chest[0], chest[1] + 2, 2, chest[3] - 2, P.col); p.rect(chest[0] + 3, R(y + h * 0.7), 2, y + h - 1 - R(y + h * 0.7), P.col);
+    p.rect(headR[0] + headR[2] - 3, headR[1], 3, Math.max(4, R(h * 0.2)) + 2, P.rubble);
+    p.px(headR[0] + 2, headR[1] + 2, O); p.px(snout[0], snout[1], O);
+    p.rect(chest[0], chest[1], chest[2], 1, P.gold);
+  } else if (kind === 'house') {
+    // the house at night on its hill, a lit window or two, the Moon up in the corner
+    const gy = R(y + h * 0.62);
+    p.rect(x, y, w, h, P.skyTop); p.rect(x, gy, w, y + h - gy, P.rubble); p.rect(x, gy, w, 1, P.rubbleHi);
+    const hw = Math.max(8, R(w * 0.5)), hx = cx - R(hw / 2), hh = Math.max(4, R(h * 0.18));
+    parts(p, [[hx, gy - hh, hw, hh, P.wood]]);
+    p.circle(cx, gy - hh, Math.max(2, R(hw / 5)), P.gold); p.rect(hx, gy - hh, hw, 1, P.woodHi);
+    for (let i = hx + 2; i < hx + hw - 1; i += 3) p.px(i, gy - 2, (i & 1) ? P.lit : P.wallLo);
+    p.px(x + w - 4, y + 3, P.moon); p.px(x + w - 5, y + 3, P.moon); p.px(x + w - 4, y + 4, P.moonShade);
+  } else if (kind === 'empty') {
+    // nobody: the wall shows through, and the nail it hung from
+    p.rect(x, y, w, h, P.wallLo); p.px(cx, y + 4, P.colLo); p.px(cx, y + 5, O);
+  } else {
+    // the man in gold, front on: a gold coat with buttons, a white collar
+    p.rect(x, y, w, h, P.wallLine);
+    parts(p, [[R(x + w * 0.18), R(y + h * 0.58), R(w * 0.64), h - R(h * 0.58), P.gold]]);
+    p.rect(R(x + w * 0.18), R(y + h * 0.58), 2, h - R(h * 0.58), P.goldLo);
+    p.rect(cx - 2, R(y + h * 0.58), 5, 2, P.colHi); for (let i = 0; i < 3; i++) p.px(cx, R(y + h * 0.68) + i * 3, P.goldHi);
+    head(cx, P.kidLo); p.rect(cx - hr, hy - hr, hr * 2 + 1, 2, P.hair);
+  }
+  // a worn one has a tear across the canvas, top right to the middle
+  if (worn) for (let i = 0; i < Math.min(w, h) / 2; i++) p.px(x + w - 3 - i, y + 2 + i + (i >> 2), O);
   glint(p, P, x - 1, y - 1);
 }
 function sconceAt(p, P, x, y, lit) { p.rect(x - 1, y, 3, 6, P.goldLo); p.rect(x - 3, y - 4, 7, 4, '#0e0f12'); p.rect(x - 2, y - 3, 5, 3, lit ? P.lamp : P.device); if (lit) { p.px(x, y - 4, P.goldHi); p.mark('sconce', x, y - 2); checkerPoly(p, [[x - 3, y + 6], [x + 4, y + 6], [x + 8, y + 22], [x - 7, y + 22]], P.wallHi); } else p.px(x, y - 4, P.crack); }
@@ -136,7 +202,17 @@ function paintTiles(p, P, map) {
     if (c === 'e') { p.rect(x, y, T, T, P.device); p.rect(x, y, 1, T, O); p.rect(x + 3, y, 1, T, P.rubble); continue; }
     if (c === 'w') { p.rect(x, y, T, T, P.wallLo); for (let yy = 0; yy < T; yy += 8) { p.rect(x, y + yy, T, 1, P.wallLine); p.rect(x + ((ty * 2 + yy / 8) & 1 ? 0 : 8), y + yy, 1, 8, P.wallLine); } }
     else if (c === 'k') { p.rect(x, y, T, T, P.wood); p.rect(x, y + 4, T, 1, P.wallLo); for (let i = 3; i < T; i += 6) p.rect(x + i, y + 5, 1, T - 5, P.wallLo); if (up) { p.rect(x, y, T, 2, P.woodHi); p.rect(x, y, T, 1, P.gold); } }
-    else if (c === 'x') { p.rect(x, y, T, T, P.colLo); p.rect(x, y + 8, T, 1, P.rubble); p.rect(x + ((ty & 1) ? 4 : 11), y, 1, 8, P.rubble); p.rect(x + ((ty & 1) ? 11 : 4), y + 8, 1, 8, P.rubble); if (up) { p.rect(x, y, T, 3, P.fabric); p.rect(x, y, T, 1, P.goldHi); p.rect(x, y + 3, T, 1, P.colHi); } }
+    else if (c === 'x') {
+      // marble steps and plinths, like the balustrades: a pale face lit from the left, a recessed
+      // panel every two tiles, a bone top edge over a gold moulding, a gold base line on the floor
+      const lf2 = !map.m[ty][tx - 1] || map.mat[ty][tx - 1] !== 'x', dn2 = map.mat[ty + 1] && map.mat[ty + 1][tx] !== 'x';
+      p.rect(x, y, T, T, P.col);
+      if (lf2) p.rect(x + 1, y, 1, T, P.colHi);
+      if (!(tx & 1) && !lf2) p.rect(x, y, 1, T, P.colLo);
+      if (!(ty & 1) && !up) p.rect(x, y, T, 1, P.colLo);
+      if (up) { p.rect(x, y, T, 1, P.colHi); p.rect(x, y + 1, T, 1, P.col); p.rect(x, y + 2, T, 1, P.goldLo); p.rect(x, y + 3, T, 1, P.colLo); }
+      if (dn2) { p.rect(x, y + T - 3, T, 2, P.colLo); p.rect(x, y + T - 1, T, 1, P.goldLo); }
+    }
     else if (c === 'd') { p.rect(x, y, T, 6, P.wood); if (up) { p.rect(x, y, T, 1, P.woodHi); } p.rect(x, y + 6, T, 1, P.goldLo); }
     else if (c === 'b') { p.rect(x, y, T, T, P.wood); if (up) { p.rect(x, y, T, 2, P.woodHi); p.rect(x, y, T, 1, P.goldHi); } p.rect(x, y + T - 2, T, 1, P.goldLo); }
     if (lf) p.rect(x, y, 1, c === 'd' ? 7 : T, O); if (rt) p.rect(x + T - 1, y, 1, c === 'd' ? 7 : T, O); if (dn && c !== 'd') p.rect(x, y + T - 1, T, 1, O); if (c === 'd' && dn) p.rect(x, y + 7, T, 1, O);
@@ -149,16 +225,17 @@ export function paintLevel(P, map, dark) {
   const sconce = (p0, P0, x, y, lit) => sconceAt(p0, P0, x, y, lit && !dark);
   // walls, pilasters, a cornice under the ceiling, a dado rail, wainscot
   p.rect(0, 0, W, H, wall);
-  for (let x = 0; x < 72 * T; x += 48) { p.rect(x + 21, 22, 6, G - 40, wallHi); p.rect(x + 23, 22, 1, G - 40, P.wallLine); p.rect(x + 20, 22, 8, 2, P.goldLo); p.rect(x + 20, G - 20, 8, 2, P.goldLo); }
-  p.rect(0, 16, W, 6, P.colHi); p.rect(0, 16, W, 1, P.gold); p.rect(0, 21, W, 1, P.goldLo); for (let x = 2; x < 72 * T; x += 6) p.rect(x, 18, 2, 2, P.gold);
-  p.rect(0, G - 22, W, 22, P.wallLo); p.rect(0, G - 22, W, 1, P.goldLo); for (let x = 8; x < 72 * T; x += 32) { p.rect(x, G - 18, 20, 14, P.wallLine); p.rect(x + 1, G - 17, 18, 1, wallHi); }
+  for (let x = 0; x < 88 * T; x += 48) { p.rect(x + 21, 22, 6, G - 40, wallHi); p.rect(x + 23, 22, 1, G - 40, P.wallLine); p.rect(x + 20, 22, 8, 2, P.goldLo); p.rect(x + 20, G - 20, 8, 2, P.goldLo); }
+  p.rect(0, 16, W, 6, P.colHi); p.rect(0, 16, W, 1, P.gold); p.rect(0, 21, W, 1, P.goldLo); for (let x = 2; x < 89 * T; x += 6) p.rect(x, 18, 2, 2, P.gold);
+  p.rect(0, G - 22, W, 22, P.wallLo); p.rect(0, G - 22, W, 1, P.goldLo); for (let x = 8; x < 89 * T - 20; x += 32) { p.rect(x, G - 18, 20, 14, P.wallLine); p.rect(x + 1, G - 17, 18, 1, wallHi); }
   // upper floor wainscot and rail
   p.rect(28 * T, M - 18, 45 * T, 18, P.wallLo); p.rect(28 * T, M - 18, 45 * T, 1, P.goldLo);
   // ---- A, the entrance hall: two storeys of portraits hung salon style, high up the walls
   const hang = [[3, 40, 26, 34, 1], [6, 36, 22, 28, 2], [9, 46, 30, 40, 3], [12, 40, 24, 30, 4], [16, 38, 28, 36, 5], [5, 112, 26, 34, 6], [10, 108, 34, 44, 7], [15, 112, 26, 34, 8], [18, 60, 20, 26, 9]];
-  hang.forEach(([tx, y, w, h, s]) => portrait(p, P, tx * T, y, w, h, s, false));
-  const PT = LEVEL.portrait; portrait(p, P, PT.x, PT.y, PT.w, PT.h, 11, false);
-  [[5, 238, 22, 28, 21], [10, 230, 26, 34, 22], [13, 244, 18, 22, 23], [17, 236, 24, 30, 24], [8, 176, 30, 40, 25], [14, 170, 22, 28, 26]].forEach(([tx, y, w, h, s0]) => portrait(p, P, tx * T + 4, y, w, h, s0, false));
+  let n = 0; const sitter = () => SITTERS[n++ % SITTERS.length];
+  hang.forEach(([tx, y, w, h]) => portrait(p, P, tx * T, y, w, h, sitter(), false, n & 1));
+  const PT = LEVEL.portrait; portrait(p, P, PT.x, PT.y, PT.w, PT.h, 'gold', false);
+  [[5, 238, 22, 28], [10, 230, 26, 34], [13, 244, 18, 22], [17, 236, 24, 30], [8, 176, 30, 40], [14, 170, 22, 28]].forEach(([tx, y, w, h]) => portrait(p, P, tx * T + 4, y, w, h, sitter(), false, n & 1));
   sconce(p, P, 4 * T + 8, 286, true); sconce(p, P, 12 * T + 8, 286, true); sconce(p, P, 18 * T + 8, 286, true);
   // the front door she came in by
   p.rect(T, G - 48, 18, 48, P.goldLo); p.rect(T, G - 44, 15, 44, P.wood); p.rect(T + 3, G - 40, 8, 14, P.woodHi); p.rect(T + 3, G - 20, 8, 14, P.woodHi); p.px(T + 12, G - 22, P.gold);
@@ -176,18 +253,22 @@ export function paintLevel(P, map, dark) {
   for (let i = 0; i < 3; i++) { const x = (20 + i) * T + 6; p.rect(x, G - (i + 1) * T - 18, 2, 18, P.goldLo); }
   p.rect(20 * T + 6, G - 3 * T - 18, 3 * T, 2, P.gold);
   p.rect(24 * T + 4, 16 * T - 8, 6, 8, P.glassLit); p.rect(24 * T + 7, 16 * T - 11, 1, 3, P.goldLo);
-  portrait(p, P, 22 * T, 70, 30, 40, 12, false); portrait(p, P, 27 * T, 110, 24, 30, 13, false);
+  portrait(p, P, 22 * T, 70, 30, 40, sitter(), false, n & 1); portrait(p, P, 27 * T, 110, 24, 30, sitter(), false, n & 1);
   sconce(p, P, 30 * T, 150, true); sconce(p, P, 20 * T, 260, true);
   // ---- C, the atrium: tall, the upper floor's railings at both edges, dust sheets heaped below
   const rail = (x0, x1) => { for (let x = x0; x < x1; x += 5) p.rect(x, M - 12, 2, 12, P.col); p.rect(x0, M - 13, x1 - x0, 2, P.colHi); };
   rail(33 * T, 37 * T - 2); rail(54 * T + 2, 60 * T); rail(64 * T, 73 * T);
-  portrait(p, P, 40 * T, 46, 40, 52, 14, false); portrait(p, P, 46 * T, 60, 30, 38, 15, false); portrait(p, P, 51 * T - 4, 44, 26, 34, 16, true);
+  portrait(p, P, 40 * T, 46, 40, 52, 'house', false); portrait(p, P, 46 * T, 60, 30, 38, 'lady', false); portrait(p, P, 51 * T - 4, 44, 26, 34, 'man', true, 1);
   for (let x = 37 * T + 4; x < 54 * T - 20; x += 26) { const h = 5 + (x * 7) % 5; p.rect(x - 1, G - h - 1, 26, h + 1, O); p.rect(x, G - h, 24, h, P.colLo); p.rect(x, G - h, 24, 1, P.col); p.rect(x + 6 + (x % 5), G - h + 1, 1, h - 1, P.rubble); p.rect(x + 15, G - h + 2, 1, h - 2, P.rubble); }
   // ---- D, the worn upper gallery: stains and cracks, a missing portrait, the hole in the roof
-  for (let i = 0; i < 40; i++) { const x = 54 * T + r() * 18 * T, y = 24 + r() * (M - 40); if (r() < 0.7) p.rect(x, y, 4 + r() * 16, 3 + r() * 12, r() < 0.5 ? P.wallLo : P.wallLine); }
+  // pale marks where paintings used to hang: an outline in the wall's light tone, a nail
+  [[54 * T + 10, 34, 24, 30], [64 * T + 2, 44, 32, 40], [66 * T + 12, 104, 20, 26], [71 * T - 2, 30, 22, 28], [55 * T + 4, 140, 18, 22]].forEach(([x, y, w, h]) => {
+    p.rect(x, y, w, 1, wallHi); p.rect(x, y + h - 1, w, 1, wallHi); p.rect(x, y, 1, h, wallHi); p.rect(x + w - 1, y, 1, h, wallHi);
+    p.px(x + (w >> 1), y - 3, P.colLo); p.px(x + (w >> 1), y - 2, O);
+  });
   for (let i = 0; i < 10; i++) crack(p, P.crack, 55 * T + i * 26 + r() * 10, 23 + r() * 20, 40 + r() * 70, 9 + i, i % 2 ? 1 : -1);
   p.rect(56 * T, 80, 28, 36, wallHi); p.rect(56 * T + 2, 82, 24, 32, wall); p.px(56 * T + 14, 78, P.goldLo);
-  portrait(p, P, 69 * T, 76, 26, 34, 17, true);
+  portrait(p, P, 69 * T, 76, 26, 34, 'dog', true);
   const hx0 = LEVEL.hole.x0, hx1 = LEVEL.hole.x1;
   p.rect(hx0, 0, hx1 - hx0, 16, P.skyMid); p.px(hx0 + 12, 4, P.star); p.px(hx0 + 50, 8, P.star); p.px(hx0 + 33, 3, P.star); p.px(hx0 + 70, 6, P.star);
   p.circle(hx0 + 46, 7, 6, O); p.circle(hx0 + 46, 7, 5, P.moon); p.rect(hx0 + 43, 4, 2, 2, P.moonShade); p.px(hx0 + 48, 9, P.moonShade); p.px(hx0 + 47, 6, P.win); // the Moon, and a lit window on it
@@ -196,11 +277,15 @@ export function paintLevel(P, map, dark) {
   sconce(p, P, 57 * T, 120, false); sconce(p, P, 70 * T, 120, false);
   // the pocket under the boards: joists and dust
   p.rect(60 * T, M + 2, 64, 30, O); for (let x = 60 * T + 4; x < 64 * T; x += 12) p.rect(x, M + 2, 3, 30, P.wood);
-  // ---- E, the laser hall: cold and bare, strip lights, ports in the end wall
-  p.rect(73 * T, 22, 16 * T, G - 22, '#2e3036'); p.rect(73 * T, G - 22, 16 * T, 22, '#1b1c21'); p.rect(73 * T, G - 22, 16 * T, 1, '#45474d');
-  for (let x = 76 * T; x < 89 * T; x += 48) { p.rect(x + 20, 30, 8, G - 52, '#1b1c21'); p.rect(x + 20, 30, 1, G - 52, '#45474d'); }
-  for (let y = 60; y < G - 30; y += 24) p.rect(73 * T, y, 16 * T, 1, '#1b1c21');
-  for (let x = 76 * T; x < 88 * T; x += 64) { p.rect(x, 16, 26, 3, P.device); p.rect(x + 2, 19, 22, 1, P.glassLit); checkerPoly(p, [[x + 2, 20], [x + 24, 20], [x + 30, 52], [x - 4, 52]], P.ash3 || '#45474d'); }
+  // ---- E, the laser hall: the same bronze hall to the end, a tall mirror and the last portraits
+  // hung high (the beams run low), two lit sconces, ports in the end wall
+  const mx = 1282, my = 196, mw = 28, mh = 88;
+  p.rect(mx - 3, my - 3, mw + 6, mh + 6, O); p.rect(mx - 2, my - 2, mw + 4, mh + 4, P.goldLo); p.rect(mx - 1, my - 1, mw + 2, 1, P.gold); p.rect(mx - 1, my - 1, 1, mh + 2, P.gold);
+  p.rect(mx, my, mw, mh, P.glass); p.rect(mx, my + mh - 20, mw, 20, P.wallLo); p.rect(mx, my + mh - 20, mw, 1, P.goldLo);
+  p.line(mx + 4, my + 26, mx + 16, my + 6, P.rubble); p.line(mx + 9, my + 30, mx + 22, my + 9, P.rubble); p.line(mx + 3, my + 16, mx + 10, my + 4, P.colLo);
+  glint(p, P, mx - 1, my - 1);
+  portrait(p, P, 1236, 212, 24, 30, 'house', false); portrait(p, P, 1331, 206, 26, 34, 'empty', false);
+  sconce(p, P, 1272, 200, true); sconce(p, P, 1368, 200, true);
   const D = LEVEL.door;
   p.rect(D.x - 4, D.y - 6, D.w + 8, D.h + 6, P.goldLo); p.rect(D.x, D.y, D.w, D.h, P.wood); p.rect(D.x + D.w / 2, D.y, 1, D.h, P.woodHi);
   p.rect(D.x + 3, D.y + 4, 6, 10, P.woodHi); p.rect(D.x + D.w - 9, D.y + 4, 6, 10, P.woodHi); p.px(D.x + D.w / 2 - 2, D.y + 18, P.gold); p.px(D.x + D.w / 2 + 2, D.y + 18, P.gold);
