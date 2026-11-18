@@ -10,10 +10,11 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.goto(BASE + '/local.html#fall'); await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'fall' && window.__game.scene.clock > 0.8, null, { timeout: 60000 });
   const shot = n => p.screenshot({ path: `tests/out/fall-${look}-${n}.png`, clip: { x: 40, y: 42, width: 1280, height: 720 } });
-  await p.evaluate(() => window.__game.scene.skipAhead());
-  await p.waitForFunction(() => window.__game.scene.phase === 'crack', null, { timeout: 8000 }); await shot('1-crack');
-  for (const [n, t] of [['2-drop', 0.35], ['3-tumble', 1.2], ['4-deep', 2.3]]) { await p.waitForFunction(t => window.__game.scene.phase === 'falling' && window.__game.scene.fallT > t, t, { timeout: 10000 }); await shot(n); }
-  await p.waitForFunction(() => window.__game.scene.phase === 'through', null, { timeout: 10000 }); await p.waitForTimeout(80); await shot('5-through');
+  await p.evaluate(() => { window.__noDeath = true; });
+  for (let i = 0; i < 6; i++) { await p.evaluate(() => window.__game.scene.skipAhead()); await p.waitForTimeout(700); await shot('1-ledge' + i); if (await p.evaluate(() => window.__game.scene.phase !== 'walk')) break; }
+  await p.waitForFunction(() => window.__game.scene.phase !== 'walk', null, { timeout: 8000 }); await shot('2-crack');
+  await p.waitForFunction(() => window.__game.scene.phase === 'through', null, { timeout: 10000 }); await p.waitForTimeout(80); await shot('3-through');
+  await p.waitForFunction(() => window.__game.scene.phase === 'falling' && window.__game.scene.fallT > 0.6, null, { timeout: 10000 }); await shot('4-tumble');
   await p.waitForFunction(() => window.__game.scene.phase === 'dark' && window.__game.scene.landed, null, { timeout: 10000 }); await p.waitForTimeout(400); await shot('6-dark');
   await p.waitForFunction(() => window.__game.scene.sys.settings.key === 'eastwing' && window.__game.scene.clock > 1.6, null, { timeout: 20000 }); await shot('7-landing');
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 6).join('\n') : 'no errors');
