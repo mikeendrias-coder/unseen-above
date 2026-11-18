@@ -21,6 +21,16 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.dead, null, 8000);
   await until(() => { const s = window.__game.scene; return s.sys.settings.key === 'fall' && s.ep.take === 2 && !s.dead && s.clock > 0.4; }, null, 20000);
   ok('a free drop down the shaft kills her (' + await p.evaluate(() => window.__game.scene.ep.bodies.map(b => b.cause).join()) + ')', await p.evaluate(() => window.__game.scene.ep.bodies.length === 1));
+  // the stub halfway down is a real rest: with the debris on, nothing lands on it
+  await p.evaluate(() => { const s = window.__game.scene, k = s.kid; s.lanes.forEach(L => { L.next = s.clock + L.phase + 0.2; L.rock = null; L.warned = false; }); k.x = 164; k.y = 33 * 16 - k.h; k.vx = 0; k.vy = 0; k.peakY = k.y; });
+  await p.waitForTimeout(6000);
+  const rest = await p.evaluate(() => ({ dead: window.__game.scene.dead, hp: window.__game.scene.kid.hp }));
+  ok('the stub is a safe rest with the debris falling (hp ' + rest.hp + ')', !rest.dead && rest.hp === 3);
+  // a free drop that brushes past the stub does not reset the fall: still too far
+  await quiet(); await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 177; k.y = 448; k.vx = 0; k.vy = 0; k.peakY = k.y; s.takeoffY = null; });
+  await until(() => window.__game.scene.dead || window.__game.scene.phase !== 'walk', null, 8000);
+  ok('a drop brushing the stub still kills her (no skip for 1 HP)', await p.evaluate(() => window.__game.scene.dead));
+  await until(() => { const s = window.__game.scene; return s.sys.settings.key === 'fall' && s.ep.take === 3 && !s.dead && s.clock > 0.4; }, null, 20000);
   // sliding down the wall (holding toward it) is safe, and the rotten floor gives way
   await quiet(); await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 199; k.y = 448; k.vx = 0; k.vy = 0; k.peakY = k.y; });
   await p.keyboard.down('KeyD');
@@ -51,6 +61,11 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.dead || window.__game.scene.ep.take > 1, null, 20000); await p.keyboard.up('ArrowRight');
   await until(() => window.__game.scene.ep.take === 2 && !window.__game.scene.dead && window.__game.scene.clock > 0.3);
   ok('a sensor sees her moving; a body stays (' + await p.evaluate(() => window.__game.scene.ep.bodies.length) + ')', await p.evaluate(() => window.__game.scene.ep.bodies.length === 1));
+  // walking into the robot: a shock and a heart, not a death (it cannot see its own feet)
+  const bump = await p.evaluate(() => { const s = window.__game.scene, R = s.robot; R.route = []; R.mode = 'off'; R.x = Math.round(R.x); R.y = Math.round(R.y); R.face = 0; const k = s.kid; k.tx = k.fx = R.x - 1; k.ty = k.fy = R.y; k.p = 1; k.moving = false; s.camX = k.tx * 16 + 8; s.camY = k.ty * 16 + 8; return s.blocked(R.x - 1, R.y) ? null : s.hp; });
+  await p.keyboard.down('ArrowRight'); await p.waitForTimeout(150); await p.keyboard.up('ArrowRight'); await p.waitForTimeout(300);
+  ok('walking into the robot costs a heart (hp ' + bump + ' to ' + await p.evaluate(() => window.__game.scene.hp) + ')', await p.evaluate(b => window.__game.scene.hp === b - 1 && !window.__game.scene.dead, bump));
+  await p.evaluate(() => { window.__game.scene.robot.mode = 'patrol'; });
   // the dumbwaiter: a pebble in at the hatch draws the robot to the far end of the study
   await p.evaluate(() => { window.__noDeath = true; window.__game.scene.pebbles = 2; });
   await put(24, 13); await until(() => window.__game.scene.nearThing === window.__game.scene.dumbThing, null, 4000);

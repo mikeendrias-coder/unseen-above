@@ -17,6 +17,7 @@ import { overlay } from '../core/overlay.js';
 import { goNext } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
 import { fx } from '../core/fx.js';
+import { cg as CG } from '../ui/cg.js';
 
 // one line each, by room
 const ROOMS = [
@@ -99,7 +100,11 @@ export class EastWing extends TopDownEpisode {
     this.glitchT = data.fromFall ? 0 : 3;
     this.beds = { hum: Sound.hum(0.012), wind: Sound.wind(0.03) };
     Music.play('eastwing', { fadeIn: 3 });
-    this.events.once('shutdown', () => Object.values(this.beds).forEach(b => b.stop(0.4)));
+    this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); CG.hp(null); });
+    // hearts: the robot's shell is the one thing in the wing that only hurts (design pass: the
+    // house hurts her, what watches her kills her)
+    this.hp = 3; this.inv = 0; this.sparks = null; this.showHp();
+    this.onWake = () => this.showHp();
     this.takeNote({ fromCut: data.fromCut && !data.fromFall }, 3, 'The East Wing');
     if (data.fromFall && state.hear('ew:crack')) this.time.delayedCall(900, () => overlay.sfx('[GLASS CRACKS]', 1700));
     this.time.delayedCall(data.fromFall ? 1900 : 600, () => this.itemPanel('cracked'));
@@ -248,12 +253,31 @@ export class EastWing extends TopDownEpisode {
     while (cur && !(cur[0] === from[0] && cur[1] === from[1])) { out.unshift(cur); cur = prev.get(key(...cur)); }
     return out;
   }
+  showHp() { CG.hp(state.immune ? null : this.hp, 3); }
+  // she walks into the robot, or it rolls into her: a shock off its shell, a heart, and she is
+  // thrown back a tile. It does not see her for it (its lens looks past her feet).
+  onBump(x, y) { const R = this.robot; if (Math.round(R.x) === x && Math.round(R.y) === y) this.bumpRobot(); }
+  bumpRobot() {
+    if (this.dead || this.leaving || this.inv > 0 || state.immune || window.__noDeath) return;
+    const R = this.robot, k = this.kid;
+    this.hp = Math.max(0, this.hp - 1); this.inv = 1; this.showHp();
+    Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800); fx.shake(this.cameras.main, 120, 0.006);
+    this.sparks = { x: Math.round((R.x * T + 8 + k.tx * T + 8) / 2), y: Math.round((R.y * T + 8 + k.ty * T + 8) / 2), t: 0 };
+    const dx = Math.sign(k.tx - Math.round(R.x)), dy = dx ? 0 : Math.sign(k.ty - Math.round(R.y));
+    if ((dx || dy) && !k.moving && !this.blocked(k.tx + dx, k.ty + dy)) { k.fx = k.tx; k.fy = k.ty; k.tx += dx; k.ty += dy; k.p = 0; k.moving = true; }
+    if (this.hp <= 0) this.die(this.robotSrc);
+    else if (state.hear('ew:bump')) overlay.sfx('[A SHOCK OFF THE ROBOT]', 1500);
+  }
   updateRobot(dt) {
     const R = this.robot, L = LEVEL.robot;
+    this.inv = Math.max(0, this.inv - dt);
     if (!R.route.length && R.mode === 'patrol') { const w = L.path[R.wp]; R.route = this.path([Math.round(R.x), Math.round(R.y)], w); R.wp = (R.wp + 1) % L.path.length; }
     if (R.route.length) {
       const [nx, ny] = R.route[0], k = this.kid;
       const kidOn = (k.tx === nx && k.ty === ny) || (k.moving && k.fx === nx && k.fy === ny);
+      // it waits for her a moment, then rolls on into her
+      R.blockT = kidOn ? (R.blockT || 0) + dt : 0;
+      if (R.blockT > 0.6) { R.blockT = 0; this.bumpRobot(); }
       if (!kidOn) {
         const dx = nx - R.x, dy = ny - R.y, d = Math.hypot(dx, dy), step = L.speed * dt;
         if (d > 0.01) R.face = Math.atan2(dy, dx) * 180 / Math.PI;
@@ -264,7 +288,10 @@ export class EastWing extends TopDownEpisode {
       R.wait += dt; R.face += 160 * dt;
       if (R.wait > (R.stay || 2.4)) { R.mode = 'patrol'; R.wp = 0; }
     }
-    this.robotSrc.tiles = this.coneTiles(R.x + 0.5, R.y + 0.5, R.face, L.half, L.range);
+    // its lens is up high: the tiles right around it are under its view (it bumps, not sees)
+    const near = this.coneTiles(R.x + 0.5, R.y + 0.5, R.face, L.half, L.range);
+    near.forEach(i => { const tx = i % W, ty = Math.floor(i / W); if (Math.hypot(tx - R.x, ty - R.y) < 1.2) near.delete(i); });
+    this.robotSrc.tiles = near;
     this.watchTiles(this.robotSrc, dt, 0.42);
   }
 
@@ -327,7 +354,7 @@ export class EastWing extends TopDownEpisode {
     this.lights = LEVEL.moon.map(m => ({ x: m.x, y: m.y, r: m.r, a: 0.9 }));
     if (ch.phase !== 'down') this.lights.push({ x: C.x * T, y: C.y * T, r: 88 - ch.cut * 6, a: 0.8 });
     this.lights.push({ x: this.robot.x * T + 8, y: this.robot.y * T + 8, r: 20, a: 0.8 });
-    this.drawDark(0.9);
+    this.drawDark();
     // what the cracked glasses still show. Only the glasses show what watches her; off, or in a
     // dropout, none of this is drawn: she has the LEDs, the sounds, and the lock box.
     const g = this.overG; g.clear();
@@ -385,6 +412,8 @@ export class EastWing extends TopDownEpisode {
     const R = this.robot, ra = R.face * Math.PI / 180; lg.fillStyle(R.mode === 'investigate' ? red : hexNum(P.robotLed), 1); lg.fillRect(Math.round(R.x * T + 8 + Math.cos(ra) * 4), Math.round(R.y * T + 8 + Math.sin(ra) * 4), 2, 2);
     // the satellite, the strike, a burst where she was
     const fxg = this.fxG; fxg.clear();
+    if (this.sparks && (this.sparks.t += dt) < 0.3) { const sp = this.sparks, n = Math.floor(sp.t * 20); [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]].forEach(([a, b], i) => { fxg.fillStyle(i % 2 ? bone : hexNum(P.goldHi), 1); fxg.fillRect(sp.x + a * (2 + n * 2), sp.y + b * (2 + n * 2), 1, 1); }); }
+    if (!this.dead && this.inv > 0) this.girl.setVisible(Math.floor(this.inv * 12) % 2 === 0); else if (!this.dead && !this.girl.visible && this.inv === 0 && !this.done) this.girl.setVisible(true);
     this.drawSatellite(fxg, null);
     this.strikeFx.update(dt);
     if (this.fxBurst && this.fxBurst.t < 0.5) { const b = this.fxBurst; b.t += dt; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; fxg.fillStyle(i % 2 ? bone : red, 1); fxg.fillRect(Math.round(b.x + Math.cos(a) * b.t * 50), Math.round(b.y + Math.sin(a) * b.t * 40), 2, 2); } }

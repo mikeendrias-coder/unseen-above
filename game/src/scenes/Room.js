@@ -160,7 +160,7 @@ const ROOMS = {
       { x0: 250, x1: 276, y: 68, text: ['Spare glasses. Boxes of them.'] }
     ],
     // his bedroll (Option C): J unrolls it; inside, his route through the house, in his hand
-    use: { x0: 280, x1: 312, y: 146, key: 'bedroll', text: ['Inside the bedroll, a map in his hand.', 'His way through the house. It ends at the bedroom.'] }
+    use: { x0: 280, x1: 312, y: 146, key: 'bedroll', text: ['His map of the house. It ends in the bedroom.'] }
   }
 };
 
@@ -187,7 +187,7 @@ export class Room extends SideEpisode {
     // one thing to do in each room, not only to look at
     this.act = { on: false, t: 0, n: 0 }; this.roomId = data.id || 'staff'; this.useSrc = null; // the scene object is reused from room to room
     if (R.use) this.things.push({ x0: R.use.x0, x1: R.use.x1, y0: Math.min(R.use.y + 4, 130), y1: G, py: R.use.y, label: 'J', use: () => this.doUse(R.use) });
-    this.darkG = this.add.graphics().setDepth(8.5);
+    this.darkG = this.add.graphics().setDepth(1.5); // over the room, under her
     this.things.push({ x0: 18, x1: 34, y0: G - 30, y1: G, label: 'J', door: true, use: () => this.leave() });
     this.hum = Sound.hum(0.02); Music.level(0.45, 0.5);
     this.events.once('shutdown', () => { this.hum.stop(0.2); overlay.hint(''); });
@@ -207,16 +207,29 @@ export class Room extends SideEpisode {
     if (u.key === 'tv') Sound.noise(0.25, 0.04, 5000);
     // say it the first time only; after that, the thing itself shows it
     if (!this.useSrc) this.useSrc = { lines: () => u.text };
-    if (A.n === 1 || u.key === 'bedroll' && A.on) this.bubbles.look('item', this.useSrc, () => ({ x: (u.x0 + u.x1) / 2, y: u.y }), { leave: 70 });
+    if (A.n === 1 || u.key === 'bedroll' && A.on) { this.useSrc.i = 0; this.bubbles.look('item', this.useSrc, () => ({ x: (u.x0 + u.x1) / 2, y: u.y }), { leave: 70 }); }
   }
   // what the one thing does, drawn live
   drawUse(g, dt) {
     const A = this.act, P = this.P, id = this.roomId, dg = this.darkG; dg.clear(); A.t += dt;
     if (id === 'staff' && A.on) {
-      // the bedroll lies open: a pale inside, his map in pencil, a route that ends in a box
-      g.fillStyle(hexNum(P.wallLo), 1); g.fillRect(270, G - 12, 42, 12);
-      g.fillStyle(hexNum(P.crack), 1); g.fillRect(259, G - 4, 50, 4); g.fillStyle(hexNum(P.sibLo), 1); g.fillRect(260, G - 3, 48, 3); g.fillStyle(hexNum(P.colHi), 1); g.fillRect(262, G - 3, 44, 2);
-      g.fillStyle(hexNum(P.device), 1); [[264, 0], [270, 1], [276, 0], [282, 1], [288, 0], [294, 1]].forEach(([x, d]) => g.fillRect(x, G - 3 + d, 4, 1)); g.fillRect(300, G - 3, 3, 2);
+      // the bedroll lies open on the floor, and his map is propped against the wall over it:
+      // rooms in pencil, his route dotted through them, ending in the gold box of the bedroom
+      g.fillStyle(hexNum(P.crack), 1); g.fillRect(259, G - 4, 52, 4); g.fillStyle(hexNum(P.sibLo), 1); g.fillRect(260, G - 3, 50, 3); g.fillStyle(hexNum(P.colLo), 1); g.fillRect(262, G - 3, 46, 1);
+      const mx = 262, my = 119, mw = 46, mh = 32, ink = hexNum(P.device), fill = (x, y, w, h, c) => { g.fillStyle(c, 1); g.fillRect(x, y, w, h); };
+      fill(mx - 1, my - 1, mw + 2, mh + 2, hexNum(P.crack)); fill(mx, my, mw, mh, hexNum(P.colHi)); fill(mx, my + mh - 2, mw, 2, hexNum(P.col));
+      // the rooms of the house, outlined
+      [[3, 20, 12, 9], [16, 20, 10, 9], [27, 16, 9, 13], [3, 10, 18, 9], [22, 6, 10, 9], [33, 3, 10, 10]].forEach(([x, y, w, h]) => {
+        fill(mx + x, my + y, w, 1, ink); fill(mx + x, my + y + h - 1, w, 1, ink); fill(mx + x, my + y, 1, h, ink); fill(mx + x + w - 1, my + y, 1, h, ink);
+      });
+      // the bedroom at the end: a gold box
+      fill(mx + 34, my + 4, 8, 8, hexNum(P.gold)); fill(mx + 36, my + 6, 4, 2, hexNum(P.goldHi));
+      // his route, dotted, from the front door in the corner to the bedroom
+      const route = [[2, 30], [8, 30], [8, 25], [20, 25], [20, 14], [27, 14], [27, 10], [35, 10], [35, 8]];
+      g.fillStyle(hexNum(P.sibLo), 1);
+      for (let i = 1; i < route.length; i++) { const [ax, ay] = route[i - 1], [bx, by] = route[i], n = Math.max(Math.abs(bx - ax), Math.abs(by - ay)); for (let j = 0; j <= n; j++) if (j % 3 !== 2) g.fillRect(mx + Math.round(ax + (bx - ax) * j / n), my + Math.round(ay + (by - ay) * j / n), 1, 1); }
+      // the corner pinned to the wall
+      fill(mx + mw / 2 - 1, my - 2, 2, 2, hexNum(P.gold));
     }
     if (id === 'keeper' && A.t < 1.2) {
       // static, then the same channel
@@ -232,8 +245,11 @@ export class Room extends SideEpisode {
       const bulb = (this.marks || []).find(m => m.kind === 'bulb');
       if (!A.on && bulb) { g.fillStyle(hexNum(P.lamp), 1); g.fillRect(bulb.x - 2, bulb.y - 2, 5, 5); g.fillStyle(hexNum(P.goldHi), 1); g.fillRect(bulb.x - 1, bulb.y - 1, 2, 2); this.coneRows(g, bulb.x, bulb.y + 3); }
       if (A.on) {
-        // the bulb is off: the room goes dark; only the red light behind the mirror is left
-        dg.fillStyle(0x000000, 0.86); dg.fillRect(0, 0, 320, 180);
+        // the bulb is off: the room goes black (she stays visible over it); the line of light
+        // under the door back, and the red light behind the mirror, are all that is left
+        dg.fillStyle(0x000000, 1); dg.fillRect(0, 0, 320, 180);
+        dg.fillStyle(hexNum(P.wallLine), 1); for (let x = 19; x < 33; x += 2) dg.fillRect(x, G - 1, 1, 1);
+        dg.fillStyle(hexNum(P.wallHi), 1); dg.fillRect(19, G - 2, 14, 1);
         const rec = (this.marks || []).find(m => m.kind === 'rec'); if (rec) { dg.fillStyle(hexNum(P.led), 1); dg.fillRect(rec.x, rec.y, 1, 1); dg.fillRect(rec.x - 1, rec.y, 3, 1); }
       }
       // the cord

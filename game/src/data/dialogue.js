@@ -151,24 +151,24 @@ export const NOTICE = {
     camera: ['The broken camera keeps turning up to the hole in the roof.', 'Up there, the Moon.']
   },
   eastwing: {
-    body: ['An old body in a jacket like hers.', 'Nobody ever took it away.'],
+    body: ['An old body in her jacket. Nobody took it away.'],
     books: ['The books are painted on a board.'],
-    desk: ['A desk. On it, a map of this wing.', 'Her way through is drawn on it in red.'],
-    calendar: ['A wall calendar.', 'Every day on it is the 7th.'],
-    radio: ['A transistor radio, tuned to nothing.', 'Near the sensors it plays the satellite notes.'],
+    desk: ['A map of this wing. Her way is drawn in red.'],
+    calendar: ['A wall calendar. Every day on it is the 7th.'],
+    radio: ['A radio. By the sensors it plays the satellite notes.'],
     hatch: ['The dumbwaiter comes out here.'],
-    dumbwaiter: ['A dumbwaiter. It runs inside the walls.', 'A pebble would rattle all the way to the study.']
+    dumbwaiter: ['A dumbwaiter. A pebble in it rattles to the study.']
   },
   bedroom: {
-    piano: ['A grand piano with the lid down.', 'Nobody here has ever played it.'],
-    table: ['A table laid for twelve.', 'The food is wax.'],
-    clock: ['A grandfather clock. It strikes every six seconds.', 'While it strikes, nobody can hear her.'],
+    piano: ['A grand piano. Nobody here has ever played it.'],
+    table: ['A table laid for twelve. The food is wax.'],
+    clock: ['While the clock strikes, nobody can hear her.'],
     silver: ['Silver on a long table, polished today.'],
     billiards: ['A billiard table. The balls are glued down.'],
-    photos: ['Three family photos. A different family in each.', 'At the back of every one, the same boy. Him.', 'A little older in each.'],
-    window: ['A tall window. The Moon, low and white.', 'One window on it is lit.'],
-    request: ['A form. REQUEST: VOLUNTARY.', 'Please locate the subject. Thank you.', 'The line to sign it is blank.'],
-    bagNote: ['A note in the bag, in his hand:', '"Don\'t let her follow."'],
+    photos: ['Three families. At the back, him, older each time.'],
+    window: ['The Moon, low and white. One window on it is lit.'],
+    request: ['REQUEST: VOLUNTARY. Locate the subject. Unsigned.'],
+    bagNote: ['A note in his hand: "Don\'t let her follow."'],
     hold: ['She holds on to him.']
   },
   moon: {

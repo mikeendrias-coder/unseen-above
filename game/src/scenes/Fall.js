@@ -50,7 +50,7 @@ const ROWS = [ // (43 rows; below them the void)
   '##########...#######',
   '##########...#######',
   '##########...#######',
-  '###########..#######', // a stub to rest on
+  '###########..#######', // a stub to rest on (nothing falls on it)
   '##########...#######',
   '##########...#######',
   '##########...#######',
@@ -69,11 +69,12 @@ const LANES = [
   { col: 9, from: 1, period: 2.1, phase: 0.2 },
   { col: 15, from: 1, period: 2.4, phase: 1.3 },
   { col: 8, from: 13, period: 2.2, phase: 0.6 },
-  { col: 10, from: 28, period: 1.9, phase: 0.0 },
-  { col: 12, from: 28, period: 1.9, phase: 0.95 },
-  { col: 10, from: 34, period: 1.9, phase: 0.5 }
+  // the shaft: the right wall all the way down, the left wall only under the stub (so the stub
+  // is a real rest), on alternate beats so one wall is always the safe one
+  { col: 12, from: 28, period: 2.0, phase: 0.95 },
+  { col: 10, from: 34, period: 2.0, phase: 0.0 }
 ];
-const WARN = 0.75; // dust trickles this long before a chunk comes down
+const WARN = 0.9; // dust trickles down the whole lane this long before a chunk comes down
 // N in story mode: the next ledge down
 const SKIP = [{ x: 120, y: 192 }, { x: 240, y: 256 }, { x: 140, y: 320 }, { x: 250, y: 432 }, { x: 162, y: 528 }, { x: 180, y: 672 }];
 
@@ -199,10 +200,14 @@ export class Fall extends SideEpisode {
     const k = this.kid;
     if (this.phase === 'walk') {
       if (!this.dead && !this.leaving) {
+        const lockWas = k.wallLock;
         this.moveKid(dt); this.updateThings();
-        // here a fall is measured from where she left the floor (or a wall), not from the top of
-        // her jump: jumping down to the next floor never hurts more than stepping off it
-        if (k.onGround || k.wall) this.takeoffY = k.y;
+        // here a fall is measured from where she left the floor (or a wall she slid on or jumped
+        // off), not from the top of her jump: jumping down to the next floor never hurts more than
+        // stepping off it. Brushing past a wall in a free fall does not count.
+        const dir = (c.right() ? 1 : 0) - (c.left() ? 1 : 0);
+        const slid = k.wall && dir === k.wall && k.wallLock <= 0, wallJumped = k.wallLock > lockWas;
+        if (k.onGround || slid || wallJumped) this.takeoffY = k.y;
         else if (this.takeoffY != null && k.peakY < this.takeoffY) k.peakY = this.takeoffY;
         this.updateCrumble(dt);
         // the rotten floor: she lands on it and it goes
@@ -312,7 +317,14 @@ export class Fall extends SideEpisode {
     const bg = this.pieceG; bg.clear();
     // falling chunks: a rubble block with a dark rim, and the dust that warns of each one
     this.lanes.forEach(L => {
-      if (L.warned && this.phase === 'walk') { bg.fillStyle(hexNum(P.dust), 1); const u = (this.clock - (L.next - WARN)) / WARN; for (let i = 0; i < 3; i++) bg.fillRect(L.x + 2 + i * 2, Math.round(L.y0 + ((u * 60 + i * 13) % 40)), 1, 1); bg.fillStyle(ash0, 1); bg.fillRect(L.x, L.y0, 8, 1); }
+      if (L.warned && this.phase === 'walk') {
+        // the warning runs the whole length of the lane, so it shows wherever she is in it:
+        // a thin trickle of dust falling, and a dark crack where the chunk will break loose
+        const v = cam.worldView, top = Math.max(L.y0, Math.floor(v.y)), bot = Math.min(L.y1, Math.ceil(v.bottom)), off = Math.floor(this.clock * 90) % 12;
+        bg.fillStyle(hexNum(P.dust), 1);
+        for (let y = L.y0 + off; y < bot; y += 12) if (y >= top) { bg.fillRect(L.x + 3, y, 1, 2); if (y + 6 < bot) bg.fillRect(L.x + 5, y + 6, 1, 1); }
+        bg.fillStyle(ash0, 1); bg.fillRect(L.x, L.y0, 8, 1);
+      }
       if (L.rock) { const y = Math.round(L.rock.y); bg.fillStyle(ash0, 1); bg.fillRect(L.x - 1, y - 1, 10, 8); bg.fillStyle(hexNum(P.rubble), 1); bg.fillRect(L.x, y, 8, 6); bg.fillStyle(hexNum(P.rubbleHi), 1); bg.fillRect(L.x, y, 8, 1); bg.fillRect(L.x, y, 1, 3); }
     });
     // the crumbling floor: it shakes, then its boards drop away

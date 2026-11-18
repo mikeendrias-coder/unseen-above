@@ -100,7 +100,7 @@ export class Bedroom extends SideEpisode {
     const N = NOTICE.bedroom, look = (x0, x1, py, lines, y0, clue) => this.addLook({ x0, x1, y0: y0 != null ? y0 : 112, py, lines, clue });
     look(94, 148, 126, N.piano); look(238, 280, 130, N.table); look(556, 580, 50, N.clock, 100); look(626, 694, 130, N.silver); look(754, 822, 132, N.billiards);
     const PH = LEVEL.photos, HW = LEVEL.hallWindow, RQ = LEVEL.request;
-    look(PH.x - 2, PH.x + 52, PH.y - 2, N.photos, 100);
+    look(PH.x - 2, PH.x + PH.span + 2, PH.y - 4, N.photos, 96);
     look(HW.x - 4, HW.x + HW.w + 4, HW.y + HW.h + 2, N.window, 100);
     look(RQ.x - 8, RQ.x + 20, RQ.y - 2, N.request, 96, 'request4');
     this.drawBodies();
@@ -271,10 +271,17 @@ export class Bedroom extends SideEpisode {
     const B = this.bag;
     if (B.have) {
       if (this.collapse || B.letGo) return;
-      if (this.ctl.useHeld() && !B.read) {
+      if (B.read) {
+        // the floor waits for his line: it goes once the note has been read out (or put away),
+        // so the collapse's caption never cuts it off
+        B.wait += dt;
+        if (B.wait > 0.4 && (!this.bubbles.busy('item') || B.wait > 7)) this.bringDown();
+        return;
+      }
+      if (this.ctl.useHeld()) {
         B.note += dt / 1.1;
-        if (B.note >= 1) { B.read = true; this.readNote(); this.time.delayedCall(1500, () => this.bringDown()); }
-      } else if (!B.read) { B.letGo = true; this.time.delayedCall(250, () => this.bringDown()); }
+        if (B.note >= 1) { B.read = true; B.wait = 0; this.readNote(); }
+      } else { B.letGo = true; this.time.delayedCall(250, () => this.bringDown()); }
       return;
     }
     if (this.nearThing === this.bagThing && this.ctl.useHeld()) {
@@ -481,63 +488,68 @@ export class Bedroom extends SideEpisode {
       if (this.bag.have) { const bx = k.face > 0 ? cx - 5 : cx + 2; eg.fillStyle(hexNum(P.crack), 1); eg.fillRect(bx - 1, top + 4, 5, 7); eg.fillStyle(hexNum(P.sibLo), 1); eg.fillRect(bx, top + 5, 3, 5); eg.fillStyle(hexNum(P.sib), 1); eg.fillRect(bx, top + 5, 3, 1); }
       if (Math.floor(t * 3) % 4 === 0) { eg.fillStyle(hexNum(P.overlay), 1); eg.fillRect(cx + (k.face < 0 ? -3 : 1), top + (k.crouch ? 1 : 2), 2, 1); }
     }
-    // the light: hard holes in the dark (a solid middle, a checker rim), and red where a flash lands
+    // the light: hard holes in solid dark (a lit middle, a checker rim; a weak light is only the
+    // checker), flat shapes for windows and broken ceilings, and red where a flash lands
     const lights = this.lights = [], reds = [];
-    const k = this.kid;
-    if (!this.dead && this.girl.visible) lights.push({ x: k.x + k.w / 2, y: k.y + 6, r: 30, a: 0.85 });
+    const k = this.kid, quad = (x0, x1, y0, x2, x3, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x3, y: y1 }, { x: x2, y: y1 }];
+    if (!this.dead && this.girl.visible) lights.push({ x: k.x + k.w / 2, y: k.y + 6, r: 30 });
     if (this.mode === 'house') {
       this.cams.forEach(cm => {
-        lights.push({ x: cm.x, y: cm.y, r: 6, a: cm.warn ? 0.8 : 0.4 });
+        lights.push({ x: cm.x, y: cm.y, r: 6, a: cm.warn ? 1 : 0.5 });
         if (cm.flash > 0 && cm.cone) {
           const fl = cm.flash * fx.level * (cm.lit == null ? 1 : cm.lit); // reduced flashing: a dimmer flash
-          if (fl > 0.25) { lights.push({ poly: cm.cone, a: 1 }); reds.push({ poly: cm.cone, dense: fl > 0.6 }); }
+          if (fl > 0.25) { lights.push({ poly: cm.cone }); reds.push({ poly: cm.cone, dense: fl > 0.6 }); }
         }
       });
       const C = LEVEL.clock, striking = this.clock % C.period < C.mask;
-      lights.push({ x: C.x, y: 76, r: striking ? 26 : 14, a: 0.8 });
-      if (this.box.t > 0) lights.push({ x: LEVEL.musicBox.x + 4, y: LEVEL.musicBox.y - 6, r: 12, a: 0.7 });
+      lights.push({ x: C.x, y: 76, r: striking ? 26 : 14 });
+      if (this.box.t > 0) lights.push({ x: LEVEL.musicBox.x + 4, y: LEVEL.musicBox.y - 6, r: 12 });
+      // the picture lamp over the family photos: a flat wedge down the wall
+      const PH = LEVEL.photos; lights.push({ poly: quad(PH.x - 2, PH.x + PH.span + 2, PH.y - 7, PH.x - 8, PH.x + PH.span + 8, PH.y + 30) });
+      // the hall window: the window itself, lit, and a checker of moonlight on the floor
       const HW = LEVEL.hallWindow;
-      lights.push({ poly: [{ x: HW.x, y: HW.y + HW.h }, { x: HW.x + HW.w, y: HW.y + HW.h }, { x: HW.x + HW.w + 26, y: GROUND }, { x: HW.x + 10, y: GROUND }], a: 0.6, dither: true });
-      lights.push({ x: HW.x + HW.w / 2, y: HW.y + HW.h / 2, r: 22, a: 0.8 });
+      lights.push({ poly: quad(HW.x - 3, HW.x + HW.w + 3, HW.y - 3, HW.x - 3, HW.x + HW.w + 3, HW.y + HW.h + 3) });
+      lights.push({ poly: quad(HW.x, HW.x + HW.w, HW.y + HW.h, HW.x + 10, HW.x + HW.w + 26, GROUND), dither: true });
       if (this.collapse) {
+        // the ceiling goes with the floor: night sky over the gone part, a checker of it below
         const x0 = LEVEL.collapse.from, x1 = this.collapse.x;
-        for (let x = x0 + 20; x < x1; x += 44) lights.push({ x, y: 96, r: 64, a: 0.85 });
-        if (x1 - x0 > 8) lights.push({ poly: [{ x: x0, y: 0 }, { x: x1, y: 0 }, { x: x1 + 30, y: GROUND }, { x: x0 + 10, y: GROUND }], a: 1, dither: true });
+        if (x1 - x0 > 8) lights.push({ poly: quad(x0, x1, 0, x0 + 10, x1 + 30, GROUND), dither: true });
       }
-      // where the ceiling came down with the floor or the slab, moonlight
+      // where the ceiling came down with the floor or the slab: a flat shaft of moonlight
       const holes = this.run.gaps.filter(q => q.state === 'open').map(q => ({ x: q.t0 * TILE, w: (q.t1 - q.t0 + 1) * TILE }));
       if (this.run.slab.state === 'down' || this.run.slab.state === 'fall') holes.push({ x: LEVEL.run.slab.x, w: LEVEL.run.slab.w });
-      holes.forEach(h => { lights.push({ x: h.x + h.w / 2, y: 110, r: 52, a: 0.85 }); lights.push({ poly: [{ x: h.x, y: 0 }, { x: h.x + h.w, y: 0 }, { x: h.x + h.w + 10, y: GROUND }, { x: h.x - 4, y: GROUND }], a: 1, dither: true }); });
-      if (this.collapse) lights.push({ x: 81.5 * TILE, y: 100, r: 48, a: 0.8 }); // light through the broken ceiling over the climb
+      holes.forEach(h => lights.push({ poly: quad(h.x, h.x + h.w, 0, h.x - 4, h.x + h.w + 10, GROUND) }));
+      // light through the broken ceiling over the climb, so the walls she jumps between show
+      if (this.collapse) { const x0 = (LEVEL.run.hang.tx + 1) * TILE, x1 = LEVEL.run.heap.tx * TILE; lights.push({ poly: quad(x0 - 6, x1 + 6, 0, x0 - 12, x1 + 12, GROUND) }); }
       // the line of cold light under the bedroom doors
-      const D = LEVEL.door; lights.push({ x: D.x + D.w / 2, y: GROUND - 2, r: 14, a: Math.floor(t * 1.5) % 3 ? 0.5 : 0.7 });
+      const D = LEVEL.door; lights.push({ x: D.x + D.w / 2, y: GROUND - 2, r: 14, a: Math.floor(t * 1.5) % 3 ? 0.5 : 1 });
     } else {
       const Wn = LEVEL.window, V = LEVEL.voidDoor;
-      lights.push({ x: Wn.x + Wn.w / 2, y: Wn.y + Wn.h / 2, r: 48, a: 0.7 });
-      lights.push({ poly: [{ x: Wn.x, y: Wn.y + Wn.h }, { x: Wn.x + Wn.w, y: Wn.y + Wn.h }, { x: Wn.x + 20, y: GROUND + 2 }, { x: Wn.x - 70, y: GROUND + 2 }], a: 0.8, dither: true });
+      lights.push({ poly: quad(Wn.x - 4, Wn.x + Wn.w + 4, Wn.y - 4, Wn.x - 4, Wn.x + Wn.w + 4, Wn.y + Wn.h + 4) });
+      lights.push({ poly: quad(Wn.x, Wn.x + Wn.w, Wn.y + Wn.h, Wn.x - 70, Wn.x + 20, GROUND + 2), dither: true });
       const open = this.mode === 'void' ? Math.min(1, this.voidT / 0.8) : 0;
-      lights.push({ x: V.x + V.w / 2, y: V.y + V.h / 2, r: 24 + Math.round(open * 40), a: 0.5 + open * 0.5 });
-      lights.push({ x: LEVEL.rec.x, y: LEVEL.rec.y, r: 7, a: 0.6 });
+      lights.push({ x: V.x + V.w / 2, y: V.y + V.h / 2, r: 24 + Math.round(open * 40), a: open > 0.3 ? 1 : 0.5 });
+      lights.push({ x: LEVEL.rec.x, y: LEVEL.rec.y, r: 7, a: 0.5 });
     }
-    this.drawDark(vx, this.mode === 'house' ? 0.92 : 0.86, reds);
+    this.drawDark(vx, reds);
     this.drawOver(dt);
     this.drawLocks(this.cams, LEVEL.caught);
     this.drawThings();
     this.drawHud(dt);
   }
 
-  drawDark(vx, alpha, reds) {
+  drawDark(vx, reds) {
     const ctx = this.darkCanvas.getContext('2d');
-    darkFill(ctx, alpha);
+    darkFill(ctx);
     const toC = p => ({ x: p.x - vx + 1, y: p.y + 1 });
     hardHoles(ctx, this.lights.filter(l => !l.poly).map(l => Object.assign(toC(l), { r: l.r, a: l.a })), vx);
-    // shapes of light (a flash's cone, moonlight through a hole): row by row, solid or checker
+    // shapes of light (a flash's cone, a window, moonlight through a hole): row by row, lit or checker
     ctx.globalCompositeOperation = 'destination-out';
     this.lights.filter(l => l.poly).forEach(l => {
-      ctx.globalAlpha = Math.min(1, l.a); ctx.fillStyle = l.dither ? checker(ctx, vx) : '#000';
+      ctx.fillStyle = l.dither ? checker(ctx, vx) : '#000';
       spans(l.poly.map(toC), (x, y, w) => ctx.fillRect(x, y, w, 1));
     });
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.globalCompositeOperation = 'source-over';
     // the flash itself: everything in the cone, her too, picked out in red pixels
     (reds || []).forEach(r => { ctx.fillStyle = redPattern(ctx, r.dense, vx); spans(r.poly.map(toC), (x, y, w) => ctx.fillRect(x, y, w, 1)); });
     this.darkTex.refresh();

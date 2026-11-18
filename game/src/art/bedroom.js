@@ -32,8 +32,8 @@ export const LEVEL = {
   noisy: [{ x0: 300, x1: 470, kind: 'boards' }, { x0: 37 * T, x1: 53 * T, kind: 'glass' }],
   // a music box on the end of the dining table: J winds it, and for 3 s nobody hears her
   musicBox: { x: 286, y: 132, mask: 3.0 },
-  // three small family photos hung low in the hall; a tall window with the Moon in it
-  photos: { x: 302, y: 110 },
+  // three family photos hung low in the hall under a picture lamp; a tall window with the Moon in it
+  photos: { x: 298, y: 104, w: 20, h: 26, gap: 4, span: 68 },
   hallWindow: { x: 396, y: 40, w: 28, h: 52 },
   // a form pinned on the wall before the fallen stairs
   request: { x: 856, y: 108 },
@@ -284,23 +284,41 @@ export function paintLevel(P) {
   // ---- the music box on the end of the dining table, lid shut
   const MB = LEVEL.musicBox;
   p.rect(MB.x - 1, MB.y - 7, 10, 7, P.crack); p.rect(MB.x, MB.y - 6, 8, 6, P.goldLo); p.rect(MB.x, MB.y - 6, 8, 1, P.gold); p.px(MB.x + 8, MB.y - 3, P.goldHi);
-  // ---- three family photos, hung low: a rich family, and at the back the same boy, older each time
+  // ---- three family photos, hung low under a brass picture lamp: a different rich family in
+  // each, and at the back of every one the same boy in grey, a head taller each time
   const PH = LEVEL.photos;
-  [0, 1, 2].forEach(i => {
-    const x = PH.x + i * 18, y = PH.y;
-    p.rect(x - 1, y - 1, 16, 16, P.crack); p.rect(x, y, 14, 14, P.goldLo); p.rect(x + 1, y + 1, 12, 12, P.wallHi);
-    // the family in front: three in gold and bone
-    [[2, P.gold], [5, P.colHi], [8, P.gold]].forEach(([dx, c]) => { p.rect(x + dx, y + 8, 3, 4, c); p.rect(x + dx + 1, y + 6, 1, 2, P.kid); });
-    // him at the back, grey, taller in each one
-    const hgt = 3 + i * 2; p.rect(x + 11, y + 12 - hgt, 1, hgt, P.sib); p.px(x + 11, y + 11 - hgt, P.kidLo);
+  p.rect(PH.x + 4, PH.y - 8, PH.span - 8, 2, P.goldLo); p.rect(PH.x + 4, PH.y - 8, PH.span - 8, 1, P.gold); // the lamp's bar
+  p.rect(PH.x + PH.span / 2 - 1, PH.y - 11, 2, 3, P.goldLo); for (let x = PH.x + 6; x < PH.x + PH.span - 6; x += 4) p.px(x, PH.y - 6, P.lamp);
+  const families = [
+    [[2, 9, P.gold, 1], [7, 11, P.colHi, 0], [12, 6, P.gold, 0]],          // two parents and a girl
+    [[2, 10, P.colHi, 1], [6, 6, P.goldHi, 0], [11, 10, P.gold, 1]],       // a child between them
+    [[1, 11, P.gold, 0], [6, 10, P.goldHi, 1], [11, 7, P.colHi, 0], [15, 5, P.gold, 0]] // four
+  ];
+  families.forEach((fam, i) => {
+    const x = PH.x + i * (PH.w + PH.gap), y = PH.y, w = PH.w, h = PH.h;
+    p.rect(x - 2, y - 2, w + 4, h + 4, P.crack); p.rect(x - 1, y - 1, w + 2, h + 2, P.goldLo); p.rect(x - 1, y - 1, w + 2, 1, P.gold);
+    p.rect(x, y, w, h, P.wallHi); p.rect(x, y + h - 7, w, 7, P.wall); p.rect(x, y + h - 7, w, 1, P.wallLo); // a sepia room, a floor
+    // him, at the back on the right, grey, older (taller) in each
+    const bh = 7 + i * 3, bx = x + w - 5, by = y + h - 9;
+    p.rect(bx - 1, by - bh - 1, 5, bh + 2, P.crack); p.rect(bx, by - bh + 3, 3, bh - 3, P.sib); p.rect(bx, by - bh, 3, 3, P.kidLo); p.px(bx + 1, by - bh, P.hair);
+    // the family in front of him: heads in bone, clothes in gold
+    fam.forEach(([dx, fh, c, hat]) => {
+      const fx = x + dx, fy = y + h - 3;
+      p.rect(fx - 1, fy - fh - 1, 5, fh + 1, P.crack); p.rect(fx, fy - fh + 3, 3, fh - 3, c); p.rect(fx, fy - fh, 3, 3, P.kid);
+      if (hat) p.rect(fx - 1, fy - fh - 1, 5, 1, P.crack);
+    });
   });
   // ---- a tall window with the Moon in it, and its one lit window
   const HW = LEVEL.hallWindow;
   p.rect(HW.x - 3, HW.y - 3, HW.w + 6, HW.h + 6, P.crack); p.rect(HW.x - 2, HW.y - 2, HW.w + 4, HW.h + 4, P.goldLo); p.rect(HW.x, HW.y, HW.w, HW.h, P.skyTop);
-  p.rect(HW.x + HW.w / 2, HW.y, 1, HW.h, P.wood); p.rect(HW.x, HW.y + 22, HW.w, 1, P.wood);
-  p.circle(HW.x + 9, HW.y + 10, 5, P.moon); p.rect(HW.x + 6, HW.y + 7, 2, 2, P.moonShade); p.px(HW.x + 11, HW.y + 12, P.moonShade);
-  p.px(HW.x + 10, HW.y + 8, P.win); p.mark('hallMoonWindow', HW.x + 10, HW.y + 8);
-  [[HW.x + 20, HW.y + 6], [HW.x + 4, HW.y + 34], [HW.x + 22, HW.y + 40]].forEach(([x, y]) => p.px(x, y, P.star));
+  p.rect(HW.x, HW.y + 30, HW.w, 1, P.wood); p.rect(HW.x + HW.w / 2, HW.y + 30, 1, HW.h - 30, P.wood); // the panes: one big one up top
+  [[HW.x + 3, HW.y + 4], [HW.x + 24, HW.y + 26], [HW.x + 5, HW.y + 40], [HW.x + 21, HW.y + 45]].forEach(([x, y]) => p.px(x, y, P.star));
+  const hx = HW.x + 14, hy = HW.y + 15;
+  p.circle(hx, hy, 10, P.crack); p.circle(hx, hy, 9, P.moon);
+  p.rect(hx - 6, hy - 4, 3, 3, P.moonShade); p.rect(hx - 3, hy + 4, 4, 2, P.moonShade); p.px(hx + 5, hy + 5, P.moonShade);
+  // its one lit window: a dark frame on the white, two warm pixels inside
+  p.rect(hx + 1, hy - 4, 5, 5, P.crack); p.rect(hx + 2, hy - 3, 3, 3, P.win); p.px(hx + 3, hy - 3, P.goldHi);
+  p.mark('hallMoonWindow', hx + 3, hy - 2);
   // ---- the form on the wall: REQUEST, a red stamp, a blank line to sign
   const RQ = LEVEL.request;
   p.rect(RQ.x - 1, RQ.y - 1, 14, 18, P.crack); p.rect(RQ.x, RQ.y, 12, 16, P.colHi); p.rect(RQ.x, RQ.y, 12, 3, P.colLo);

@@ -65,7 +65,10 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await put(59 * 16 - 4); await until(() => window.__game.scene.nearThing === window.__game.scene.bagThing, null, 4000);
   await p.keyboard.down('KeyJ'); await until(() => window.__game.scene.bag.read, null, 8000); await p.keyboard.up('KeyJ');
   ok('the full pull finds his note (clue ' + await p.evaluate(() => window.__game.state.hasClue('bagNote')) + ')', await p.evaluate(() => window.__game.state.hasClue('bagNote') && !window.__game.scene.collapse));
-  await until(() => !!window.__game.scene.collapse, null, 4000);
+  ok('his line is on screen before the floor goes', await p.evaluate(() => { const b = window.__game.scene.bubbles.list.get('item'); return !!b && b.lines.join(' ').includes("Don't let her follow."); }));
+  await p.waitForTimeout(1600);
+  ok('the floor has not cut the line off yet', await p.evaluate(() => !window.__game.scene.collapse && window.__game.scene.bubbles.busy('item')));
+  await until(() => !!window.__game.scene.collapse, null, 9000);
   await p.evaluate(() => { window.__noDeath = false; });
   // a small autopilot: run right, jump the rubble and the gaps, crouch under the slab
   await p.evaluate(() => {

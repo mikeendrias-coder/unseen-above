@@ -50,10 +50,11 @@ export function pxCircle(g, cx, cy, r, color, step) {
     i++; y++; if (e < 0) e += 2 * y + 1; else { x--; e += 2 * (y - x) + 1; }
   }
 }
-// The dark layer: a canvas filled with black at `alpha`, then holes cut where light falls.
-export function darkFill(ctx, alpha) {
+// The dark layer: a canvas filled with solid black, then holes cut where light falls. No alpha
+// anywhere (ART_DIRECTION section 2): a pixel is dark, half lit (checker), or lit.
+export function darkFill(ctx) {
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.fillStyle = 'rgba(0,0,0,' + alpha + ')'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 const checkers = new WeakMap();
 // a 2 x 2 checker pattern for this canvas, lined up with the world (parity = (view x + view y) % 2)
@@ -63,23 +64,23 @@ export function checker(ctx, parity) {
   if (pat.setTransform) pat.setTransform(new DOMMatrix([1, 0, 0, 1, ((parity % 2) + 2) % 2, 0]));
   return pat;
 }
-// Cut lights out of the dark: each light { x, y, r, a } (canvas px) clears a solid disc of 60%
-// of its radius and a checker ring out to its full radius. Rows of rects, so edges are hard.
+// Cut lights out of the dark: each light { x, y, r, a } (canvas px). A strong light (a >= 0.75,
+// the default) clears a solid disc of 60% of its radius and a checker ring out to its full
+// radius; a weak one is only the checker, out to 80% of its radius. Rows of rects, edges hard.
 export function hardHoles(ctx, lights, parity) {
   const W = ctx.canvas.width, H = ctx.canvas.height, pat = checker(ctx, parity);
-  ctx.globalCompositeOperation = 'destination-out';
+  ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1;
   lights.forEach(l => {
-    const r = Math.round(l.r), ri = Math.round(l.r * 0.6), x = Math.round(l.x), y = Math.round(l.y);
-    if (x < -r || y < -r || x > W + r || y > H + r) return;
-    ctx.globalAlpha = l.a == null ? 1 : Math.min(1, l.a);
+    const strong = l.a == null || l.a >= 0.75, r = Math.round(strong ? l.r : l.r * 0.8), ri = strong ? Math.round(l.r * 0.6) : -1, x = Math.round(l.x), y = Math.round(l.y);
+    if (r <= 0 || x < -r || y < -r || x > W + r || y > H + r) return;
     for (let dy = -r; dy <= r; dy++) {
       const yy = y + dy; if (yy < 0 || yy >= H) continue;
-      const ho = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35), hi = Math.abs(dy) <= ri ? Math.floor(Math.sqrt(ri * ri - dy * dy) + 0.35) : -1;
+      const ho = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35), hi = ri >= 0 && Math.abs(dy) <= ri ? Math.floor(Math.sqrt(ri * ri - dy * dy) + 0.35) : -1;
       if (hi >= 0) { ctx.fillStyle = '#000'; ctx.fillRect(x - hi, yy, 2 * hi + 1, 1); ctx.fillStyle = pat; ctx.fillRect(x - ho, yy, ho - hi, 1); ctx.fillRect(x + hi + 1, yy, ho - hi, 1); }
       else { ctx.fillStyle = pat; ctx.fillRect(x - ho, yy, 2 * ho + 1, 1); }
     }
   });
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 export class TopDownEpisode extends Phaser.Scene {
@@ -152,6 +153,7 @@ export class TopDownEpisode extends Phaser.Scene {
         k.face = d;
         const [dx, dy] = DIRS[d];
         if (!this.blocked(k.tx + dx, k.ty + dy)) { k.fx = k.tx; k.fy = k.ty; k.tx += dx; k.ty += dy; k.p = 0; k.moving = true; k.step++; }
+        else if (this.onBump) this.onBump(k.tx + dx, k.ty + dy); // a scene can make walking into something hurt
       }
     }
   }
@@ -320,10 +322,10 @@ export class TopDownEpisode extends Phaser.Scene {
     this.view = { x: cx - 160, y: cy - 90 };
   }
   // lights: { x, y, r, a } in world px; the girl always carries a small one. Hard light (Nov 17
-  // art pass): a solid hole, then a ring of checker dither, nothing soft.
-  drawDark(alpha) {
+  // art pass): a solid hole, then a ring of checker dither, nothing soft, no alpha.
+  drawDark() {
     const ctx = this.darkCanvas.getContext('2d'), v = this.view;
-    darkFill(ctx, alpha);
+    darkFill(ctx);
     const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 52 }].concat(this.lights);
     hardHoles(ctx, all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a })), v.x + v.y);
     this.darkTex.refresh();
