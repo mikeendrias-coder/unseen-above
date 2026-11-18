@@ -160,7 +160,7 @@ const ROOMS = {
     paint: paintWardrobe, bg: 'wallLo', doorX: 286,
     items: [
       { x0: 18, x1: 70, y: 40, text: ['Jackets on a rail. Her jacket, in her size.', 'Every one has the same tear in the left sleeve.'] },
-      { x0: 118, x1: 166, y: 80, text: ['Photos pinned in a row, all of her, in that jacket.', 'Each one is stamped CONTINUITY.'] },
+      { x0: 118, x1: 166, y: 80, text: ['Photos of her in a row, all in that jacket.', 'Each one is stamped CONTINUITY.'] },
       { x0: 186, x1: 232, y: 82, text: ['A mirror ringed with bulbs.'] },
       { x0: 74, x1: 116, y: 146, text: ['Small shoes in a row, worn down at the same heel.'] }
     ],

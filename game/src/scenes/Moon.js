@@ -176,7 +176,7 @@ export class Moon extends SideEpisode {
   npcTalk(Nn) {
     // the one who says "My son aims on Tuesdays" (their second line) gives a clue
     Nn.presses = (Nn.presses || 0) + 1;
-    if (Nn.i === 3 && Nn.presses === 2 && state.clue('tuesday')) overlay.note('NOTED (' + state.clueCount() + ')', 1600);
+    if (Nn.i === 3 && Nn.presses === 2 && state.clue('tuesday')) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600);
     this.bubbles.press('npc' + Nn.i, Nn.src, () => ({ x: Nn.x, y: GROUND - 28 }), { ink: 0xebe6d8, pitch: 560 + Nn.i * 90, leave: 64 });
   }
   npcSay(Nn, text) { this.bubbles.say('npc' + Nn.i, text, () => ({ x: Nn.x, y: GROUND - 28 }), { ink: 0xebe6d8, pitch: 700 + Nn.i * 90, leave: 64, hold: 900 }); }

@@ -111,7 +111,7 @@ export class RequestForm {
     this.last = 'operator';
     if (this.checked.operator) return;
     this.checked.operator = true; Sound.tone(330, 0.05, 'square', 0.012);
-    if (state.clue('operator')) overlay.note('NOTED (' + state.clueCount() + ')', 1600);
+    if (state.clue('operator')) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600);
   }
   note(key) {
     if (key === 'operator') return this.checked.operator ? (this.D.operator || REQ.operator.note) : null;

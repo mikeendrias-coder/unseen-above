@@ -125,7 +125,7 @@ export class Hallway extends SideEpisode {
   lookable() { return this.mode === 'walk' || this.mode === 'after'; }
   doorReady() { return (this.mode === 'after' || this.mode === 'giveup') && !this.dead && !this.leaving; }
   // a clue found in a look: noted once, with the count
-  noteClue(id) { if (id && state.clue(id)) overlay.note('NOTED (' + state.clueCount() + ')', 1600); }
+  noteClue(id) { if (id && state.clue(id)) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600); }
   // a death in the fight counts toward the creator giving up
   die(src) {
     if (!this.dead && (this.mode === 'fight' || this.mode === 'between')) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);

@@ -1,7 +1,7 @@
 // The endings (Nov 17, Claude's call, from research/design_pass_nov17.md section 2). Every one
 // ends on the old TV in a dark room on Earth. The playroom picks one, in this order:
 //   END IT ALL   the creator was beaten after giving up (story.killedBroken). No kids, no choice.
-//   THE COUCH    she answers "Sit down." (secret: she spared the creator and found 5 "what" clues)
+//   THE COUCH    she answers "Sit with them." (secret: she spared the creator and found 5 "what" clues)
 //   LOOK BACK    she answers "Turn it around." (5 "who" clues, or she spared the creator who gave up)
 //   ROUND TWO    she answers "Yes."
 //   THE VEST     everything else: "Who picks the lights?" Michael's own ending.
@@ -14,19 +14,19 @@ export const ENDINGS = [
   { id: 'endall', title: 'END IT ALL', when: 'The creator gave up after six deaths, and she hit them nine times anyway.' },
   { id: 'round2', title: 'ROUND TWO', when: 'She answers "Yes." to round two.' },
   { id: 'lookback', title: 'LOOK BACK', when: 'She answers "Turn it around." (5 who-aims clues, or she spared the creator who gave up).' },
-  { id: 'couch', title: 'THE COUCH', when: 'Secret. She answers "Sit down." (she spared the creator and found 5 what-she-is clues).' }
+  { id: 'couch', title: 'THE COUCH', when: 'Secret. She answers "Sit with them." (she spared the creator and found 5 what-she-is clues).' }
 ];
 export const endingTitle = id => (ENDINGS.find(e => e.id === id) || ENDINGS[0]).title;
 export const endingsSeen = () => ENDINGS.filter(e => state.story.endings[e.id]).length;
 
 // The replies she can give at "Are you here for round two?". Story mode opens "Turn it around."
-// for a walkthrough, but never the secret: "Sit down." shows only when it is earned, or when a
+// for a walkthrough, but never the secret: "Sit with them." shows only when it is earned, or when a
 // link asks for it (force: an ending id).
 export const REPLIES = [
   { id: 'lights', text: 'Who picks the lights?', ending: 'vest' },
   { id: 'yes', text: 'Yes.', ending: 'round2' },
   { id: 'turn', text: 'Turn it around.', ending: 'lookback', story: true, open: s => state.clueCount('who') >= WHO_NEEDED || (s.spared && s.gaveUp) },
-  { id: 'sit', text: 'Sit down.', ending: 'couch', open: s => s.spared && state.clueCount('what') >= WHAT_NEEDED }
+  { id: 'sit', text: 'Sit with them.', ending: 'couch', open: s => s.spared && state.clueCount('what') >= WHAT_NEEDED }
 ];
 export function replies(force) {
   const s = state.story;

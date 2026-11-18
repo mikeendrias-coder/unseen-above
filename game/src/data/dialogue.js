@@ -40,7 +40,7 @@ export const MOON_OVERHEARD = [
   ['Is this one new?', 'It is a repeat.']
 ];
 // DRAFT: the cleaning robot up here, the same model as the one in the gallery.
-export const MOON_ROBOT = ['Welcome home. Please wipe your feet.', 'You are early. Round two has not started.', 'The playroom is at the end. They are expecting a winner.'];
+export const MOON_ROBOT = ['Welcome home. Please wipe your feet.', 'You are early. Round two has not started.', 'The playroom is at the end. They want a winner.'];
 // The playroom (Nov 17, Claude's draft from Michael's lines). The opening is the same every time;
 // at "Are you here for round two?" she picks a reply (data/endings.js REPLIES), and the reply's
 // lines lead into its ending. Lines are short on purpose; none over about 50 characters.
@@ -64,7 +64,7 @@ export const PLAYROOM_REPLY = {
   // ROUND TWO: she takes the controller
   yes: [
     { who: 'SISTER', text: 'Yes.' },
-    { who: 'KID', text: 'Good. You can aim this time.' },
+    { who: 'KID', text: 'Good. You can be player two.' },
     { who: 'LITTLE KID', text: 'Pick a light. Any light.' },
     { who: null, text: '[GAME SHOW JINGLE]' }
   ],
@@ -88,20 +88,20 @@ export const PLAYROOM_REPLY = {
 };
 // END IT ALL: the creator gave up and she beat them anyway. Nobody is in the playroom.
 export const PLAYROOM_EMPTY = [
-  { who: null, text: '[NOBODY HERE]' },
-  { who: null, text: '[THE SHOW REPEATS]' }
+  { who: null, text: '[THE COUCH IS EMPTY. THE TV IS ON]' },
+  { who: null, text: '[A RERUN PLAYS TO NOBODY]' }
 ];
 // the reply slip's heading
 export const PLAYROOM_ASK = 'REPLY';
 // DRAFT: looks in the city that count as clues
 export const MOON_LOOKS = {
-  lost: ['LOST AND FOUND. A tray of glasses.', 'Every pair is hers.'],
-  camera: ['Their camera, aimed out the window at Earth.', 'A red light. It is always on.']
+  lost: ['LOST AND FOUND. Glasses, one kind only.', 'Every pair is hers.'],
+  camera: ['Their camera, aimed out at Earth.', 'A red light. It is always on.']
 };
 
 // DRAFT, for Michael: the hallway behind the Moon city, where the creator of the show waits.
 // The creator built every set, trap and camera, resets the props between takes, and is owned
-// like everyone else. They toss her a sword because the kids voted for a fight. Lines are short
+// like everyone else. They toss her a sword because the kids picked a fight. Lines are short
 // on purpose: they run as captions during the fight. Marked choices for Michael:
 //   * "two clicks ... the only kind thing I was allowed to build" ties the cameras' warning to
 //     the two clicks on her chest at the end. Cut it if that says too much about the vest.
@@ -112,21 +112,21 @@ export const MOON_LOOKS = {
 // HALL_TOSS: one fixed train of lines, the same on every arrival. Retries skip it.
 export const HALL_IN = [
   { who: 'CREATOR', text: 'Every room you walked through, I built.' },
-  { who: 'CREATOR', text: 'I put the glasses back in the drawer after every take.' }
+  { who: 'CREATOR', text: 'I put the glasses back in the drawer. Every take.' }
 ];
 // At the edge of the stage: the toss.
 export const HALL_TOSS = [
   { who: 'SISTER', text: 'Why are you doing this?' },
   { who: 'CREATOR', text: 'Because they are watching. Same as you.' },
-  { who: 'CREATOR', text: 'The kids voted for a fight tonight. Here.' },
+  { who: 'CREATOR', text: 'The kids picked a fight tonight. Here.' },
   { who: null, text: '[A SWORD CLATTERS]' },
   { who: 'CREATOR', text: 'Hold it up. They need to see you hold it.' }
 ];
 // Each round opens with the set it comes from.
 export const HALL_ROUND = [
-  ['The grounds were my first set. Lights in the dark. Simple.'],
+  ['The grounds. My first set. Lights in the dark.'],
   ['The gallery. I put the laser where the money is.'],
-  ['Lights off. My cameras click twice before they flash.']
+  ['Lights off. My cameras click twice, then flash.']
 ];
 // Each time she lands a hit, in order.
 // (Nov 17) Only hits 2, 4, 6 and 8 speak; the HP bar carries the rest.
@@ -134,18 +134,18 @@ export const HALL_HIT = [
   null,
   'Do you know what they call this up here? Content.',
   null,
-  'Being seen is the one thing they cannot buy.',
+  'Nobody films them. That is what the money is for.',
   null,
   'The satellite is not mine. The kids aim it.',
   null,
-  'They are watching me lose. First time anyone watched me.',
+  'They watch me lose. First time anyone watched me.',
   null
 ];
 // Her next take: the first thing the creator says.
 export const HALL_AGAIN = [
   'Again. They like it when it is close.',
-  'Take {take}. You are getting better. You always do.',
-  'Do not stop. If you stop, they change the channel.',
+  'Take {take}. You get better. You always do.',
+  'Do not stop. Stop, and they change the channel.',
   'Again. I will be here. I am always here.'
 ];
 // The creator yields. The red light on their headset goes out.
@@ -168,9 +168,9 @@ export const HALL_GIVEUP = {
 export const HALL_THINGS = {
   coats: ['Crew coats on a rail.', 'SEASON 41 on every back.'],
   shelf: ['A shelf of glasses. Dozens.', 'All the same as hers.'],
-  board: ['CONTINUITY. Photos of every room, every take.', 'She is in a lot of them.'],
-  monitors: ['Six feeds from Earth.', 'One is this hallway.'],
-  console: ['A console with a satellite on the screen.', 'A sticker on it: ROUND TWO.']
+  board: ['CONTINUITY. Every room, every take.', 'She is in a lot of them.'],
+  monitors: ['Six feeds. Five from Earth.', 'The sixth is this hallway.'],
+  console: ['A console. A satellite on the screen.', 'Signed in: PLAYER 2. Sticker: ROUND TWO.']
 };
 
 // DRAFT, for Michael: what she notices when she looks at things with E, in every part. Shown
@@ -182,48 +182,48 @@ export const NOTICE = {
     car: ['A burnt car. The seats are ash.'],
     mailbox: ['A mailbox. OCCUPANT, ESTATE 07.', 'Inside, a form. REQUEST: VOLUNTARY.', 'The signature line is blank.'],
     footprints: ['Footprints in the ash. His.', 'They go straight to the gate.'],
-    footprints2: ['Footprints in the ash. His, and smaller ones.', 'The small ones are hers. Every take.'],
+    footprints2: ['His footprints, and smaller ones.', 'The small ones are hers. Every take.'],
     intercom: ['Please hold.', 'Your call is being recorded.'],
-    gate: ['The gate stands open. No ash on it.', 'Out here, everything is grey. In there, nothing is.'],
-    crowbar: ['His crowbar. He came this way.', 'Scratched on the handle: a tally. Eleven marks.'],
-    hedge: ['The hedges are cut square.', 'Somebody cuts them. She has never seen who.'],
+    gate: ['The gate stands open. No ash on it.', 'Out here, all grey. Not in there.'],
+    crowbar: ['His crowbar. He came this way.', 'On the handle, a tally. Eleven marks.'],
+    hedge: ['The hedges are cut square.', 'Somebody cuts them. She never sees who.'],
     orangery: ['A glass house full of orange trees.', 'The oranges are wax.'],
-    fountain: ['Gold koi, all turning at the same moment.', 'They run on a track.'],
+    fountain: ['Gold koi, all turning at once.', 'They run on a track.'],
     statue: ['A gold figure holding up a star.', 'The plaque says 07. They all do.'],
     crate: ['A crate stencilled ESTATE 07. Heavy.', 'Something to hide behind.'],
     cradle: ['A window cleaner\'s cradle.', 'The glass up there is spotless.']
   },
   gallery: {
     man: ['A man in gold. The eyes are painted red.', 'They move when she does.'],
-    desk: ['A writing desk. The paper on it is blank.', 'The pen has never been used.'],
+    desk: ['A writing desk. The paper is blank.', 'The pen has never been used.'],
     sheets: ['Dust sheets, heaped up.', 'Someone left them here to catch a fall.'],
-    chandelier: ['Chandeliers on long chains.', 'They swing on their own. Nobody pushed them.'],
+    chandelier: ['Chandeliers on long chains.', 'They swing. Nobody pushed them.'],
     missing: ['A clean square where a portrait hung.', 'The nail is still there.'],
     polisher: ['A floor polisher. It stops for nobody.'],
-    camera: ['The broken camera keeps turning to the roof.', 'Up there, the Moon. One window lit.'],
+    camera: ['A broken camera. It keeps turning up.', 'Up there, the Moon. One window lit.'],
     lightswitch: ['The chandeliers go dark.', 'The red lights stay on.'],
     drawer2: ['The glasses are back in the drawer.', 'Someone puts them back. Every take.'],
     emitter: ['The laser port is still warm.', 'That sound again. Like a prize.']
   },
   eastwing: {
-    body: ['An old body in her jacket. Nobody took it away.'],
+    body: ['An old body in her jacket. Never moved.'],
     books: ['The books are painted on a board.'],
-    desk: ['A map of this wing. Her way is drawn in red.'],
-    calendar: ['A wall calendar. Every day on it is the 7th.'],
-    radio: ['A radio. By the sensors it plays the satellite notes.'],
+    desk: ['A map of this wing. Her way, in red.'],
+    calendar: ['A calendar. Every day on it is the 7th.'],
+    radio: ['A radio, tuned to the sensors.', 'Near one, it plays the satellite tune.'],
     hatch: ['The dumbwaiter comes out here.'],
-    dumbwaiter: ['A dumbwaiter. A pebble in it rattles to the study.']
+    dumbwaiter: ['A dumbwaiter. It goes to the study.', 'A pebble in it would rattle there.']
   },
   bedroom: {
-    piano: ['A grand piano. Nobody here has ever played it.'],
-    table: ['A table laid for twelve. The food is wax.'],
-    clock: ['While the clock strikes, nobody can hear her.'],
+    piano: ['A grand piano. Nobody has played it.'],
+    table: ['A table set for twelve. The food is wax.'],
+    clock: ['While it strikes, nobody can hear her.'],
     silver: ['Silver on a long table, polished today.'],
-    billiards: ['A billiard table. The balls are glued down.'],
-    photos: ['Three families. At the back, him, older each time.'],
-    window: ['The Moon, low and white. One window on it is lit.'],
-    request: ['REQUEST: VOLUNTARY. Locate the subject. Unsigned.'],
-    bagNote: ['A note in his hand: "Don\'t let her follow."'],
+    billiards: ['A billiard table. The balls are glued.'],
+    photos: ['Three families in three photos.', 'Him at the back, older each time.'],
+    window: ['The Moon, low and white. One window lit.'],
+    request: ['REQUEST: VOLUNTARY. Locate the subject.', 'Unsigned.'],
+    bagNote: ['In his hand: "Don\'t let her follow."'],
     hold: ['She holds on to him.']
   },
   // the first gold piece she ever picks up (core/props.js Gold); never again after that
@@ -232,19 +232,19 @@ export const NOTICE = {
   },
   // the first tape mark she ever reaches, in any episode (core/props.js Marks); never again
   tape: {
-    first: ['Tape on the floor. If she dies, she starts here.']
+    first: ['A tape mark. Her next take starts here.']
   },
   moon: {
-    fountain: ['A gold fountain, the twin of the one on the grounds.', 'Up here, the water is the expensive part.'],
+    fountain: ['A gold fountain.', 'Its twin stands on the grounds.', 'Up here, water is the expensive part.'],
     bench: ['A bench. Nobody up here sits outside.'],
     planter: ['Real plants in real soil.', 'Somebody brought dirt to the Moon.'],
-    blocks: ['Blocks in a heap.', 'Someone built a little house and knocked it down.'],
+    blocks: ['Blocks in a heap.', 'A little house, built and knocked down.'],
     porthole: ['The Earth, through a round window.', 'From here it looks like a toy.']
   },
   hallway: {
-    gallery: ['The back of the gallery. Plywood, braces, sandbags.'],
-    gate: ['GROUNDS GATE, stencilled on the back of a wall.', 'From this side, the gold is yellow paint.'],
-    door: ['BEDROOM DOOR. The frame, from behind.', 'Tape on the floor marks where his bed goes.'],
+    gallery: ['The gallery, from the back.', 'Plywood, braces, sandbags.'],
+    gate: ['GROUNDS GATE, stencilled on the plywood.', 'From here, the gold is yellow paint.'],
+    door: ['BEDROOM DOOR. The frame, from behind.', 'Tape marks where his bed goes.'],
     crate: ['A crate stencilled PROPS.', 'Inside, a dozen crowbars like his.']
   }
 };
@@ -312,8 +312,8 @@ export function deathLine(id, direct) {
 export const MOON_PEOPLE = [
   { lines: ['Smile, sweetheart. No, toward the light.', 'Is this the one where she cries?'], bump: 'Careful, dear. This is silk.' },
   { lines: ['Do not touch her. It might be part of it.', 'It is only television, dear.'], bump: 'She touched me!' },
-  { lines: ['Not now. I am working.', 'Keep walking. They like it when you keep walking.'], bump: 'Excuse me.' },
+  { lines: ['On their maps, our house is a blur. We paid.', 'Keep walking. They like it when you keep walking.'], bump: 'Excuse me.' },
   { lines: ['Look at her. Just like on the screen.', 'My son aims on Tuesdays.'], bump: 'Mind the phone!' },
-  { lines: ['You are early. Round two is not set.', 'The staff door. Mind the cables.'], bump: 'Watch it.' }
+  { lines: ['Are you lost? Staff use the back.', 'The staff door. Mind the cables.'], bump: 'Watch it.' }
 ];
 export const MOON_HEAD = ['Get down!', 'Off! Off!', 'Someone get her down!'];
