@@ -1,6 +1,6 @@
 // The end of the game: batch 4 hands on to the kids' room, the kids' room to the Moon. On the
-// Moon she walks the corridor, enters the playroom, the lines play, two clicks, the last shot,
-// and no end card.
+// Moon she walks the corridor, goes backstage, wins the fight, enters the playroom, the lines
+// play, she picks the first reply, two clicks, the last shot, and the small endings card.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -54,13 +54,19 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => { const g = window.__unseen.game; return g.scene.isActive('moon') && window.__game.scene.sys.settings.key === 'moon' && window.__game.scene.mode === 'room'; }, null, 15000);
   ok('through the pink door: the playroom', true);
   await p.keyboard.down('ArrowRight'); await until(() => window.__game.scene.mode === 'talk', null, 10000); await p.keyboard.up('ArrowRight');
-  const look = await p.evaluate(() => window.__game.scene.lines.find(l => /We do/.test(l.text)).text);
-  ok('the kids talk to her; the little one says: "' + look + '"', /We pick everything/.test(look));
+  for (let i = 0; i < 12 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(150); }
+  await until(() => window.__game.scene.mode === 'choose', null, 15000);
+  const offered = await p.evaluate(() => window.__game.scene.choices.map(c => c.text));
+  ok('at round two she gets a reply slip: ' + offered.join(' / '), offered[0] === 'Who picks the lights?' && offered.includes('Yes.'));
+  await p.waitForTimeout(400); await p.keyboard.press('KeyJ');
+  await until(() => window.__game.scene.talking && window.__game.scene.lines.some(l => /We pick everything/.test(l.text)), null, 5000);
+  ok('J says the first reply; the little one answers: "We do. We pick everything."', await p.evaluate(() => window.__game.state.story.choice === 'lights'));
   for (let i = 0; i < 20 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(150); }
   await until(() => window.__game.scene.mode === 'last', null, 15000);
   ok('two clicks, the flash, then the last shot', true);
-  await until(() => window.__game.scene.lastT > 7, null, 20000);
-  ok('it ends on the Moon, with no end card', await p.evaluate(() => !document.querySelector('#card').classList.contains('on') && window.__game.scene.tvImg.visible));
+  await until(() => !!window.__game.scene.endCard, null, 20000);
+  ok('it ends on the Moon on the old TV, then a small card: ' + await p.evaluate(() => JSON.stringify(window.__game.scene.endCard)), await p.evaluate(() => window.__game.scene.tvImg.visible && window.__game.scene.endCard.title === 'THE VEST' && window.__game.scene.endCard.seen === 1));
+  ok('the ending is recorded as seen', await p.evaluate(() => window.__game.state.story.endings.vest === true));
   ok('the Moon episode is marked finished', await p.evaluate(() => window.__game.state.episode('ep5').done));
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
   await b.close();

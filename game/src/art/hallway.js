@@ -4,7 +4,7 @@
 // in front of the backs of the set flats: the front of the house, seen from behind. The Moon's
 // own colors, gone grey, because nobody up here pays to look at the back.
 import { Painter, rng } from './painter.js';
-import { M, channel } from './moon.js';
+import { M, channel, outline } from './moon.js';
 import { pixText } from './pixfont.js';
 
 export const TILE = 16, GROUND = 160;
@@ -50,10 +50,10 @@ export function buildMap() {
 
 function ptext(p, s, x, y, c) { pixText({ fillStyle: () => {}, fillRect: (a, b, w, h) => p.rect(a, b, w, h, c) }, s, x, y, c, 1, 1); }
 
-// a work light on the grid, its cone on the wall
+// a work light on the grid: a lamp, a lit lens, and its light on the wall as a flat checker
 function workLight(p, x) {
-  p.rect(x - 3, 16, 7, 4, H.steelLo); p.rect(x - 2, 20, 5, 2, H.work); p.softGlow(x, 22, 10, H.work, 0.25);
-  p.glowPoly([[x - 2, 22], [x + 3, 22], [x + 18, 70], [x - 17, 70]], H.work, 0.05);
+  p.poly([[x - 2, 22], [x + 3, 22], [x + 18, 70], [x - 17, 70]], 'd:' + H.wallHi + ':' + H.wall + ':checker');
+  p.rect(x - 3, 16, 7, 4, H.steelLo); p.rect(x - 2, 20, 5, 2, H.work); p.rect(x - 1, 22, 3, 1, H.glow);
   p.mark('work', x, 21);
 }
 
@@ -71,6 +71,7 @@ export function paintLevel() {
   const W = LEVEL.w * T, p = new Painter(W, 180), r = rng(41);
   // the wall, panel seams, a dado of scuffed paint
   p.rect(0, 0, W, G, H.wall);
+  for (let x = 40; x < W; x += 112) workLight(p, x);
   for (let x = 0; x < W; x += 32) { p.rect(x, 30, 1, G - 30, H.wallLo); }
   p.rect(0, 120, W, 1, H.wallHi); p.rect(0, 121, W, G - 121, H.panel);
   for (let i = 0; i < 60; i++) p.px(r() * W, 122 + r() * 36, H.wallLo);
@@ -78,7 +79,6 @@ export function paintLevel() {
   p.rect(0, 10, W, 2, H.steel); p.rect(0, 16, W, 2, H.steel); for (let x = 0; x < W; x += 8) p.line(x, 11, x + 4, 16, H.steelLo);
   p.rect(0, 26, W, 3, H.pipe); p.rect(0, 26, W, 1, H.pipeHi); p.rect(0, 31, W, 2, H.pipeLo);
   for (let x = 6; x < W; x += 37) { const sag = 6 + Math.floor(r() * 8); for (let i = 0; i < 24; i++) p.px(x + i, 18 + Math.round(Math.sin(i / 23 * Math.PI) * sag), H.cable); }
-  for (let x = 40; x < W; x += 112) workLight(p, x);
   // the floor: concrete, scuffs, gaffer tape
   p.rect(0, G, W, 20, H.floor); p.rect(0, G, W, 1, H.floorHi); for (let x = 0; x < W; x += 48) p.rect(x, G + 1, 1, 19, H.floorLo);
   for (let i = 0; i < 40; i++) p.rect(r() * W, G + 3 + r() * 14, 2 + r() * 4, 1, H.floorLo);
@@ -171,10 +171,57 @@ export const POSES = {
   kneel: { head: [3, 9], torso: [2, 15], legs: 'kneel', sh: [8, 17] }
 };
 export function paintCreator(pose) {
-  const P = POSES[pose], p = new Painter(14, 26), legs = LEGS[P.legs];
-  rows(p, legs, P.torso[0], 26 - legs.length);
-  rows(p, TORSO, P.torso[0], P.torso[1]);
-  rows(p, HEAD, P.head[0], P.head[1]);
+  // a pixel of room on each side and on top for the outline; the feet stay on the bottom row
+  const P = POSES[pose], p = new Painter(16, 27), legs = LEGS[P.legs];
+  rows(p, legs, P.torso[0] + 1, 27 - legs.length);
+  rows(p, TORSO, P.torso[0] + 1, P.torso[1] + 1);
+  rows(p, HEAD, P.head[0] + 1, P.head[1] + 1);
+  outline(p, '#0e0f12');
   return p;
 }
 export const CREATOR_H = 25;
+
+// A light layer for the stage: one small canvas over the view, redrawn each frame with hard
+// pixels only. Light is a checker of one color over what is behind it, never a soft glow.
+export class PixLayer {
+  constructor(scene, key, depth) {
+    this.c = document.createElement('canvas'); this.c.width = 322; this.c.height = 182;
+    this.x = this.c.getContext('2d'); this.pats = new Map(); this.ox = 0;
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+    this.tex = scene.textures.addCanvas(key, this.c);
+    this.img = scene.add.image(0, 0, key).setOrigin(0).setDepth(depth);
+  }
+  // kind: 'solid', 'checker' (half the pixels) or 'q25' (a quarter)
+  ink(color, kind) {
+    if (!kind || kind === 'solid') return color;
+    const k = color + kind; if (this.pats.has(k)) return this.pats.get(k);
+    const t = document.createElement('canvas'); t.width = 2; t.height = 2; const x = t.getContext('2d'); x.fillStyle = color;
+    x.fillRect(0, 0, 1, 1); if (kind === 'checker') x.fillRect(1, 1, 1, 1);
+    const pat = this.x.createPattern(t, 'repeat'); this.pats.set(k, pat); return pat;
+  }
+  begin(ox) { this.ox = Math.round(ox) - 1; this.x.clearRect(0, 0, 322, 182); this.drew = false; }
+  rect(x, y, w, h, color, kind) { this.x.fillStyle = this.ink(color, kind); this.x.fillRect(Math.round(x) - this.ox, Math.round(y) + 1, Math.round(w), Math.round(h)); this.drew = true; }
+  poly(pts, color, kind) {
+    this.x.fillStyle = this.ink(color, kind); const P = pts.map(q => [q.x - this.ox, q.y + 1]);
+    let y0 = Infinity, y1 = -Infinity; P.forEach(q => { y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); });
+    for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(181, Math.ceil(y1)); y++) {
+      const yc = y + 0.5, xs = [];
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > yc) !== (yj > yc)) xs.push(xi + (yc - yi) * (xj - xi) / (yj - yi)); }
+      xs.sort((a, b) => a - b);
+      for (let k = 0; k + 1 < xs.length; k += 2) { const a = Math.round(xs[k]), b = Math.round(xs[k + 1]); if (b > a) this.x.fillRect(a, y, b - a, 1); }
+    }
+    this.drew = true;
+  }
+  // the dark: solid, with hard round holes where there is light and a checker ring at their edge
+  dark(color, holes) {
+    if (!this.img_) this.img_ = this.x.createImageData(322, 182);
+    const d = this.img_.data, rgb = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16)), H = holes.map(h => ({ x: h.x - this.ox, y: h.y + 1, r: h.r }));
+    for (let y = 0; y < 182; y++) for (let x = 0; x < 322; x++) {
+      let m = 99; for (const h of H) { const v = Math.hypot(x - h.x, y - h.y) - h.r; if (v < m) m = v; }
+      const i = (y * 322 + x) * 4, on = m >= 3 || (m >= 0 && (x + y) % 2 === 0);
+      d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = on ? 255 : 0;
+    }
+    this.x.putImageData(this.img_, 0, 0); this.drew = true;
+  }
+  end() { if (this.drew) this.tex.refresh(); this.img.setVisible(this.drew).setPosition(this.ox, -1); }
+}

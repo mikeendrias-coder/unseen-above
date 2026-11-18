@@ -1,17 +1,20 @@
-// The kids' room on the Moon (a preview of a scene near the end). Two kids on a couch play the
-// satellite game show on a giant screen. They finish the round and cheer; the screen cuts to the
-// live feed from Earth, where a girl is struck the moment the same charge sound plays. The next
-// take walks in. The game asks if they are ready for round two. Michael described this beat;
-// the staging here is a first pass for him to approve or change.
+// The kids' room on the Moon, after batch 4 (and a preview from its # link). A pixel scene at
+// 320 x 180, the same playroom she reaches at the end. Two kids on a gold couch play the
+// satellite game show on a giant screen: a board, a gold path drawn from target to target,
+// and a feed from Earth where a box closes on a small girl (the game she walks in on at the end).
+// They win and cheer. The screen cuts to static, then to the live feed from Earth, full frame:
+// the grounds at night, a girl in the open, the searchlight finds her, the satellite strikes the
+// moment the charge sound plays. Back in the room the next take walks in on the screen, the
+// little one turns round, and the show asks: ROUND 2, READY? Then black, and the Moon.
 import { Music } from '../core/music.js';
 import { LOOKS } from '../art/palettes.js';
-import { hexNum } from '../art/painter.js';
+import { Painter, hexNum, rng } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
-import { pixText, textWidth } from '../art/pixfont.js';
-import { makeCinemaTextures, cinemaPalette, mix, num } from '../art/cinema.js';
-import { LEVEL as EST, buildMap as estateMap, paintSky, paintMoon, paintLevel as paintEstate } from '../art/estate.js';
-import { designZoom, display } from '../core/display.js';
-import { SatelliteStrike, STRIKE } from '../art/strike.js';
+import { ccText, ccWidth } from '../art/ccfont.js';
+import { LEVEL as MOON, KX, paintPlayroom, paintKid, KID_POSES, BOARD, drawBoard, drawFeedBox } from '../art/moon.js';
+import { PixLayer } from '../art/hallway.js';
+import { pixelZoom, display } from '../core/display.js';
+import { SatelliteStrike } from '../art/strike.js';
 import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -20,63 +23,33 @@ import { goNext } from '../core/flow.js';
 import { reviewKeys } from '../core/review.js';
 import { fx } from '../core/fx.js';
 
-const TV = { x: 500, y: 110, w: 640, h: 360 };
-const X0 = 440; // the feed shows the garden from this x
-const T = { solve: 8.7, cut: 11.6, feed: 11.9, lockAt: 14.0, fire: 14.42, strike: 14.8, back: 18.5, turn: 22, next: 22.5, round2: 26, reach: 27, black: 31.5, end: 33.5 };
-const smooth = u => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
-const lerp = (a, b, u) => a + (b - a) * u;
+const T = { solve: 5.5, cut: 8.4, feed: 8.7, lockAt: 11.0, fire: 11.5, back: 14.6, turn: 16, round2: 17.5, black: 20.5, end: 21.5 };
+const n = c => hexNum(c);
+const SCR = { x: MOON.screen.x - KX, y: MOON.screen.y, w: MOON.screen.w, h: MOON.screen.h };
+const KIDS = MOON.kids.map(k => ({ x: k.x - KX, bun: k.bun })), KY = MOON.couch.y + 4;
+// the feed from Earth: where things stand on the grounds
+const F = { ground: 152, lamp: { x: 34, y: 58 }, girl0: 92, girl1: 150, hedge: 168, gate: 236 };
 
-function canvasTex(scene, key, w, h, draw) {
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
-  scene.textures.addCanvas(key, c).setFilter(Phaser.Textures.FilterMode.LINEAR);
-}
-
-// The room, painted once: plush walls, a porthole onto Earth over the lunar ground, toys, trophies.
-function paintRoom(scene) {
-  canvasTex(scene, 'k_room', 1280, 720, (x, W, H) => {
-    let g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1d1236'); g.addColorStop(0.7, '#120a24'); g.addColorStop(1, '#0a0614');
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-    for (let px = 30; px < W; px += 124) { x.fillStyle = 'rgba(255,255,255,0.025)'; x.fillRect(px, 40, 96, 470); x.fillStyle = 'rgba(0,0,0,0.18)'; x.fillRect(px + 94, 40, 3, 470); }
-    x.fillStyle = '#2a1a44'; x.fillRect(0, 520, W, 8); x.fillStyle = '#b8913a'; x.fillRect(0, 520, W, 1);
-    g = x.createLinearGradient(0, 560, 0, H); g.addColorStop(0, '#0e0819'); g.addColorStop(1, '#05030a'); x.fillStyle = g; x.fillRect(0, 556, W, H - 556);
-    x.fillStyle = '#1a0f2c'; x.beginPath(); x.ellipse(830, 690, 520, 70, 0, 0, Math.PI * 2); x.fill();
-    // the porthole: space, Earth burning on its night side, the lunar ground
-    const cx = 250, cy = 300, r = 170;
-    x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.clip();
-    x.fillStyle = '#020207'; x.fillRect(cx - r, cy - r, r * 2, r * 2);
-    let s = 7; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-    for (let i = 0; i < 90; i++) { x.fillStyle = `rgba(230,230,255,${0.3 + rnd() * 0.6})`; const q = rnd() < 0.1 ? 2 : 1; x.fillRect(cx - r + rnd() * 2 * r, cy - r + rnd() * 2 * r, q, q); }
-    const ex = 220, ey = 230, er = 74;
-    x.fillStyle = '#0a1322'; x.beginPath(); x.arc(ex, ey, er, 0, Math.PI * 2); x.fill();
-    x.save(); x.beginPath(); x.arc(ex, ey, er, 0, Math.PI * 2); x.clip();
-    g = x.createRadialGradient(ex + 95, ey - 20, er * 0.9, ex + 60, ey - 10, er * 1.6); g.addColorStop(0, 'rgba(120,180,255,0)'); g.addColorStop(0.35, 'rgba(110,170,250,0.75)'); g.addColorStop(1, 'rgba(190,225,255,0.95)');
-    x.fillStyle = '#0a1322'; x.fill(); x.beginPath(); x.arc(ex + 34, ey - 6, er * 1.02, 0, Math.PI * 2); x.arc(ex + 100, ey - 6, er * 1.9, 0, Math.PI * 2, true);
-    x.fillStyle = 'rgba(80,140,230,0.85)'; x.beginPath(); x.arc(ex, ey, er, -1.25, 1.25); x.arc(ex - 26, ey, er * 0.92, 1.1, -1.1, true); x.closePath(); x.fill();
-    x.fillStyle = 'rgba(190,225,255,0.9)'; x.beginPath(); x.arc(ex, ey, er, -1.0, 1.0); x.arc(ex - 10, ey, er * 0.95, 0.95, -0.95, true); x.closePath(); x.fill();
-    for (let i = 0; i < 26; i++) { const a = rnd() * Math.PI * 2, d = rnd() * er * 0.85, fx = ex - 18 + Math.cos(a) * d * 0.8, fy = ey + Math.sin(a) * d; x.fillStyle = 'rgba(255,120,40,0.18)'; x.beginPath(); x.arc(fx, fy, 5, 0, Math.PI * 2); x.fill(); x.fillStyle = '#ff9a4a'; x.fillRect(fx, fy, 1.6, 1.6); }
-    x.restore();
-    x.strokeStyle = 'rgba(140,190,255,0.35)'; x.lineWidth = 2; x.beginPath(); x.arc(ex, ey, er + 2, -1.3, 1.3); x.stroke();
-    g = x.createRadialGradient(cx, cy + 620, 400, cx, cy + 620, 560); g.addColorStop(0, '#8a8682'); g.addColorStop(0.92, '#6b6864'); g.addColorStop(1, '#3a3836');
-    x.fillStyle = g; x.beginPath(); x.arc(cx, cy + 620, 540, 0, Math.PI * 2); x.fill();
-    [[150, 410, 22], [300, 440, 14], [210, 455, 9], [360, 400, 11]].forEach(([qx, qy, qr]) => { x.fillStyle = 'rgba(0,0,0,0.22)'; x.beginPath(); x.ellipse(qx, qy, qr, qr * 0.35, 0, 0, Math.PI * 2); x.fill(); });
-    x.restore();
-    x.lineWidth = 16; x.strokeStyle = '#2a1b45'; x.beginPath(); x.arc(cx, cy, r + 8, 0, Math.PI * 2); x.stroke();
-    x.lineWidth = 2; x.strokeStyle = '#b8913a'; x.beginPath(); x.arc(cx, cy, r + 1, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.arc(cx, cy, r + 16, 0, Math.PI * 2); x.stroke();
-    // toys: a rocket, a ball; trophies and a pennant by the screen
-    x.fillStyle = '#e8e2d6'; x.beginPath(); x.moveTo(430, 560); x.quadraticCurveTo(452, 590, 448, 650); x.lineTo(412, 650); x.quadraticCurveTo(408, 590, 430, 560); x.fill();
-    x.fillStyle = '#c8423a'; x.beginPath(); x.moveTo(412, 630); x.lineTo(396, 660); x.lineTo(414, 652); x.fill(); x.beginPath(); x.moveTo(448, 630); x.lineTo(464, 660); x.lineTo(446, 652); x.fill();
-    x.fillStyle = '#7fb0ff'; x.beginPath(); x.arc(430, 600, 7, 0, Math.PI * 2); x.fill();
-    x.fillStyle = '#ffd23f'; x.beginPath(); x.arc(480, 676, 18, 0, Math.PI * 2); x.fill(); x.fillStyle = '#ff5fa2'; x.fillRect(463, 672, 34, 7);
-    x.fillStyle = '#2a1a44'; x.fillRect(1160, 300, 110, 8);
-    [1178, 1212, 1246].forEach((tx, i) => { x.fillStyle = '#e2b146'; x.beginPath(); x.moveTo(tx - 11, 262 - i * 4); x.lineTo(tx + 11, 262 - i * 4); x.lineTo(tx + 5, 284); x.lineTo(tx - 5, 284); x.fill(); x.fillRect(tx - 2, 284, 4, 8); x.fillRect(tx - 8, 292, 16, 8); x.fillStyle = '#fff0a8'; x.fillRect(tx - 7, 264 - i * 4, 3, 10); });
-    x.fillStyle = '#ff5fa2'; x.beginPath(); x.moveTo(1170, 150); x.lineTo(1262, 168); x.lineTo(1170, 186); x.fill();
-    x.fillStyle = '#ffffff'; x.font = '600 18px "Martian Mono", monospace'; x.fillText('07', 1182, 175);
-    // the screen: a bezel with a gold line, and a hole where the picture shows through
-    x.fillStyle = '#06040b'; x.fillRect(TV.x - 16, TV.y - 16, TV.w + 32, TV.h + 32);
-    x.strokeStyle = '#b8913a'; x.lineWidth = 2; x.strokeRect(TV.x - 12, TV.y - 12, TV.w + 24, TV.h + 24);
-    x.clearRect(TV.x, TV.y, TV.w, TV.h);
-  });
+// The grounds at night, full frame, as the show's camera sees them: ash sky, the house in
+// bronze with lit gold windows, the gold gate, a hedge, a searchlight on a pole.
+function paintFeed() {
+  const p = new Painter(320, 180), r = rng(13), G = F.ground;
+  p.rect(0, 0, 320, 180, '#1b1c21');
+  for (let i = 0; i < 60; i++) p.px(Math.floor(r() * 320), Math.floor(r() * 90), i % 7 ? '#45474d' : '#8f8d87');
+  p.circle(276, 30, 9, '#b8b2a3'); p.circle(273, 28, 6, '#ebe6d8'); p.px(279, 26, '#f5ce77'); // the Moon, its one lit window
+  // the house, far back
+  p.rect(176, 70, 140, G - 70, '#261f15'); p.rect(176, 70, 140, 2, '#3a2f1f'); p.poly([[176, 70], [246, 44], [316, 70]], '#3a2f1f'); p.rect(240, 52, 12, 6, '#d6a03c');
+  for (let j = 0; j < 3; j++) for (let i = 0; i < 6; i++) { const wx = 184 + i * 22, wy = 80 + j * 22; p.rect(wx, wy, 9, 13, '#0e0f12'); p.rect(wx + 1, wy + 1, 7, 11, (i + j) % 3 ? '#d6a03c' : '#8a5f1c'); p.rect(wx + 4, wy + 1, 1, 11, '#3a2f1f'); }
+  // the ground: grey ash out here
+  p.rect(0, G, 320, 180 - G, '#2e3036'); p.rect(0, G, 320, 1, '#45474d'); for (let i = 0; i < 30; i++) p.rect(Math.floor(r() * 320), G + 3 + Math.floor(r() * 24), 2 + Math.floor(r() * 4), 1, '#1b1c21');
+  // the gate, gold, open
+  [F.gate, F.gate + 30].forEach(x => { p.rect(x, G - 46, 5, 46, '#8a5f1c'); p.rect(x + 1, G - 46, 3, 46, '#d6a03c'); p.rect(x - 1, G - 50, 7, 4, '#f2d58c'); });
+  for (let y = G - 40; y < G; y += 6) p.rect(F.gate + 5, y, 6, 1, '#d6a03c');
+  // a hedge, cut square, bronze-green, low enough to hide behind crouched
+  p.rect(F.hedge, G - 12, 50, 12, '#261f15'); p.rect(F.hedge, G - 12, 50, 2, '#3a2f1f'); for (let x = F.hedge + 3; x < F.hedge + 48; x += 6) p.px(x, G - 8, '#3a2f1f');
+  // the searchlight: a pole and a head
+  p.rect(F.lamp.x - 1, F.lamp.y, 3, G - F.lamp.y, '#45474d'); p.rect(F.lamp.x - 6, G - 3, 13, 3, '#45474d'); p.rect(F.lamp.x - 5, F.lamp.y - 6, 10, 7, '#6b6c70'); p.rect(F.lamp.x - 3, F.lamp.y, 6, 2, '#f2d58c');
+  return p;
 }
 
 export class Kids extends Phaser.Scene {
@@ -84,56 +57,43 @@ export class Kids extends Phaser.Scene {
 
   create(data) {
     const P = this.P = LOOKS[state.look];
-    this.C = cinemaPalette(P);
-    makeCinemaTextures(this, this.C);
     makeSprites(this, P);
-    paintRoom(this);
-    paintSky(P, 320).toTexture(this, 'k_sky'); paintMoon(P).toTexture(this, 'k_moon'); paintEstate(P).toTexture(this, 'k_level');
-    this.map = estateMap();
+    const room = new Painter(320, 180); paintPlayroom(room, 0); room.toTexture(this, 'kr_room');
+    paintFeed().toTexture(this, 'kr_feed');
+    [true, false].forEach(bun => KID_POSES.forEach(pose => paintKid(bun, pose).toTexture(this, 'mk_' + (bun ? 'a' : 'b') + '_' + pose)));
     this.ctl = makeControls(this);
-    const cam = this.cameras.main; cam.setRoundPixels(false);
+    this.cameras.main.setBackgroundColor('#000000').setRoundPixels(true);
+    this.place();
 
-    this.add.image(0, 0, 'k_room').setOrigin(0).setDepth(0);
-    // the Earth feed, in screen pixels (320 x 180) scaled into the screen
-    this.feed = this.add.container(TV.x, TV.y).setScale(TV.w / 320).setDepth(2).setVisible(false);
-    this.feed.add(this.add.image(0, 0, 'k_sky').setOrigin(0));
-    this.feed.add(this.add.image(250, 22, 'k_moon'));
-    this.feed.add(this.add.image(-X0, 0, 'k_level').setOrigin(0).setCrop(X0, 0, 320, 180));
+    // the room
+    this.roomImg = this.add.image(0, 0, 'kr_room').setOrigin(0).setDepth(0);
+    this.screenG = this.add.graphics().setDepth(1);
+    this.kidImgs = KIDS.map((k, i) => this.add.image(k.x, KY, 'mk_' + (i ? 'b' : 'a') + '_back').setOrigin(0.5, 1).setDepth(2));
+    this.handG = this.add.graphics().setDepth(2.1);
+    // the feed, full frame, over the room
+    this.feed = this.add.container(0, 0).setDepth(10).setVisible(false);
+    this.feed.add(this.add.image(0, 0, 'kr_feed').setOrigin(0));
+    this.light = new PixLayer(this, 'kr_light', 0); this.feed.add(this.light.img);
     this.body1 = this.add.image(0, 0, 'body0').setOrigin(0.5, 1).setVisible(false); this.feed.add(this.body1);
     this.girl1 = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1); this.feed.add(this.girl1);
-    this.girl2 = this.add.image(0, 0, 'girl_stand').setOrigin(0.5, 1).setVisible(false); this.feed.add(this.girl2);
     this.feedG = this.add.graphics(); this.feed.add(this.feedG);
-    this.feedStrike = new SatelliteStrike(this, { parent: this.feed }); this.hitAt = null; this.satX = null; this.g1x = 570;
-    this.staticG = this.add.graphics().setDepth(3);
-    // light from the screen
-    this.glows = [[TV.x + TV.w / 2, TV.y - 30, 9, 1.6], [TV.x + TV.w / 2, TV.y + TV.h + 40, 10, 2.2], [TV.x - 40, TV.y + TV.h / 2, 2, 6], [TV.x + TV.w + 40, TV.y + TV.h / 2, 2, 6]]
-      .map(([gx, gy, sx, sy]) => this.add.image(gx, gy, 'c_glow').setScale(sx, sy).setDepth(4).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.3));
-    this.floorGlow = this.add.image(820, 640, 'c_glow').setScale(9, 1.6).setDepth(4).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.25);
-    this.kidsG = this.add.graphics().setDepth(6);
-    this.couchG = this.add.graphics().setDepth(7);
-    this.grain = this.add.tileSprite(0, 0, 1280, 720, 'c_grain').setDepth(50).setAlpha(0.45);
-    this.vig = this.add.image(0, 0, 'c_vignette').setDepth(51);
-    this.bars = [this.add.rectangle(0, 0, 10, 10, 0x000000).setDepth(52), this.add.rectangle(0, 0, 10, 10, 0x000000).setDepth(52)];
-    this.blackout = this.add.rectangle(640, 360, 4000, 3000, 0x000000).setDepth(60).setVisible(false);
+    this.strike = new SatelliteStrike(this, { parent: this.feed }); this.hitAt = null; this.satX = null;
+    this.staticG = this.add.graphics().setDepth(20);
+    this.blackout = this.add.rectangle(160, 90, 400, 260, 0x000000).setDepth(60).setVisible(false);
 
     this.t = 0; this.fired = {}; this.solvedAt = null; this.over = false;
     this.beds = { show: Sound.show(0.045), hum: Sound.hum(0.0001) };
     Music.stop(0.8);
-    this.scene.launch('satellite', { embed: true, batch: 4, skin: 4, ids: ['walls'], autoDelay: 1.5, autoEvery: 0.2, round: 3, score: 2400 });
-    this.sat = this.scene.get('satellite');
-    this.onSolved = () => { if (this.solvedAt == null) this.solvedAt = this.t; };
-    this.sat.events.on('solved', this.onSolved);
-    this.events.once('shutdown', () => {
-      Object.values(this.beds).forEach(b => b.stop(0.3)); overlay.clearCaption();
-      this.sat.events.off('solved', this.onSolved);
-      if (this.scene.isActive('satellite')) this.scene.stop('satellite');
-    });
+    this.scale.on('rescale', this.place, this);
+    this.events.once('shutdown', () => { this.scale.off('rescale', this.place, this); Object.values(this.beds).forEach(b => b.stop(0.3)); overlay.clearCaption(); });
     // in the game's own order it plays after batch 4 and hands on to the Moon; on its own it is a preview
     this.inFlow = !!(data && data.inFlow);
-    overlay.hint(this.inFlow ? '' : 'A preview of the kids’ room on the Moon, a scene near the end. Esc goes back to the opening.');
-    cam.fadeIn(1200);
+    overlay.hint(this.inFlow ? '' : 'A preview of the kids’ room on the Moon. Esc goes back to the opening.');
+    this.cameras.main.fadeIn(900);
     window.__game = { scene: this, T };
   }
+  // the 320 x 180 picture, scaled by whole numbers, centered the way the other pixel scenes are
+  place() { const S = display.S, cam = this.cameras.main; cam.setZoom(pixelZoom()); cam.scrollX = -160 * (S - 1); cam.scrollY = -90 * (S - 1); }
 
   skipAhead() { if (this.inFlow) { if (!goNext(this, 'kids')) this.scene.start('intro', {}); } else this.t = Math.max(this.t, T.black); }
   cue(key, at, fn) { if (this.t >= at && !this.fired[key]) { this.fired[key] = true; fn(); } }
@@ -147,32 +107,35 @@ export class Kids extends Phaser.Scene {
     if (c.skip()) { if (this.inFlow) { if (!goNext(this, 'kids')) this.scene.start('intro', {}); } else this.scene.start('intro', {}); return; }
     if (this.over && c.advance()) { this.scene.restart(); return; }
     this.script(t);
-    this.direct(t);
-    this.drawFeed(t);
+    const inFeed = t >= T.feed && t < T.back;
+    this.feed.setVisible(inFeed);
+    this.drawScreen(t);
     this.drawKids(t);
+    if (inFeed) this.drawFeed(t, dt); else this.strike.update(dt);
+    this.drawStatic(t);
     c.endFrame();
   }
 
-  // ------------------------------------------------------------------ the script: sound, captions, the cut
+  // ------------------------------------------------------------------ the script: sound, captions, cuts
   script(t) {
     this.cue('cc1', 0.6, () => overlay.caption(null, '[GAME SHOW MUSIC]'));
-    this.cue('cc1x', 5, () => overlay.clearCaption());
-    if (this.solvedAt != null) {
-      this.cue('cheer', this.solvedAt + 0.15, () => { overlay.caption(null, '[CHEERING]'); this.beds.show.set(0.07, 0.2); [0, 0.25, 0.55, 0.9].forEach(d => this.time.delayedCall(d * 1000, () => Sound.noise(0.35, 0.05, 2400))); });
-    }
-    this.cue('cut', T.cut, () => {
-      overlay.caption(null, '[STATIC]'); Sound.noise(0.4, 0.14, 9000); this.beds.show.stop(0.05); this.beds.hum.set(0.025, 0.5);
-      if (this.scene.isActive('satellite')) this.scene.stop('satellite');
+    this.cue('cc1x', 4.6, () => overlay.clearCaption());
+    this.cue('lock0', T.solve - 1.1, () => Sound.charge());
+    this.cue('solve', T.solve, () => {
+      this.solvedAt = this.t; overlay.caption(null, '[CHEERING]'); this.beds.show.set(0.07, 0.2);
+      [0, 0.25, 0.55, 0.9].forEach(d => this.time.delayedCall(d * 1000, () => Sound.noise(0.35, 0.05, 2400)));
+      [784, 1047].forEach((f, i) => this.time.delayedCall(i * 120, () => Sound.tone(f, 0.12, 'square', 0.02)));
     });
-    this.cue('feed', T.feed, () => { this.feed.setVisible(true); });
+    this.cue('cut', T.cut, () => { overlay.caption(null, '[STATIC]'); Sound.noise(0.4, 0.14, 9000); this.beds.show.stop(0.05); this.beds.hum.set(0.025, 0.5); });
     this.cue('ccx', T.feed + 0.9, () => overlay.clearCaption());
     this.cue('lock', T.lockAt, () => Sound.charge());
     // the satellite fires; the beam ricochets down the feed and hits her
-    this.cue('fire', T.fire, () => this.feedStrike.fire({ view: { x: 0, y: 0, width: 320, height: 180 }, tx: (this.g1x || 570) - X0, ty: 153, P: this.P, from: this.satX, onImpact: () => {
+    this.cue('fire', T.fire, () => this.strike.fire({ view: { x: 0, y: 0, width: 320, height: 180 }, tx: this.g1x, ty: F.ground - 7, P: this.P, from: this.satX, onImpact: () => {
       this.hitAt = this.t; Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16); fx.shake(this.cameras.main, 140, 0.003);
     } }));
+    this.cue('back', T.back, () => { this.beds.show = Sound.show(0.03); });
     this.cue('round2', T.round2, () => { overlay.caption(null, '[GAME SHOW JINGLE]'); [523, 659, 784, 1047].forEach((f, i) => this.time.delayedCall(i * 140, () => Sound.tone(f, 0.16, 'square', 0.025, null, 0.3))); });
-    this.cue('round2x', T.round2 + 2.4, () => overlay.clearCaption());
+    this.cue('round2x', T.round2 + 2.2, () => overlay.clearCaption());
     this.cue('black', T.black, () => { this.blackout.setVisible(true); Object.values(this.beds).forEach(b => b.stop(0.02)); overlay.clearCaption(); });
     this.cue('end', T.end, () => {
       if (this.inFlow && goNext(this, 'kids')) return;
@@ -180,145 +143,97 @@ export class Kids extends Phaser.Scene {
     });
   }
 
-  // ------------------------------------------------------------------ camera, film layers, the screen
-  direct(t) {
-    let k, cx, cy;
-    if (t < 7) { k = lerp(1, 1.06, t / 7); cx = 640; cy = 360; }
-    else if (t < T.feed + 0.6) { const u = smooth((t - 7) / 2.5); k = lerp(1.06, 1.55, u); cx = lerp(640, 835, u); cy = lerp(360, 318, u); }
-    else if (t < T.lockAt) { const u = smooth((t - T.feed - 0.6) / (T.lockAt - T.feed - 0.6)); k = lerp(1.55, 1.95, u); cx = lerp(835, 780, u); cy = lerp(318, 380, u); }
-    // the lamp holds her: the camera pulls back so the whole screen shows, satellite and all
-    else if (t < T.strike + 0.5) { const u = smooth((t - T.lockAt) / 0.35); k = lerp(1.95, 1.5, u); cx = lerp(780, 830, u); cy = lerp(380, 300, u); }
-    else if (t < T.back) { const u = smooth((t - T.strike - 0.5) / 3); k = lerp(1.5, 2.1, u); cx = lerp(830, 770, u); cy = lerp(300, 400, u); }
-    else if (t < T.back + 3) { const u = smooth((t - T.back) / 3); k = lerp(2.1, 1.05, u); cx = lerp(770, 660, u); cy = lerp(400, 360, u); }
-    else { const u = smooth((t - T.back - 3) / 10); k = lerp(1.05, 1.12, u); cx = lerp(660, 700, u); cy = lerp(360, 380, u); }
-    const cam = this.cameras.main, z = designZoom() * k;
-    cam.setZoom(z); cam.centerOn(cx, cy);
-    const vw = 1280 / k, vh = 720 / k;
-    this.grain.setPosition(cx, cy).setScale(1 / k).setTilePosition(Math.random() * 256, Math.random() * 256);
-    this.vig.setPosition(cx, cy).setDisplaySize(vw + 2, vh + 2);
-    const barH = vh * 0.075;
-    this.bars[0].setPosition(cx, cy - vh / 2 + barH / 2).setSize(vw + 4, barH);
-    this.bars[1].setPosition(cx, cy + vh / 2 - barH / 2).setSize(vw + 4, barH);
-    // the satellite scene draws into the screen's rectangle, wherever the camera puts it
-    if (this.scene.isActive('satellite') && this.sat.cameras && this.sat.cameras.main) {
-      const left = cx - display.w / (2 * z), top = cy - display.h / (2 * z);
-      const sx = Math.round((TV.x - left) * z), sy = Math.round((TV.y - top) * z), sw = Math.round(TV.w * z), sh = Math.round(TV.h * z);
-      const sc = this.sat.cameras.main; sc.setViewport(sx, sy, sw, sh); sc.setZoom(sw / 320); sc.centerOn(160, 90);
-    }
-    // the screen's light: game show colors, then the cold feed, then nothing
-    let col;
-    if (t < T.cut) { const i = Math.floor(t * 3) % 3; col = ['#ff5fa2', '#7d6bff', '#ffd23f'][i]; if (this.solvedAt != null && t - this.solvedAt < 2.5) col = Math.floor(t * 10) % 2 ? '#ffd23f' : '#ff5fa2'; }
-    else if (t < T.feed) col = '#ffffff';
-    else col = t > T.round2 && Math.floor(t * 4) % 2 ? '#ff5fa2' : '#8fb6ff';
-    if (this.hitAt != null && t - this.hitAt < 0.12) col = '#ff6060';
-    this.tvCol = col;
-    const flick = 0.85 + 0.15 * Math.sin(t * 13) * Math.sin(t * 7.7);
-    this.glows.forEach(g => g.setTint(num(col)).setAlpha((t < T.cut ? 0.32 : 0.22) * flick));
-    this.floorGlow.setTint(num(col)).setAlpha((t < T.cut ? 0.26 : 0.18) * flick);
-    // static at the cut
-    const sg = this.staticG; sg.clear();
-    if (t >= T.cut && t < T.feed + 0.05) { for (let i = 0; i < 260; i++) { const v = Math.random(); sg.fillStyle(v > 0.5 ? 0xffffff : 0x000000, 0.9); sg.fillRect(TV.x + Math.random() * TV.w, TV.y + Math.random() * TV.h, 3 + Math.random() * 40, 2 + Math.random() * 3); } sg.fillStyle(0x777777, 0.4); sg.fillRect(TV.x, TV.y, TV.w, TV.h); }
-  }
-
-  // ------------------------------------------------------------------ the feed from Earth
-  cone(lx, ly, angle, half, range) {
-    const pts = [{ x: lx - X0, y: ly }], solid = (px, py) => { const tx = Math.floor(px / 16), ty = Math.floor(py / 16); return ty >= 0 && ty < this.map.H && tx >= 0 && tx < this.map.W && this.map.m[ty][tx] === 1; };
-    for (let a = angle - half; a <= angle + half + 0.001; a += 1) {
-      const r = a * Math.PI / 180, dx = Math.cos(r), dy = Math.sin(r); let d = 0;
-      while (d < range) { d += 2; const px = lx + dx * d, py = ly + dy * d; if (solid(px, py) || px < X0 || px > X0 + 320 || py < 0 || py > 180) { d -= 1; break; } }
-      pts.push({ x: lx + dx * d - X0, y: ly + dy * d });
-    }
-    return pts;
-  }
-  drawFeed(t) {
-    if (!this.feed.visible) return;
-    const g = this.feedG, P = this.P, L = EST.lights[0]; g.clear();
-    // girl one: past the hedge, creeping toward the fountain; the lamp turns to her
-    const g1 = t < T.feed + 2 ? lerp(550, 570, Math.max(0, (t - T.feed) / 2)) : 570, walking1 = t < T.feed + 2 && t > T.feed;
-    const hit = this.hitAt != null; this.g1x = g1;
-    this.girl1.setVisible(!hit).setPosition(Math.round(g1 - X0), 160).setTexture(walking1 && Math.floor(t * 6) % 2 ? 'girl_pass' : 'girl_stand');
-    this.body1.setVisible(hit).setPosition(Math.round(g1 - X0), 160);
-    const sweep = L.a0 + (L.a1 - L.a0) * (Math.sin((t / L.period + L.phase) * Math.PI * 2) + 1) / 2, aim = Math.atan2(150 - L.y, g1 - L.x) * 180 / Math.PI;
-    const toward = smooth((t - (T.lockAt - 0.35)) / 0.35) * (1 - smooth((t - T.strike - 0.6) / 0.8));
-    const angle = lerp(sweep, aim, toward), pts = this.cone(L.x, L.y, angle, L.half, L.range);
-    const lock = t >= T.lockAt && t < T.fire ? (t - T.lockAt) / (T.fire - T.lockAt) : t >= T.fire && !hit ? 1 : 0;
-    const coneCol = hexNum(lock > 0 ? P.hazard : P.shaft), inner = [pts[0]].concat(pts.slice(1).filter((_, j, a) => j > a.length * 0.25 && j < a.length * 0.75));
-    g.fillStyle(coneCol, 0.2 + lock * 0.12); g.fillPoints(pts, true); if (inner.length > 2) { g.fillStyle(coneCol, 0.16); g.fillPoints(inner, true); }
-    const hx = g1 - X0, hy = 153;
-    if (lock > 0 && t < T.fire) {
-      const r = 9 - lock * 7; g.lineStyle(1, hexNum(P.hazard), 1); g.strokeRect(Math.round(hx - 4 - r), Math.round(hy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r));
-      // the satellite slides into place at the top of the feed while the lamp holds her
-      const want = hx < 160 ? 230 : 90; this.satX = this.satX == null ? (hx < 160 ? 330 : -10) : this.satX + (want - this.satX) * 0.2;
-      SatelliteStrike.drawSat(g, P, this.satX, 3, null, 0);
-    }
-    this.feedStrike.update(this.game.loop.delta / 1000);
-    // the next take walks in and hides behind the hedge, the body on its other side
-    if (t >= T.next) {
-      const u = Math.min(1, (t - T.next) / 3), x2 = lerp(X0 - 6, 500, u), crouch = t > T.next + 3.4;
-      this.girl2.setVisible(true).setPosition(Math.round(x2 - X0), 160).setTexture(crouch ? 'girl_crouch' : u < 1 && Math.floor(t * 6) % 2 ? 'girl_pass' : 'girl_stand');
-    }
-    // broadcast marks: LIVE, the channel, the take
-    const red = hexNum(P.hazard);
-    if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(red, 1); g.fillCircle(9, 9, 2); }
-    pixText(g, 'LIVE', 14, 7, 0xffffff, 1, 0.9); pixText(g, 'CH 07', 320 - 6 - textWidth('CH 07'), 7, 0xffffff, 1, 0.8);
-    pixText(g, 'TAKE ' + (this.hitAt == null || t < this.hitAt + 1.2 ? 31 : 32), 6, 168, 0xffffff, 1, 0.7);
-    // round two: the game show comes back over the feed
+  // ------------------------------------------------------------------ the giant screen in the room
+  drawScreen(t) {
+    const g = this.screenG, { x, y, w, h } = SCR; g.clear();
+    g.fillStyle(0x0e0f12, 1); g.fillRect(x, y, w, h);
+    if (t < T.cut) return this.drawShow(g, t);
+    if (t < T.back) return;
+    // back in the room: the feed, small, on the giant screen; the next take walks in
+    g.fillStyle(n('#1b1c21'), 1); g.fillRect(x, y, w, h); g.fillStyle(n('#2e3036'), 1); g.fillRect(x, y + 72, w, h - 72); g.fillStyle(n('#45474d'), 1); g.fillRect(x, y + 72, w, 1);
+    g.fillStyle(n('#261f15'), 1); g.fillRect(x + 96, y + 30, w - 96, 42); for (let i = 0; i < 4; i++) { g.fillStyle(n((i % 2) ? '#8a5f1c' : '#d6a03c'), 1); g.fillRect(x + 104 + i * 18, y + 38, 6, 9); }
+    g.fillStyle(n('#261f15'), 1); g.fillRect(x + 72, y + 64, 26, 8);
+    // the body where she fell, and the next one walking in from the left, crouching at the hedge
+    g.fillStyle(n('#b8b2a3'), 1); g.fillRect(x + 52, y + 70, 9, 2); g.fillStyle(n('#1b1c21'), 1); g.fillRect(x + 50, y + 70, 2, 2);
+    const u = Math.min(1, Math.max(0, (t - T.back - 0.4) / 2.6)), gx = Math.round(x + 4 + u * 62), crouch = u >= 1;
+    g.fillStyle(n('#ebe6d8'), 1); g.fillRect(gx, y + (crouch ? 66 : 63), 3, crouch ? 6 : 9); g.fillStyle(n('#1b1c21'), 1); g.fillRect(gx, y + (crouch ? 65 : 62), 3, 2);
+    g.fillStyle(0xe3412b, 1); if (Math.floor(t * 2) % 2 === 0) g.fillRect(x + 6, y + 7, 3, 3); ccText(g, 'LIVE', x + 12, y + 5, 0xebe6d8); ccText(g, 'CH 07', x + w - 34, y + 5, n('#d6a03c'));
+    ccText(g, 'TAKE 32', x + 6, y + h - 12, 0xebe6d8);
     if (t >= T.round2) {
-      const on = Math.floor(t * 6) % 2;
-      // over the sky, so the ground (and what lies on it) stays in view
-      g.fillStyle(0x1b0f3a, 0.92); g.fillRect(70, 22, 180, 30);
-      for (let bx = 74; bx < 250; bx += 8) { g.fillStyle((bx / 8 + (on ? 1 : 0)) % 2 ? 0xffd23f : 0xff5fa2, 1); g.fillCircle(bx, 24, 1.5); g.fillCircle(bx, 50, 1.5); }
-      pixText(g, 'ROUND 2', 160 - textWidth('ROUND 2', 2) / 2, 29, 0xffd23f, 2, 1);
-      pixText(g, 'READY?', 160 - textWidth('READY?') / 2, 42, on ? 0xffffff : 0xff5fa2, 1, 1);
+      // the show comes back over the feed: ROUND 2, READY?
+      const on = Math.floor(t * 4) % 2, a = 'ROUND 2', b = 'READY?', bw = 100;
+      g.fillStyle(0x0e0f12, 1); g.fillRect(x + w / 2 - bw / 2 - 1, y + 13, bw + 2, 36); g.fillStyle(n('#d6a03c'), 1); g.fillRect(x + w / 2 - bw / 2, y + 14, bw, 34); g.fillStyle(0x0e0f12, 1); g.fillRect(x + w / 2 - bw / 2 + 2, y + 16, bw - 4, 30);
+      ccText(g, a, Math.round(x + w / 2 - ccWidth(a, 2) / 2), y + 18, n('#f2d58c'), { sx: 2, sy: 2 }); ccText(g, b, Math.round(x + w / 2 - ccWidth(b) / 2), y + 36, on ? 0xebe6d8 : n('#d6a03c'));
     }
   }
+  // The game show, the same one she walks in on at the end (art/moon.js): the board, a gold path
+  // drawing itself from target to target, and the feed from Earth in the corner. When the path
+  // reaches the last target the amber box locks on the girl in the feed: +400, round over.
+  drawShow(g, t) {
+    const { x, y, w, h } = SCR, solved = t >= T.solve;
+    g.fillStyle(0x0e0f12, 1); g.fillRect(x, y, w, h);
+    g.fillStyle(0xe3412b, 1); g.fillRect(x + 6, y + 6, 28, 11); ccText(g, 'LIVE', x + 8, y + 8, 0xebe6d8);
+    ccText(g, 'CH 07', x + w - 34, y + 8, n('#d6a03c'));
+    const bx = x + 100, by = y + 22, u = Math.min(BOARD.path.length, Math.max(0, (t - 0.8) / (T.solve - 0.8) * BOARD.path.length));
+    drawBoard(g, bx, by, u);
+    // the feed: she walks along the fence; the box closes in as the path gets near
+    const fx = x + 8, fy = y + 22, fw = 80, fh = 48, gx = fx + 6 + Math.min(24, t * 4);
+    drawFeedBox(g, fx, fy, fw, fh, gx);
+    const close = Math.min(1, Math.max(0, (t - 1) / (T.solve - 1.2))), bs = Math.round(22 - close * 14);
+    if (!solved || Math.floor(t * 8) % 2) { g.lineStyle(1, n('#ffb01f'), 1); g.strokeRect(Math.round(gx + 1 - bs / 2), Math.round(fy + fh - 10 - bs / 2), bs, bs); }
+    ccText(g, 'ROUND 1', x + 8, y + h - 12, n('#d6a03c'));
+    ccText(g, 'SCORE ' + (solved ? 2400 : 2000), x + 8, y + h - 22, n('#f5ce77'));
+    if (solved && Math.floor(t * 8) % 2 === 0) ccText(g, '+400', bx + 64, by + 2, n('#f2d58c'));
+    if (solved && t < T.solve + 0.15) { g.fillStyle(0xebe6d8, 1); g.fillRect(x, y, w, h); }
+  }
 
-  // ------------------------------------------------------------------ the kids and the couch
+  // ------------------------------------------------------------------ the kids
   drawKids(t) {
-    const g = this.kidsG, rim = num(this.tvCol), ink = 0x050309; g.clear();
-    const cheer = this.solvedAt == null ? 0 : smooth((t - this.solvedAt) / 0.25) * (1 - smooth((t - T.cut + 0.4) / 1.2));
-    const still = this.hitAt != null;
-    const bob = still ? 0 : Math.sin(t * 9) * cheer * 6 + Math.sin(t * 1.7) * 1.2;
-    const turn = smooth((t - T.turn) / 0.8);
-    const reach = smooth((t - T.reach) / 3.5);
-    const kids = [
-      { hx: 730, hy: 488 + bob, r: 30, bun: true, turn: 0, tablet: true, reach },
-      { hx: 950, hy: 494 + (still ? 0 : Math.sin(t * 9 + 1) * cheer * 7 + Math.sin(t * 1.5 + 2) * 1.2), r: 28, bun: false, turn, tablet: false, reach: 0 }
-    ];
-    // the tablet's light spills around its edges
-    const tab = kids[0], tx = tab.hx + 46, ty = tab.hy - 4, tabOn = t < T.cut ? 0.7 : t > T.round2 ? (Math.floor(t * 4) % 2 ? 1 : 0.6) : 0.15;
-    g.fillStyle(num(t > T.round2 || t < T.cut ? '#ff7fb8' : '#8fb6ff'), 0.12 * tabOn); g.fillEllipse(tx + 25, ty + 16, 110, 70);
-    g.fillStyle(num(t > T.round2 || t < T.cut ? '#ff9fca' : '#8fb6ff'), 0.25 * tabOn); g.fillEllipse(tx + 25, ty + 16, 70, 46);
-    [[rim, 3], [ink, 0]].forEach(([col, grow]) => {
-      g.fillStyle(col, grow ? 0.9 : 1); g.lineStyle(18 + grow * 2, col, grow ? 0.9 : 1);
-      kids.forEach(k => {
-        const hx = k.hx - k.turn * 7, sy = k.hy + k.r + 4;
-        g.fillRoundedRect(k.hx - 54 - grow, sy - grow, 108 + grow * 2, 90, 28);
-        g.fillRect(k.hx - 10 - grow, k.hy + k.r - 10, 20 + grow * 2, 18);
-        g.fillCircle(hx, k.hy, k.r + grow);
-        if (k.bun) g.fillCircle(hx + 5, k.hy - k.r - 6, 12 + grow);
-        else { g.fillCircle(hx - 13, k.hy - k.r + 7, 9 + grow); g.fillCircle(hx + 2, k.hy - k.r + 2, 9 + grow); g.fillCircle(hx + 15, k.hy - k.r + 8, 8 + grow); }
-        if (k.turn > 0.05) g.fillCircle(hx - k.r + 1, k.hy + 5, 5 + grow); // her cheek, as she turns
-        // arms: down behind the couch, up when they cheer
-        const up = k === kids[1] ? cheer : cheer * (k.tablet ? 0.6 : 1);
-        [[-1, up], [1, k.tablet ? 0 : up]].forEach(([s, u]) => {
-          if (u < 0.02) return;
-          const ax = k.hx + s * 42, ay = sy + 14, hxx = k.hx + s * (60 + 14 * u), hyy = sy + 70 - 170 * u;
-          g.lineBetween(ax, ay, hxx, hyy); g.fillCircle(hxx, hyy, 10 + grow);
-        });
-        if (k.tablet) {
-          // the right hand holds the tablet up by the shoulder; its back faces us
-          g.lineBetween(k.hx + 40, sy + 16, tx + 6, ty + 30); g.fillRoundedRect(tx - grow, ty - grow, 50 + grow * 2, 34 + grow * 2, 4);
-          if (k.reach > 0.01) { const rx = lerp(k.hx - 20, tx - 4, k.reach), ry = lerp(sy + 80, ty + 22, k.reach); g.lineBetween(k.hx - 30, sy + 16, rx, ry); g.fillCircle(rx, ry, 9 + grow); }
-        }
-      });
+    const cheer = this.solvedAt != null && t < T.cut;
+    this.kidImgs.forEach((img, i) => {
+      let pose = Math.floor(t * 0.7 + i * 0.6) % 4 === 0 ? 'back1' : 'back';
+      if (cheer) pose = Math.floor(t * 6 + i) % 2 ? 'cheer' : 'cheer1';
+      if (i === 1 && t >= T.turn && t < T.black) pose = 'turned';
+      img.setTexture('mk_' + (i ? 'b' : 'a') + '_' + pose);
     });
-    // the couch back, in front of them, lit along its top
-    const cg = this.couchG; cg.clear();
-    cg.fillStyle(0x120a20, 1); cg.fillRoundedRect(560, 556, 560, 220, 56);
-    cg.fillStyle(rim, 0.35); cg.fillRoundedRect(572, 556, 536, 5, 3);
-    cg.fillStyle(0x0b0614, 1); cg.fillRect(838, 572, 4, 160);
-    cg.fillStyle(0x1a0f2c, 1); cg.fillRoundedRect(540, 600, 60, 160, 26); cg.fillRoundedRect(1080, 600, 60, 160, 26);
-    cg.fillStyle(rim, 0.25); cg.fillRoundedRect(548, 600, 44, 4, 2); cg.fillRoundedRect(1088, 600, 44, 4, 2);
+    // the big one's controller, held up by her shoulder (a small dark slab, a gold button)
+    const h = this.handG, k = KIDS[0]; h.clear();
+    if (!cheer) { h.fillStyle(0x0e0f12, 1); h.fillRect(k.x + 6, KY - 13, 7, 5); h.fillStyle(n('#d6a03c'), 1); h.fillRect(k.x + 8, KY - 12, 3, 1); if (t > T.round2 && Math.floor(t * 4) % 2) { h.fillStyle(0xe3412b, 1); h.fillRect(k.x + 11, KY - 11, 1, 1); } }
+  }
+
+  // ------------------------------------------------------------------ the feed from Earth, full frame
+  drawFeed(t, dt) {
+    const g = this.feedG, P = this.P, L = this.light, G = F.ground; g.clear();
+    // she walks out past the lamp toward the hedge, then stops: the lamp turns to her
+    const u = Math.min(1, Math.max(0, (t - T.feed - 0.3) / 1.8)), gx = Math.round(F.girl0 + (F.girl1 - F.girl0) * u), walking = u > 0 && u < 1;
+    const hit = this.hitAt != null; this.g1x = gx;
+    this.girl1.setVisible(!hit).setPosition(gx, G).setTexture(walking && Math.floor(t * 6) % 2 ? 'girl_pass' : 'girl_stand');
+    this.body1.setVisible(hit).setPosition(gx, G);
+    // the searchlight: one slow sweep, then it swings onto her and holds; a checker of light
+    const aimAt = Math.atan2(G - 8 - F.lamp.y, gx - F.lamp.x) * 180 / Math.PI, sweep = 20 + 40 * (Math.sin((t - T.feed) * 1.3) + 1) / 2;
+    const toward = Math.min(1, Math.max(0, (t - (T.lockAt - 0.5)) / 0.5)) * (1 - Math.min(1, Math.max(0, (t - T.fire - 0.8) / 0.6)));
+    const ang = sweep + (aimAt - sweep) * toward, half = 8, range = 190;
+    const pts = [{ x: F.lamp.x, y: F.lamp.y + 1 }]; for (let a = ang - half; a <= ang + half + 0.01; a += 2) { const r = a * Math.PI / 180; let d = range; const yy = F.lamp.y + Math.sin(r) * d; if (yy > G) d = (G - F.lamp.y) / Math.sin(r); pts.push({ x: F.lamp.x + Math.cos(r) * d, y: F.lamp.y + Math.sin(r) * d }); }
+    const lock = t >= T.lockAt && !hit;
+    L.begin(1); L.poly(pts, lock ? P.hazard : '#f2d58c', 'checker'); L.end(); L.img.setPosition(0, -1);
+    // the lock box closing on her, the satellite sliding into place at the top of the feed
+    if (lock && t < T.fire) {
+      const k = Math.min(1, (t - T.lockAt) / (T.fire - T.lockAt)), r = 9 - k * 7;
+      g.lineStyle(1, n(P.hazard), 1); g.strokeRect(Math.round(gx - 4 - r), Math.round(G - 11 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r));
+      this.satX = this.satX == null ? 330 : this.satX + (230 - this.satX) * 0.2;
+      SatelliteStrike.drawSat(g, P, Math.round(this.satX), 3, null, 0);
+    }
+    this.strike.update(dt);
+    // the broadcast's marks: LIVE, the channel, the take
+    if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(n(P.hazard), 1); g.fillRect(6, 7, 3, 3); }
+    ccText(g, 'LIVE', 12, 5, 0xebe6d8); ccText(g, 'CH 07', 320 - 6 - ccWidth('CH 07'), 5, n('#d6a03c'));
+    ccText(g, 'TAKE ' + (this.hitAt == null || t < this.hitAt + 1.2 ? 31 : 32), 6, 168, 0xebe6d8);
+  }
+  // the cut: a few frames of static, hard square noise in four greys
+  drawStatic(t) {
+    const g = this.staticG; g.clear();
+    if (!(t >= T.cut && t < T.feed)) return;
+    const cols = [0x0e0f12, 0x45474d, 0x8f8d87, 0xebe6d8];
+    for (let y = 0; y < 180; y += 2) for (let x = 0; x < 320; x += 4) { g.fillStyle(cols[Math.floor(Math.random() * 4)], 1); g.fillRect(x, y, 4, 2); }
   }
 }

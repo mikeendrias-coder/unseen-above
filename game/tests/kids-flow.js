@@ -1,5 +1,6 @@
-// The kids' room preview: plays to the end, Enter replays it (the embedded screen comes back),
-// Esc leaves for the opening (the embedded screen stops). Also checks the #links.
+// The kids' room preview (a 320 x 180 pixel scene since Nov 17): the kids win their round, the
+// feed from Earth plays, it runs to the end, Enter replays it, Esc leaves for the opening. Also
+// checks the #links.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -11,19 +12,20 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const active = () => p.evaluate(() => window.__unseen.game.scene.getScenes(true).map(s => s.sys.settings.key).join(','));
   await p.goto(BASE + '/local.html#kids'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'kids');
-  await until(() => window.__unseen.game.scene.isActive('satellite'));
-  ok('kids starts with the embedded screen: ' + await active(), true);
-  await until(() => window.__game.scene.solvedAt != null, null, 120000); ok('the kids finish the round', true);
-  await p.evaluate(() => { window.__game.scene.t = 31; });
+  ok('kids starts on its own, nothing embedded: ' + await active(), (await active()) === 'kids');
+  await until(() => window.__game.scene.solvedAt != null, null, 30000); ok('the kids finish the round', true);
+  await until(() => window.__game.scene.feed.visible, null, 30000); ok('the screen cuts to the feed from Earth', true);
+  await until(() => window.__game.scene.hitAt != null, null, 30000); ok('the satellite strikes the girl on the feed', true);
+  await p.evaluate(() => { window.__game.scene.t = Math.max(window.__game.scene.t, 20); });
   await until(() => window.__game.scene.over, null, 30000);
-  ok('plays to the end; screen stopped: ' + await active(), !(await p.evaluate(() => window.__unseen.game.scene.isActive('satellite'))));
+  ok('plays to the end', true);
   await p.keyboard.press('Enter');
-  await until(() => window.__game.scene.t < 2 && window.__unseen.game.scene.isActive('satellite'));
+  await until(() => window.__game.scene.t < 2 && !window.__game.scene.over);
   ok('Enter replays: ' + await active(), true);
   await p.keyboard.press('Escape');
   await until(() => window.__game.scene.sys.settings.key === 'intro');
   await p.waitForTimeout(500);
-  ok('Esc goes to the opening: ' + await active(), !(await p.evaluate(() => window.__unseen.game.scene.isActive('satellite'))));
+  ok('Esc goes to the opening: ' + await active(), true);
   for (const [h, key] of [['gallery', 'gallery'], ['batch2', 'satellite'], ['grounds', 'grounds']]) {
     await p.goto('about:blank'); await p.goto(BASE + '/local.html#' + h); await p.click('#start');
     await until(k => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === k, key);
