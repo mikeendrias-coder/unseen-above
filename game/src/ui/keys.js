@@ -3,17 +3,19 @@
 // the keyboard would (held while the pointer is down, for moving, jumping, crouching and
 // running). Switches (immunity, sound, flashing, glasses) latch down while on and stay in step
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
+// Presenter tools (Nov 18): Pres is presenter mode, H holds the picture (ui/pause.js), U is full
+// screen (main.js). On a satellite screen W A S D say "turn": they turn the globe.
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
-import { setStory, canSkip } from '../core/review.js';
+import { setStory, canSkip, setPresenter, presenting } from '../core/review.js';
 import { overlay } from '../core/overlay.js';
 
 const KEYS = [
-  { cap: 'A', key: 'a', code: 'KeyA', kc: 65, label: 'left', hold: true },
-  { cap: 'D', key: 'd', code: 'KeyD', kc: 68, label: 'right', hold: true },
+  { cap: 'A', key: 'a', code: 'KeyA', kc: 65, label: 'left', hold: true, dyn: 'a' },
+  { cap: 'D', key: 'd', code: 'KeyD', kc: 68, label: 'right', hold: true, dyn: 'd' },
   { cap: 'Space', key: ' ', code: 'Space', kc: 32, label: 'jump', hold: true },
-  { cap: 'S', key: 's', code: 'KeyS', kc: 83, label: 'crouch', hold: true },
-  { cap: 'W', key: 'w', code: 'KeyW', kc: 87, label: 'door' },
+  { cap: 'S', key: 's', code: 'KeyS', kc: 83, label: 'crouch', hold: true, dyn: 's' },
+  { cap: 'W', key: 'w', code: 'KeyW', kc: 87, label: 'door', dyn: 'w' },
   { cap: 'Shift', key: 'Shift', code: 'ShiftLeft', kc: 16, label: 'run', hold: true },
   { cap: 'J', key: 'j', code: 'KeyJ', kc: 74, label: 'use' },
   { cap: 'K', key: 'k', code: 'KeyK', kc: 75, label: 'throw' },
@@ -26,7 +28,10 @@ const KEYS = [
   { cap: 'I', label: 'immunity', sw: 'immune' },
   { cap: 'N', key: 'n', code: 'KeyN', kc: 78, label: 'skip ahead', dyn: 'skip' },
   { cap: 'Flash', label: 'flashing', sw: 'flash' },
-  { cap: 'CH', label: 'chapters', sw: 'chapters' }
+  { cap: 'CH', label: 'chapters', sw: 'chapters' },
+  { cap: 'Pres', label: 'presenter', sw: 'presenter' },
+  { cap: 'H', key: 'h', code: 'KeyH', kc: 72, label: 'hold', sw: 'hold', send: true },
+  { cap: 'U', key: 'u', code: 'KeyU', kc: 85, label: 'full screen', sw: 'full', send: true }
 ];
 
 // a key event the game cannot tell from a real one (Phaser reads keyCode)
@@ -40,7 +45,13 @@ const scene = () => window.__game && window.__game.scene;
 // kids' room and opens the menu everywhere else. N only skips while immunity is on or the
 // scene offers it (stuck, or a screen that allows it); otherwise its cap greys out.
 const playing = () => { const st = document.getElementById('stage'); return !!(st && st.classList.contains('playing')); };
+const sat = () => { const sc = scene(); return playing() && sc && sc.sys && sc.sys.settings.key === 'satellite' ? sc : null; };
+const ring = () => { const sc = sat(); return !!(sc && sc.level && sc.level.id === 'ring'); };
 const DYN = {
+  a: () => [sat() ? 'turn' : 'left', true],
+  d: () => [sat() ? 'turn' : 'right', true],
+  w: () => [sat() ? 'turn' : 'door', !ring()],
+  s: () => [sat() ? 'turn' : 'crouch', !ring()],
   esc: () => { const sc = scene(), k = sc && sc.sys && sc.sys.settings.key; return [playing() && (k === 'intro' || k === 'kids') ? 'skip scene' : 'menu', true]; },
   skip: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canSkip(sc); } catch (e) { /* not a scene yet */ } return ['skip ahead', on]; }
 };
@@ -55,7 +66,10 @@ const SWITCH = {
   sound: () => [!Sound.muted, Sound.muted ? 'sound off' : 'sound on'],
   flash: () => [!!state.settings.reduceFlash, state.settings.reduceFlash ? 'flash reduced' : 'flash full'],
   glasses: () => { const g = glasses(); return [!!(g && g.on), g ? (g.on ? 'glasses on' : 'glasses') : 'glasses'] },
-  chapters: () => { const n = document.getElementById('jump'); return [!!(n && !n.hidden), 'chapters']; }
+  chapters: () => { const n = document.getElementById('jump'); return [!!(n && !n.hidden), 'chapters']; },
+  presenter: () => [presenting(), presenting() ? 'presenter on' : 'presenter'],
+  hold: () => [!!window.__frozen, window.__frozen ? 'held' : 'hold'],
+  full: () => { const on = !!(document.fullscreenElement || document.webkitFullscreenElement); return [on, on ? 'full on' : 'full screen']; }
 };
 
 export function initKeys() {
@@ -90,6 +104,8 @@ export function initKeys() {
     else if (k.sw === 'sound') { Sound.ensure(); overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000); }
     else if (k.sw === 'flash') { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); overlay.note(r ? 'Flashing reduced' : 'Flashing full', 1400); }
     else if (k.sw === 'chapters') { const n = document.getElementById('jump'); if (n) { n.hidden = !n.hidden; window.dispatchEvent(new Event('resize')); } }
+    else if (k.sw === 'presenter') { setPresenter(!presenting()); overlay.note(presenting() ? 'Presenter on' : 'Presenter off', 1600); }
+    else if (k.send) { send('keydown', k); setTimeout(() => send('keyup', k), 90); }
     else { send('keydown', k); if (!k.hold) setTimeout(() => send('keyup', k), 90); }
     sync();
     if (k.sw) listeners.forEach(fn => fn(k.sw));

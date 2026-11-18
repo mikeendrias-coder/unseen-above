@@ -48,15 +48,23 @@
   .tv-menu button[aria-pressed="true"] i { color: var(--ground); }
   .tv-menu button i, .tv-menu button b { font-style: normal; font-weight: normal; }
   .tv-menu button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .tv-menu button:hover, .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
-  .tv-menu button[aria-pressed="true"]:hover i, .tv-menu button[aria-pressed="true"]:focus i { color: var(--ground); background: var(--ink); padding: 0 calc(var(--u, 4px) * 2); }
-  .tv-menu button:hover::before, .tv-menu button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
-  /* the chapter list: every part of the show, on the picture, two columns */
-  .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
-  .tv-chapters button { position: relative; padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 4) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; color: var(--ground); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
+  /* one row is picked at a time: the pointer focuses the row it moves onto (ui/vibe.js), so
+     only :focus is drawn and a row moving under a still pointer never shows a second pick */
+  .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
+  .tv-menu button[aria-pressed="true"]:focus i { color: var(--ground); background: var(--ink); padding: 0 calc(var(--u, 4px) * 2); }
+  .tv-menu button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
+  /* the chapter list: every part of the show, the endings and give-up mode, three columns */
+  .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: auto auto auto; justify-content: space-between; grid-template-rows: repeat(8, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
+  /* rows with a number key are dark; the parts between them (no key) are grey, so 0 to 9 reads
+     as one list down the first two columns */
+  .tv-chapters button { position: relative; padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 2) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 10); background: transparent; border: 0; color: var(--ground); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; white-space: nowrap; }
+  .tv-chapters button.nonum { color: var(--ash4); }
   .tv-chapters button.back { color: var(--red); }
-  .tv-chapters button:hover, .tv-chapters button:focus { outline: none; color: var(--ink); background: var(--ground); }
-  .tv-chapters button:hover::before, .tv-chapters button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
+  .tv-chapters .end, .tv-chapters .head { grid-column: 3; }
+  .tv-chapters .head { padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 2) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 10); color: var(--ash4); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); }
+  .tv-chapters button:disabled { color: var(--boneLo); background: transparent; cursor: default; }
+  .tv-chapters button:focus { outline: none; color: var(--ink); background: var(--ground); }
+  .tv-chapters button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 3); color: var(--ink); }
   .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); text-align: center; }
   .tv-note b { font-weight: normal; color: var(--yellow); }
 
@@ -82,16 +90,31 @@
   .jump a:hover { background: var(--ash3); }
   .jump a:focus { outline: none; }
   .jump a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+  /* Presenter mode: a small quiet tag in the bottom right corner of the caption strip, under
+     the lives (captions keep to the middle 40 columns, so they never reach it). Half the caption
+     size, rounded down to a whole multiple of the face's 10px so it stays sharp. The freeze mark:
+     two bars, top left. */
+  #ptag { position: absolute; right: calc(var(--u, 4px) * 4); bottom: calc(var(--u, 4px) * 2); font: 10px/1 var(--pix); font-size: max(10px, round(down, calc(var(--u, 4px) * 5), 10px)); color: var(--ash3); white-space: nowrap; }
+  #freeze { position: absolute; left: calc(var(--u, 4px) * 6); top: calc(var(--u, 4px) * 6); width: calc(var(--u, 4px) * 7); height: calc(var(--u, 4px) * 8); }
+  #freeze::before, #freeze::after { content: ""; position: absolute; top: 0; width: calc(var(--u, 4px) * 2); height: calc(var(--u, 4px) * 8); background: var(--ink); box-shadow: 0 0 0 var(--u, 4px) var(--ground); }
+  #freeze::before { left: 0; } #freeze::after { right: 0; }
+  /* Full screen (U, the key below, or the title): only the stage, the page around it hidden. */
+  body.fs #chrome-top, body.fs #chrome-bottom { display: none; }
+  #stage:fullscreen { max-width: none; margin: 0; background: var(--ground); padding-top: var(--fs-pad, 0px); box-sizing: border-box; }
+  #stage:fullscreen #overlay { top: var(--fs-pad, 0px); }
+  #stage:-webkit-full-screen { max-width: none; margin: 0; background: var(--ground); padding-top: var(--fs-pad, 0px); box-sizing: border-box; }
+  #stage:-webkit-full-screen #overlay { top: var(--fs-pad, 0px); }
   @media (prefers-reduced-motion: reduce) { #blackout { transition: none; } }
 </style>
 <header id="chrome-top">
   <h1>Unseen Above <span>· CH 07</span></h1>
-  <div class="tag">A show in five episodes. Keyboard, or click the keys below.</div>
+  <div class="tag">A show in five episodes. Keyboard, or click the keys below. W A S D or a drag turns the globe.</div>
 </header>
 <button id="focus-note" type="button" hidden>Click the game to use the keyboard</button>
 <div id="stage">
   <div id="overlay" aria-live="polite">
     <div id="blackout"></div>
+    <div id="ptag" hidden>PRESENTER</div>
     <canvas id="cg" width="320" height="180" aria-hidden="true"></canvas>
     <div id="card" class="sr"><div class="card-top"></div><div class="card-title"></div></div>
     <div id="cc" class="sr"></div>
@@ -99,14 +122,19 @@
     <div id="note" class="sr"></div>
     <div id="panel" class="sr" role="dialog" aria-live="assertive"><div class="panel-kicker"></div><div class="panel-title"></div><div class="panel-body"></div><div class="panel-key">Any key or a click to go on</div></div>
     <div id="immune" class="sr">Immunity on. N skips ahead.</div>
+    <div id="freeze" hidden><span class="sr">Held. H goes on.</span></div>
   </div>
   <div id="tv">
     <canvas id="tv-canvas" width="320" height="180" role="img" aria-label="Unseen Above. Two siblings on an ash ridge look across a dead city at the one lit mansion."></canvas>
     <div class="tv-menu" role="group" aria-label="Start">
       <button id="continue" class="main" type="button" hidden>Continue<i>Episode 1</i></button>
       <button id="start" class="main" type="button">Begin<span>Sound on. Enter begins.</span></button>
+      <button id="opt-new" type="button" hidden><b>New game</b><i></i><span>Clears her takes, bodies, clues and lines heard.</span></button>
       <button id="opt-story" type="button" aria-pressed="false"><b>Immunity</b><i>off</i><span>Nothing can kill her. N skips ahead.</span></button>
       <button id="opt-flash" type="button" aria-pressed="false"><b>Flashing</b><i>full</i><span>Reduced: dim, slow flashes and no shake.</span></button>
+      <button id="opt-present" type="button" aria-pressed="false"><b>Presenter</b><i>off</i><span>For a class: immunity, N skips anywhere, 0 to 9 jump to parts, H holds the picture, a refresh comes back here.</span></button>
+      <button id="opt-full" type="button" aria-pressed="false" hidden><b>Full screen</b><i>off</i><span>U does it too.</span></button>
+      <button id="opt-caps" type="button" aria-pressed="false" hidden><b>Big captions</b><i>off</i><span>Captions at double height, for a projector.</span></button>
       <button id="opt-chapters" type="button" aria-expanded="false" aria-controls="chapters"><b>Chapters</b><i>&gt;</i></button>
     </div>
     <div id="chapters" class="tv-chapters" role="group" aria-label="Chapters" hidden></div>
