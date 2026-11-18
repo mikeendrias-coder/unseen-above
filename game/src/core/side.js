@@ -106,7 +106,7 @@ export class SideEpisode extends Phaser.Scene {
   // spec: { x0, x1, y0, y1 (the reach, in world px), lines, px, py (where the E key shows) }
   addLook(spec) {
     const src = { lines: spec.lines }, th = Object.assign({ y1: 180, label: 'J', look: true }, spec);
-    th.use = () => this.bubbles.look('item', src, () => ({ x: th.px != null ? th.px : (th.x0 + th.x1) / 2, y: th.py != null ? th.py : th.y0 }));
+    th.use = () => { if (th.clue && state.clue(th.clue)) overlay.note('NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: th.px != null ? th.px : (th.x0 + th.x1) / 2, y: th.py != null ? th.py : th.y0 })); };
     delete th.lines; th.src = src; this.things.push(th); return th;
   }
   // whether looks are on offer right now (a scene turns them off while it needs her attention)

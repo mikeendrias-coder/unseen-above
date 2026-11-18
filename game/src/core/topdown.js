@@ -231,8 +231,8 @@ export class TopDownEpisode extends Phaser.Scene {
   }
   // Things she looks at with E: narration at the foot of the screen. spec: { tx, ty, lines, reach }
   addLook(spec) {
-    const src = { lines: spec.lines }, th = { tx: spec.tx, ty: spec.ty, reach: spec.reach || 1, label: 'J', look: true, body: !!spec.body, src };
-    th.use = () => this.bubbles.look('item', src, () => ({ x: th.tx * T + 8, y: th.ty * T }));
+    const src = { lines: spec.lines }, th = { tx: spec.tx, ty: spec.ty, reach: spec.reach || 1, label: 'J', look: true, body: !!spec.body, src, clue: spec.clue };
+    th.use = () => { if (th.clue && state.clue(th.clue)) overlay.note('NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: th.tx * T + 8, y: th.ty * T })); };
     this.things.push(th); return th;
   }
   takeNote(data, num, title) {

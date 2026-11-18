@@ -1,16 +1,20 @@
 // Shared state that outlives scenes, saved to localStorage when the browser allows it.
 import { LOOK_KEYS } from '../art/palettes.js';
+import { CLUES } from '../data/clues.js';
 
 const KEY = 'unseen-above-v1';
 // settings: music and effects volume (0 to 5), reduced flashing, screen shake. A computer that
 // asks for reduced motion starts with flashing reduced and shake off.
 const calm = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
 const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm });
-const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false, panels: {}, immune: false, settings: defaults(), reached: null });
+// story: what she found and did, for the endings (Nov 17). heard: lines already spoken, never replayed.
+const freshStory = () => ({ clues: {}, heard: {}, choice: null, creatorDeaths: 0, gaveUp: false, spared: false, killedBroken: false, endings: {} });
+const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false, panels: {}, immune: false, settings: defaults(), reached: null, story: freshStory() });
 let mem = fresh();
 try { const raw = window.localStorage.getItem(KEY); if (raw) mem = Object.assign(fresh(), JSON.parse(raw)); } catch (e) { /* private window or blocked storage: keep it in memory */ }
 if (!LOOK_KEYS.includes(mem.look)) mem.look = 'A';
 mem.settings = Object.assign(defaults(), mem.settings || {});
+mem.story = Object.assign(freshStory(), mem.story || {});
 
 const session = {};
 const save = () => { try { window.localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) { /* ignore */ } };
@@ -44,5 +48,17 @@ export const state = {
   // deaths this visit, per episode (not saved): after three, the show offers to skip ahead
   died(id) { session[id] = (session[id] || 0) + 1; return session[id]; },
   diedHere(id) { return session[id] || 0; },
+  // ---- the story (Nov 17): clues, lines heard, the boss, the endings
+  get story() { return mem.story; },
+  // mark a clue found; true the first time
+  clue(id) { if (!CLUES[id] || mem.story.clues[id]) return false; mem.story.clues[id] = true; save(); return true; },
+  hasClue(id) { return !!mem.story.clues[id]; },
+  clueCount(group) { return Object.keys(mem.story.clues).filter(id => !group || CLUES[id] === group).length; },
+  // a line (any stable key) already heard; hear() marks it and returns true the first time
+  heard(key) { return !!mem.story.heard[key]; },
+  hear(key) { if (mem.story.heard[key]) return false; mem.story.heard[key] = true; save(); return true; },
+  // set a story flag or counter: state.storySet('spared', true)
+  storySet(key, v) { mem.story[key] = v; save(); return v; },
+  sawEnding(id) { mem.story.endings[id] = true; save(); },
   resetAll() { mem = fresh(); save(); }
 };
