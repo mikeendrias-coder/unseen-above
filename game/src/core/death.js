@@ -113,6 +113,7 @@ function nextTake(scene, fadeMs) {
 export function beginDeath(scene, src, impact, fire) {
   const fast = state.bodyCount() > 0, firstHere = results.deathsHere(scene.epId) === 0;
   const d = scene.death = { impacted: false, skipping: false, skippable: fast, fast };
+  scene.nearThing = null; if (scene.bubbles) scene.bubbles.prompt = null; // no J key over the strike
   results.died(scene);
   // a life used up (not in story mode, where nothing kills her anyway)
   if (hasTakes(scene) && visits[scene.epId]) { visits[scene.epId].left = Math.max(0, visits[scene.epId].left - 1); scene.takesLeft = visits[scene.epId].left; showStatus(scene); }

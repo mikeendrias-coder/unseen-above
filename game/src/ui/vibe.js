@@ -24,9 +24,14 @@ export function initPicker(onBegin, onChapter) {
   const fit = () => { measure(); tv.style.setProperty('--u', (display.cssH / 180) + 'px'); };
   fit(); window.addEventListener('resize', fit);
   const menu = tv.querySelector('.tv-menu'), list = document.getElementById('chapters'), open = document.getElementById('opt-chapters');
+  // where the pointer was last; a list that opens under a still pointer takes no pick from it
+  let ptr = null, still = null;
+  const onMove = e => { ptr = { x: e.clientX, y: e.clientY }; };
+  window.addEventListener('pointermove', onMove, true); window.addEventListener('pointerdown', onMove, true);
   // the chapter list
   const showList = on => {
     if (!list || !menu) return;
+    still = ptr;
     list.hidden = !on; menu.hidden = on; if (open) open.setAttribute('aria-expanded', on ? 'true' : 'false');
     const target = on ? list.querySelector('button:not(.back)') : open; if (target) target.focus({ preventScroll: true });
   };
@@ -55,7 +60,10 @@ export function initPicker(onBegin, onChapter) {
   const buttons = () => [...tv.querySelectorAll(list && !list.hidden ? '.tv-chapters button' : '.tv-menu button')].filter(b => !b.hidden && !b.disabled);
   const first = buttons()[0]; if (first) try { first.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   // the pointer picks the row it moves onto (focus), so only one row is ever drawn as picked
-  const onOver = e => { const b = e.target.closest && e.target.closest('.tv-menu button, .tv-chapters button'); if (b && !b.disabled && document.activeElement !== b) b.focus({ preventScroll: true }); };
+  const onOver = e => {
+    if (still && e.clientX === still.x && e.clientY === still.y) return; // the list moved, not the pointer
+    still = null;
+    const b = e.target.closest && e.target.closest('.tv-menu button, .tv-chapters button'); if (b && !b.disabled && document.activeElement !== b) b.focus({ preventScroll: true }); };
   tv.addEventListener('pointerover', onOver);
   const onKey = e => {
     if (tv.hidden) return;
@@ -66,5 +74,5 @@ export function initPicker(onBegin, onChapter) {
     else if (e.key === 'Enter' && i < 0) { e.preventDefault(); onBegin(); }
   };
   window.addEventListener('keydown', onKey);
-  return () => { tv.removeEventListener('pointerover', onOver); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', fit); if (open) open.removeEventListener('click', onOpen); };
+  return () => { window.removeEventListener('pointermove', onMove, true); window.removeEventListener('pointerdown', onMove, true); tv.removeEventListener('pointerover', onOver); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', fit); if (open) open.removeEventListener('click', onOpen); };
 }

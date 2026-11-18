@@ -4,6 +4,7 @@
 import { cg, TV } from '../ui/cg.js';
 import { state } from './state.js';
 import { typer } from '../ui/typer.js';
+import { clueGroup } from '../data/clues.js';
 
 const el = id => document.getElementById(id);
 const timers = new Map();
@@ -64,7 +65,8 @@ export const overlay = {
   take(n) { overlay.card('TAKE ' + n, '', 1500, 'lower'); },
   bug(text, ms) { cg.bug(text, ms); say('bug', text, true); later('bug', ms || 900, () => say('bug', null, false)); },
   // the TV set's own message: sound, picture, review mode
-  note(text, ms) { cg.osd(text, ms); say('note', text, true); later('note', ms || 1800, () => say('note', null, false)); },
+  // (a clue's NOTED (n) names its group and the count toward that group's ending: clueNote)
+  note(text, ms) { if (/^NOTED \(\d+\)$/.test(text) && state.lastClue) text = clueNote(state.lastClue); cg.osd(text, ms); say('note', text, true); later('note', ms || 1800, () => say('note', null, false)); },
   rec(ms) { cg.rec(ms); say('note', 'REC', true); later('note', ms || 2400, () => say('note', null, false)); },
 
   // A how-to-play notice (a slip from the show). Any key or a click closes it, after a moment.
@@ -96,4 +98,12 @@ export const overlay = {
   fade(on, ms) { const f = el('blackout'); if (!f) return; f.style.transitionDuration = (ms || 600) + 'ms'; f.classList.toggle('on', !!on); }
 };
 typer.hook({ tick: showHint });
+// What a clue's note says: which kind it is and how many of that kind she has, toward the five an
+// ending needs (data/clues.js): NOTED: WHO AIMS 3/5, NOTED: WHAT SHE IS 2/5.
+export function clueNote(id) {
+  const g = clueGroup(id), n = state.clueCount(g);
+  return 'NOTED: ' + (g === 'who' ? 'WHO AIMS ' : 'WHAT SHE IS ') + Math.min(n, 5) + '/5';
+}
+// Mark a clue found and say so once. True the first time.
+export function noteClue(id) { if (!state.clue(id)) return false; overlay.note(clueNote(id), 1600); return true; }
 export { TV };

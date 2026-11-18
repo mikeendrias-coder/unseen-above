@@ -22,7 +22,7 @@ export const TV = { black: ASH.ash0, white: ASH.bone, yellow: ASH.gold, cyan: AS
 // paper and ink
 const PAPER = ASH.bone, PAPER_LO = ASH.boneLo, INK = ASH.ash0, INK_LO = ASH.ash3, RULE = ASH.ash5;
 
-const S = { hp: null, lives: null, caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null, menu: null, flash: null };
+const S = { hp: null, lives: null, caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, immuneUntil: 0, page: null, menu: null, flash: null };
 let cv = null, ctx = null, running = false;
 const now = () => performance.now() / 1000;
 const pats = new Map();
@@ -35,7 +35,23 @@ function ensure() {
   return true;
 }
 function kick() { if (!ensure() || running) return; running = true; requestAnimationFrame(frame); }
-const busy = () => !!(S.hp || S.lives || S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || S.immune || S.page || S.menu || S.flash);
+// The IMMUNE tag shows for a moment when immunity turns on and when a part starts with it on,
+// never over a part that takes no input (the opening, the kids' room, a talk, a death, the last
+// shot, a satellite screen) or under the continuity report. The I key cap says it all along.
+const TAG_S = 3;
+const CINE = ['talk', 'dying', 'after', 'vest', 'cut', 'last', 'arrive'];
+function tagQuiet() {
+  if (window.__results) return true;
+  const sc = window.__game && window.__game.scene, key = sc && sc.sys && sc.sys.settings && sc.sys.settings.key;
+  return !key || ['intro', 'kids', 'satellite'].includes(key) || (sc.mode != null && CINE.includes(sc.mode));
+}
+// the moment counts from the first frame the tag can show (a slow start does not eat it)
+function tagUp(t) {
+  if (!S.immune || tagQuiet()) return false;
+  if (S.immuneUntil == null) S.immuneUntil = t + TAG_S;
+  return t < S.immuneUntil;
+}
+const busy = () => !!(S.hp || S.lives || S.caption || S.desc || S.cards.length || S.osd.length || S.bug || S.rec || (S.immune && (S.immuneUntil == null || now() < S.immuneUntil)) || S.page || S.menu || S.flash);
 
 // a two-color-free dither: one palette color on every other pixel (checker) or one in four (q25)
 function pattern(color, kind) {
@@ -172,11 +188,13 @@ function drawTop(t) {
   if (S.page || S.menu) return; // paperwork has the screen: the set's messages wait
   let y = 4;
   // immunity, top right, on paper so it reads at a glance (the class walkthrough)
-  if (S.immune) { const s = 'IMMUNE · N SKIPS', w = ccWidth(s) + 8; paper(314 - w, 3, w, 11); ccText(ctx, s, 318 - w, 5, INK); y = 19; }
-  if (S.bug) { const w = ccWidth(S.bug.text); ccText(ctx, S.bug.text, 311 - w, y + 1, INK); ccText(ctx, S.bug.text, 310 - w, y, INK_LO); y += 11; }
+  const tag = tagUp(t);
+  if (tag) { const s = 'IMMUNE · N SKIPS', w = ccWidth(s) + 8; paper(314 - w, 3, w, 11); ccText(ctx, s, 318 - w, 5, INK); y = 19; }
+  // the channel bug: CH 07 in ash5 on a flat ash0 box, the one mark used everywhere
+  if (S.bug) { const w = ccWidth(S.bug.text); ccBox(ctx, 307 - w, y - 2, w + 6, 11, INK); ccText(ctx, S.bug.text, 310 - w, y, ASH.ash5); y += 12; }
   // the set's own notes: paper tags like the immunity one, ink on bone, so they read over any
   // scenery (the immunity tag already says IMMUNITY ON, so that note is not repeated)
-  S.osd.forEach(o => { const s = o.text.toUpperCase(); if (S.immune && s === 'IMMUNITY ON') return; const w = ccWidth(s) + 8; paper(314 - w, y - 1, w, 11); ccText(ctx, s, 318 - w, y + 1, INK); y += 14; });
+  S.osd.forEach(o => { const s = o.text.toUpperCase(); if (tag && s === 'IMMUNITY ON') return; const w = ccWidth(s) + 8; paper(314 - w, y - 1, w, 11); ccText(ctx, s, 318 - w, y + 1, INK); y += 14; });
   if (S.rec) { if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 10, 9, ASH.red); ccText(ctx, 'REC', 17, 9, PAPER); }
 }
 
@@ -189,7 +207,7 @@ function pageLayout(p) {
   let w = Math.max(minW, ccWidth(p.title.toUpperCase(), 2) + PAD * 2, ...p.lines.map(l => richW(l) + PAD * 2));
   w = Math.min(maxW, w);
   const lines = []; p.lines.forEach(l => wrapPx(l, w - PAD * 2).forEach(s => lines.push(s)));
-  const h = 12 + 4 + 18 + 4 + lines.length * LINE + 6 + 12;
+  const h = 12 + 4 + 18 + 4 + lines.length * LINE + 6 + 16; // the footer row holds ANY KEY and the stamp
   return { w, h, lines };
 }
 function drawPage(t) {
@@ -201,14 +219,15 @@ function drawPage(t) {
   ccText(ctx, 'NOTICE', x + PAD, yy, INK_LO);
   const no = 'No. ' + p.num; ccText(ctx, no, x + L.w - PAD - ccWidth(no), yy, INK_LO);
   yy += 10; rule(x + 4, yy, L.w - 8, INK); yy += 4;
-  ccText(ctx, p.title.toUpperCase(), x + PAD, yy, INK, { sy: 2 });
+  ccText(ctx, p.title.toUpperCase(), x + PAD, yy, INK, { sx: 2, sy: 2 }); // the one title face: double both ways, as the lower thirds
   yy += 18; rule(x + 4, yy, L.w - 8, RULE); yy += 6;
   L.lines.forEach(s => { richLine(s, x + PAD, yy, INK); yy += LINE; });
   yy += 2; rule(x + 4, yy, L.w - 8, PAPER_LO);
   const age = t - p.t0;
-  ccText(ctx, 'ANY KEY', x + PAD, yy + 3, INK_LO);
-  // the stamp lands a beat after the slip
-  if (age > 0.3) { const s = p.stamp || 'CH 07', sw = ccWidth(s) + 8; stamp(s, x + L.w - PAD - sw + 2, yy - 6, { fill: PAPER }); }
+  ccText(ctx, 'ANY KEY', x + PAD, yy + 5, INK_LO);
+  // the stamp lands a beat after the slip, in the footer row beside ANY KEY (clear of the text
+  // and the rules)
+  if (age > 0.3) { const s = p.stamp || 'CH 07', sw = ccWidth(s) + 8; stamp(s, x + L.w - PAD - sw + 2, yy + 2, { fill: PAPER }); }
 }
 
 // ------------------------------------------------------------------ the pause menu
@@ -229,7 +248,7 @@ function drawMenu(t) {
   ccText(ctx, 'FORM 100', x + 6, y, INK_LO);
   if (m.where) ccText(ctx, m.where, x + w - 6 - ccWidth(m.where), y, INK_LO);
   y += 10; rule(x + 4, y, w - 8, INK); y += 4;
-  ccText(ctx, 'PAUSED', x + 6, y, INK, { sy: 2 });
+  ccText(ctx, 'PAUSED', x + 6, y, INK, { sx: 2, sy: 2 });
   stamp('ON HOLD', x + w - ccWidth('ON HOLD') - 14, y + 1, { fill: PAPER });
   y += 18; rule(x + 4, y, w - 8, RULE); y += 4;
   m.hit = []; m.hx0 = x; m.hx1 = x + w;
@@ -282,7 +301,8 @@ export const cg = {
   osd(text, ms) { S.osd = [{ text, until: now() + (ms || 1800) / 1000 }]; kick(); },
   bug(text, ms) { S.bug = { text, until: now() + (ms || 900) / 1000 }; kick(); },
   rec(ms) { S.rec = { until: now() + (ms || 2400) / 1000 }; kick(); },
-  immune(on) { S.immune = !!on; kick(); },
+  // immunity on or off; on (again, at a part's start too) shows the tag for a moment
+  immune(on) { S.immune = !!on; S.immuneUntil = on ? null : 0; kick(); },
   // a flash: a palette color as a dither over the picture for ms (kind 'checker' or 'q25')
   flash(color, ms, kind) { S.flash = { color, kind: kind || 'checker', until: now() + (ms || 80) / 1000 }; kick(); },
   // a notice: { num, title, lines, stamp } (lines may mark keys as {L})

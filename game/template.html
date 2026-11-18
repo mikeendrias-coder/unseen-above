@@ -4,7 +4,7 @@
   /* One committed dark look, and one face for every letter on the page: the game's caption
      face, built from the same pixels the game draws with (fonts/ch07-caption.ttf). It is set
      only at whole multiples of its pixel (10px, 20px, 40px) so it stays sharp. Colors are the
-     game's one palette, Ash and Gold: ash greys, bone for words, gold for wealth and keys,
+     game's one palette, Ash and Gold: ash greys, bone for words (and switches that are on), gold for wealth only,
      red only for what watches her. */
   @font-face { font-family: "CH07 Caption"; src: url(__CCFONT__) format("truetype"); font-display: block; }
   :root {
@@ -52,7 +52,8 @@
      only :focus is drawn and a row moving under a still pointer never shows a second pick */
   .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
   .tv-menu button[aria-pressed="true"]:focus i { color: var(--ground); background: var(--ink); padding: 0 calc(var(--u, 4px) * 2); }
-  .tv-menu button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
+  /* the pick arrow: a 3 x 5 pixel step triangle (no fallback glyph) */
+  .tv-menu button:focus::before { content: ""; position: absolute; top: calc(var(--u, 4px) * 4); width: calc(var(--u, 4px) * 3); height: calc(var(--u, 4px) * 5); background: var(--ink); clip-path: polygon(0 0, 33.4% 0, 33.4% 20%, 66.7% 20%, 66.7% 40%, 100% 40%, 100% 60%, 66.7% 60%, 66.7% 80%, 33.4% 80%, 33.4% 100%, 0 100%); left: calc(var(--u, 4px) * 4); }
   /* the chapter list: every part of the show, the endings and give-up mode, three columns */
   .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: auto auto auto; justify-content: space-between; grid-template-rows: repeat(8, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
   /* rows with a number key are dark; the parts between them (no key) are grey, so 0 to 9 reads
@@ -64,11 +65,11 @@
   .tv-chapters .head { padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 2) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 10); color: var(--ash4); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); }
   .tv-chapters button:disabled { color: var(--boneLo); background: transparent; cursor: default; }
   .tv-chapters button:focus { outline: none; color: var(--ink); background: var(--ground); }
-  .tv-chapters button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 3); color: var(--ink); }
+  .tv-chapters button:focus::before { content: ""; position: absolute; top: calc(var(--u, 4px) * 4); width: calc(var(--u, 4px) * 3); height: calc(var(--u, 4px) * 5); background: var(--ink); clip-path: polygon(0 0, 33.4% 0, 33.4% 20%, 66.7% 20%, 66.7% 40%, 100% 40%, 100% 60%, 66.7% 60%, 66.7% 80%, 33.4% 80%, 33.4% 100%, 0 100%); left: calc(var(--u, 4px) * 3); }
   .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); text-align: center; }
-  .tv-note b { font-weight: normal; color: var(--yellow); }
+  .tv-note b { font-weight: normal; color: var(--ink); }
 
-  #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--yellow); color: #000; border: 0; font: 20px/1 var(--pix); cursor: pointer; }
+  #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--ink); color: var(--ground); border: 0; font: 20px/1 var(--pix); cursor: pointer; }
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
   #h-hint { min-height: 1.6em; margin: 0 0 4px; color: var(--quiet); text-align: center; }
   /* The keys under the game: key caps with what they do under them. Hard edges, palette only. */
@@ -78,18 +79,18 @@
   .key .lbl { display: block; margin-top: 3px; white-space: nowrap; }
   .key:hover .cap { background: var(--ink); }
   .key.down .cap, .key[aria-pressed="true"] .cap { transform: translateY(3px); box-shadow: 0 0 0 0 var(--ash3), 0 0 0 2px var(--ground); }
-  .key[aria-pressed="true"] .cap { background: var(--yellow); }
+  .key[aria-pressed="true"] .cap { background: var(--ink); box-shadow: inset 0 0 0 1px var(--ground), 0 0 0 2px var(--ground); }
   .key[aria-pressed="true"] .lbl { color: var(--ink); }
   .key.off { opacity: 1; color: var(--ash3); }
   .key.off .cap { background: var(--ash4); }
   .key:focus { outline: none; }
-  .key:focus-visible .cap { outline: 2px solid var(--yellow); outline-offset: 3px; }
+  .key:focus-visible .cap { outline: 2px solid var(--ink); outline-offset: 3px; }
   .key::-moz-focus-inner { border: 0; }
   .jump { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; margin: 10px 0 0; }
   .jump a { padding: 3px 6px; background: var(--ash2); color: var(--ink); text-decoration: none; border: 2px solid var(--ground); }
   .jump a:hover { background: var(--ash3); }
   .jump a:focus { outline: none; }
-  .jump a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+  .jump a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* Presenter mode: a small quiet tag in the bottom right corner of the caption strip, under
      the lives (captions keep to the middle 40 columns, so they never reach it). Half the caption
      size, rounded down to a whole multiple of the face's 10px so it stays sharp. The freeze mark:
@@ -108,7 +109,7 @@
 </style>
 <header id="chrome-top">
   <h1>Unseen Above <span>· CH 07</span></h1>
-  <div class="tag">A show in five episodes. Keyboard, or click the keys below. W A S D or a drag turns the globe.</div>
+  <div class="tag">A show in five episodes. Keyboard, or click the keys below.</div>
 </header>
 <button id="focus-note" type="button" hidden>Click the game to use the keyboard</button>
 <div id="stage">

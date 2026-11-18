@@ -4,7 +4,9 @@
 // running). Switches (immunity, sound, flashing, glasses) latch down while on and stay in step
 // when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
 // Presenter tools (Nov 18): Pres is presenter mode, H holds the picture (ui/pause.js), U is full
-// screen (main.js). On a satellite screen W A S D say "turn": they turn the globe.
+// screen (main.js). On a satellite screen W A S D say "turn": they turn the globe (on a request
+// form W and S say "field"); Space and Shift grey out there. In the top-down east wing W A S D
+// walk up, down, left and right and Space greys out. In the fight K says "swing".
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
 import { setStory, canSkip, setPresenter, presenting } from '../core/review.js';
@@ -13,10 +15,10 @@ import { overlay } from '../core/overlay.js';
 const KEYS = [
   { cap: 'A', key: 'a', code: 'KeyA', kc: 65, label: 'left', hold: true, dyn: 'a' },
   { cap: 'D', key: 'd', code: 'KeyD', kc: 68, label: 'right', hold: true, dyn: 'd' },
-  { cap: 'Space', key: ' ', code: 'Space', kc: 32, label: 'jump', hold: true },
+  { cap: 'Space', key: ' ', code: 'Space', kc: 32, label: 'jump', hold: true, dyn: 'space' },
   { cap: 'S', key: 's', code: 'KeyS', kc: 83, label: 'crouch', hold: true, dyn: 's' },
   { cap: 'W', key: 'w', code: 'KeyW', kc: 87, label: 'door', dyn: 'w' },
-  { cap: 'Shift', key: 'Shift', code: 'ShiftLeft', kc: 16, label: 'run', hold: true },
+  { cap: 'Shift', key: 'Shift', code: 'ShiftLeft', kc: 16, label: 'run', hold: true, dyn: 'shift' },
   { cap: 'J', key: 'j', code: 'KeyJ', kc: 74, label: 'use', dyn: 'j' },
   { cap: 'K', key: 'k', code: 'KeyK', kc: 75, label: 'throw', dyn: 'k' },
   { cap: 'L', key: 'l', code: 'KeyL', kc: 76, label: 'glasses', sw: 'glasses', dyn: 'l' },
@@ -49,14 +51,21 @@ const sat = () => { const sc = scene(); return playing() && sc && sc.sys && sc.s
 const ring = () => { const sc = sat(); return !!(sc && sc.level && sc.level.id === 'ring'); };
 // while a satellite request form is up, J K L stamp and ask
 const form = () => { const sc = sat(); return !!(sc && sc.form); };
+// the top-down east wing: W A S D walk her up, down, left and right; nothing to jump
+const top = () => { const sc = scene(); return !!(playing() && sc && sc.sys && !sat() && typeof sc.kidPx === 'function'); };
+// the fight backstage, once she holds the sword: K swings it
+const sword = () => { const sc = scene(); return !!(playing() && sc && sc.sys && sc.sys.settings.key === 'hallway' && sc.sword && sc.sword.have); };
 const DYN = {
   j: () => [form() ? 'approve' : 'use', true],
-  k: () => [form() ? 'deny' : 'throw', true],
+  k: () => [form() ? 'deny' : sword() ? 'swing' : 'throw', true],
   l: () => (form() ? ['ask who', true] : null), // otherwise the glasses switch speaks for L
-  a: () => [sat() ? 'turn' : 'left', true],
-  d: () => [sat() ? 'turn' : 'right', true],
-  w: () => [sat() ? 'turn' : 'door', !ring()],
-  s: () => [sat() ? 'turn' : 'crouch', !ring()],
+  // on a request form W and S walk the fields and A D do nothing; on the globe they all turn it
+  a: () => (form() ? ['\u00a0', false] : [sat() ? 'turn' : 'left', true]),
+  d: () => (form() ? ['\u00a0', false] : [sat() ? 'turn' : 'right', true]),
+  w: () => (form() ? ['field', true] : [sat() ? 'turn' : top() ? 'up' : 'door', !ring()]),
+  s: () => (form() ? ['field', true] : [sat() ? 'turn' : top() ? 'down' : 'crouch', !ring()]),
+  space: () => ['jump', !sat() && !top()],
+  shift: () => ['run', !sat()],
   esc: () => { const sc = scene(), k = sc && sc.sys && sc.sys.settings.key; return [playing() && (k === 'intro' || k === 'kids') ? 'skip scene' : 'menu', true]; },
   skip: () => { const sc = scene(); let on = false; try { on = playing() && !!sc && canSkip(sc); } catch (e) { /* not a scene yet */ } return ['skip ahead', on]; }
 };

@@ -21,7 +21,7 @@ const hit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
 export class Bubbles {
   constructor(scene, depth) {
-    this.scene = scene; this.g = scene.add.graphics().setDepth(depth || 9); this.list = new Map(); this.prompt = null;
+    this.scene = scene; this.g = scene.add.graphics().setDepth(depth || 9); this.list = new Map(); this.prompt = null; this.prompt2 = null;
     this.player = null; // () => ({ x, y }) of the girl (x center, y top), for walking away
     this.bodies = null; // () => [{ x0, y0, x1, y1 }] characters speech must keep clear of; her by default
     this.order = 0;
@@ -94,8 +94,10 @@ export class Bubbles {
     if (b.src.loop && !b.line.shown && b.src.i > 0) b.src.i--;
     if (!b.src.loop) b.src.i = 0; else if (b.src.i >= n) b.src.i = b.src.from || 0;
   }
-  // a key over something she can use: a black cap with the letter, bobbing
-  showPrompt(x, y, label, ink) { this.prompt = { x, y, label: label || 'E', ink }; }
+  // a key over something she can use: a black cap with the letter (J by default), bobbing
+  showPrompt(x, y, label, ink) { this.prompt = { x, y, label: label || 'J', ink }; }
+  // a second key this frame (a side-room door's W beside a look's J)
+  showPrompt2(x, y, label) { this.prompt2 = { x, y, label: label || 'W' }; }
 
   update(dt, clock) {
     const g = this.g; g.clear();
@@ -160,9 +162,11 @@ export class Bubbles {
       // more to say: a small arrow at the end of the last line once it is out
       if (more) { const ax = last.x + last.w - 6, ay = bottom - 5; g.fillStyle(b.ink, 1); g.fillRect(ax - 1, ay, 3, 1); g.fillRect(ax, ay + 1, 1, 1); }
     });
-    if (this.prompt) {
+    if (this.scene.dead) { this.prompt = null; this.prompt2 = null; } // no key over a death
+    [this.prompt, this.prompt2].forEach(p => {
+      if (!p) return;
       // the key sits over the thing; if she is standing there, over her head instead
-      const p = this.prompt, bob = Math.floor((clock || 0) * 2.5) % 2 ? -1 : 0, x = Math.round(p.x - 5);
+      const bob = Math.floor((clock || 0) * 2.5) % 2 ? -1 : 0, x = Math.round(p.x - 5);
       let y = Math.round(p.y - 14 + bob);
       const her = bodies[0];
       if (her && x < her.x1 + 1 && x + 11 > her.x0 - 1 && y < her.y1 && y + 13 > her.y0 - 1) y = Math.round(her.y0 - 15 + bob);
@@ -171,7 +175,7 @@ export class Bubbles {
       g.fillStyle(p.label === '!' ? 0xd6a03c : 0xb8b2a3, 1); g.fillRect(x + 1, y + 1, 9, 8);
       g.fillStyle(0x45474d, 1); g.fillRect(x + 1, y + 9, 9, 2);
       ccText(g, p.label, x + 3, y + 1, 0x0e0f12);
-      this.prompt = null;
-    }
+    });
+    this.prompt = null; this.prompt2 = null;
   }
 }

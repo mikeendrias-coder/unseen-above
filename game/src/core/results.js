@@ -7,7 +7,7 @@
 //   - the continuity report: the end of each episode. It takes the place of the old END OF
 //     EPISODE card (one piece of end paperwork, not two): END OF EPISODE n and TAKE n (the
 //     show's running count, the same number as the tape on the floor) at the top, then TAKES
-//     THIS RUN, TIME, FALLS, CLUES, GOLD (once something counts gold), OPERATOR: (NONE), and a
+//     THIS RUN, TIME, FALLS, CLUES, GOLD (once something counts gold), OPERATOR: (NOT REQUIRED), and a
 //     red stamp grade on a numbered ladder, 1 PRIME TIME down to 4 RERUN, or REHEARSAL in
 //     story mode or for a presenter. About 2.4 s, any key moves on; a presenter's report waits
 //     for a key (a beat to talk over).
@@ -109,8 +109,9 @@ function drawBar(scene, r) {
   const here = at(p), best = at(r.best);
   for (let x = BX0; x < BX1; x++) px(x, BY, 1, 2, x <= here ? ASH.ash5 : ASH.ash3);
   if (r.best > p + 0.004) px(best, BY - 1, 2, 4, PAPER_LO);
-  r.ticks.forEach(t => px(at(t), BY - 1, 1, 4, ASH.red));
   px(here, BY - 2, 2, 6, PAPER);
+  // the deaths go on top: one right by her post (a checkpoint) still shows
+  r.ticks.forEach(t => px(at(t), BY - 1, 1, 4, ASH.red));
   // BEST: a red stamp under the bar for a moment, where she passed it, clear of the captions
   const age = performance.now() / 1000 - r.bestAt;
   if (age >= 0 && age < 1.3) {
@@ -132,12 +133,12 @@ export function gradeOf(d) {
 function rows(d) {
   const out = [['TAKES THIS RUN', String(d.takes)], ['TIME', fmtTime(d.time)], ['FALLS', String(d.falls)], ['CLUES', d.clues ? d.clues + ' NEW' : 'NONE']];
   if (d.gold != null) out.push(['GOLD', String(d.gold)]);
-  out.push(['OPERATOR', '(NONE)']);
+  out.push(['OPERATOR', '(NOT REQUIRED)']); // as the request forms say
   return out;
 }
 function drawSlip(s, t) {
   const d = s.data, R = rows(d), age = t - s.t0;
-  const w = 200, ROW = 11, LAD = 8, h = 3 + 10 + 4 + 18 + 4 + R.length * ROW + 3 + 4 * LAD + 5;
+  const w = 200, ROW = 11, LAD = 10, h = 3 + 10 + 4 + 18 + 4 + R.length * ROW + 3 + 4 * LAD + 5;
   const x = Math.round(160 - w / 2), y = Math.max(3, Math.round((H - h) / 2));
   ctx.fillStyle = INK; dither(0, 0, W, H);
   ccBox(ctx, x - 1, y - 1, w + 2, h + 2, INK); ccBox(ctx, x, y, w, h, PAPER);
@@ -145,7 +146,7 @@ function drawSlip(s, t) {
   ccText(ctx, d.num ? 'END OF EPISODE ' + d.num : 'CONTINUITY REPORT', x + 6, yy, INK_LO);
   if (d.take) { const no = 'TAKE ' + d.take; ccText(ctx, no, x + w - 6 - ccWidth(no), yy, INK); }
   yy += 10; ccBox(ctx, x + 4, yy, w - 8, 1, INK); yy += 4;
-  ccText(ctx, d.title, x + 6, yy, INK, { sy: 2 });
+  ccText(ctx, d.title, x + 6, yy, INK, { sx: 2, sy: 2 });
   yy += 18; ccBox(ctx, x + 4, yy, w - 8, 1, RULE); yy += 4;
   R.forEach(([k, v]) => {
     ccText(ctx, k, x + 6, yy + 1, INK_LO);
@@ -167,7 +168,7 @@ function drawSlip(s, t) {
   if (age > 0.35) {
     if (!s.thunk) { s.thunk = true; Sound.stamp(); }
     const g = d.grade, sw = ccWidth(g) + 8;
-    stamp(g, x + w - 6 - sw, yy + 2, 2, PAPER);
+    stamp(g, x + w - 6 - sw, yy + 2, 1, PAPER);
   }
 }
 
@@ -263,7 +264,7 @@ export const results = {
     if (window.__noResults || !ensure()) { setTimeout(finish, 0); return finish; }
     slip = { data: d, t0: performance.now() / 1000, thunk: false };
     window.__results = d;
-    sr.textContent = (d.num ? 'End of episode ' + d.num + ', ' : 'Continuity report, ') + d.title.toLowerCase() + (d.take ? ', take ' + d.take : '') + '. Takes this run ' + d.takes + ', time ' + fmtTime(d.time) + ', falls ' + d.falls + ', clues ' + d.clues + (d.gold != null ? ', gold ' + d.gold : '') + ', operator none. Stamped ' + d.grade + '.';
+    sr.textContent = (d.num ? 'End of episode ' + d.num + ', ' : 'Continuity report, ') + d.title.toLowerCase() + (d.take ? ', take ' + d.take : '') + '. Takes this run ' + d.takes + ', time ' + fmtTime(d.time) + ', falls ' + d.falls + ', clues ' + d.clues + (d.gold != null ? ', gold ' + d.gold : '') + ', operator not required. Stamped ' + d.grade + '.';
     window.addEventListener('keydown', key, true); window.addEventListener('pointerdown', key, true);
     if (scene && scene.events) scene.events.once('shutdown', drop);
     // a presenter's report waits for a key: a beat to talk over

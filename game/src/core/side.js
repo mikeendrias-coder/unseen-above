@@ -3,7 +3,7 @@
 import { makeControls } from './controls.js';
 import { Sound } from './sound.js';
 import { state } from './state.js';
-import { overlay } from './overlay.js';
+import { overlay, noteClue } from './overlay.js';
 import { display, pixelZoom } from './display.js';
 import { LOOKS } from '../art/palettes.js';
 import { hexNum } from '../art/painter.js';
@@ -104,14 +104,14 @@ export class SideEpisode extends Phaser.Scene {
       const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take));
       this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1));
       const src = { lines: bodyLines(b, age) };
-      this.things.push({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 8, y1: b.y + 2, label: 'J', look: true, body: true, src, use: () => this.bubbles.look('item', src, () => ({ x: b.x, y: b.y - 6 })) });
+      this.things.push({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 8, y1: b.y + 2, label: 'J', look: true, body: true, src, use: () => { noteClue('ownBody'); this.bubbles.look('item', src, () => ({ x: b.x, y: b.y - 6 })); } });
     });
   }
   // Things she looks at with E: what she notices, as narration at the foot of the screen.
   // spec: { x0, x1, y0, y1 (the reach, in world px), lines, px, py (where the E key shows) }
   addLook(spec) {
     const src = { lines: spec.lines }, th = Object.assign({ y1: 180, label: 'J', look: true }, spec);
-    th.use = () => { if (th.clue && state.clue(th.clue)) overlay.note('NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: th.px != null ? th.px : (th.x0 + th.x1) / 2, y: th.py != null ? th.py : th.y0 })); };
+    th.use = () => { if (th.clue) noteClue(th.clue); this.bubbles.look('item', src, () => ({ x: th.px != null ? th.px : (th.x0 + th.x1) / 2, y: th.py != null ? th.py : th.y0 })); };
     delete th.lines; th.src = src; this.things.push(th); return th;
   }
   // whether looks are on offer right now (a scene turns them off while it needs her attention)
@@ -137,16 +137,22 @@ export class SideEpisode extends Phaser.Scene {
   }
   // Things she can use: { x0, x1, y0, y1, use(), label? }. The nearest one shows an E prompt.
   updateThings() {
-    const k = this.kid; this.nearThing = null;
+    const k = this.kid; this.nearThing = null; this.nearDoor = null;
     if (this.dead || this.leaving || this.done) return;
     const cx = k.x + k.w / 2, looks = this.lookable();
     const near = this.things.filter(t => !t.off && (looks || !t.look) && k.x + k.w > t.x0 - 6 && k.x < t.x1 + 6 && k.y < t.y1 && k.y + k.h > t.y0 - 10);
-    // things to use come before things to look at; then the nearest
-    this.nearThing = near.sort((a, b) => (a.look ? 1 : 0) - (b.look ? 1 : 0) || Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
-    // E uses anything; Up also goes through a door, as the key list says. Up counts once per
-    // press, and not at all if it was already held when the scene began (no bouncing back out).
+    // things to use come before things to look at, side-room doors last; then the nearest
+    const rank = t => (t.door ? 2 : t.look ? 1 : 0);
+    this.nearThing = near.sort((a, b) => rank(a) - rank(b) || Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
+    // J uses things and looks; W goes through a side-room door (the key bar's "door"). J opens a
+    // door only when nothing else is in reach, so a look near a door never walks her inside.
+    // W counts once per press, and not at all if it was already held when the scene began (no
+    // bouncing back out).
     const up = this.ctl.up(), upTap = up && this.upHeld === false; this.upHeld = up;
-    if (this.nearThing && (this.ctl.interact() || (this.nearThing.door && upTap))) this.nearThing.use();
+    this.nearDoor = near.find(t => t.door) || null;
+    const door = upTap ? this.nearDoor : null;
+    if (door) door.use();
+    else if (this.nearThing && this.ctl.interact()) this.nearThing.use();
   }
   // A side room behind an optional door: this episode sleeps (its clock and lights freeze) and
   // wakes where she left it.
@@ -166,9 +172,15 @@ export class SideEpisode extends Phaser.Scene {
   doorReady() { return !this.dead && !this.leaving; }
   drawThings() {
     const t = this.nearThing, d = this.level.door;
-    if (t && !t.noPrompt) { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0, t.label); }
-    else if (!t && d && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(d.x + d.w / 2, d.y, 'E'); // the way out
-    this.bubbles.update(this.game.loop.delta / 1000, this.clock);
+    if (this.dead) this.bubbles.prompt = null; // no key over a death
+    else if (t && !t.noPrompt) {
+      const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0, t.door ? 'W' : t.label);
+      // a side-room door in reach behind a look: its W shows too, over the door
+      const dr = !t.door && this.nearDoor; if (dr) { const dx = (dr.x0 + dr.x1) / 2; this.bubbles.showPrompt2(Math.abs(dx - px) < 12 ? px + (dx < px ? -12 : 12) : dx, dr.y0, 'W'); }
+    }
+    else if (!t && d && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(this.kid.x + this.kid.w / 2, this.kid.y, 'W'); // the way out: W (the key bar's door), over her head on the door's face, clear of any sign above it
+    // the scene's own step (capped as the scene's clock is), so holds and typing keep its time
+    this.bubbles.update(Math.min(this.game.loop.delta / 1000, 1 / 30), this.clock);
   }
 
   moveKid(dt) {
@@ -308,14 +320,13 @@ export class SideEpisode extends Phaser.Scene {
   markCheckpoint(at) { setCheckpoint(this, at); }
   canRestart() { return !this.dead && !this.leaving && !this.done; }
   restartTake() { if (!this.canRestart()) return false; this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart(retryData(this))); return true; }
-  // Mute, switch look, restart; while she is dying, a key skips the strike. Returns true when the
+  // Mute, restart; while she is dying, a key skips the strike. Returns true when the
   // scene is restarting.
   commonKeys() {
     const c = this.ctl;
     reviewKeys(this);
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
-    if (this.dead) { const go = c.advance() || c.restart() || c.jumpPressed(); c.look(); return go && skipDeath(this); }
-    if (c.look()) { const L = state.nextLook(); overlay.note('Look ' + L + ' · ' + LOOKS[L].name, 1800); this.scene.restart({}); return true; }
+    if (this.dead) { const go = c.advance() || c.restart() || c.jumpPressed(); return go && skipDeath(this); }
     if (c.restart() && this.restartTake()) return true;
     return false;
   }

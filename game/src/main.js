@@ -35,7 +35,9 @@ function route() {
   else if (hash === 'opening') params.set('scene', 'intro');
   const first = ['grounds', 'gallery', 'fall', 'eastwing', 'bedroom', 'moon', 'hallway', 'satellite', 'kids'].includes(params.get('scene')) ? params.get('scene') : 'intro';
   const batch = [1, 2, 3, 4].includes(Number(params.get('batch'))) ? Number(params.get('batch')) : 1;
-  return { first, firstData: first === 'satellite' ? { batch, skin: Number(params.get('skin')) || batch } : {} };
+  // the kids' room by a #link plays as it does in the show and flows on to the Moon (?scene=kids
+  // is the preview: it ends, Enter replays it)
+  return { first, firstData: first === 'satellite' ? { batch, skin: Number(params.get('skin')) || batch } : first === 'kids' && hash === 'kids' ? { inFlow: true } : {} };
 }
 
 let game = null, pause = null, playing = false;
@@ -274,7 +276,8 @@ const remembered = () => { const s = state.story; return !!saved() || state.body
 const sw = (b, on, word) => { if (!b) return; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.querySelector('i').textContent = word; };
 let armed = 0; // New game asks twice
 function syncGuide() {
-  const st = saved();
+  // a #link with a saved place: Continue offers the linked part (with none, Begin goes there)
+  const h = hashStep(), st = h && saved() ? STEPS.find(s => s.id === h) : saved();
   if (cont) { cont.hidden = !st; const at = cont.querySelector('i'); if (at && st) at.textContent = SHORT[st.id] || st.label; cont.setAttribute('aria-label', st ? 'Continue: ' + st.label : 'Continue'); }
   if (go) { go.classList.toggle('second', !!st); go.firstChild.textContent = st ? 'From the start' : 'Begin'; }
   if (optNew) { optNew.hidden = !(remembered() || presenting()); if (!armed) optNew.querySelector('i').textContent = ''; }
@@ -304,9 +307,14 @@ const begin = entry => {
   game.scene.start(first, firstData);
   fsFit();
 };
-const resume = () => { const st = saved(); begin(st ? { first: st.scene, firstData: Object.assign({}, st.data) } : null); };
-// Enter on the guide: Continue when there is a place to go back to
-const primary = () => (saved() ? resume() : begin(null));
+// Continue (and Enter on the guide): a part named in the address (a #link opened on the title)
+// wins over the saved place, so local.html#bedroom then Enter opens the bedroom
+const hashStep = () => stepOfHash(location.hash);
+const resume = () => {
+  const h = hashStep(); if (h) { goStep({ step: h }); return; }
+  const st = saved(); begin(st ? { first: st.scene, firstData: Object.assign({}, st.data) } : null);
+};
+const primary = () => (hashStep() || saved() ? resume() : begin(null));
 function guide() { stopPicker(); syncGuide(); stopPicker = initPicker(primary, goStep); } // once: a second picker would move two rows per arrow
 
 if (go) {
@@ -343,7 +351,7 @@ if (go) {
     goStep({ step: id });
   }));
   // a new # while the show is on goes there; on the guide, BEGIN will use it
-  window.addEventListener('hashchange', () => { if (playing) jumpTo(); });
+  window.addEventListener('hashchange', () => { if (playing) jumpTo(); else syncGuide(); });
   // presenter mode: a refresh (or reopening within 15 minutes) goes straight back into the part
   // (with the ending or give-up mode that was picked there)
   if (presenting()) {

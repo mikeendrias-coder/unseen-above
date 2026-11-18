@@ -1,6 +1,6 @@
 // The kids' room preview (a 320 x 180 pixel scene since Nov 17): the kids win their round, the
 // feed from Earth plays, it runs to the end, Enter replays it, Esc leaves for the opening. Also
-// checks the #links.
+// checks the #links. The preview is ?scene=kids now; #kids plays it in the show's order (coreui.js).
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -10,7 +10,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const until = (fn, arg, ms) => p.waitForFunction(fn, arg, { timeout: ms || 60000, polling: 100 });
   const ok = (label, v) => console.log((v ? 'ok   ' : 'FAIL ') + label);
   const active = () => p.evaluate(() => window.__unseen.game.scene.getScenes(true).map(s => s.sys.settings.key).join(','));
-  await p.goto(BASE + '/local.html#kids'); await p.click('#start');
+  await p.goto(BASE + '/local.html?scene=kids'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'kids');
   ok('kids starts on its own, nothing embedded: ' + await active(), (await active()) === 'kids');
   await until(() => window.__game.scene.solvedAt != null, null, 30000); ok('the kids finish the round', true);

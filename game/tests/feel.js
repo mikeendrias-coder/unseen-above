@@ -80,7 +80,9 @@ const LIVE_MS = 500; // the brief: the next take is up in under about 0.5 s afte
   ok('nothing else shakes the view (a camera shake call does nothing)', quiet);
 
   // ---- instant takes: the very first death plays out; after that, a cut and the take on the floor
-  await live(); await S(() => { window.__game.scene.placeAt(260); });
+  // (x 200 is short of the grounds' first tape mark, x 256 with a 64 px reach: both takes start
+  // from the level's start, not a checkpoint)
+  await live(); await S(() => { window.__game.scene.placeAt(200); });
   const first = await dieAndTime('garden lamp');
   ok(`the first death plays out in full, with a fade (${first.ms} ms from the body landing to the next take)`, first.faded);
   await live(); await S(() => { window.__game.scene.placeAt(400); });
@@ -121,7 +123,7 @@ const LIVE_MS = 500; // the brief: the next take is up in under about 0.5 s afte
   ok(`it counts this visit: TAKE ${d.take}, takes this run ${d.takes}, time ${Math.round(d.time)} s, falls ${d.falls}, grade ${d.grade}`, d.take === second.take && d.takes === 3 && d.falls >= 2 && d.time > 1 && ['DAYTIME', 'LATE NIGHT'].includes(d.grade));
   await p.waitForTimeout(500); await shot('feel-report');
   const srText = await S(() => document.getElementById('results').textContent);
-  ok('the report reads out: ' + srText, /End of episode 1/.test(srText) && /Takes this run 3/.test(srText) && /operator none/.test(srText));
+  ok('the report reads out: ' + srText, /End of episode 1/.test(srText) && /Takes this run 3/.test(srText) && /operator not required/.test(srText));
   const tKey = Date.now(); await p.keyboard.press('KeyX');
   const went = await until(() => window.__game.scene.sys.settings.key === 'satellite', 3000);
   ok(`any key moves on to the satellite (${Date.now() - tKey} ms)`, !!went && !(await S(() => window.__feel.results.up)));

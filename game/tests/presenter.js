@@ -117,7 +117,9 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.sys.settings.key === 'satellite' && window.__game.scene.clock > 0.3, null, 20000);
   await p.waitForTimeout(400);
   const labs = await S(() => [...document.querySelectorAll('#keybar .key')].slice(0, 5).map(k => k.querySelector('.lbl').textContent));
-  ok('on a satellite screen the keys say turn (' + labs.join(', ') + ')', labs[0] === 'turn' && labs[1] === 'turn');
+  // (batch 1 opens on a request form: W and S walk its fields, A and D do nothing; on the globe all four turn)
+  const formUp = await S(() => !!window.__game.scene.form);
+  ok('on a satellite screen the keys say turn, or field on a form (' + labs.join(', ') + ')', formUp ? labs[3] === 'field' && labs[4] === 'field' && !labs[0].trim() : labs[0] === 'turn' && labs[1] === 'turn');
 
   // an ending from the title's chapters: the playroom with that reply
   await p.keyboard.press('KeyP'); await until(() => window.__paused === true, null, 3000);

@@ -5,7 +5,7 @@
 import { makeControls } from './controls.js';
 import { Sound } from './sound.js';
 import { state } from './state.js';
-import { overlay } from './overlay.js';
+import { overlay, noteClue } from './overlay.js';
 import { display, pixelZoom } from './display.js';
 import { LOOKS } from '../art/palettes.js';
 import { Painter, hexNum, flat } from '../art/painter.js';
@@ -278,13 +278,13 @@ export class TopDownEpisode extends Phaser.Scene {
     this.ep.bodies.forEach(b => {
       const age = Math.max(0, Math.min(3, this.ep.take - 1 - b.take));
       this.bodyLayer.add(this.add.image(b.x, b.y, 'body' + age).setOrigin(0.5, 1));
-      this.addLook({ tx: Math.floor(b.x / T), ty: Math.floor((b.y - 13) / T), lines: bodyLines(b, age), body: true });
+      this.addLook({ tx: Math.floor(b.x / T), ty: Math.floor((b.y - 13) / T), lines: bodyLines(b, age), body: true, clue: 'ownBody' });
     });
   }
   // Things she looks at with E: narration at the foot of the screen. spec: { tx, ty, lines, reach }
   addLook(spec) {
     const src = { lines: spec.lines }, th = { tx: spec.tx, ty: spec.ty, reach: spec.reach || 1, label: 'J', look: true, body: !!spec.body, src, clue: spec.clue };
-    th.use = () => { if (th.clue && state.clue(th.clue)) overlay.note('NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: th.tx * T + 8, y: th.ty * T })); };
+    th.use = () => { if (th.clue) noteClue(th.clue); this.bubbles.look('item', src, () => ({ x: th.tx * T + 8, y: th.ty * T })); };
     this.things.push(th); return th;
   }
   takeNote(data, num, title) {

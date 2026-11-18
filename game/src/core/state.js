@@ -65,7 +65,8 @@ export const state = {
   // ---- the story (Nov 17): clues, lines heard, the boss, the endings
   get story() { return mem.story; },
   // mark a clue found; true the first time
-  clue(id) { if (!CLUES[id] || mem.story.clues[id]) return false; mem.story.clues[id] = true; save(); return true; },
+  clue(id) { if (!CLUES[id] || mem.story.clues[id]) return false; mem.story.clues[id] = true; this.lastClue = id; save(); return true; },
+  lastClue: null, // the clue found last (overlay.note names its group)
   hasClue(id) { return !!mem.story.clues[id]; },
   clueCount(group) { return Object.keys(mem.story.clues).filter(id => !group || CLUES[id] === group).length; },
   // a line (any stable key) already heard; hear() marks it and returns true the first time
