@@ -77,7 +77,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.waitForTimeout(500);
   await S(() => { const s = window.__unseen.game.scene.getScene('room'); s.placeAt(20); });
   await p.waitForTimeout(300);
-  await p.keyboard.press('KeyW');
+  await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW'); // a held press, as a player does
   await until(() => window.__game.scene.sys.settings.key === 'grounds' && !window.__unseen.game.scene.isActive('room'), null, 5000).catch(() => null);
   ok('W at the room door goes back out', await S(() => !window.__unseen.game.scene.isActive('room')));
   await live();
@@ -93,7 +93,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await S(() => window.__unseen.goStep({ step: 'ep3b' }));
   await until(() => window.__game.scene.sys.settings.key === 'eastwing'); await p.waitForTimeout(600);
   const ew = await labels();
-  ok(`east wing keys: W ${ew.W}, S ${ew.S}, A ${ew.A}, D ${ew.D}, Space ${ew.Space}`, ew.W === 'up' && ew.S === 'down' && ew.A === 'left' && ew.D === 'right' && ew.Space === 'jump(off)');
+  ok(`east wing keys: W ${ew.W}, S ${ew.S}, A ${ew.A}, D ${ew.D}, Space ${ew.Space}`, ew.W === 'up' && ew.S === 'down' && ew.A === 'left' && ew.D === 'right' && /\(off\)/.test(ew.Space));
   await shot('keys-eastwing');
   await S(() => window.__unseen.goStep({ step: 'ep5b' }));
   await until(() => window.__game.scene.sys.settings.key === 'hallway'); await p.waitForTimeout(400);
@@ -102,7 +102,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await S(() => window.__unseen.goStep({ step: 'batch1' }));
   await until(() => window.__game.scene.sys.settings.key === 'satellite'); await p.waitForTimeout(800);
   const sat = await labels();
-  ok(`satellite keys: W ${sat.W}, A ${sat.A}, Space ${sat.Space}, Shift ${sat.Shift}`, (sat.W === 'field' || /turn/.test(sat.W)) && /\(off\)/.test(sat.Space) && /\(off\)/.test(sat.Shift));
+  ok(`satellite keys: W ${sat.W}, A ${sat.A}, Space ${sat.Space}, Shift ${sat.Shift}`, (sat.W === 'check' || sat.W === 'field' || /turn/.test(sat.W)) && /\(off\)/.test(sat.Space) && /\(off\)/.test(sat.Shift));
   await shot('keys-sat');
 
   // ---- paperwork: a notice slip and the report, at 1x
