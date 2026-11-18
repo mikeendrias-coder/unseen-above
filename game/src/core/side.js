@@ -10,7 +10,7 @@ import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint, tapeTake } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint, tapeTake, hasTakes } from './death.js';
 import { juice } from './juice.js';
 import { results } from './results.js';
 import { itemPanel } from './panels.js';
@@ -41,12 +41,12 @@ export class SideEpisode extends Phaser.Scene {
     this.props = [];  // solid rectangles off the tile grid: low debris, furniture, a robot
     this.things = []; // things she can use with E
     this.scale.on('rescale', this.onRescale, this);
-    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); cg.hp(null); cg.lives(null); });
+    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); if (hasTakes(this)) { cg.hp(null); cg.lives(null); } }); // a side room stops after the episode wakes: it leaves the strip alone
     syncImmunity();
     startTakes(this); showStatus(this);
   }
   itemPanel(kind) { return itemPanel(this, kind); }
-  // Review: with immunity on, N moves her to the next of this.skipPoints (x positions).
+  // Review: in ENDLESS or IMMUNE (or when offered), N moves her to the next of this.skipPoints (x positions).
   skipAhead() {
     const k = this.kid, pts = this.skipPoints || []; if (!k || this.dead || this.leaving) return;
     const x = pts.find(p => p > k.x + 12); if (x == null) return;
@@ -61,7 +61,8 @@ export class SideEpisode extends Phaser.Scene {
   }
   // the nearest x to this one where she fits standing where she is (clear of props and people)
   clearX(x) { const k = this.kid; for (let d = 0; d < 80; d++) for (const s of [1, -1]) if (!this.boxHits(x + s * d, k.y, k.w, k.h)) return x + s * d; return x; }
-  // immune and falling out of the world: back onto the nearest floor
+  // put her back on the nearest floor (falling out of the world now dies, in every mode; this
+  // stays for scenes that move her by hand)
   rescue() {
     const k = this.kid;
     for (let d = 0; d < 400; d += 4) for (const s of [1, -1]) {
@@ -144,16 +145,21 @@ export class SideEpisode extends Phaser.Scene {
     // things to use come before things to look at, side-room doors last; then the nearest
     const rank = t => (t.door ? 2 : t.look ? 1 : 0);
     this.nearThing = near.sort((a, b) => rank(a) - rank(b) || Math.abs(cx - (a.x0 + a.x1) / 2) - Math.abs(cx - (b.x0 + b.x1) / 2))[0] || null;
-    // J uses things and looks; W goes through a side-room door (the key bar's "door"). J opens a
-    // door only when nothing else is in reach, so a look near a door never walks her inside.
-    // W counts once per press, and not at all if it was already held when the scene began (no
-    // bouncing back out).
+    // One key, one job (Michael, Nov 18): J uses things, looks and talks, and never opens a door.
+    // W (or Up) goes through doors, every kind: side-room doors here, the way out in moveKid. W
+    // counts once per press, and not at all if it was already held when the scene began (no
+    // bouncing back out). J at a door with nothing else in reach says W.
     const up = this.ctl.up(), upTap = up && this.upHeld === false; this.upHeld = up;
     this.nearDoor = near.find(t => t.door) || null;
     const door = upTap ? this.nearDoor : null;
     if (door) door.use();
-    else if (this.nearThing && this.ctl.interact()) this.nearThing.use();
+    else if (this.ctl.interact()) {
+      if (this.nearThing && !this.nearThing.door) this.nearThing.use();
+      else if (this.nearDoor || (this.level && this.level.door && this.atDoor() && this.doorReady())) this.wForDoors();
+    }
   }
+  // J pressed at a door: the set says which key opens it (a beat apart, so it never stutters)
+  wForDoors() { const t = this.clock; if (this.wSaidAt != null && t - this.wSaidAt < 1.5) return; this.wSaidAt = t; overlay.note('W opens doors', 1400); Sound.tone(330, 0.05, 'square', 0.012); }
   // A side room behind an optional door: this episode sleeps (its clock and lights freeze) and
   // wakes where she left it.
   enterRoom(id) {
@@ -243,7 +249,7 @@ export class SideEpisode extends Phaser.Scene {
       k.peakY = k.y;
     }
     k.walkT = k.onGround && Math.abs(k.vx) > 8 ? k.walkT + dt : 0;
-    if (this.atDoor() && (c.interact() || c.up())) this.enterDoor();
+    if (this.atDoor() && c.up()) this.enterDoor(); // W or Up, never J
   }
   // With control taken away (a scene beginning, a light that has her), she still falls and slows
   // to a stop: nobody hangs in the air.
@@ -285,7 +291,8 @@ export class SideEpisode extends Phaser.Scene {
   hurt(n, id) {
     const k = this.kid; if (!k || this.dead) return;
     if (id === 'fall') results.fell(this); // for the report: falls count in story mode too
-    if (k.inv > 0 || state.immune || window.__noDeath) return;
+    // every mode takes HP (IMMUNE too: at 0 she regenerates at the mark, death.js)
+    if (k.inv > 0 || window.__noDeath) return;
     k.hp = Math.max(0, k.hp - n); k.inv = K.inv; showStatus(this, k.hp, K.hp);
     Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800);
     // a hit-stop and a kick (juice.js); the strike, if this kills her, adds its own

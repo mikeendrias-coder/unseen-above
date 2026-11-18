@@ -12,7 +12,7 @@ import { Painter, hexNum, flat } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint, tapeTake } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint, tapeTake, hasTakes } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
@@ -96,7 +96,7 @@ export class TopDownEpisode extends Phaser.Scene {
     this.noises = []; this.flight = null; this.pebbles = 0; this.things = []; this.nearThing = null; this.sources = []; this.satX = null; this.floorPebbles = [];
     this.lights = []; this.par = [];
     this.scale.on('rescale', this.onRescale, this);
-    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); cg.lives(null); });
+    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); if (hasTakes(this)) cg.lives(null); });
     startTakes(this); showStatus(this, null);
   }
   onRescale() { this.cameras.main.setZoom(pixelZoom()); this.place(); }
@@ -294,14 +294,25 @@ export class TopDownEpisode extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ things, the camera, the dark
+  // One key, one job (Michael, Nov 18): J uses, looks and talks; a thing marked door (a side
+  // room) opens with W (or Up) only, pressed while she stands at it (W walks her into it, or
+  // against it). J at a door says W. W counts once per press, and not if it was held when the
+  // scene began.
   updateThings() {
     this.nearThing = null;
+    const up = this.ctl.up(), upTap = up && this.upHeld === false; this.upHeld = up;
     if (this.dead || this.leaving || this.done || this.kid.moving) return;
     const k = this.kid, near = this.things.filter(t => !t.off && (t.reach === 2 ? Math.max(Math.abs(t.tx - k.tx), Math.abs(t.ty - k.ty)) <= 1 || Math.abs(t.tx - k.tx) + Math.abs(t.ty - k.ty) <= 2 : Math.abs(t.tx - k.tx) + Math.abs(t.ty - k.ty) <= (t.reach || 1)));
-    // things to use come before things to look at
-    this.nearThing = near.sort((a, b) => (a.look ? 1 : 0) - (b.look ? 1 : 0))[0] || null;
-    if (this.nearThing && !this.nearThing.hold && this.ctl.interact()) this.nearThing.use();
+    // things to use come before things to look at, doors last
+    const rank = t => (t.door ? 2 : t.look ? 1 : 0);
+    this.nearThing = near.sort((a, b) => rank(a) - rank(b))[0] || null;
+    const door = near.find(t => t.door);
+    if (door && upTap) { door.use(); return; }
+    const t = this.nearThing;
+    if (t && t.hold) return; // held things read the key themselves (useHeld)
+    if (this.ctl.interact()) { if (t && !t.door) t.use(); else if (door) this.wForDoors(); }
   }
+  wForDoors() { const t = this.clock; if (this.wSaidAt != null && t - this.wSaidAt < 1.5) return; this.wSaidAt = t; overlay.note('W opens doors', 1400); Sound.tone(330, 0.05, 'square', 0.012); }
   // A side room behind an optional door, as in the side-view episodes: this scene sleeps and
   // wakes where she left it.
   itemPanel(kind) { return itemPanel(this, kind); }
@@ -315,7 +326,7 @@ export class TopDownEpisode extends Phaser.Scene {
     this.time.delayedCall(260, () => {
       this.leaving = false;
       Object.values(this.beds || {}).forEach(b => b.set(0.0001, 0.3));
-      this.events.once('wake', () => { this.ctl.endFrame(); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
+      this.events.once('wake', () => { this.ctl.endFrame(); showStatus(this, null); if (this.showHp) this.showHp(); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
       this.scene.launch('room', { id, from: this.scene.key, take: this.ep.take });
       this.scene.sleep();
     });

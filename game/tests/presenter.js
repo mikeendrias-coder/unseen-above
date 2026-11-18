@@ -29,7 +29,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   // presenter on, from the title
   await p.click('#opt-present');
   const sv = await save();
-  ok('presenter on: immunity, flashing reduced, no shake, music 2 (' + JSON.stringify({ i: sv.immune, f: sv.settings.reduceFlash, s: sv.settings.shake, m: sv.settings.music }) + ')', sv.settings.presenter === true && sv.immune === true && sv.settings.reduceFlash === true && sv.settings.shake === false && sv.settings.music === 2 && sv.settings.sfx === 4);
+  ok('presenter on: IMMUNE, flashing reduced, no shake, music 2 (' + JSON.stringify({ i: sv.mode, f: sv.settings.reduceFlash, s: sv.settings.shake, m: sv.settings.music }) + ')', sv.settings.presenter === true && sv.mode === 'immune' && sv.settings.reduceFlash === true && sv.settings.shake === false && sv.settings.music === 2 && sv.settings.sfx === 4);
   ok('the title shows Full screen now; Big captions waits until the strip can draw them', await S(() => !document.getElementById('opt-full').hidden && document.getElementById('opt-caps').hidden)); // until ui/cg.js sets cg.canBigCaptions
   await p.screenshot({ path: 'tests/out/presenter-title.png' });
   await p.click('#opt-chapters');
@@ -45,19 +45,19 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('1 on the title opens episode 1 with its card', true);
   await until(() => location.hash === '#grounds', null, 4000);
   ok('the address follows the part (#grounds)', true);
-  ok('the PRESENTER tag shows in the strip, the IMMUNE tag does not', await S(() => !document.getElementById('ptag').hidden && document.getElementById('ptag').textContent === 'PRESENTER' && !document.getElementById('immune').classList.contains('on')));
+  ok('the PRESENTER tag shows in the strip, the mode tag does not; LIVES reads IMMUNE', await S(() => !document.getElementById('ptag').hidden && document.getElementById('ptag').textContent === 'PRESENTER' && !document.getElementById('immune').classList.contains('on') && window.__unseen.cg.status.lives.kind === 'immune'));
   await p.waitForTimeout(3600);
   await p.screenshot({ path: 'tests/out/presenter-tag.png' });
 
-  // immunity off: N still skips ahead, the tag says she can die
+  // NORMAL while presenting: N still skips ahead, the strip's LIVES says she can die
   await p.keyboard.press('KeyI');
-  await until(() => !window.__game.state.immune, null, 3000);
-  ok('I turns immunity off; the tag says so (' + await S(() => document.getElementById('ptag').textContent) + ')', /CAN DIE/.test(await S(() => document.getElementById('ptag').textContent)));
+  await until(() => window.__game.state.mode === 'normal', null, 3000);
+  ok('I from IMMUNE goes to NORMAL; LIVES reads a number (' + await S(() => window.__unseen.cg.status.lives.n) + ')', await S(() => window.__unseen.cg.status.lives.kind === 'normal'));
   const x0 = await S(() => window.__game.scene.kid.x);
   await p.keyboard.press('KeyN'); await p.waitForTimeout(300);
   const x1 = await S(() => window.__game.scene.kid.x);
-  ok('N skips ahead with immunity off (' + Math.round(x0) + ' to ' + Math.round(x1) + ')', x1 !== x0);
-  await p.keyboard.press('KeyI');
+  ok('N skips ahead in NORMAL while presenting (' + Math.round(x0) + ' to ' + Math.round(x1) + ')', x1 !== x0);
+  await p.keyboard.press('KeyI'); await p.waitForTimeout(100); await p.keyboard.press('KeyI');
   await until(() => window.__game.state.immune, null, 3000);
 
   // H holds the picture: no menu, the clock stops, the mark shows; H again goes on
@@ -189,7 +189,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   // presenter off puts the settings back
   await p.click('#opt-present');
   const off = await save();
-  ok('presenter off: the old settings come back (' + JSON.stringify({ i: off.immune, f: off.settings.reduceFlash, m: off.settings.music }) + ')', off.settings.presenter === false && off.immune === false && off.settings.music === 5 && off.settings.sfx === 5);
+  ok('presenter off: the old settings come back (' + JSON.stringify({ i: off.mode, f: off.settings.reduceFlash, m: off.settings.music }) + ')', off.settings.presenter === false && off.mode === 'normal' && off.settings.music === 5 && off.settings.sfx === 5);
   console.log(errs.length ? 'ERRORS ' + errs.slice(0, 4).join(' | ') : 'no page errors');
   await b.close();
   process.exit(fails || errs.length ? 1 : 0);

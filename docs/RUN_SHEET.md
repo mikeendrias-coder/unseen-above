@@ -7,7 +7,7 @@ Talking points are yours: each stop has a blank line for them.
 
 - [ ] Copy `game/dist/local.html` and `game/dist/phaser.min.js` into one folder on the desktop, and the same two files onto a USB stick. Double-click `local.html`: it runs with no network.
 - [ ] Open it in Chrome on the presenting laptop. Use the local copy, not the web link, unless the network is good. (GitHub Pages can take 10 minutes to show a new build.)
-- [ ] On the title: **Presenter** on. That turns on immunity, turns flashing down, stops the shake, and sets the music to 2 of 5 and the effects to 4 of 5.
+- [ ] On the title: **Presenter** on. That sets the mode to IMMUNE (hazards still play out, then she comes back at the last tape mark with nothing lost), turns flashing down, stops the shake, and sets the music to 2 of 5 and the effects to 4 of 5.
 - [ ] On the title: **New game**, twice (it asks). This clears your rehearsal: lines you heard, how-to slips, bodies. Without it some lines stay silent in class.
 - [ ] Plug in the projector. Check where the sound goes (HDMI sound may go to a weak projector speaker). Bring a small speaker.
 - [ ] Press one key before you start talking: browsers start sound only after a key or a click.
@@ -24,7 +24,8 @@ Talking points are yours: each stop has a blank line for them.
 | **0** to **9** | Jump to a part, with its title card: 0 opening, 1 ep 1, 2 satellite 1, 3 ep 2, 4 satellite 2, 5 ep 3, 6 ep 4, 7 kids' room, 8 Moon, 9 backstage |
 | **H** | Hold the picture to talk. No menu over it, sound ducks. H again goes on |
 | **N** | Skip ahead one section per press (or solves a satellite screen). An episode has 4 to 7 sections, so keep pressing. In presenter mode it always works |
-| **I** | Immunity off and on. Off: she can die (the small tag under the lives reads CAN DIE) |
+| **I** | The mode: NORMAL (5 lives), ENDLESS (she dies, lives never run out), IMMUNE (she comes back at the mark, nothing lost). The strip's right end says which |
+| **W** | Doors, every kind. J never opens a door |
 | **Backspace** | Start this take again |
 | **Enter** | Next line (the bedroom, backstage and the playroom wait for it) |
 | **P** | Pause menu (presenter, big captions, music and effects levels, title screen) |

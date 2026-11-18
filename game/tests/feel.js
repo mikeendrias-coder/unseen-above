@@ -97,6 +97,7 @@ const LIVE_MS = 500; // the brief: the next take is up in under about 0.5 s afte
   // ---- the broadcast bar: red ticks where she died, her best, BEST when she passes it
   const r0 = await S(() => { const r = window.__feel.results.of('ep1'); return { ticks: r.ticks.length, best: r.best }; });
   ok(`the bar has a tick for each death this visit (${r0.ticks}) and keeps her best (${r0.best.toFixed(2)})`, r0.ticks === 2 && r0.best > 0.05);
+  await until(() => !window.__unseen.cg.captionRect, 9000); // the bar steps aside for a caption (the first life lost is explained there)
   const strip = await S(() => { const c = document.getElementById('feel'), x = c.getContext('2d'), d = x.getImageData(0, 177, 320, 8).data; let red = 0, bar = 0; for (let i = 0; i < d.length; i += 4) { if (d[i] === 0xe3 && d[i + 1] === 0x41 && d[i + 2] === 0x2b) red++; if (d[i] === 0x45 && d[i + 1] === 0x47 && d[i + 2] === 0x4d) bar++; } return { red, bar }; });
   ok(`red death ticks (${strip.red} px) and a 2 px bar (${strip.bar} px of it still to go) are drawn on the strip`, strip.red >= 6 && strip.bar > 300);
   await S(() => { const s = window.__game.scene, r = window.__feel.results.of('ep1'); s.placeAt(s.level.start.x + (s.level.door.x - s.level.start.x) * Math.min(0.95, r.best + 0.1)); });
@@ -106,8 +107,8 @@ const LIVE_MS = 500; // the brief: the next take is up in under about 0.5 s afte
 
   // ---- grades
   ok('a clean run is PRIME TIME; many deaths are a RERUN', await S(() => { const g = window.__feel.gradeOf; return g({ id: 'ep1', deaths: 0, time: 40 }) === 'PRIME TIME' && g({ id: 'ep1', deaths: 9, time: 40 }) === 'RERUN' && g({ id: 'ep1', deaths: 1, time: 400 }) === 'LATE NIGHT'; }));
-  await p.keyboard.press('KeyI'); await p.waitForTimeout(150);
-  ok('story mode stamps REHEARSAL', await S(() => window.__feel.results.collect(window.__game.scene).grade === 'REHEARSAL'));
+  await p.keyboard.press('KeyI'); await p.waitForTimeout(150); await p.keyboard.press('KeyI'); await p.waitForTimeout(150);
+  ok('IMMUNE stamps REHEARSAL', await S(() => window.__game.state.mode === 'immune' && window.__feel.results.collect(window.__game.scene).grade === 'REHEARSAL'));
   await p.keyboard.press('KeyI'); await p.waitForTimeout(150);
 
   // ---- the report, from a real exit: walk into the grounds' door

@@ -67,14 +67,14 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `done, check` (pixel audit against the palette, art direction review, fixes merged) **Final checks include an aesthetics cohesion pass** (everything in the one look).
 
 ## 6. Nov 18 playtest feedback (Michael, after publishing)
-- `todo` **J and K must be distinct; J must not open doors.** Doors are W only. J is use, look, talk. K is throw and swing.
-- `todo` **Immunity got stuck when the chandelier fell.** New meaning of immunity: hazards and their animations still happen, then she regenerates and spawns just before the event (the last checkpoint), on purpose, never stuck, no life lost.
-- `todo` **A new mode: she loses HP but never runs out of lives** (lives shown as an infinity sign). A setting beside immunity.
+- `done, check` **J and K must be distinct; J must not open doors.** Doors are W only. J is use, look, talk. K is throw and swing. (Every door: exits, side rooms, the bedroom's void door, the playroom. J at a door says W opens doors.)
+- `done, check` **Immunity got stuck when the chandelier fell.** New meaning of immunity: hazards and their animations still happen, then she regenerates and spawns just before the event (the last checkpoint), on purpose, never stuck, no life lost. (IMMUNE mode: every death goes through one path, no body, no take; the chandelier throws her clear or kills her and she comes back at the mark.)
+- `done, check` **A new mode: she loses HP but never runs out of lives** (lives shown as an infinity sign). A setting beside immunity. (One MODE control on the title, the pause menu and the I key: NORMAL, ENDLESS, IMMUNE. Presenter uses IMMUNE.)
 - `todo` **No collision on a prop** (docs/feedback/nov18-collision.png: a gold bench or planter by a white railing; she stands inside it).
-- `todo` **Lives vs HP is confusing.** Make the two readable at a glance and explained once.
+- `done, check` **Lives vs HP is confusing.** Make the two readable at a glance and explained once. (HP: three hearts at the strip's left. LIVES: a number, an infinity sign or IMMUNE at the right. One line the first time each goes down in a run.)
 - `todo` **Some lasers in the top-down level do not trigger.** A laser hit should cost a life.
 - `todo` **East wing (top-down) looks unsatisfying:** a real pile of pebbles, carry at most five, dead ends, make it cooler like the side levels.
-- `todo` **Key buttons under the game run off the left edge of the window, with a big empty gap above them** (docs/feedback/nov18-shed-keys.png).
+- `done, check` **Key buttons under the game run off the left edge of the window, with a big empty gap above them** (docs/feedback/nov18-shed-keys.png). (Two rows that wrap inside the window, right under the strip; the strip is drawn as a flat band so it no longer reads as a gap.)
 
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).

@@ -8,7 +8,7 @@
 import { cg, TV } from './cg.js';
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
-import { canSkip, setStory, setPresenter, presenting } from '../core/review.js';
+import { canSkip, cycleMode, setPresenter, presenting, MODE_WORD, MODE_HELP } from '../core/review.js';
 
 // where she is, for the band
 const PLACE = {
@@ -23,10 +23,10 @@ const CONTROLS = {
   lines: [
     '{A} {D} move. {Space} jumps, twice.',
     '{S} crouches. {W} opens doors. {Shift} runs.',
-    '{J} uses and talks. {K} throws and swings.',
+    '{J} uses, looks, talks. {K} throws, swings.',
     '{L} glasses. {Enter} skips a line.',
     '{Bksp} retries. {P} pauses. {M} sound.',
-    '{I} immunity. {N} skips ahead.',
+    '{I} mode. {N} skips ahead.',
     'Globe: {W} {A} {S} {D} or a drag turns it.'
   ]
 };
@@ -71,7 +71,7 @@ export function initPause(game, hooks) {
     R.push({ id: 'resume', label: 'RESUME', help: 'Back to the show. P or Esc too.' });
     if (sc.restartTake && (!sc.canRestart || sc.canRestart())) R.push({ id: 'restart', label: key === 'satellite' ? 'RESTART THIS BATCH' : 'RETRY', help: key === 'satellite' ? 'This batch from the top.' : 'Start this take again. Costs no life.' });
     if (canSkip(sc)) R.push({ id: 'skip', label: 'SKIP AHEAD', help: key === 'satellite' ? 'Solves this screen.' : 'To the next part of this stage.' });
-    R.push({ id: 'story', label: 'IMMUNITY', value: state.immune ? 'ON' : 'OFF', adjust: true, help: 'Nothing can kill her. N skips ahead.' });
+    R.push({ id: 'story', label: 'MODE', value: MODE_WORD[state.mode], adjust: true, help: MODE_HELP[state.mode] });
     R.push({ id: 'music', label: 'MUSIC', value: bars(state.settings.music), adjust: true, help: 'Left and right set the level.' });
     R.push({ id: 'sfx', label: 'EFFECTS', value: bars(state.settings.sfx), adjust: true, help: 'Left and right set the level.' });
     R.push({ id: 'flash', label: 'FLASHING', value: state.settings.reduceFlash ? 'REDUCED' : 'FULL', adjust: true, help: 'Reduced: dim, slow, fewer flashes.' });
@@ -135,7 +135,7 @@ export function initPause(game, hooks) {
   // change a row's value (d: -1 or 1); wrap when it comes from a single click or Enter
   function adjust(d, wrap) {
     const r = rows[at]; if (!r || !r.adjust) return false;
-    if (r.id === 'story') setStory(!state.immune);
+    if (r.id === 'story') cycleMode(d);
     else if (r.id === 'music' || r.id === 'sfx') setVol(r.id, d, wrap);
     else if (r.id === 'flash') state.set('reduceFlash', !state.settings.reduceFlash);
     else if (r.id === 'shake') state.set('shake', !state.settings.shake);

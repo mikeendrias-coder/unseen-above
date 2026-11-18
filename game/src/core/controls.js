@@ -1,7 +1,8 @@
 // Named actions, not keys. Layout (Michael, Nov 17): the left hand moves (A D, W up and doors,
-// S crouch, Space jump, Shift run); the right hand acts (J use and talk, K throw and swing,
-// L glasses, Backspace restart, Enter skip a line, P pause, M sound). Arrows still move, and the
-// old E F G R keys still work, so nobody gets stuck.
+// S crouch, Space jump, Shift run); the right hand acts (J use, look and talk, K throw and swing,
+// L glasses, Backspace restart, Enter skip a line, P pause, M sound, I the mode). One key, one job
+// (Nov 18): doors open with W or Up only, never J (side.js, topdown.js). Arrows still move, and
+// the old E F G R keys still work, so nobody gets stuck.
 // One-shot actions come from keydown events, so a tap shorter than a
 // frame is never lost. Rebuild one controls object in every scene's create().
 import { Sound } from './sound.js';

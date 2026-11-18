@@ -139,7 +139,7 @@ export class Bedroom extends SideEpisode {
         if (k.onGround && !wasGround && vy > 150) this.step(true);
         this.footsteps(dt); this.updateBag(dt);
         if (c.glasses()) this.gl.toggle();
-        if (k.y + k.h > 176) { if (state.immune) this.rescue(); else this.die({ id: 'the fall', direct: true, footY: GROUND }); }
+        if (k.y + k.h > 176) this.die({ id: 'the fall', direct: true, footY: GROUND }); // every mode (immune regenerates, core/death.js)
       } else if (this.dead && this.girl.visible) this.settle(dt);
       this.gl.update(dt);
       this.updateClock(dt); this.updateBox(dt); this.updateCams(dt); this.updateCollapse(dt); this.updateRun(dt);
@@ -416,7 +416,7 @@ export class Bedroom extends SideEpisode {
       if (this.dyingT > 5.6) {
         this.mode = 'after';
         const V = LEVEL.voidDoor, B = LEVEL.brother;
-        this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'J', use: () => this.openVoid() };
+        this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'W', door: true, use: () => this.openVoid() }; // a door: W, never J
         this.broThing = { x0: B.x - 14, x1: B.x + 20, y0: 130, y1: GROUND, px: B.x + 14, py: GROUND - 24, label: 'J', use: () => this.holdOn() };
         this.things = [this.voidThing, this.broThing];
       }
@@ -799,8 +799,10 @@ export class Bedroom extends SideEpisode {
   doorReady() { return this.mode === 'house' && !this.dead && !this.leaving; }
   drawThings() {
     const t = this.nearThing, d = this.level.door;
-    if (!t && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(d.x + d.w / 2, d.y, 'J');
-    if (t && !t.noPrompt && this.mode !== 'break') { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0 - 2, t.label); }
+    if (!t && this.kid && this.atDoor() && this.doorReady()) this.bubbles.showPrompt(d.x + d.w / 2, d.y, 'W');
+    if (t && !t.noPrompt && this.mode !== 'break') { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0 - 2, t.door ? 'W' : t.label); }
+    // the void door in reach behind him: its W shows too, over the door
+    const dr = t && !t.door && this.nearDoor; if (dr && this.mode !== 'break' && this.bubbles.showPrompt2) { const dx = (dr.x0 + dr.x1) / 2, px = t.px != null ? t.px : (t.x0 + t.x1) / 2; this.bubbles.showPrompt2(Math.abs(dx - px) < 12 ? px + (dx < px ? -12 : 12) : dx, dr.y0, 'W'); }
     // a hold bar under the key while she pulls the bag, then while she reads what is in it
     const bar = (x, y, u) => { const g = this.fxG; x = Math.round(x - 7); g.fillStyle(hexNum(this.P.crack), 1); g.fillRect(x - 1, y - 1, 16, 4); g.fillStyle(hexNum(this.P.device), 1); g.fillRect(x, y, 14, 2); g.fillStyle(0xebe6d8, 1); g.fillRect(x, y, Math.round(14 * Math.min(1, u)), 2); };
     if (t === this.bagThing && this.bag.hold > 0) bar(LEVEL.bag.x + 1, GROUND - 30, this.bag.hold);
@@ -844,7 +846,7 @@ export class Bedroom extends SideEpisode {
   hint() {
     // inside: one line for what to do; none while he talks or goes
     if (this.mode === 'bedroom') return overlay.hint('Go to him.');
-    if (this.mode === 'after') return overlay.hint(this.rerun ? 'The door. J opens it.' : 'Hold J to stay with him. Or J at the door.');
+    if (this.mode === 'after') return overlay.hint(this.rerun ? 'The door. W opens it.' : 'Hold J to stay with him. Or W at the door.');
     if (this.mode !== 'house' || this.leaving) return overlay.hint('');
     const k = this.kid, x = (k.x + k.w / 2) / TILE;
     if (this.collapse && !this.collapse.done && x < 79) return overlay.hint('Run. With the bag, one jump: hold Space at the edge. Crouch under the slab.');

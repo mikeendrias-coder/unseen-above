@@ -35,7 +35,7 @@ function ensure() {
   return true;
 }
 function kick() { if (!ensure() || running) return; running = true; requestAnimationFrame(frame); }
-// The IMMUNE tag shows for a moment when immunity turns on and when a part starts with it on,
+// The mode tag (ENDLESS or IMMUNE) shows for a moment when the mode changes and when a part starts in it,
 // never over a part that takes no input (the opening, the kids' room, a talk, a death, the last
 // shot, a satellite screen) or under the continuity report. The I key cap says it all along.
 const TAG_S = 3;
@@ -92,17 +92,25 @@ function drawFlash() { const f = S.flash; if (!f) return; ctx.fillStyle = patter
 
 // ------------------------------------------------------------------ the strip under the picture
 // Captions in the middle (40 columns), her HP at the left end, the lives left at the right end.
+// HP is three hearts under a small HP; LIVES is a number under a small LIVES (an infinity sign in
+// ENDLESS, the word IMMUNE in IMMUNE). Bone is what she has, ash3 what is gone.
 const CAP_COLS = 40, CAP_ROW = 10;
+// a 7 x 6 heart and a 9 x 5 infinity sign, '#' is ink
+const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+const INF = ['.##...##.', '#..#.#..#', '#...#...#', '#..#.#..#', '.##...##.'];
+function glyph(rows, x, y, color) { ctx.fillStyle = color; rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') ctx.fillRect(x + i, y + j, 1, 1); }); }
 function drawStrip() {
-  const top = H + 5, pipY = H + 15;
+  const top = H + 5, valY = H + 14;
   if (S.hp) {
     ccText(ctx, 'HP', 6, top, INK_LO);
-    for (let i = 0; i < S.hp.max; i++) { const x = 6 + i * 8; if (i < S.hp.n) ccBox(ctx, x, pipY, 6, 6, PAPER); else { ccBox(ctx, x, pipY, 6, 6, INK_LO); ccBox(ctx, x + 1, pipY + 1, 4, 4, INK); } }
+    for (let i = 0; i < S.hp.max; i++) glyph(HEART, 6 + i * 9, valY + 1, i < S.hp.n ? PAPER : INK_LO);
   }
   if (S.lives) {
-    const n = S.lives.max, x0 = 316 - (n * 6 - 2);
-    ccText(ctx, 'LIVES', 316 - ccWidth('LIVES'), top, S.lives.n <= 1 ? ASH.red : INK_LO);
-    for (let i = 0; i < n; i++) { const x = x0 + i * 6; if (i < S.lives.n) ccBox(ctx, x, pipY, 4, 6, PAPER); else { ccBox(ctx, x, pipY, 4, 6, INK_LO); ccBox(ctx, x + 1, pipY + 1, 2, 4, INK); } }
+    const L = S.lives, label = 'LIVES';
+    ccText(ctx, label, 316 - ccWidth(label), top, L.kind === 'normal' && L.n <= 1 ? ASH.red : INK_LO);
+    if (L.kind === 'endless') glyph(INF, 316 - 9, valY + 1, PAPER);
+    else if (L.kind === 'immune') ccText(ctx, 'IMMUNE', 316 - ccWidth('IMMUNE'), valY, PAPER);
+    else { const v = String(L.n); ccText(ctx, v, 316 - ccWidth(v), valY, PAPER); }
   }
 }
 function drawCaption(t) {
@@ -187,14 +195,14 @@ function drawCards() { S.cards.forEach(c => chyron(c)); }
 function drawTop(t) {
   if (S.page || S.menu) return; // paperwork has the screen: the set's messages wait
   let y = 4;
-  // immunity, top right, on paper so it reads at a glance (the class walkthrough)
+  // the mode (ENDLESS or IMMUNE), top right, on paper so it reads at a glance
   const tag = tagUp(t);
-  if (tag) { const s = 'IMMUNE · N SKIPS', w = ccWidth(s) + 8; paper(314 - w, 3, w, 11); ccText(ctx, s, 318 - w, 5, INK); y = 19; }
+  if (tag) { const s = (S.modeWord || 'IMMUNE') + ' · N SKIPS', w = ccWidth(s) + 8; paper(314 - w, 3, w, 11); ccText(ctx, s, 318 - w, 5, INK); y = 19; }
   // the channel bug: CH 07 in ash5 on a flat ash0 box, the one mark used everywhere
   if (S.bug) { const w = ccWidth(S.bug.text); ccBox(ctx, 307 - w, y - 2, w + 6, 11, INK); ccText(ctx, S.bug.text, 310 - w, y, ASH.ash5); y += 12; }
-  // the set's own notes: paper tags like the immunity one, ink on bone, so they read over any
-  // scenery (the immunity tag already says IMMUNITY ON, so that note is not repeated)
-  S.osd.forEach(o => { const s = o.text.toUpperCase(); if (tag && s === 'IMMUNITY ON') return; const w = ccWidth(s) + 8; paper(314 - w, y - 1, w, 11); ccText(ctx, s, 318 - w, y + 1, INK); y += 14; });
+  // the set's own notes: paper tags like the mode one, ink on bone, so they read over any
+  // scenery (the mode tag already says the mode, so that note is not repeated)
+  S.osd.forEach(o => { const s = o.text.toUpperCase(); if (tag && /^MODE: /.test(s)) return; const w = ccWidth(s) + 8; paper(314 - w, y - 1, w, 11); ccText(ctx, s, 318 - w, y + 1, INK); y += 14; });
   if (S.rec) { if (Math.floor(t * 2) % 2 === 0) ccText(ctx, '●', 10, 9, ASH.red); ccText(ctx, 'REC', 17, 9, PAPER); }
 }
 
@@ -301,8 +309,8 @@ export const cg = {
   osd(text, ms) { S.osd = [{ text, until: now() + (ms || 1800) / 1000 }]; kick(); },
   bug(text, ms) { S.bug = { text, until: now() + (ms || 900) / 1000 }; kick(); },
   rec(ms) { S.rec = { until: now() + (ms || 2400) / 1000 }; kick(); },
-  // immunity on or off; on (again, at a part's start too) shows the tag for a moment
-  immune(on) { S.immune = !!on; S.immuneUntil = on ? null : 0; kick(); },
+  // the mode tag on or off (word: ENDLESS or IMMUNE); on (again, at a part's start too) shows it for a moment
+  immune(on, word) { S.immune = !!on; S.immuneUntil = on ? null : 0; if (word) S.modeWord = word; kick(); },
   // a flash: a palette color as a dither over the picture for ms (kind 'checker' or 'q25')
   flash(color, ms, kind) { S.flash = { color, kind: kind || 'checker', until: now() + (ms || 80) / 1000 }; kick(); },
   // a notice: { num, title, lines, stamp } (lines may mark keys as {L})
@@ -316,10 +324,18 @@ export const cg = {
   menuHit(x, y) { const m = S.menu; if (!m || !m.hit || S.page || x < m.hx0 || x > m.hx1) return -1; const h = m.hit.find(r => y >= r.y0 && y < r.y1); return h ? h.i : -1; },
   // where row i of the menu is (for tests): { x, y } at its middle, on the pixel grid
   menuRow(i) { const m = S.menu; if (!m) return null; const g = menuGeom(m); return { x: g.x + g.w / 2, y: g.rowsY + i * FROW + FROW / 2 }; },
-  // her HP in the strip (n of max), or null to hide it
-  hp(n, max) { S.hp = n == null ? null : { n, max }; kick(); },
-  // lives left in the strip (n of max), or null to hide them
-  lives(n, max) { S.lives = n == null ? null : { n, max }; kick(); },
+  // her HP in the strip (n of max), or null to hide it. A drop calls cg.onHpDrop (core/death.js
+  // explains HP the first time).
+  hp(n, max) {
+    const was = S.hp; S.hp = n == null ? null : { n, max }; kick();
+    if (was && S.hp && max === was.max && n < was.n && cg.onHpDrop) cg.onHpDrop();
+  },
+  onHpDrop: null,
+  // lives left in the strip (n of max; kind is the mode: 'normal', 'endless' shows an infinity
+  // sign, 'immune' says IMMUNE), or null to hide them
+  lives(n, max, kind) { S.lives = n == null ? null : { n, max, kind: kind || 'normal' }; kick(); },
+  // what the strip ends show, for tests: { hp: {n, max}, lives: {n, max, kind} }
+  get status() { return { hp: S.hp && Object.assign({}, S.hp), lives: S.lives && Object.assign({}, S.lives) }; },
   clearAll() { S.hp = null; S.lives = null; S.caption = null; S.desc = null; S.cards = []; S.osd = []; S.bug = null; S.rec = null; S.page = null; S.menu = null; S.flash = null; }
 };
 // where the typer finds the lines a press acts on, and the pixel grid under a click
