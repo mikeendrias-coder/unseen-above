@@ -253,6 +253,9 @@ export function paintLevel(P, map) {
   for (let x = lx0 + 10; x < lx1 - 16; x += 38) { p.rect(x, LOGGIA + 22, 24, TR - LOGGIA - 22, O); p.circle(x + 12, LOGGIA + 22, 12, O); p.rect(x + 11, LOGGIA + 8, 3, 4, P.gold); }
   // the house base under the balcony: rusticated, with deep windows; then the balcony's railing
   for (let x = 75 * T; x < W - 10; x += 40) { p.rect(x + 8, 11 * T + 24, 14, 40, O); p.rect(x + 9, 11 * T + 25, 12, 1, P.goldLo); }
+  // the terrace wall: basement grilles, a gold band under its coping
+  p.rect(38 * T, TR + 2, (LEVEL.w - 38) * T, 1, P.goldLo);
+  for (let x = 40 * T; x < LEVEL.w * T - 20; x += 72) { p.rect(x - 1, TR + 40, 22, 14, O); p.rect(x, TR + 41, 20, 12, P.wallLo); for (let i = 2; i < 20; i += 4) p.rect(x + i, TR + 41, 1, 12, P.device); p.rect(x, TR + 41, 20, 1, P.lamp); }
   // fairy lights along the hedge tops
   for (let tx = 15; tx < 36; tx++) for (let ty = 17; ty < 25; ty++) if (map.mat[ty][tx] === 'h' && !map.m[ty - 1][tx]) for (let i = 2; i < T; i += 5) { p.px(tx * T + i, ty * T + 4 + (i % 3), P.lamp); p.mark('fairy', tx * T + i, ty * T + 4 + (i % 3)); }
   // D: the fountain: water, the bowl's stem, the bowl's gold lip

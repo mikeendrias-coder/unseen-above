@@ -23,6 +23,8 @@
 // delay s after she stands on it, then drops; back: s later it is there again (0: never).
 // Swing: a chandelier or rope on a fixed swing; touching its end in the air, she holds on;
 // Space lets go with the swing's speed plus a jump, S drops straight off.
+// hardCone(g, cone points, color, view) draws a watcher's light the final-pass way: every other
+// pixel row of the cone in one flat color, its two edges solid (no alpha, no blending).
 import { Sound } from './sound.js';
 import { K } from './side.js';
 import { hexNum } from '../art/painter.js';

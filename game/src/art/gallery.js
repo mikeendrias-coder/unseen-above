@@ -24,7 +24,7 @@ export const LEVEL = {
   staffDoor: { x: 8 * T + 2, y: GROUND - 28, w: 14, h: 28 },
   lightSwitch: { x: 11 * T + 8, y: GROUND - 26 },
   portrait: { x: 2 * T + 4, y: GROUND - 60, w: 28, h: 36 },  // the man in gold, eyes that follow
-  hallLamps: [{ x: 6 * T, y: 118 }, { x: 15 * T, y: 118 }],  // the chandeliers the switch turns off
+  hallLamps: [{ x: 6 * T + 8, y: 196 }, { x: 17 * T + 8, y: 196 }],  // the chandeliers the switch turns off
   robot: { x0: 3 * T, x1: 13 * T, speed: 16 },
   // C: two chandeliers she rides over the atrium (anchor, chain length, swing)
   swings: [{ x: 41 * T, y: 16, len: 165, amp: 30, period: 3.0, phase: 0 }, { x: 50 * T + 6, y: 16, len: 165, amp: 30, period: 3.0, phase: 0.5 }],
@@ -111,7 +111,7 @@ function portrait(p, P, x, y, w, h, seed, worn) {
   if (worn) for (let i = 0; i < 6; i++) p.px(x + r() * w, y + r() * h, P.crack);
   glint(p, P, x - 1, y - 1);
 }
-function sconce(p, P, x, y, lit) { p.rect(x - 1, y, 3, 6, P.goldLo); p.rect(x - 3, y - 4, 7, 4, '#0e0f12'); p.rect(x - 2, y - 3, 5, 3, lit ? P.lamp : P.device); if (lit) { p.px(x, y - 4, P.goldHi); p.mark('sconce', x, y - 2); checkerPoly(p, [[x - 3, y + 6], [x + 4, y + 6], [x + 8, y + 22], [x - 7, y + 22]], P.wallHi); } else p.px(x, y - 4, P.crack); }
+function sconceAt(p, P, x, y, lit) { p.rect(x - 1, y, 3, 6, P.goldLo); p.rect(x - 3, y - 4, 7, 4, '#0e0f12'); p.rect(x - 2, y - 3, 5, 3, lit ? P.lamp : P.device); if (lit) { p.px(x, y - 4, P.goldHi); p.mark('sconce', x, y - 2); checkerPoly(p, [[x - 3, y + 6], [x + 4, y + 6], [x + 8, y + 22], [x - 7, y + 22]], P.wallHi); } else p.px(x, y - 4, P.crack); }
 function crack(p, c, x, y, len, seed, dir) { const r = rng(seed); let cx = x, cy = y; for (let i = 0; i < len; i++) { p.px(cx, cy, c); cy += 1; cx += (r() < 0.5 ? -1 : 1) * (r() < 0.6 ? 1 : 0) + (dir || 0) * (r() < 0.3 ? 1 : 0); if (r() < 0.12) p.px(cx + 1, cy, c); } }
 
 // Solid tiles by material, with a light top edge where she stands and an ash0 outline on open sides.
@@ -134,7 +134,8 @@ function paintTiles(p, P, map) {
 
 export function paintLevel(P, map, dark) {
   const W = LEVEL.w * T, H = LEVEL.h * T, G = GROUND, M = MEZZ, p = new Painter(W, H), r = rng(77), O = '#0e0f12';
-  const wall = dark ? P.wallLo : P.wall, wallHi = dark ? P.wall : P.wallHi;
+  const wall = dark ? P.wallLo : P.wall, wallHi = dark ? P.wallLine : P.wallHi;
+  const sconce = (p0, P0, x, y, lit) => sconceAt(p0, P0, x, y, lit && !dark);
   // walls, pilasters, a cornice under the ceiling, a dado rail, wainscot
   p.rect(0, 0, W, H, wall);
   for (let x = 0; x < 72 * T; x += 48) { p.rect(x + 21, 22, 6, G - 40, wallHi); p.rect(x + 23, 22, 1, G - 40, P.wallLine); p.rect(x + 20, 22, 8, 2, P.goldLo); p.rect(x + 20, G - 20, 8, 2, P.goldLo); }

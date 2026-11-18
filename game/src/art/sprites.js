@@ -15,7 +15,7 @@ const INK = {
 };
 
 // Facing right. Rows 0 to 9 are the top half, 10 to 13 the legs.
-const HEAD = ['..HHHh..', '.HHHHHh.', '.HHHfff.', '.HHfffe.', '..Hfff..', '..ssss..'];
+const HEAD = ['..HHHh..', '.HHHHHh.', '.HHHfff.', '.HHffef.', '..Hfff..', '..ssss..'];
 const TORSO = {
   rest: ['.JJjjJ..', '.JJjjJJ.', '.dJjjJf.', '.dJJJJ..'],
   fwd: ['.JJjjJ..', '.JJjjJJ.', '.dJjjJJ.', '.dJJJJf.'],   // hand forward
@@ -32,10 +32,10 @@ const LEGS = {
   fall: ['..tttt..', '.tt..tt.', '.tt..tt.', '.b....b.']
 };
 // a tuck for the double jump: knees up, arms out
-const TUCK = ['........', '........', '..HHHh..', '.HHHHHh.', '.HHHfff.', '.HHfffe.', '..sfff..', 'fJJjjJJf', '.JJjjJJ.', '.dJJJJ..', '.tttttt.', '.tt..tt.', '.bb..bb.', '........'];
+const TUCK = ['........', '........', '..HHHh..', '.HHHHHh.', '.HHHfff.', '.HHffef.', '..sfff..', 'fJJjjJJf', '.JJjjJJ.', '.dJJJJ..', '.tttttt.', '.tt..tt.', '.bb..bb.', '........'];
 // wall slide, the wall on her right: she looks back into the room, a hand and a foot on the wall
-const WALL = ['..hHHH..', '.hHHHHH.', '.fffHHH.', '.efffHH.', '..fffH..', '..ssss.f', '..JjjJJf', '.JJjjJJ.', '.JJjjJd.', '..JJJJd.', '..tttt..', '..tt.tt.', '..tt..tt', '..bb...b'];
-const CROUCH = ['..HHHh..', '.HHHHHh.', '.HHHfff.', '..sfffe.', '.JJjjJJ.', 'JJJjjJJ.', '.dJJJJf.', '.tttttt.', '.bb..bbb'];
+const WALL = ['..hHHH..', '.hHHHHH.', '.fffHHH.', '.fefHHH.', '..fffH..', '..ssss.f', '..JjjJJf', '.JJjjJJ.', '.JJjjJd.', '..JJJJd.', '..tttt..', '..tt.tt.', '..tt..tt', '..bb...b'];
+const CROUCH = ['..HHHh..', '.HHHHHh.', '.HHffef.', '..sfff..', '.JJjjJJ.', 'JJJjjJJ.', '.dJJJJf.', '.tttttt.', '.bb..bbb'];
 
 const frame = (top, torso, legs, bob) => { const rows = HEAD.concat(TORSO[torso], LEGS[legs]); return bob ? ['........'].concat(rows.slice(0, 13)) : rows; };
 export const GIRL_FRAMES = {
