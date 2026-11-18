@@ -69,7 +69,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const cutHer = () => p.evaluate(() => { const s = window.__game.scene, c = s.cr; s.kid.inv = 0; c.st = 'lunge'; c.hi = true; c.face = 1; c.x = 30 * 16; s.kid.x = c.x + 12; s.kid.crouch = false; s.kid.h = 14; s.kid.y = 146; s.bladeHits(); return { hp: s.kid.hp, dead: s.dead }; });
   const c1 = await cutHer(), c2 = await cutHer();
   ok('two cuts: 3 HP to ' + c1.hp + ' to ' + c2.hp + ', still standing', c1.hp === 2 && c2.hp === 1 && !c2.dead);
-  await p.evaluate(() => { const s = window.__game.scene; s.updateCreator = s.__uc; });
+  await p.evaluate(() => { const s = window.__game.scene; s.updateCreator = s.__uc; delete s.updateTraps; }); // the scene object outlives the take: put its traps back
   const c3 = await cutHer();
   ok('the third cut ends her take', c3.dead);
   ok('her death in the fight is counted', await p.evaluate(() => window.__game.state.story.creatorDeaths === 1));
@@ -81,7 +81,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
 
   // review mode through the rest: immunity, N to the end of each round, then out
   await p.keyboard.press('KeyI');
-  ok('I turns immunity on', await p.evaluate(() => window.__noDeath === true));
+  ok('I turns immunity on', await until(() => window.__noDeath === true, null, 3000).then(() => true, () => false));
   await until(() => !!window.__game.scene.sword.floor, null, 30000);
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = s.sword.floor.x - 4; s.pickUp(); });
   await until(() => window.__game.scene.mode === 'fight', null, 20000);
@@ -100,17 +100,23 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('through the pink door: the playroom', true);
   ok('a normal win spares the creator', await p.evaluate(() => window.__game.state.story.spared === true && !window.__game.state.story.killedBroken));
 
-  // give-up mode: six deaths in the fight, and the next take is different
+  // a fresh arrival backstage starts the fight over: no deaths counted, the lead-in again
   await p.keyboard.press('KeyI'); // story mode off again
-  await p.evaluate(() => { window.__game.state.storySet('creatorDeaths', 6); location.hash = 'moon'; });
-  await until(() => window.__game.scene.sys.settings.key === 'moon', null, 15000);
-  await p.evaluate(() => { location.hash = 'hallway'; });
+  await p.evaluate(() => { location.hash = 'moon'; });
+  await until(() => window.__game.scene.sys.settings.key === 'moon' && window.__game.scene.mode === 'walk', null, 15000);
+  await p.evaluate(() => { window.__game.state.storySet('creatorDeaths', 4); location.hash = 'hallway'; });
   await until(() => window.__game.scene.sys.settings.key === 'hallway' && window.__game.scene.clock > 0.3, null, 15000);
+  ok('back from the Moon: a fresh fight (walk in, deaths 0, nothing spared, shutter down)', await p.evaluate(() => { const s = window.__game.scene, st = window.__game.state.story; return s.mode === 'walk' && st.creatorDeaths === 0 && !st.spared && !st.gaveUp && s.shutterOpen === 0 && s.shutterProp.solid; }));
+  // give-up mode: six deaths in this fight, and the next take is different
+  await p.evaluate(() => { const s = window.__game.scene; window.__game.state.storySet('creatorDeaths', 5); s.mode = 'fight'; s.die({ id: 'laser', direct: true }); });
+  ok('the sixth death is counted', await p.evaluate(() => window.__game.state.story.creatorDeaths === 6));
+  await until(() => window.__game.scene.sys.settings.key === 'hallway' && !window.__game.scene.dead && window.__game.scene.clock > 0.3, null, 15000);
   ok('after six deaths: give-up mode', await p.evaluate(() => window.__game.scene.mode === 'giveup' && window.__game.scene.cr.unarmed && window.__game.state.story.gaveUp));
+  ok('the drop is captioned: "' + await p.evaluate(() => document.getElementById('cc').textContent) + '"', await p.evaluate(() => /DROPS/.test(document.getElementById('cc').textContent)));
   await until(() => /End it all/.test(document.getElementById('cc').textContent), null, 8000);
   ok('the creator screams: "' + await p.evaluate(() => document.getElementById('cc').textContent) + '"', true);
   await until(() => !window.__game.scene.shutterProp.solid, null, 8000);
-  ok('the shutter is already open', true);
+  ok('the shutter rolls up', true);
   await until(() => !!window.__game.scene.sword.floor, null, 8000);
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = s.sword.floor.x - 4; s.pickUp(); });
   ok('she has the sword; they do not fight', await p.evaluate(() => window.__game.scene.sword.have && window.__game.scene.cr.st === 'broken'));
@@ -118,17 +124,22 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('a hit drains one segment, slowly; a second right away does nothing (' + hits.join(' ') + ')', hits[1] === hits[0] - 1 && hits[2] === hits[1]);
   await p.evaluate(() => { const s = window.__game.scene, c = s.cr; for (let i = 0; i < 9; i++) { c.drain = 0; s.hitBroken(); } });
   ok('nine: they go down, killedBroken is set', await p.evaluate(() => window.__game.scene.cr.st === 'down' && window.__game.state.story.killedBroken === true));
-  // walking out instead: spared (a fresh take of the same stage)
-  await p.evaluate(() => { location.hash = 'moon'; });
-  await until(() => window.__game.scene.sys.settings.key === 'moon', null, 15000);
-  await p.evaluate(() => { location.hash = 'hallway'; });
-  await until(() => window.__game.scene.sys.settings.key === 'hallway' && window.__game.scene.clock > 0.3, null, 15000);
+  // a new take (Backspace) of the same fight: give-up mode again, and the drop is not captioned twice
+  await p.waitForTimeout(400);
+  const take = await p.evaluate(() => window.__game.state.episode('ep5b').take);
+  await p.keyboard.press('Backspace');
+  await until(t => window.__game.scene.sys.settings.key === 'hallway' && window.__game.state.episode('ep5b').take > t && !window.__game.scene.dead && window.__game.scene.clock > 0.6, take, 15000);
   ok('the next take is give-up mode again', await p.evaluate(() => window.__game.scene.mode === 'giveup'));
+  ok('no drop caption on the retry ("' + await p.evaluate(() => document.getElementById('cc').textContent) + '")', await p.evaluate(() => !/DROPS/.test(document.getElementById('cc').textContent)));
   await until(() => !window.__game.scene.shutterProp.solid, null, 15000);
   await p.evaluate(() => { const s = window.__game.scene; s.placeAt(46 * 16 + 4); });
   await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW');
   await until(() => window.__unseen.game.scene.isActive('moon') && window.__game.scene.mode === 'room', null, 15000);
   ok('walking out on the creator who gave up: spared', await p.evaluate(() => window.__game.state.story.spared === true && window.__game.state.story.killedBroken === false));
+  // the presenter's link straight to give-up mode
+  await p.goto(BASE + '/local.html?giveup=1#hallway'); await p.click('#start');
+  await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'hallway' && window.__game.scene.clock > 0.3, null, 15000);
+  ok('?giveup=1#hallway opens in give-up mode, and the link is used up', await p.evaluate(() => window.__game.scene.mode === 'giveup' && !/giveup/.test(location.search)));
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
   await b.close();
 })().catch(e => { console.log('FAIL ' + e.message.split('\n')[0]); process.exit(1); });

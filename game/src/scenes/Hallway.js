@@ -9,6 +9,7 @@
 // stands in the middle of the stage and screams "End it all." and nothing else; each hit drains
 // one segment, slowly. Nine hits: story.killedBroken. Out the open shutter instead: spared. A
 // normal win (they yield) also spares them. Those flags pick the ending (data/endings.js).
+// The count and the flags belong to one visit: a fresh arrival (not a retry) clears them.
 import { Music } from '../core/music.js';
 import { hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
@@ -21,6 +22,7 @@ import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K, inPoly } from '../core/side.js';
 import { goNext } from '../core/flow.js';
+import { linkGiveUp } from '../data/endings.js';
 import { Glasses } from '../core/glasses.js';
 import { HALL_IN, HALL_TOSS, HALL_ROUND, HALL_HIT, HALL_AGAIN, HALL_YIELD, HALL_THINGS, HALL_GIVEUP, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { fx } from '../core/fx.js';
@@ -29,7 +31,8 @@ const T = TILE, G = GROUND, n = c => hexNum(c);
 const HP = 9, ROUND_AT = [9, 6, 3];                     // hits left when each round starts
 const TELL = [0.68, 0.6, 0.52];                         // how long the creator winds up, per round
 const BLADE = 15, ARM = 6;
-export const GIVE_UP_AT = 6;                          // her deaths in the fight before the creator gives up
+export const GIVE_UP_AT = 6;
+const RETRY_KEY = 'hallRetryAt';                          // her deaths in the fight before the creator gives up
 const SCREAM_EVERY = 4, DRAIN = 0.6;
 const THING_CLUE = { shelf: 'shelf', board: 'continuity' };
 
@@ -88,17 +91,28 @@ export class Hallway extends SideEpisode {
     this.things.push(this.consoleThing); this.consoleAt = 0;
 
     this.drawBodies();
-    // give-up mode: asked for (a chapter link), or six deaths in the fight already
-    if (data.giveUp && state.story.creatorDeaths < GIVE_UP_AT) state.storySet('creatorDeaths', GIVE_UP_AT);
-    const retry = this.retry = (this.ep.take > 1 || !!data.giveUp) && !data.fresh;
+    // A retry is this scene starting again right after a take ended here (a death, Backspace, a
+    // look change). Anything else is a fresh arrival: from the Moon, a link, Continue. A fresh
+    // arrival starts the fight over: no deaths counted, no outcome, every line can be said again.
+    const at = this.registry.get(RETRY_KEY) || 0; this.registry.set(RETRY_KEY, 0);
+    const again = !data.fresh && at > 0 && performance.now() - at < 1500;
+    const askGiveUp = !!data.giveUp || linkGiveUp();
+    if (!again) {
+      ['creatorDeaths', 'gaveUp', 'spared', 'killedBroken'].forEach(k => state.storySet(k, k === 'creatorDeaths' ? 0 : false));
+      const heard = Object.assign({}, state.story.heard); Object.keys(heard).forEach(k => { if (/^HALL_/.test(k)) delete heard[k]; }); state.storySet('heard', heard);
+    }
+    // give-up mode: six deaths in the fight already, or asked for (?giveup=1#hallway)
+    if (askGiveUp) state.storySet('creatorDeaths', Math.max(GIVE_UP_AT, state.story.creatorDeaths || 0));
+    const retry = this.retry = again || askGiveUp;
     this.giveUp = retry && state.story.creatorDeaths >= GIVE_UP_AT;
+    this.shutterOpen = 0; this.shutterProp.solid = true; this.train = false;
     this.spawn(retry ? 21 * T + 6 : null); this.kid.face = 1;
     this.mode = 'walk'; this.heardIn = 0;
     this.input.on('pointerdown', () => { if (this.mode === 'fight' || this.mode === 'giveup') this.swing(); });
     this.cameras.main.fadeIn(retry ? 300 : 900);
     this.beds = { hum: Sound.hum(0.02), wind: Sound.wind(0.0001) };
     Music.play('backstage', { fadeIn: 2 });
-    this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
+    this.events.once('shutdown', () => { if (this.dead) this.markRetry(); Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
     if (this.giveUp) this.startGiveUp(); else if (retry) this.startToss(true);
     this.updateView(1);
     window.__game = { scene: this, state };
@@ -114,6 +128,18 @@ export class Hallway extends SideEpisode {
     if (!this.dead && (this.mode === 'fight' || this.mode === 'between')) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);
     super.die(src);
   }
+  // a take thrown away in the middle of the fight (Backspace) counts as a death too; this is also
+  // how story mode, where nothing kills her, can still reach give-up mode
+  restartTake() {
+    const mid = this.mode === 'fight' || this.mode === 'between';
+    const ok = super.restartTake();
+    if (ok && mid) state.storySet('creatorDeaths', (state.story.creatorDeaths || 0) + 1);
+    return ok;
+  }
+  // every way this scene restarts itself (a death, Backspace, a look change) comes through here
+  // or through die(); the time is left for the next create() to see it is a retry
+  commonKeys() { const r = super.commonKeys(); if (r) this.markRetry(); return r; }
+  markRetry() { this.registry.set(RETRY_KEY, performance.now()); }
 
   // ------------------------------------------------------------------ the loop
   update(time, delta) {
@@ -229,7 +255,7 @@ export class Hallway extends SideEpisode {
     Object.assign(c, { x: 30 * T, st: 'broken', pose: 'stand', face: -1, open: true, unarmed: true, drain: 0, screamT: 2.2, walkTo: null });
     // the sword falls out of their hand and lands between them
     this.sword.fly = { sx: c.x - 6, sy: G - 18, ex: Math.max(ARENA.x0 + 20, Math.min(c.x - 30, this.kid.x + this.kid.w / 2 + 30)), t: 0.2 };
-    this.say([{ who: null, text: HALL_GIVEUP.drop }]);
+    if (state.hear('HALL_GIVEUP_drop')) this.say([{ who: null, text: HALL_GIVEUP.drop }]);
   }
   updateGiveUp(dt) {
     const c = this.cr; if (c.st !== 'broken') return;

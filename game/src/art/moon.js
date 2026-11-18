@@ -375,32 +375,103 @@ export function paintNpc(kind, frame) {
   return p;
 }
 
-// The two kids, about her size, rich: bone pajamas, gold hair. Painted 14 x 20 with the feet
-// at the bottom. Poses: back (on the couch, their backs to us), back1 (a breath), cheer (arms
-// up), turned (looking round at her), squint (an arm over the eyes, into a light).
+// The two kids, about her size, rich: bone pajamas, gold hair, seen mostly from behind on their
+// couch. Painted 18 x 20, the bottom row at the couch. A child's build so they read from across
+// the room: a round head with ears, a short neck, shoulders wider than the head, arms marked off
+// the back. The big one wears a bun; the little one (two pixels shorter) a paper crown.
+// Poses: back, back1 (a breath: head and shoulders sink a pixel), cheer, cheer1 (arms up),
+// turned (looking round over the left shoulder at her), squint (an arm up against a light).
 export const KID_POSES = ['back', 'back1', 'cheer', 'cheer1', 'turned', 'squint'];
 export function paintKid(bun, pose) {
-  const p = new Painter(14, 20), hair = bun ? '#f2d58c' : '#d6a03c', hairLo = bun ? '#d6a03c' : '#8a5f1c', cloth = '#ebe6d8', clothLo = '#b8b2a3', skin = '#b8b2a3';
-  const sink = pose === 'back1' || pose === 'cheer1' ? 1 : 0, y = 3 + sink;
-  // body
-  p.rect(3, y + 8, 8, 12 - sink, cloth); p.rect(3, y + 8, 2, 12 - sink, clothLo);
-  // head from behind: all hair; turned: a face on the left
-  p.rect(3, y, 8, 8, hair); p.rect(4, y - 1, 6, 1, hair); p.rect(3, y + 5, 2, 3, hairLo);
-  if (bun) { p.rect(5, y - 3, 4, 3, hair); p.px(5, y - 1, hairLo); }
-  else { p.rect(3, y - 3, 8, 2, '#d6a03c'); p.px(4, y - 4, '#d6a03c'); p.px(7, y - 4, '#d6a03c'); p.px(10, y - 4, '#d6a03c'); p.rect(3, y - 2, 8, 1, '#8a5f1c'); } // a paper crown
-  if (pose === 'turned' || pose === 'squint') { p.rect(2, y + 2, 4, 5, skin); p.px(2, y + 3, '#0e0f12'); p.px(2, y + 6, '#8f8d87'); }
-  if (pose === 'cheer' || pose === 'cheer1') { p.rect(1, y - 2 + sink, 2, 9, cloth); p.rect(11, y - 2 + sink, 2, 9, cloth); p.rect(1, y - 3 + sink, 2, 1, skin); p.rect(11, y - 3 + sink, 2, 1, skin); }
-  if (pose === 'squint') { p.rect(1, y + 3, 6, 2, cloth); p.rect(0, y + 3, 2, 2, skin); }
+  const p = new Painter(18, 20), ink = '#0e0f12';
+  const hair = bun ? '#f2d58c' : '#d6a03c', hairLo = bun ? '#d6a03c' : '#8a5f1c';
+  const cloth = '#ebe6d8', clothLo = '#b8b2a3', skin = '#b8b2a3', skinLo = '#8f8d87';
+  const s = (pose === 'back1' || pose === 'cheer1' ? 1 : 0) + (bun ? 0 : 2), hy = 3 + s, by = hy + 9;
+  const face = pose === 'turned' || pose === 'squint', cheer = pose === 'cheer' || pose === 'cheer1';
+  // the body: sloped shoulders, then the back, the arms marked off by a fold
+  p.rect(6, by, 6, 1, cloth); p.rect(4, by + 1, 10, 1, cloth); p.rect(3, by + 2, 12, 20 - by - 2, cloth);
+  p.rect(5, by + 3, 1, 20 - by - 3, clothLo); p.rect(12, by + 3, 1, 20 - by - 3, clothLo);
+  p.rect(7, by, 4, 1, clothLo); // the back of the collar
+  if (face) { p.rect(3, by + 2, 2, 20 - by - 2, clothLo); } // turning: the near shoulder in shade
+  // the neck, and the head: round, all hair from behind, the nape darker
+  p.rect(7, hy + 8, 4, 1, skinLo);
+  p.rect(6, hy, 6, 1, hair); p.rect(5, hy + 1, 8, 6, hair); p.rect(6, hy + 7, 6, 1, hairLo);
+  p.rect(5, hy + 5, 1, 2, hairLo); p.rect(12, hy + 5, 1, 2, hairLo);
+  // ears: what makes the back of a head a head
+  if (!face) { p.rect(4, hy + 3, 1, 2, skin); p.px(4, hy + 4, skinLo); }
+  p.rect(13, hy + 3, 1, 2, skin); p.px(13, hy + 4, skinLo);
+  if (bun) { p.rect(7, hy - 4, 4, 3, hair); p.px(7, hy - 2, hairLo); p.rect(8, hy - 1, 2, 1, '#8a5f1c'); } // a top knot, tied
+  else { p.rect(5, hy - 2, 8, 2, cloth); p.rect(5, hy - 1, 8, 1, clothLo); p.px(5, hy - 3, cloth); p.px(8, hy - 3, cloth); p.px(9, hy - 3, cloth); p.px(12, hy - 3, cloth); p.px(9, hy - 2, '#d6a03c'); } // a paper crown
+  if (face) {
+    // three quarters toward her: a fringe, one eye, a nose that breaks the outline, a mouth
+    p.rect(4, hy + 3, 4, 4, skin); p.rect(5, hy + 7, 2, 1, skin); p.rect(4, hy + 2, 5, 1, hair); p.px(4, hy + 3, hair);
+    p.px(5, hy + 4, ink); p.px(3, hy + 5, skin); p.px(4, hy + 6, skinLo); p.rect(7, hy + 4, 1, 3, skinLo); p.rect(8, hy + 4, 1, 2, skin);
+  }
+  if (pose === 'squint') { p.rect(2, hy + 2, 6, 2, cloth); p.rect(2, hy + 4, 2, by - hy - 2, cloth); p.rect(1, hy + 2, 2, 2, skin); p.px(5, hy + 4, ink); }
+  if (cheer) {
+    // both arms up, hands open
+    p.rect(2, by - 2, 2, 4, cloth); p.rect(1, hy - 1, 2, by - hy - 1, cloth); p.rect(1, hy - 3, 2, 2, skin);
+    p.rect(14, by - 2, 2, 4, cloth); p.rect(15, hy - 1, 2, by - hy - 1, cloth); p.rect(15, hy - 3, 2, 2, skin);
+  }
+  outline(p, ink, true);
+  return p;
+}
+// Her, from behind, sitting on the couch, built the same way as the kids: head, ears, shoulders.
+// Painted per look from the girl's own colors.
+export function paintSister(P) {
+  const p = new Painter(14, 16), hy = 1, by = hy + 8;
+  p.rect(5, by, 4, 1, P.kid); p.rect(3, by + 1, 8, 1, P.kid); p.rect(2, by + 2, 10, 16 - by - 2, P.kid);
+  p.rect(4, by + 3, 1, 16 - by - 3, P.kidLo); p.rect(9, by + 3, 1, 16 - by - 3, P.kidLo);
+  p.rect(6, hy + 7, 2, 1, P.bone);
+  p.rect(5, hy, 4, 1, P.hair); p.rect(4, hy + 1, 6, 6, P.hair); p.rect(5, hy + 7, 4, 1, P.hair);
+  p.px(3, hy + 3, P.bone); p.px(10, hy + 3, P.bone);
   outline(p, '#0e0f12', true);
   return p;
 }
-// Her, from behind, sitting on the couch: only her head and shoulders show over its back.
-// Painted per look from the girl's own colors.
-export function paintSister(P) {
-  const p = new Painter(10, 14);
-  p.rect(1, 2, 7, 6, P.hair); p.rect(2, 1, 5, 1, P.hair); p.rect(1, 8, 7, 6, P.kid); p.rect(1, 8, 7, 1, P.kidLo);
-  outline(p, '#0e0f12', true);
-  return p;
+
+// ------------------------------------------------------------------ the kids' game
+// The game the kids play on their giant screen, the same in their room (Kids.js) and when she
+// walks in (Moon.js): a 7 x 7 board where a gold path draws itself from target to target, and in
+// the corner the feed from Earth, a small girl on the grounds at night. g is a Phaser Graphics.
+const hx = c => parseInt(c.slice(1), 16);
+export const BOARD = { cols: 7, rows: 7, cs: 9,
+  path: [[0, 6], [1, 6], [2, 6], [2, 5], [2, 4], [3, 4], [4, 4], [4, 3], [4, 2], [5, 2], [6, 2], [6, 1], [6, 0]],
+  targets: [[0, 6], [4, 4], [6, 0]] };
+// u: how many cells of the path are drawn (0 to path.length)
+export function drawBoard(g, bx, by, u) {
+  const B = BOARD, cs = B.cs;
+  g.fillStyle(hx('#2e3036'), 1);
+  for (let j = 0; j < B.rows; j++) for (let i = 0; i < B.cols; i++) g.fillRect(bx + i * cs + 1, by + j * cs + 1, cs - 2, cs - 2);
+  g.fillStyle(hx(M.trim), 1);
+  for (let i = 0; i < Math.min(B.path.length, Math.floor(u)); i++) { const [px, py] = B.path[i]; g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); }
+  B.targets.forEach(([px, py], i) => { const reached = Math.floor(u) > B.path.findIndex(q => q[0] === px && q[1] === py); g.fillStyle(hx(reached ? M.yellow : '#8f8d87'), 1); g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); });
+}
+// the feed in the corner: the grounds at night, the gate, a girl at gx (screen x); returns her x
+export function drawFeedBox(g, fx, fy, fw, fh, gx) {
+  g.fillStyle(hx('#1b1c21'), 1); g.fillRect(fx, fy, fw, fh);
+  g.fillStyle(hx('#2e3036'), 1); g.fillRect(fx, fy + fh - 8, fw, 8);
+  g.fillStyle(hx('#d6a03c'), 1); g.fillRect(fx + 30, fy + 12, 40, 3);
+  g.fillStyle(hx('#b8b2a3'), 1); for (let i = 0; i < 5; i++) g.fillRect(fx + 32 + i * 8, fy + 15, 2, fh - 23);
+  g.fillStyle(hx('#ebe6d8'), 1); g.fillRect(Math.round(gx), fy + fh - 13, 2, 5); g.fillStyle(hx('#261f15'), 1); g.fillRect(Math.round(gx), fy + fh - 14, 2, 1);
+}
+// Earth on a screen, the same as the one in the porthole: grey seas, lighter land, a band of
+// cloud, the night side, small fires
+export function drawEarth(g, x, y, r, t) {
+  const hwAt = dy => Math.abs(dy) > r ? -1 : Math.floor(Math.sqrt(r * r - dy * dy) + 0.35);
+  // a shape on the globe, cut to its edge; shapes are in units of r/30 so any size works
+  const k = r / 30, drift = Math.floor(t * 1.5) % 10 - 5;
+  const shape = (rects, col) => { g.fillStyle(hx(col), 1); rects.forEach(([a, b, w, h]) => { for (let j = 0; j < Math.max(1, Math.round(h * k)); j++) { const dy = Math.round(b * k) + j, hw = hwAt(dy); if (hw < 0) continue; const x0 = Math.max(-hw, Math.round(a * k) + drift), x1 = Math.min(hw, Math.round((a + w) * k) + drift - 1); if (x1 >= x0) g.fillRect(x + x0, y + dy, x1 - x0 + 1, 1); } }); };
+  g.fillStyle(hx(M.earth), 1); for (let dy = -r; dy <= r; dy++) { const hw = hwAt(dy); g.fillRect(x - hw, y + dy, hw * 2 + 1, 1); }
+  // two continents, ragged, narrowing to the south
+  shape([[-24, -16, 10, 4], [-26, -12, 16, 5], [-22, -7, 11, 6], [-18, -1, 6, 6], [-16, 5, 4, 5], [-15, 10, 2, 3]], M.earthLand);
+  shape([[2, -20, 12, 4], [-1, -16, 18, 6], [3, -10, 10, 5], [5, -5, 7, 9], [7, 4, 5, 6], [8, 10, 3, 3]], M.earthLand);
+  // ice at both poles, and cloud
+  g.fillStyle(hx(M.earthCloud), 1); for (let dy = -r; dy <= -r + Math.max(1, Math.round(2 * k)); dy++) { const hw = hwAt(dy); g.fillRect(x - hw, y + dy, hw * 2 + 1, 1); }
+  for (let dy = r - Math.max(1, Math.round(k)); dy <= r; dy++) { const hw = hwAt(dy); g.fillRect(x - hw, y + dy, hw * 2 + 1, 1); }
+  shape([[-28, 2, 14, 1], [-8, -24, 12, 1], [-12, 15, 22, 1], [4, 18, 9, 1]], M.earthCloud);
+  // the night side, and its fires
+  g.fillStyle(hx(M.earthShade), 1); for (let dy = -r; dy <= r; dy++) { const hw = hwAt(dy), sw = Math.round(hw * 0.5); g.fillRect(x + hw - sw, y + dy, sw + 1, 1); }
+  g.fillStyle(hx(M.fire), 1); [[0.55, -0.3], [0.7, 0.2], [0.6, 0.5], [0.8, -0.1], [0.65, -0.55]].forEach(([a, b], i) => { if (Math.floor(t * 2 + i) % 3) g.fillRect(x + Math.round(a * r), y + Math.round(b * r), 1, 1); });
 }
 
 // a cleaning robot, the same model as the one in the gallery, polished

@@ -1,6 +1,7 @@
 // The kids' room on the Moon, after batch 4 (and a preview from its # link). A pixel scene at
 // 320 x 180, the same playroom she reaches at the end. Two kids on a gold couch play the
-// satellite game show on a giant screen: a cartoon Earth, a target closing on a small girl.
+// satellite game show on a giant screen: a board, a gold path drawn from target to target,
+// and a feed from Earth where a box closes on a small girl (the game she walks in on at the end).
 // They win and cheer. The screen cuts to static, then to the live feed from Earth, full frame:
 // the grounds at night, a girl in the open, the searchlight finds her, the satellite strikes the
 // moment the charge sound plays. Back in the room the next take walks in on the screen, the
@@ -10,7 +11,7 @@ import { LOOKS } from '../art/palettes.js';
 import { Painter, hexNum, rng } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
-import { LEVEL as MOON, KX, paintPlayroom, paintKid, KID_POSES } from '../art/moon.js';
+import { LEVEL as MOON, KX, paintPlayroom, paintKid, KID_POSES, BOARD, drawBoard, drawFeedBox } from '../art/moon.js';
 import { PixLayer } from '../art/hallway.js';
 import { pixelZoom, display } from '../core/display.js';
 import { SatelliteStrike } from '../art/strike.js';
@@ -165,30 +166,25 @@ export class Kids extends Phaser.Scene {
       ccText(g, a, Math.round(x + w / 2 - ccWidth(a, 2) / 2), y + 18, n('#f2d58c'), { sx: 2, sy: 2 }); ccText(g, b, Math.round(x + w / 2 - ccWidth(b) / 2), y + 36, on ? 0xebe6d8 : n('#d6a03c'));
     }
   }
-  // the game show: a cartoon Earth, a small girl on it, the amber box closing in, then ZAP
+  // The game show, the same one she walks in on at the end (art/moon.js): the board, a gold path
+  // drawing itself from target to target, and the feed from Earth in the corner. When the path
+  // reaches the last target the amber box locks on the girl in the feed: +400, round over.
   drawShow(g, t) {
-    const { x, y, w, h } = SCR, ex = x + 64, ey = y + 50, er = 30;
-    g.fillStyle(n('#261f15'), 1); g.fillRect(x, y, w, h);
-    for (let i = 0; i < 12; i++) { const bx = x + 4 + i * 15, on = (Math.floor(t * 6) + i) % 2; g.fillStyle(n(on ? '#f2d58c' : '#8a5f1c'), 1); g.fillRect(bx, y + 3, 3, 3); g.fillRect(bx, y + h - 6, 3, 3); }
-    // Earth: a flat disc, two lands, a shaded side, a hard outline
-    const row = (cy, r, col, from, to) => { g.fillStyle(n(col), 1); for (let dy = -r; dy <= r; dy++) { const hw = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35), a = Math.max(-hw, from == null ? -hw : Math.round(from * hw)), b = Math.min(hw, to == null ? hw : Math.round(to * hw)); if (b >= a) g.fillRect(ex + a, cy + dy, b - a + 1, 1); } };
-    row(ey, er + 1, '#0e0f12'); row(ey, er, '#6b6c70'); row(ey, er, '#45474d', 0.35, 1);
-    const spin = Math.floor(t * 4) % 20;
-    g.fillStyle(n('#b8b2a3'), 1); g.fillRect(ex - 18 + spin, ey - 12, 10, 7); g.fillRect(ex - 12 + spin, ey - 5, 6, 8); g.fillRect(ex + 4 - spin / 2, ey + 6, 9, 6);
-    g.fillStyle(n('#8f8d87'), 1); g.fillRect(ex - 2 + spin / 2, ey + 14, 7, 4);
-    // the small girl on top, and the amber box closing in on her
-    const gx = ex + 2, gy = ey - er - 6, solved = t >= T.solve;
-    if (!solved) { g.fillStyle(n('#ebe6d8'), 1); g.fillRect(gx, gy, 3, 6); g.fillStyle(n('#1b1c21'), 1); g.fillRect(gx, gy - 1, 3, 2); }
-    const close = Math.min(1, Math.max(0, (t - 1) / (T.solve - 1.2))), bs = Math.round(40 - close * 30), bx = Math.round(gx + 1 - bs / 2 + (1 - close) * 50), by = Math.round(gy + 3 - bs / 2 + (1 - close) * 30);
-    if (!solved || Math.floor(t * 8) % 2) { g.lineStyle(1, n('#ffb01f'), 1); g.strokeRect(bx, by, bs, bs); }
+    const { x, y, w, h } = SCR, solved = t >= T.solve;
+    g.fillStyle(0x0e0f12, 1); g.fillRect(x, y, w, h);
+    g.fillStyle(0xe3412b, 1); g.fillRect(x + 6, y + 6, 28, 11); ccText(g, 'LIVE', x + 8, y + 8, 0xebe6d8);
+    ccText(g, 'CH 07', x + w - 34, y + 8, n('#d6a03c'));
+    const bx = x + 100, by = y + 22, u = Math.min(BOARD.path.length, Math.max(0, (t - 0.8) / (T.solve - 0.8) * BOARD.path.length));
+    drawBoard(g, bx, by, u);
+    // the feed: she walks along the fence; the box closes in as the path gets near
+    const fx = x + 8, fy = y + 22, fw = 80, fh = 48, gx = fx + 6 + Math.min(24, t * 4);
+    drawFeedBox(g, fx, fy, fw, fh, gx);
+    const close = Math.min(1, Math.max(0, (t - 1) / (T.solve - 1.2))), bs = Math.round(22 - close * 14);
+    if (!solved || Math.floor(t * 8) % 2) { g.lineStyle(1, n('#ffb01f'), 1); g.strokeRect(Math.round(gx + 1 - bs / 2), Math.round(fy + fh - 10 - bs / 2), bs, bs); }
+    ccText(g, 'ROUND 1', x + 8, y + h - 12, n('#d6a03c'));
+    ccText(g, 'SCORE ' + (solved ? 2400 : 2000), x + 8, y + h - 22, n('#f5ce77'));
+    if (solved && Math.floor(t * 8) % 2 === 0) ccText(g, '+400', bx + 64, by + 2, n('#f2d58c'));
     if (solved && t < T.solve + 0.15) { g.fillStyle(0xebe6d8, 1); g.fillRect(x, y, w, h); }
-    else if (solved) { g.fillStyle(n('#2e3036'), 1); g.fillRect(gx - 2, gy + 5, 7, 1); ccText(g, 'ZAP!', ex - 10, y + 6, 0xebe6d8, { sx: 2, sy: 2 }); }
-    // the scoreboard on the right
-    const sx = x + 112; g.fillStyle(0x0e0f12, 1); g.fillRect(sx, y + 14, 58, 66);
-    ccText(g, 'ROUND', sx + 4, y + 18, n('#d6a03c')); ccText(g, '1', sx + 46, y + 18, 0xebe6d8);
-    ccText(g, 'SCORE', sx + 4, y + 32, n('#d6a03c')); ccText(g, solved ? '2400' : '2000', sx + 4, y + 42, 0xebe6d8);
-    if (solved && Math.floor(t * 6) % 2) ccText(g, '+400', sx + 4, y + 56, n('#f2d58c'));
-    ccText(g, 'CH 07', sx + 4, y + 68, n('#8a5f1c'));
   }
 
   // ------------------------------------------------------------------ the kids

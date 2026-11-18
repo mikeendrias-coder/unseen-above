@@ -12,7 +12,7 @@ import { hexNum } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { pixText, textWidth } from '../art/pixfont.js';
 import { LOOKS } from '../art/palettes.js';
-import { TILE, GROUND, KX, CW, M, LEVEL, buildMap, paintLevel, paintSky, paintFar, paintMid, paintNpc, NPC_FRAMES, paintKid, KID_POSES, paintSister, paintRobot, paintLastRoom, drawTv, TVSCREEN } from '../art/moon.js';
+import { TILE, GROUND, KX, CW, M, LEVEL, buildMap, paintLevel, paintSky, paintFar, paintMid, paintNpc, NPC_FRAMES, paintKid, KID_POSES, paintSister, paintRobot, paintLastRoom, drawTv, TVSCREEN, BOARD, drawBoard, drawFeedBox, drawEarth } from '../art/moon.js';
 import { goNext } from '../core/flow.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -20,7 +20,7 @@ import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
 import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, PLAYROOM_REPLY, PLAYROOM_EMPTY, PLAYROOM_ASK, MOON_LOOKS, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
-import { replies, emptyRoom, endingTitle, endingsSeen, ENDINGS } from '../data/endings.js';
+import { replies, emptyRoom, endingTitle, endingsSeen, ENDINGS, linkEnding } from '../data/endings.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
 import { reviewKeys } from '../core/review.js';
 import { fx } from '../core/fx.js';
@@ -77,6 +77,18 @@ export class Moon extends SideEpisode {
     this.cardG = this.addParallax(this.add.graphics().setDepth(45), 0);
 
     this.mode = 'walk'; this.view = { x: 0 }; this.heard = new Set(); this.vest = 0;
+    // Phaser keeps this scene object between visits: everything an ending sets starts over here,
+    // so the playroom can be played again in the same sitting (Nov 18)
+    Object.assign(this, { endCard: null, sitting: false, bugOff: false, boomed: false, quiet: false, r2Took: false, r2Aim: false, r2T: 0,
+      choiceMade: false, camLight: false, endingId: null, lastKind: null, cardTime: 0, lastT: 0, cutT: 0, cutTo: null, vestT: 0, lookT: 0,
+      force: null, empty: false, cam: null, camThing: null, hiss: null, talking: false, lines: [], talkI: -1, after: null, walk: null,
+      choices: [], pick: 0, chooseT: 0, slipRows: null, upWas: false, shutSound: false, filmed: false, headN: 0, robotSrc: null, slide: null, roomT: 0 });
+    this.girl.setVisible(true);
+    // the reply slip takes the mouse: over a row picks it, a click says it. These listeners go
+    // with the scene when it shuts down, so they are added on every visit.
+    const row = p => { const r = this.slipRows; if (!r) return -1; const x = p.x / display.S, y = p.y / display.S; return x >= r.x && x < r.x + r.w ? Math.floor((y - r.y) / r.h) : -1; };
+    this.input.on('pointermove', p => { if (this.mode !== 'choose') return; const i = row(p); if (i >= 0 && i < this.choices.length) this.pick = i; });
+    this.input.on('pointerdown', p => { if (this.mode !== 'choose' || this.chooseT < 0.3) return; const i = row(p); if (i >= 0 && i < this.choices.length) { this.pick = i; this.choose(); } });
     this.robot = { x: LEVEL.robot.x0 + 30, dir: 1, line: 0 };
     this.robotProp = { id: 'robot', x: 0, y: GROUND - 6, w: 10, h: 6 }; this.props.push(this.robotProp);
     this.robotThing = { x0: 0, x1: 0, y0: GROUND - 8, y1: GROUND, label: 'J', use: () => this.robotTalk() };
@@ -116,7 +128,7 @@ export class Moon extends SideEpisode {
     this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
     window.__game = { scene: this, state };
     // after backstage: straight into the playroom, in through the pink door
-    if (data && data.at === 'playroom') { this.force = data.force || null; this.startRoom(); this.cameras.main.fadeIn(700, 255, 255, 255); return; }
+    if (data && data.at === 'playroom') { this.force = data.force || linkEnding(); this.startRoom(); this.cameras.main.fadeIn(700, 255, 255, 255); return; }
     this.updateView(1);
     const fromCut = !!(data && data.fromCut);
     // she steps out of the door into the light
@@ -228,10 +240,8 @@ export class Moon extends SideEpisode {
   startRoom() {
     this.mode = 'room'; this.leaving = false; this.things = [];
     this.props = this.props.filter(r => r.id !== 'person');
-    // a chapter link can ask for an ending: set the flags it needs
-    if (this.force === 'endall') { state.storySet('killedBroken', true); state.storySet('spared', false); }
-    else if (this.force) { state.storySet('killedBroken', false); state.storySet('spared', true); state.storySet('gaveUp', true); }
-    this.empty = emptyRoom();
+    // a link can ask for an ending (?end=couch#playroom): it is offered, and nothing in the save changes
+    this.empty = this.force ? this.force === 'endall' : emptyRoom();
     const X = KX, N = NOTICE.moon, CM = LEVEL.camera;
     this.addLook({ x0: X + 56, x1: X + 76, y0: GROUND - 30, py: GROUND - 14, lines: N.blocks });
     this.addLook({ x0: X + 38, x1: X + 60, y0: GROUND - 40, py: 86, lines: N.porthole });
@@ -272,12 +282,6 @@ export class Moon extends SideEpisode {
   startChoose() {
     this.mode = 'choose'; this.choices = replies(this.force); this.pick = Math.max(0, this.choices.findIndex(r => r.ending === this.force)); this.chooseT = 0;
     overlay.caption('KID', 'Are you here for round two?');
-    if (!this.pointerOn) {
-      this.pointerOn = true;
-      const row = p => { const r = this.slipRows; if (!r) return -1; const x = p.x / display.S, y = p.y / display.S; return x >= r.x && x < r.x + r.w ? Math.floor((y - r.y) / r.h) : -1; };
-      this.input.on('pointermove', p => { if (this.mode !== 'choose') return; const i = row(p); if (i >= 0 && i < this.choices.length) this.pick = i; });
-      this.input.on('pointerdown', p => { if (this.mode !== 'choose' || this.chooseT < 0.3) return; const i = row(p); if (i >= 0 && i < this.choices.length) { this.pick = i; this.choose(); } });
-    }
   }
   updateChoose(c) {
     this.chooseT += this.game.loop.delta / 1000;
@@ -492,11 +496,8 @@ export class Moon extends SideEpisode {
     }
     const sat = this.mode === 'sat' || (this.sitting && this.endingId == null);
     if (sat) {
-      // THE COUCH: Earth, turning, small fires on its night side. The board ticks on below.
-      g.fillStyle(n('#45474d'), 1); for (let dy = -30; dy <= 30; dy++) { const hw = Math.floor(Math.sqrt(900 - dy * dy)); g.fillRect(x + 88 - hw, y + 44 + dy, hw * 2 + 1, 1); }
-      g.fillStyle(n('#6b6c70'), 1); g.fillRect(x + 70 + Math.floor(t * 2) % 30, y + 30, 12, 6); g.fillRect(x + 84 + Math.floor(t * 2) % 20, y + 50, 9, 5);
-      g.fillStyle(n('#1b1c21'), 1); for (let dy = -30; dy <= 30; dy++) { const hw = Math.floor(Math.sqrt(900 - dy * dy)); g.fillRect(x + 88 + Math.floor(hw * 0.2), y + 44 + dy, Math.ceil(hw * 0.8) + 1, 1); }
-      g.fillStyle(n(M.trim), 1); [[96, 36], [104, 50], [99, 58], [110, 42]].forEach(([a, b], i) => { if (Math.floor(t * 2 + i) % 3) g.fillRect(x + a, y + b, 1, 1); });
+      // THE COUCH: Earth, turning, small fires on its night side
+      drawEarth(g, x + 88, y + 44, 30, t);
       ccText(g, 'TAKE 32', x + 6, y + S.h - 12, 0xebe6d8);
       ccText(g, 'CH 07', x + S.w - 34, y + 5, n(M.trim));
       return;
@@ -504,19 +505,14 @@ export class Moon extends SideEpisode {
     const round2 = ['talk', 'choose', 'arrive', 'held', 'walkto', 'r2', 'look', 'lit'].includes(this.mode) || (this.mode === 'room' && this.roomT > 2.2);
     g.fillStyle(0xe3412b, 1); g.fillRect(x + 6, y + 6, 28, 11); ccText(g, 'LIVE', x + 8, y + 8, 0xebe6d8);
     ccText(g, 'CH 07', x + S.w - 34, y + 8, n(M.trim));
-    // the board the kids play: a path that draws itself to each target
-    const bx = x + 100, by = y + 22, cs = 9, cols = 7, rows = 7;
-    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { g.fillStyle(n('#2e3036'), 1); g.fillRect(bx + i * cs + 1, by + j * cs + 1, cs - 2, cs - 2); }
-    const path = [[0, 6], [1, 6], [2, 6], [2, 5], [2, 4], [3, 4], [4, 4], [4, 3], [4, 2], [5, 2], [6, 2], [6, 1], [6, 0]], u = this.mode === 'walk' ? (t * 1.6) % path.length : path.length;
-    for (let i = 0; i < Math.floor(u); i++) { const [px, py] = path[i]; g.fillStyle(n(M.trim), 1); g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); }
-    [[0, 6], [4, 4], [6, 0]].forEach(([px, py], i) => { g.fillStyle(n(i < 2 || u >= path.length ? M.yellow : '#8f8d87'), 1); g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); });
-    // the feed from Earth in the corner: the grounds at night, a small girl in an amber box
-    const fx2 = x + 8, fy = y + 22, fw = 80, fh = 48;
-    g.fillStyle(n('#1b1c21'), 1); g.fillRect(fx2, fy, fw, fh); g.fillStyle(n('#2e3036'), 1); g.fillRect(fx2, fy + fh - 8, fw, 8); g.fillStyle(n('#d6a03c'), 1); g.fillRect(fx2 + 30, fy + 12, 40, 3);
-    for (let i = 0; i < 5; i++) { g.fillStyle(n('#b8b2a3'), 1); g.fillRect(fx2 + 32 + i * 8, fy + 15, 2, fh - 23); }
-    const gx = fx2 + 6 + ((t * 6) % 24); g.fillStyle(n('#ebe6d8'), 1); g.fillRect(Math.round(gx), fy + fh - 13, 2, 5); g.fillStyle(n('#261f15'), 1); g.fillRect(Math.round(gx), fy + fh - 14, 2, 1);
+    // the board the kids play (art/moon.js, the same game as in their room): a path that draws
+    // itself to each target; and the feed from Earth in the corner, a small girl at the gate
+    const bx = x + 100, by = y + 22, u = this.mode === 'walk' ? (t * 1.6) % BOARD.path.length : BOARD.path.length;
+    drawBoard(g, bx, by, u);
+    const fx2 = x + 8, fy = y + 22, fw = 80, fh = 48, gx = fx2 + 6 + ((t * 6) % 24);
+    drawFeedBox(g, fx2, fy, fw, fh, gx);
     if (this.mode === 'r2' && this.r2Aim && Math.floor(t * 8) % 2) { g.lineStyle(1, n('#ffb01f'), 1); g.strokeRect(Math.round(gx) - 3, fy + fh - 17, 8, 10); }
-    ccText(g, 'SCORE ' + (round2 ? 2800 : 2400), x + 8, y + S.h - 22, n(M.mint));
+    ccText(g, 'SCORE ' + (this.mode === 'walk' ? 2000 : 2400), x + 8, y + S.h - 22, n(M.mint));
     if (round2 && Math.floor(t * 2.5) % 2 === 0) { const s = 'ROUND 2 READY?', w = ccWidth(s); g.fillStyle(ink, 1); g.fillRect(x + S.w / 2 - w / 2 - 3, y + S.h - 12, w + 6, 10); ccText(g, s, x + S.w / 2 - w / 2, y + S.h - 11, n(M.yellow)); }
     if (this.mode === 'room' && this.roomT < 2.2 && Math.floor(t * 8) % 2 === 0) ccText(g, '+400', bx + 64, by + 2, n(M.yellow));
   }
@@ -533,10 +529,11 @@ export class Moon extends SideEpisode {
   // A paper slip over the kids' screen: REPLY, ruled rows, the one picked inverted.
   drawSlip(g) {
     const ch = this.choices, ink = 0x0e0f12, paper = 0xebe6d8, rowH = 11;
-    const w = Math.max(ccWidth(PLAYROOM_ASK) + 40, ...ch.map(r => ccWidth(r.text) + 20)), h = 14 + ch.length * rowH + 3, x = 160 - Math.round(w / 2), y = 26;
+    // over the right half of their screen (the finished board), so the feed and ROUND 2 READY? show
+    const w = Math.max(ccWidth(PLAYROOM_ASK) + 40, ...ch.map(r => ccWidth(r.text) + 20)), h = 14 + ch.length * rowH + 3, x = 314 - w, y = 26;
     g.fillStyle(ink, 1); g.fillRect(x - 1, y - 1, w + 2, h + 2);
     g.fillStyle(paper, 1); g.fillRect(x, y, w, h);
-    ccText(g, PLAYROOM_ASK, x + 5, y + 3, ink); ccText(g, 'CH 07', x + w - 34, y + 3, n('#8f8d87'));
+    ccText(g, PLAYROOM_ASK, x + 5, y + 3, ink);
     g.fillStyle(ink, 1); g.fillRect(x + 3, y + 12, w - 6, 1);
     this.slipRows = { x, y: y + 14, w, h: rowH };
     ch.forEach((r, i) => {
