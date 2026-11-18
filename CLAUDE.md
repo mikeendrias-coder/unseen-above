@@ -1,5 +1,7 @@
 # Notes for Claude sessions in this repo
 
+**First, read WISHLIST.md.** It is Michael's running list of requests with their status. Keep it current.
+
 ## Roles (Michael set these)
 - Story, characters, lore and the ending are Michael's calls. Draft only when asked, and mark drafts as drafts.
 - Art: Claude designs, Michael approves or rejects. Keep the loop light.
