@@ -3,7 +3,7 @@
 // latitude and longitude, so only the front half is ever drawn and every edge stays on the
 // pixel grid. Beads, targets and gates are points on the body, turned, projected, dropped when
 // they face away, and drawn back to front with whole-pixel rectangles.
-import { GLOBE, RING, apply, applyT, rotM } from './globe-logic.js';
+import { RING, apply, applyT, rotM } from './globe-logic.js';
 import { LAND, inPoly } from './wins.js';
 
 const H = h => parseInt(h.slice(1), 16);
@@ -94,7 +94,9 @@ export class TurnView {
     if (this.tex.refresh) this.tex.refresh();
   }
   paintGlobe(m, t) {
-    const { w, h, ox, oy, R, mask, buf, col, P } = this, B = this.B, S = GLOBE, rows = S.rows, cols = S.cols, hw = 0.072;
+    const { w, h, ox, oy, R, mask, buf, col, P } = this, B = this.B, S = B.S, rows = S.rows, cols = S.cols;
+    // the groove's half width: narrower on a finer grid, so the walls still read
+    const hw = 0.072 * Math.min(1, Math.sqrt(Math.min(S.rowH / (24 * Math.PI / 180), S.colW / (30 * Math.PI / 180))));
     const outR = (R + (P.thick ? 2.2 : 1.2)) / R, out2 = outR * outR, earth = this.skin === 4;
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const k = j * w + i, dx = (i - ox) / R, dy = (j - oy) / R, d2 = dx * dx + dy * dy;
@@ -197,7 +199,9 @@ export class TurnView {
       if (it.kind === 'bead') this.bead(q.x, q.y, it.color, it.caught);
       else if (it.kind === 'target') this.target(q.x, q.y, it.color, t, it.lock);
       else if (it.kind === 'gate') this.gate(it, q);
-      else if (it.kind === 'girl') this.girl(q.x, q.y, t, it.hair);
+      else if (it.kind === 'girl') this.girl(q.x, q.y, t, it.hair, it.face);
+      else if (it.kind === 'mark') this.mark(q.x, q.y, it.color, it.u);
+      else if (it.kind === 'trail') this.rect(q.x, q.y, 1, 1, H(it.color));
     });
   }
   // is a projected point on the ring's far band, not hidden by the near one
@@ -247,9 +251,28 @@ export class TurnView {
     const tri = (o, col) => { const [x1, y1] = pt(3 + o, 0), [x2, y2] = pt(-2 - o, 3 + o), [x3, y3] = pt(-2 - o, -3 - o); g.fillStyle(col, 1); g.fillTriangle(Math.round(x1), Math.round(y1), Math.round(x2), Math.round(y2), Math.round(x3), Math.round(y3)); };
     tri(1, lo); tri(0, c);
   }
-  // the game show's target: a girl in pink, standing on the world, waving
-  girl(x, y, t, hair) {
-    const wave = Math.floor(t * 5) % 2, pink = 0xff8fc8, hi = H(hair || '#2a1d16');
+  // where a walking target steps next: a dashed box that closes up as the step comes (u: 0 to 1)
+  mark(x, y, color, u) {
+    const c = H(color);
+    [[-3, -3], [3, -3], [-3, 3], [3, 3]].forEach(([dx, dy]) => this.rect(x + dx, y + dy, 1, 1, c));
+    if (u > 0.4) { this.rect(x - 1, y - 3, 3, 1, c); this.rect(x - 1, y + 3, 3, 1, c); this.rect(x - 3, y - 1, 1, 3, c); this.rect(x + 3, y - 1, 1, 3, c); }
+    if (u > 0.75) this.rect(x, y, 1, 1, c);
+  }
+  // the game show's target: a girl in pink, standing on the world, waving (or running: face +1 or
+  // -1 on screen)
+  girl(x, y, t, hair, face) {
+    const wave = Math.floor(t * (face ? 8 : 5)) % 2, pink = 0xff8fc8, hi = H(hair || '#2a1d16');
+    if (face) {
+      // running: hair streams behind, legs apart and together
+      const b = face > 0 ? -1 : 1;
+      this.rect(x - 2, y - 12, 5, 3, hi); this.rect(x - 2 + b * 3, y - 11, 2, 2, hi);
+      this.rect(x - 1, y - 9, 3, 2, 0xf1c9a5);
+      this.rect(x - 2, y - 7, 5, 3, pink); this.rect(x - 3, y - 4, 7, 2, pink);
+      this.rect(x + face * 3, y - 7, 1, 2, 0xf1c9a5);
+      if (wave) { this.rect(x - 2, y - 2, 1, 2, 0x1b0f3a); this.rect(x + 2, y - 2, 1, 2, 0x1b0f3a); }
+      else { this.rect(x, y - 2, 1, 2, 0x1b0f3a); this.rect(x + face, y - 2, 1, 1, 0x1b0f3a); }
+      return;
+    }
     this.rect(x - 2, y - 12, 5, 3, hi); this.rect(x - 3, y - 11, 1, 4, hi);
     this.rect(x - 1, y - 9, 3, 2, 0xf1c9a5);
     this.rect(x - 2, y - 7, 5, 3, pink); this.rect(x - 3, y - 4, 7, 2, pink);

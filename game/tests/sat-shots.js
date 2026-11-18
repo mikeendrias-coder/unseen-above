@@ -49,6 +49,26 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     const canvas = await p.$('canvas');
     await canvas.screenshot({ path: 'tests/out/sat-' + name + '.png' });
     console.log('wrote tests/out/sat-' + name + '.png');
+    if (/^globe/.test(name)) {
+      // held still and turned to face the walking target, its trail and its next step; batch 4
+      // also with the girl under the blur (hidden, her next step marked as she comes out)
+      const face = async (tag, hide) => {
+        const info = await p.evaluate(hide => {
+          const s = window.__game.scene, B = s.B, L = s.level; s.scene.pause();
+          if (hide) { const path = L.beads[0].path, blur = L.blur || []; const i = path.findIndex((c, j) => blur.includes(c) && !blur.includes(path[(j + s.ts[0].d + path.length) % path.length])); if (i >= 0) { s.ts[0].i = i; s.targets[0] = path[i]; s.slides[0] = null; } }
+          const c = s.targets[0]; let best = 0, bz = -9;
+          for (let o = 0; o < B.nO; o++) { const m = B.matrix(o), q = [B.pos[c * 3], B.pos[c * 3 + 1], B.pos[c * 3 + 2]], z = m[6] * q[0] + m[7] * q[1] + m[8] * q[2], sc = z - Math.abs(B.angles(o).pitch) * 0.3; if (sc > bz) { bz = sc; best = o; } }
+          const a = B.angles(best); s.yaw = a.yaw; s.pitch = a.pitch; s.tClock = L.tick * 0.8; s.drawBoard(); s.drawLive();
+          return { cell: c, hidden: !!s.hidden0 };
+        }, hide);
+        await p.waitForTimeout(200);
+        await canvas.screenshot({ path: 'tests/out/sat-' + name + '-' + tag + '.png' });
+        console.log('wrote tests/out/sat-' + name + '-' + tag + '.png  target at ' + info.cell + (hide ? ', hidden ' + info.hidden : ''));
+        await p.evaluate(() => window.__game.scene.scene.resume());
+      };
+      await face('front');
+      if (batch === 4) await face('hidden', true);
+    }
     await ctx.close();
   }
   // the kids' room: the same game show screen, playing itself on the big screen

@@ -1,12 +1,14 @@
 // Satellite batches between episodes, on a screen whose look drifts batch by batch from an
 // engineer's back end to a kids' game show. Each batch is one turning puzzle: the first time, a
 // short tutorial on an orbit ring (one axis), then the real one, a maze on a globe (two axes).
-// After that every batch is one globe with one new idea: one-way gates (batch 1), two beads at
-// once (batch 2), a blurred zone and a target that drifts (batch 3), and the cartoon Earth with
-// a girl in pink as the target (batch 4). Turn the surface; gravity rolls the bead down the screen.
+// Every target on a globe walks: a step along its path on its own clock, its next step marked
+// faintly, and it turns round rather than walk into a bead. Each batch adds to that: one-way gates
+// (batch 1), two beads and two targets walking as a convoy (batch 2), blurred patches and a quicker
+// target (batch 3), and the cartoon Earth, where a girl in pink runs a long loop, hides under the
+// blur and has to be cut off (batch 4, the hardest). Turn the surface; gravity rolls the bead.
 // Every screen celebrates a solved puzzle its own way, and every win plays the laser's charge.
 // Before the puzzles, a REQUEST form to stamp (sat/request.js), with a bulletin whose rules get
-// weaker each batch. A puzzle that runs long (90 s, 45 s for the ring) offers N on the screen.
+// weaker each batch. A puzzle that runs long (2 minutes, 45 s for the ring) offers N on the screen.
 import { Music } from '../core/music.js';
 import { reviewKeys } from '../core/review.js';
 import { pixText, textWidth } from '../art/pixfont.js';
@@ -19,7 +21,7 @@ import { state } from '../core/state.js';
 import { LOOKS } from '../art/palettes.js';
 import { flat } from '../art/painter.js';
 import { WinFx, winSound, WIN_SECONDS, drawDeathMap } from '../sat/wins.js';
-import { buildBoard, stepOnce, solve } from '../sat/globe-logic.js';
+import { buildBoard, stepOnce, walks, tInit, tCells, tTick, tPeek, planFrom } from '../sat/globe-logic.js';
 import { TurnView } from '../sat/globe-view.js';
 import { RequestForm } from '../sat/request.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
@@ -29,15 +31,15 @@ const BATCHES = { 1: ['ring', 'g1'], 2: ['g2'], 3: ['g3'], 4: ['g4'] };
 // what each puzzle says: the lower third at its start, the goal on the screen, the page hint
 const TEXT = {
   ring: { title: 'Turn the ring', goal: 'DOT TO THE LOCK', keys: 'A D OR DRAG', hint: 'A and D turn the ring until the dot drops into the lock.' },
-  g1: { title: 'Turn the globe', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'Turn the globe. Roll the bead to the red target. Arrows go one way.' },
-  g2: { title: 'Two at once', goal: 'EACH BEAD TO ITS COLOR', keys: 'W A S D OR DRAG', hint: 'Each bead to the target of its color.' },
-  g3: { title: 'The blur', goal: 'BEAD TO THE TARGET', keys: 'W A S D OR DRAG', hint: 'Nobody may look into the blur. Be quick: the target moves.' },
-  g4: { title: 'Find her', goal: 'ROLL TO THE GIRL', keys: 'W A S D OR DRAG', hint: 'Roll the bead to the girl in pink.' },
-  show: { title: 'Find her', goal: 'ROLL TO THE GIRL', keys: '', hint: '' }
+  g1: { title: 'A moving target', goal: 'CATCH THE TARGET', keys: 'W A S D OR DRAG', hint: 'Roll the bead into the walking target. The dots show its next step. Arrows go one way.' },
+  g2: { title: 'Two at once', goal: 'EACH BEAD TO ITS COLOR', keys: 'W A S D OR DRAG', hint: 'Each bead to its color. The two targets walk together.' },
+  g3: { title: 'The blur', goal: 'CATCH THE TARGET', keys: 'W A S D OR DRAG', hint: 'Nobody may look into the blur. This target is quick.' },
+  g4: { title: 'Cut her off', goal: 'CUT HER OFF', keys: 'W A S D OR DRAG', hint: 'She runs, and hides under the blur. Get ahead of her.' },
+  show: { title: 'Find her', goal: 'CUT HER OFF', keys: '', hint: '' }
 };
 const ROLL = 0.075, BOUNCE = 0.3, TURN_SPEED = 1.9; // seconds per groove, per bounce; radians a second
-const DRIFT_AFTER = 30, DRIFT_EVERY = 9;            // batch 3: the target starts to move when you are slow
-const STUCK = { ring: 45 }, STUCK_GLOBE = 90;       // seconds on one puzzle before the screen offers N
+const STEP_SLIDE = 0.3;                              // seconds a walking target takes to slide one cell
+const STUCK = { ring: 45 }, STUCK_GLOBE = 120;      // seconds on one puzzle before the screen offers N
 // where each screen puts that offer, and what it says: [x, y, w], label
 const OFFER = { 1: [[8, 104, 124], 'SOLVE IT FOR ME'], 2: [[12, 92, 124], 'SOLVE IT FOR ME'], 3: [[14, 132, 124], 'SOLVE IT FOR ME'], 4: [[16, 150, 124], 'FREE WIN!'] };
 const H = h => parseInt(h.slice(1), 16);
@@ -125,11 +127,12 @@ export class Satellite extends Phaser.Scene {
     this.view = new TurnView(this, B, this.skinN, 238, B.ring ? 92 : 90, 5);
     const a = B.angles(L.o0);
     this.yaw = a.yaw; this.pitch = B.ring ? 0 : a.pitch;
-    this.driftIdx = 0; this.levelT = 0; this.driftAnim = null; this.drifted = 0;
-    this.targets = L.beads.map((b, k) => k === 0 && L.drift ? L.drift[0] : b.target);
+    // the targets: where each walks (ts), the cells they stand on now, their slides and trails
+    this.walking = walks(L); this.ts = tInit(L); this.targets = tCells(L, this.ts);
+    this.tClock = 0; this.tSteps = 0; this.slides = L.beads.map(() => null); this.trails = L.beads.map(() => []); this.faces = L.beads.map(() => 0);
     this.ph = { o: L.o0, beads: L.beads.map(b => b.start), caught: L.beads.map(() => 0) };
     this.anim = null; this.bounced = ''; this.idle = false; this.solved = false; this.drag = null;
-    this.startDist = this.beadDist();
+    this.startDist = 0; this.startDist = this.beadDist();
     const T = TEXT[L.id] || TEXT.g1;
     if (!this.embedded) {
       overlay.hint(T.hint);
@@ -191,25 +194,31 @@ export class Satellite extends Phaser.Scene {
     if (want !== ph.o) { ph.o = this.stepToward(ph.o, want); this.idle = false; this.physics(0); return; }
     this.idle = true;
   }
-  // batch 3: dawdle and the target walks away along its path
-  drift(dt) {
-    const L = this.level; if (!L.drift || this.solved) return;
-    this.levelT += dt;
-    const due = this.levelT < DRIFT_AFTER ? 0 : 1 + Math.floor((this.levelT - DRIFT_AFTER) / DRIFT_EVERY);
-    if (due > this.drifted) {
-      this.drifted = due;
-      const from = this.targets[0]; this.driftIdx = (this.driftIdx + 1) % L.drift.length; this.targets[0] = L.drift[this.driftIdx];
-      this.driftAnim = { from, to: this.targets[0], t: 0 };
-      Sound.tone(660, 0.05, 'sine', 0.015); this.time.delayedCall(90, () => Sound.tone(520, 0.07, 'sine', 0.015));
-      if (due === 1 && !this.embedded) overlay.note('Too slow. The target moved.', 2600);
-      this.startDist = Math.max(1, this.beadDist());
-      if (this.ph.beads[0] === this.targets[0] && !this.anim) { this.ph.caught[0] = 1; }
-    }
-    if (this.driftAnim) { this.driftAnim.t += dt / 0.6; if (this.driftAnim.t >= 1) this.driftAnim = null; }
+  // The targets walk on their own clock: a step every L.tick seconds. The clock only runs while
+  // every bead is at rest, so the game moves in the same steps as the solver (globe-logic.js).
+  walk(dt) {
+    const L = this.level, ph = this.ph;
+    this.slides.forEach((sl, k) => { if (sl) { sl.t += dt / STEP_SLIDE; if (sl.t >= 1) this.slides[k] = null; } });
+    if (!this.walking || this.solved || this.anim) return;
+    this.tClock += dt;
+    if (this.tClock < L.tick) return;
+    this.tClock -= L.tick;
+    const before = this.targets.slice(), blockers = ph.beads.filter((b, k) => !ph.caught[k]);
+    this.ts = tTick(L, this.ts, blockers, ph.caught); this.tSteps++;
+    const now = tCells(L, this.ts);
+    let stepped = false;
+    L.beads.forEach((b, k) => {
+      if (!b.path || ph.caught[k]) return;
+      if (now[k] === before[k]) return; // a bead was in the way: it turned round
+      this.targets[k] = now[k]; this.slides[k] = { from: before[k], to: now[k], t: 0 }; stepped = true;
+      this.trails[k].unshift(before[k]); this.trails[k].length = Math.min(this.trails[k].length, 2);
+    });
+    if (!this.embedded || this.clock > 0) Sound.tone(stepped ? (this.skinN === 4 ? 880 : 440) : 220, 0.025, this.skinN === 4 ? 'triangle' : 'sine', 0.006);
   }
   // how far the beads still have to go along the grooves, for the progress bars
   beadDist() {
     let s = 0; this.ph.beads.forEach((b, k) => { if (this.ph.caught[k]) return; const d = this.B.dist(this.targets[k])[b]; s += d < 0 ? 12 : d; });
+    this.startDist = Math.max(this.startDist || 1, s);
     return s;
   }
   // where to draw bead k right now
@@ -220,20 +229,29 @@ export class Satellite extends Phaser.Scene {
     return v.cellPos(this.ph.beads[k]);
   }
 
-  // Plays the puzzle by itself, along the solver's turns (the kids' room, and the tests).
+  // Plays the puzzle by itself, along the solver's plan (the kids' room, and the tests). A plan is
+  // turns (0 to 3) and waits for the targets' step (4). When a step comes that the plan did not
+  // wait for, it plans again from where things stand.
   autoSolve(delay, every) {
-    const L = this.level, ph = this.ph;
-    const L2 = Object.assign({}, L, { drift: undefined, o0: ph.o, beads: ph.beads.map((b, k) => ({ start: b, target: this.targets[k] })) });
-    const r = solve(this.B, L2);
-    this.auto = { plan: r.plan, i: 0, t: -(delay || 0), every: every || 0.2, target: this.targets[0] };
-    return r.plan.length;
+    const ph = this.ph, plan = planFrom(this.B, this.level, { o: ph.o, beads: ph.beads, caught: ph.caught, ts: this.ts, u: 0 }) || [];
+    this.auto = { plan, i: 0, t: -(delay || 0), every: every || 0.2, steps: this.tSteps };
+    return plan.filter(m => m < 4).length;
   }
   autoStep(dt) {
     const a = this.auto; if (!a || this.solved) return;
-    if (this.level.drift && a.target !== this.targets[0]) { this.autoSolve(0, a.every); return; } // it moved: plan again
-    a.t += dt; if (a.t < 0) return;
+    a.t += dt;
+    if (this.tSteps !== a.steps) {
+      const waited = a.goal == null && a.plan[a.i] === 4 && this.tSteps === a.steps + 1;
+      a.steps = this.tSteps;
+      if (waited) a.i++; else a.lost = true;
+    }
+    if (a.t < 0) return;
     if (a.goal == null) {
-      if (!this.idle || this.anim || a.i >= a.plan.length) return;
+      if (!this.idle || this.anim) return;
+      if (a.lost) { const keep = a.t; this.autoSolve(0, a.every); this.auto.t = keep; return; }
+      if (a.i >= a.plan.length || a.plan[a.i] === 4) return; // wait for the step
+      // a burst of turns must fit before the next step, or it waits for the step and plans again
+      if (this.walking) { let n = 0; while (a.i + n < a.plan.length && a.plan[a.i + n] < 4) n++; if (a.plan[a.i + n] === 4 && this.level.tick - this.tClock < n * a.every + 0.15) return; }
       a.goal = this.B.turn(this.ph.o, a.plan[a.i]);
     }
     const g = this.B.angles(a.goal), rate = this.B.S.step / a.every * dt;
@@ -329,7 +347,7 @@ export class Satellite extends Phaser.Scene {
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 20), c = this.ctl;
     this.clock += dt;
-    if (this.embedded) { this.autoStep(dt); this.physics(dt); this.drawLive(); this.drawBoard(); this.winFx.update(dt, this.K); return; }
+    if (this.embedded) { this.autoStep(dt); this.physics(dt); this.walk(dt); this.drawLive(); this.drawBoard(); this.winFx.update(dt, this.K); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     reviewKeys(this); // N: skipAhead() (the form, or the puzzle)
     if (c.nextScreen()) {
@@ -345,7 +363,7 @@ export class Satellite extends Phaser.Scene {
     this.turnInput(dt);
     this.autoStep(dt);
     this.physics(dt);
-    this.drift(dt);
+    this.walk(dt);
     this.drawLive();
     this.drawBoard();
     this.winFx.update(dt, this.K);
@@ -374,7 +392,7 @@ export class Satellite extends Phaser.Scene {
     const tx = (s, x, y, col, sc, a) => pixText(g, s, x, y, H(col || K.text), sc || 1, a == null ? 1 : a);
     const L = this.level, T = TEXT[L.id] || TEXT.g1, task = (this.levelIdx + 1) + '/' + this.ids.length;
     const left = this.beadDist(), prog = this.solved ? 1 : Math.max(0, Math.min(1, 1 - left / Math.max(1, this.startDist)));
-    const driftIn = L.drift && !this.solved ? Math.ceil(this.levelT < DRIFT_AFTER ? DRIFT_AFTER - this.levelT : DRIFT_EVERY - ((this.levelT - DRIFT_AFTER) % DRIFT_EVERY)) : null;
+    const walking = this.walking && !this.solved, stepU = walking ? Math.min(1, this.tClock / L.tick) : 0;
     if (this.skinN === 1) {
       tx((this.B.ring ? 'ORBIT' : 'GLOBE') + '.EXE  PID 4471', 8, 8);
       tx('TASK ' + task + '  ' + (this.B.ring ? 'RING ' : 'GRID ') + this.B.rows + 'x' + this.B.cols + (L.gates ? '  GATES ' + L.gates.length : ''), 8, 18, K.dim);
@@ -382,7 +400,7 @@ export class Satellite extends Phaser.Scene {
       const msg = this.solved ? '> LOCK ACQUIRED' : '> AWAITING LOCK';
       tx(msg, 8, 32, this.solved ? K.accent : K.text);
       if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(H(K.text), 1); g.fillRect(8 + textWidth(msg) + 2, 32, 3, 5); }
-      tx('GOAL: ' + T.goal, 8, 44); tx('KEYS: ' + T.keys, 8, 54, K.dim); tx('DIST ' + String(left).padStart(2, '0'), 8, 64, K.dim);
+      tx('GOAL: ' + T.goal, 8, 44); tx('KEYS: ' + T.keys, 8, 54, K.dim); tx('DIST ' + String(left).padStart(2, '0') + (walking ? '  TGT MOBILE ' + L.tick.toFixed(1) + 'S' : ''), 8, 64, K.dim);
       tx('CFG RES_LIMIT=0.4M', 8, 78, K.dim); tx('CFG PRIVACY=OUT_OF_SCOPE', 8, 86, K.dim); tx('REQ SRC=CONTRACT', 8, 94, K.dim);
       for (let r = 0; r < 7; r++) { let line = ''; for (let b = 0; b < 6; b++) line += hex2(((r * 37 + b * 11 + Math.floor(t * 3)) * 2654435761 >>> 24) & 255) + ' '; tx(hex2(r * 16 + 0x40) + ': ' + line, 8, 108 + r * 8, r === Math.floor(t * 2) % 7 ? K.text : K.dim); }
     } else if (this.skinN === 2) {
@@ -392,14 +410,14 @@ export class Satellite extends Phaser.Scene {
       tx('REQUESTS ' + this.ph.caught.filter(v => v).length + '/' + this.ph.beads.length, 12, 134); tx('RF SENSING: NOT LICENSED', 12, 144, K.dim);
       const cmd = '> route --batch ' + this.batch + ' --beads ' + this.ph.beads.length; tx(cmd, 12, 160, K.accent);
       if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(H(K.accent), 1); g.fillRect(12 + textWidth(cmd) + 2, 160, 3, 5); }
-      tx('ROUTE', 168, 10); tx(T.goal, 168, 164, K.dim);
+      tx('ROUTE', 168, 10); tx(T.goal, 168, 164, K.dim); if (walking) tx('CONTACTS MOVING', 202, 10, K.accent);
       // each bead's color, and whether it is home
       this.ph.beads.forEach((b, k) => { const c = H(this.view.P.beads[k]); g.fillStyle(c, 1); g.fillRect(290 + k * 10, 10, 5, 5); if (!this.ph.caught[k]) { g.fillStyle(H(K.panel), 1); g.fillRect(291 + k * 10, 11, 3, 3); } });
     } else if (this.skinN === 3) {
       tx('ROUTE', 14, 14, K.text, 2); tx(String(this.batch).padStart(2, '0'), 14, 30, K.accent, 3);
       g.fillStyle(0xffffff, 1); g.fillRect(84, 72, 46, 44); g.fillStyle(H(K.text), 1); g.fillRect(84, 72, 46, 1); g.fillRect(84, 115, 46, 1);
       g.fillStyle(0xf1e9d8, 1); g.fillCircle(107, 84, 4); g.fillRect(103, 89, 9, 12); g.fillStyle(0xa69c87, 1); g.fillRect(104, 101, 3, 8); g.fillRect(108, 101, 3, 8); g.fillStyle(0x2a1d16, 1); g.fillRect(103, 80, 9, 3);
-      if (driftIn != null) tx((this.levelT < DRIFT_AFTER ? 'MOVES IN ' : 'MOVING. NEXT IN ') + driftIn, 14, 50, this.levelT < DRIFT_AFTER ? K.dim : '#d94a4a');
+      if (walking) { tx('ON THE MOVE', 14, 50, '#d94a4a'); g.fillStyle(H(K.rule), 1); g.fillRect(14, 58, 60, 2); g.fillStyle(0xd94a4a, 1); g.fillRect(14, 58, Math.round(60 * stepU), 2); }
       tx(T.goal, 14, 154); tx('PUBLIC FEED: OFF', 14, 164, K.dim);
       g.fillStyle(H(K.accent), 1); g.fillRect(170, 162, Math.round(134 * prog), 3); g.fillStyle(H(K.rule), 1); g.fillRect(170 + Math.round(134 * prog), 162, 134 - Math.round(134 * prog), 3);
     } else {
@@ -411,7 +429,7 @@ export class Satellite extends Phaser.Scene {
       for (let i = 0; i < 3; i++) { const on = i < this.batch - 1 + (this.solved ? 1 : 0); g.fillStyle(on ? 0xffd23f : 0x4b3a86, 1); g.fillRect(18 + i * 10, 74, 3, 7); g.fillRect(16 + i * 10, 76, 7, 3); }
       tx('ROUND ' + (this.roundN || this.batch), 16, 90, '#ff5fa2', 2);
       g.fillStyle(0x0d0820, 1); g.fillRect(16, 108, 112, 8); g.fillStyle(0x3ee6c1, 1); g.fillRect(16, 108, Math.round(112 * prog), 8);
-      tx(this.solved ? 'NICE ONE!' : 'FIND HER!', 16, 126, '#ffffff');
+      tx(this.solved ? 'NICE ONE!' : this.hidden0 ? 'WHERE IS SHE?' : 'CATCH HER!', 16, 126, '#ffffff');
       tx(T.keys, 16, 140, K.dim);
       // confetti
       this.confetti.forEach(p => { p.t += 1 / 60; p.vy += 40 / 60; p.x += p.vx / 60; p.y += p.vy / 60; g.fillStyle(H(p.c), 1); g.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); });
@@ -424,17 +442,35 @@ export class Satellite extends Phaser.Scene {
     this.drawThings();
   }
   drawThings() {
-    const v = this.view, P = v.P, L = this.level, items = [], t = this.clock;
+    const v = this.view, P = v.P, L = this.level, items = [], t = this.clock, ph = this.ph, B = this.B;
     (L.gates || []).forEach(([a, b]) => items.push({ kind: 'gate', p: v.between(a, b, 0.5), from: v.cellPos(a), to: v.cellPos(b) }));
-    const hair = flat((LOOKS[state.look] || LOOKS.A).hair);
+    const hair = flat((LOOKS[state.look] || LOOKS.A).hair), blockers = ph.beads.filter((b, k) => !ph.caught[k]);
+    const stepU = this.walking ? Math.min(1, this.tClock / L.tick) : 0;
+    this.hidden0 = false;
     this.targets.forEach((c, k) => {
+      const color = this.skinN === 4 && k === 0 ? P.target : L.beads.length > 1 ? P.beads[k] : P.target;
+      const sl = this.slides[k], free = L.beads[k].path && !ph.caught[k] && !this.solved;
       let p = v.cellPos(c);
-      if (k === 0 && this.driftAnim) p = v.between(this.driftAnim.from, this.driftAnim.to, ease(Math.min(1, this.driftAnim.t)));
+      if (sl) p = v.between(sl.from, sl.to, ease(Math.min(1, sl.t)));
+      // under the blur a target cannot be seen (it shows again as it steps out)
+      const hidden = free && B.blur[c] && (!sl || sl.t > 0.5 || B.blur[sl.from]);
+      if (k === 0) this.hidden0 = hidden;
+      if (free) {
+        // the way it came (two dots), and a faint mark where it steps next
+        this.trails[k].forEach((cell, j) => { if (!B.blur[cell] && (j === 0 || !sl)) items.push({ kind: 'trail', p: v.cellPos(cell), color }); });
+        const nx = tPeek(L, this.ts, k, blockers, ph.caught);
+        if (nx && !nx.blocked && !B.blur[nx.cell]) items.push({ kind: 'mark', p: v.cellPos(nx.cell), color, u: stepU });
+      }
+      if (hidden) return;
       const girl = this.skinN === 4 && k === 0;
-      if (girl) { if (!(this.solved && this.winFx.on)) items.push({ kind: 'girl', p, hair, tick: true, color: P.target }); items.push({ kind: 'target', p, color: P.target, tick: false }); }
-      else items.push({ kind: 'target', p, color: L.beads.length > 1 ? P.beads[k] : P.target, tick: true, lock: this.B.ring && this.ph.caught[k] });
+      if (girl) {
+        // she faces the way she runs on screen
+        if (sl) { const a = v.project(v.cellPos(sl.from)), b = v.project(v.cellPos(sl.to)); if (b.x !== a.x) this.faces[k] = b.x > a.x ? 1 : -1; }
+        if (!(this.solved && this.winFx.on)) items.push({ kind: 'girl', p, hair, tick: true, color: P.target, face: free ? this.faces[k] : 0 });
+        items.push({ kind: 'target', p, color: P.target, tick: false });
+      } else items.push({ kind: 'target', p, color, tick: true, lock: B.ring && ph.caught[k] });
     });
-    this.ph.beads.forEach((b, k) => items.push({ kind: 'bead', p: this.beadPoint(k), color: P.beads[k], caught: this.ph.caught[k], tick: true }));
+    ph.beads.forEach((b, k) => items.push({ kind: 'bead', p: this.beadPoint(k), color: P.beads[k], caught: ph.caught[k], tick: true }));
     v.drawThings(items, t);
     if (this.skinN === 4) { const q = v.project(v.cellPos(this.targets[0])); this.girlAt = { x: q.x, y: q.y }; }
   }

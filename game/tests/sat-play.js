@@ -76,17 +76,18 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     const n = await p.evaluate(() => window.__game.scene.ids.length);
     for (let i = 0; i < n; i++) {
       await until(i => window.__game.scene.levelIdx === i && !window.__game.scene.solved && window.__game.scene.idle, i);
-      if (batch === 3) {
-        // dawdle: the target walks off along its path, and the puzzle can still be finished
-        const t0 = await p.evaluate(() => { const s = window.__game.scene; s.levelT = 29.8; return s.targets[0]; });
-        await until(t0 => window.__game.scene.targets[0] !== t0, t0, 10000);
-        ok('batch 3: the target drifts when you are slow (' + t0 + ' to ' + await p.evaluate(() => window.__game.scene.targets[0]) + ')', true);
-        await until(() => window.__game.scene.idle && !window.__game.scene.driftAnim);
+      if (await p.evaluate(() => window.__game.scene.walking)) {
+        // hands off: the target walks by itself, one step at a time, with its next step marked
+        const w0 = await p.evaluate(() => ({ cell: window.__game.scene.targets[0], steps: window.__game.scene.tSteps, tick: window.__game.scene.level.tick }));
+        await until(w0 => window.__game.scene.tSteps >= w0.steps + 2, w0, 10000);
+        const w1 = await p.evaluate(() => ({ cell: window.__game.scene.targets[0], trail: window.__game.scene.trails[0].length }));
+        ok('batch ' + batch + ': the target walks on its own, a step every ' + w0.tick + ' s (' + w0.cell + ' to ' + w1.cell + ', trail ' + w1.trail + ')', w1.cell !== w0.cell || w1.trail > 0);
+        await until(() => window.__game.scene.idle && !window.__game.scene.anim);
       }
       const t0 = Date.now();
       const steps = await p.evaluate(() => window.__game.scene.autoSolve(0, 0.12));
       const id = await p.evaluate(() => window.__game.scene.level.id);
-      await until(() => window.__game.scene.solved, null, 90000);
+      await until(() => window.__game.scene.solved, null, 150000);
       const how = await p.evaluate(() => ({ caught: window.__game.scene.ph.caught.join(''), beads: window.__game.scene.ph.beads.join(','), targets: window.__game.scene.targets.join(',') }));
       ok('batch ' + batch + ' ' + id + ': the solver\'s ' + steps + ' turns solve it with the real physics in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s (beads ' + how.beads + ' on ' + how.targets + ')', how.beads === how.targets);
       if (i === 0 && batch === 2) { await p.waitForTimeout(300); await p.screenshot({ path: 'tests/out/sat-play-b2-win.png' }); }
@@ -104,15 +105,15 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.form, null, { timeout: 60000 });
     await p.waitForFunction(() => window.__game.scene.form.ready(), null, { timeout: 10000 }); await p.waitForTimeout(800); await p.keyboard.press('Enter');
     await p.waitForFunction(() => !window.__game.scene.form && window.__game.scene.stuckKey, null, { timeout: 20000 });
-    ok('no offer before 90 s', await p.evaluate(() => !window.__game.scene.offerRect()));
-    // 89 s, then a retry: the time is kept, so the offer still comes at 90
-    await p.evaluate(() => { window.__game.scene.stuckT = 89; });
-    await p.waitForFunction(() => window.__game.scene.stuckT > 89, null, { timeout: 5000 });
+    ok('no offer before 120 s', await p.evaluate(() => !window.__game.scene.offerRect()));
+    // 119 s, then a retry: the time is kept, so the offer still comes at 120
+    await p.evaluate(() => { window.__game.scene.stuckT = 119; });
+    await p.waitForFunction(() => window.__game.scene.stuckT > 119, null, { timeout: 5000 });
     await p.evaluate(() => window.__game.scene.restartTake());
     await p.waitForFunction(() => window.__game.scene.clock > 0.2 && window.__game.scene.stuckKey, null, { timeout: 10000 });
-    ok('a retry keeps the time spent (' + (await p.evaluate(() => window.__game.scene.stuckT)).toFixed(1) + ' s)', await p.evaluate(() => window.__game.scene.stuckT > 89));
+    ok('a retry keeps the time spent (' + (await p.evaluate(() => window.__game.scene.stuckT)).toFixed(1) + ' s)', await p.evaluate(() => window.__game.scene.stuckT > 119));
     const r = await (await p.waitForFunction(() => window.__game.scene.offerRect(), null, { timeout: 5000 })).jsonValue();
-    ok('after 90 s the screen offers N at ' + r.join(','), true);
+    ok('after 120 s the screen offers N at ' + r.join(','), true);
     const box = await (await p.$('canvas')).boundingBox(), sx = box.width / 320;
     await p.mouse.click(box.x + (r[0] + 30) * sx, box.y + (r[1] + 6) * sx);
     await p.waitForFunction(() => window.__game.scene.solved, null, { timeout: 5000 });
