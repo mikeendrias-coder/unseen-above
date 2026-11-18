@@ -75,7 +75,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **Some lasers in the top-down level do not trigger.** A laser hit should cost a life.
 - `todo` **East wing (top-down) looks unsatisfying:** a real pile of pebbles, carry at most five, dead ends, make it cooler like the side levels.
 - `todo` **Episode 4 lags when the lasers or flashes fire** (Michael, Nov 18). Profile and fix.
-- `todo` **Add moving targets** (Michael, Nov 18): read as moving watchers in the levels (lasers on tracks, sweeping cameras, patrolling drones). Confirm with Michael if he meant something else.
+- `todo` **Satellite puzzles are too easy: make the target move** (Michael, Nov 18: "make them where the target is moving, at least; the last one was way too easy"). Every globe gets a moving target; batch 4 (the last) much harder.
 - `todo` **Key buttons under the game run off the left edge of the window, with a big empty gap above them** (docs/feedback/nov18-shed-keys.png).
 
 ## Hosting
