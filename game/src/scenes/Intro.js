@@ -3,6 +3,7 @@
 // title fades, they talk, he goes down for supplies, the show's camera locks on to her, hours
 // pass, and she follows him down. Then the gate (episode 1).
 import { Music } from '../core/music.js';
+import { goNext } from '../core/flow.js';
 import { reviewKeys } from '../core/review.js';
 import { makeControls } from '../core/controls.js';
 import { Sound } from '../core/sound.js';
@@ -206,7 +207,7 @@ export class Intro extends Phaser.Scene {
     if (this.done) return;
     this.done = true; state.seenIntro = true;
     overlay.clearCaption();
-    const go = () => this.scene.start('grounds', { fromIntro: true });
+    const go = () => { if (!goNext(this, 'intro')) this.scene.start('grounds', { fromIntro: true }); }; // goNext saves her place for Continue
     if (skipped) { this.cameras.main.fadeOut(400, 0, 0, 0); this.time.delayedCall(420, go); } else go();
   }
 }
