@@ -29,6 +29,28 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 
 - `done, check` **Get to any part, including after episode 5** (Michael, Nov 17: "I cannot skip to it"). Title menu has Chapters (every part, incl. the playroom, which never had a link); jump links under the game gained #playroom.
 
+## 4. Requests from Nov 17 (evening), in Michael's words where possible
+### Controls
+- `doing` **WASD to move, Space to jump, everything else on the right side of the keyboard**, so she can do several things at once besides jumping.
+### Levels and movement
+- `todo` **Build out levels: more interactive stages, more competitive** (harder, more to do).
+- `todo` **New sprites.**
+- `todo` **Double jump and wall jumps.** Make movement "much better and cooler".
+- `todo` **Physics that make it more entertaining** (things that move, fall, swing, push).
+- `todo` **Fall damage.**
+- `todo` **HP bars** (her, and the boss). Decide with Michael how HP fits with lives and instant restarts.
+- `todo` **Scale:** ceilings can stay high with lots of wall decoration, but most things themselves should be normal size next to her, so the space makes sense.
+### Satellite puzzles
+- `todo` **One complex 3D puzzle instead of many small ones.** First time: a tutorial version, then the real one. After that, each batch is one complex 3D puzzle with similar dynamics and gimmicks. Example: a 3D maze on a circle (a ring or sphere) that you must turn to complete.
+### Dialogue
+- `todo` **Briefer dialogue.**
+- `todo` **No repeated dialogue on reruns** (lines already heard do not play again on a retry).
+- `todo` **A forced dialogue train going into the boss fight** that is the same every time (no variation).
+### Endings
+- `todo` **Boss mercy ending:** if you die to the creator enough times, the creator gives up: stands there screaming "end it all" and does nothing while you slowly deplete their HP. (Michael also floated the creator killing themself; building the give-up version first, his call.) Part of the multiple endings.
+### Creative pass
+- `doing` **A dedicated agent thinks through the plot and new elements** that fit the aesthetic, do not extend runtime, and add story, feeling, and more things to do and interact with, based on games in this genre (deep research). Output for Michael to pick from; story calls stay his.
+
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).
 
