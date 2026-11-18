@@ -75,7 +75,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 - `todo` **Some lasers in the top-down level do not trigger.** A laser hit should cost a life.
 - `todo` **East wing (top-down) looks unsatisfying:** a real pile of pebbles, carry at most five, dead ends, make it cooler like the side levels.
 - `todo` **Episode 4 lags when the lasers or flashes fire** (Michael, Nov 18). Profile and fix.
-- `todo` **Satellite puzzles are too easy: make the target move** (Michael, Nov 18: "make them where the target is moving, at least; the last one was way too easy"). Every globe gets a moving target; batch 4 (the last) much harder.
+- `done, check` **Satellite puzzles are too easy: make the target move** (Michael, Nov 18: "make them where the target is moving, at least; the last one was way too easy"). Every globe target now walks on its own clock with its next step marked and turns round rather than walk into a bead. Batch 1 gates (40 turns), batch 2 two beads and a two-target convoy (39), batch 3 blur and a quicker target on a 7x14 globe (45), batch 4 the girl runs an 18-cell loop round an 8x16 Earth, hides under the blur, gates, fastest clock (55, the hardest). The solver proves no dead ends for any speed of play. Branch pt-sat.
 - `todo` **Key buttons under the game run off the left edge of the window, with a big empty gap above them** (docs/feedback/nov18-shed-keys.png).
 
 ## Hosting

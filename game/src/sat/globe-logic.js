@@ -7,10 +7,27 @@
 //   * At each step a resting bead looks at the open grooves out of its cell and takes the one that
 //     runs most steeply downhill, if it is steep enough. It repeats until nothing moves.
 //   * A bead that rolls into its target is caught there. A blurred cell bounces it back.
+//   * A target can walk (bead.path). It takes one step along its path on its own clock (L.tick
+//     seconds), only while every bead is at rest. It never walks into a bead: it turns round and
+//     waits a step instead. A caught target stops.
 // The game plays this rule step by step with animation; the solver runs it in a search.
+//
+// The solver's model of time: a turn is one move, a target step is another ("wait"). A player can
+// turn any number of times between two target steps, so every state a real player can reach is in
+// the search with no limit on turns (the fast model). To finish, the solver only lets itself make
+// L.speed turns between two steps (the slow model), and it proves the puzzle can be finished that
+// way from every state the fast model reaches, even one where the turns are used up. So a player
+// who turns too fast can never land somewhere a slow player could not get out of, and nothing
+// asks for more than L.speed turns per target step.
 
 const D = Math.PI / 180;
-export const GLOBE = { rows: 6, cols: 12, latN: 72 * D, rowH: 24 * D, colW: 30 * D, step: 15 * D, yawN: 24, pMin: -6, pMax: 6 };
+// the globe's grid: rows of latitude between 72 N and 72 S, columns of longitude all the way round.
+// A level can ask for a finer grid (L.grid = { rows, cols }).
+export function globeSpec(grid) {
+  const rows = (grid && grid.rows) || 6, cols = (grid && grid.cols) || 12, latN = 72 * D;
+  return { rows, cols, latN, rowH: 2 * latN / rows, colW: 2 * Math.PI / cols, step: 15 * D, yawN: 24, pMin: -6, pMax: 6 };
+}
+export const GLOBE = globeSpec();
 export const RING = { rows: 3, cols: 16, R: 66, hw: 28, tilt: -35 * D, step: 11.25 * D, phiN: 32 };
 // how steep a groove must be before a bead rolls (friction)
 export const SLOPE = 0.15;
@@ -30,10 +47,11 @@ export const apply = (m, x, y, z) => [m[0] * x + m[1] * y + m[2] * z, m[3] * x +
 export const applyT = (m, x, y, z) => [m[0] * x + m[3] * y + m[6] * z, m[1] * x + m[4] * y + m[7] * z, m[2] * x + m[5] * y + m[8] * z];
 
 // ------------------------------------------------------------------ boards
-// A level: { id, kind: 'globe'|'ring', links: [[a,b]...] open grooves (or ring: { walls, holes }),
-// gates: [[from,to]] one way, blur: [cells], beads: [{ start, target }], drift: [cells], o0 }
+// A level: { id, kind: 'globe'|'ring', grid: { rows, cols }, links: [[a,b]...] open grooves (or
+// ring: { walls, holes }), gates: [[from,to]] one way, blur: [cells], o0, tick, speed,
+// beads: [{ start, target } or { start, path, loop, i0, d0 }] }
 export function buildBoard(L) {
-  const ring = L.kind === 'ring', S = ring ? RING : GLOBE, rows = S.rows, cols = S.cols, n = rows * cols;
+  const ring = L.kind === 'ring', S = ring ? RING : globeSpec(L.grid), rows = S.rows, cols = S.cols, n = rows * cols;
   const pos = new Float64Array(n * 3);
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const i = r * cols + c;
@@ -108,6 +126,7 @@ export function buildBoard(L) {
 
 // One pass of the rule: each free bead, in order, takes its downhill groove. Returns the events
 // ({ k, from, to } for a roll, { k, bounce } for a blurred cell) and whether anything moved.
+// A caught bead is locked on its target and is out of the way of the others.
 export function stepOnce(B, o, beads, targets, caught) {
   const ev = []; let moved = false;
   for (let k = 0; k < beads.length; k++) {
@@ -115,7 +134,7 @@ export function stepOnce(B, o, beads, targets, caught) {
     const i = beads[k], j = B.best[o * B.n + i];
     if (j < 0) continue;
     if (B.blur[j]) { ev.push({ k, bounce: j }); continue; }
-    let taken = false; for (let m = 0; m < beads.length; m++) if (m !== k && beads[m] === j) taken = true;
+    let taken = false; for (let m = 0; m < beads.length; m++) if (m !== k && !caught[m] && beads[m] === j) taken = true;
     if (taken) continue;
     beads[k] = j; moved = true; ev.push({ k, from: i, to: j });
     if (j === targets[k]) caught[k] = 1;
@@ -124,81 +143,176 @@ export function stepOnce(B, o, beads, targets, caught) {
 }
 export function settle(B, o, beads, targets, caught) { for (let guard = 0; guard < 1000; guard++) if (!stepOnce(B, o, beads, targets, caught).moved) return; }
 
+// ------------------------------------------------------------------ walking targets
+// A walking target's state is { i, d }: its place on the path and the way it faces (+1 or -1).
+// A loop path's last cell links back to its first; any other path is walked back and forth.
+// L.convoy: every walking target keeps the same (i, d) on paths of the same length, so they step
+// together, and when one is blocked they all turn round (two contacts moving as one).
+export const walks = L => L.beads.some(b => b.path);
+export const tInit = L => L.beads.map(b => b.path ? { i: b.i0 || 0, d: b.d0 || 1 } : null);
+export const tCells = (L, ts) => L.beads.map((b, k) => b.path ? b.path[ts[k].i] : b.target);
+function tAhead(b, i, d) { const n = b.path.length; let j = i + d; if (b.loop) j = (j + n) % n; else if (j < 0 || j >= n) { d = -d; j = i + d; } return { j, d }; }
+// where target k goes at its next step: { i, d, cell, blocked }. blockers: the cells of the beads
+// that are not caught. Blocked: one of them is in the way (of any target in a convoy), so it
+// turns round and waits instead.
+export function tPeek(L, ts, k, blockers, caught) {
+  const b = L.beads[k]; if (!b.path) return null;
+  const a = tAhead(b, ts[k].i, ts[k].d), cell = b.path[a.j];
+  let blocked = blockers.includes(cell);
+  if (L.convoy) L.beads.forEach((c, q) => { if (c.path && !(caught && caught[q]) && blockers.includes(c.path[a.j])) blocked = true; });
+  return { i: a.j, d: a.d, cell, blocked };
+}
+// one step of every walking target that is not caught; returns the new states
+export function tTick(L, ts, blockers, caught) {
+  return ts.map((t, k) => {
+    if (!t || (caught[k] && !L.convoy)) return t;
+    const a = tPeek(L, ts, k, blockers, caught);
+    return a.blocked ? { i: t.i, d: -a.d } : { i: a.i, d: a.d };
+  });
+}
+
 // ------------------------------------------------------------------ the solver
-// States: orientation and every bead's cell. A bead sitting on its own target is caught.
-// explore() searches from a list of start states and keeps each state's four turns.
-export function explore(B, starts, targets) {
-  const n = B.n, k = targets.length, per = k === 1 ? n : n * n, size = B.nO * per;
-  const enc = (o, bs) => o * per + (k === 1 ? bs[0] : bs[0] * n + bs[1]);
-  const dec = s => { const o = Math.floor(s / per), r = s % per; return { o, beads: k === 1 ? [r] : [Math.floor(r / n), r % n] }; };
-  const idx = new Int32Array(size).fill(-1), list = [], parent = [], via = [];
-  const isGoal = bs => bs.every((b, m) => b === targets[m]);
-  starts.forEach(s => { if (idx[s] < 0) { idx[s] = list.length; list.push(s); parent.push(-1); via.push(-1); } });
-  const succ = [];
-  for (let h = 0; h < list.length; h++) {
-    const st = dec(list[h]);
-    const row = [-1, -1, -1, -1];
-    if (!isGoal(st.beads)) for (let m = 0; m < 4; m++) {
-      const o2 = B.turn(st.o, m); if (o2 < 0) continue;
-      const bs = st.beads.slice(), caught = bs.map((b, q) => b === targets[q] ? 1 : 0);
-      settle(B, o2, bs, targets, caught);
-      const s2 = enc(o2, bs);
-      if (idx[s2] < 0) { idx[s2] = list.length; list.push(s2); parent.push(h); via.push(m); }
-      row[m] = idx[s2];
+// A state is a number: orientation, every bead's cell (n once it is caught: a caught bead takes
+// no further part), the targets' (i, d) (one shared pair in a convoy), and the turns used since
+// the targets last stepped (u, only in the slow model). M is the turns allowed between steps
+// (Infinity: no limit, and u is always 0). Moves 0 to 3 are turns, 4 is a target step.
+function space(B, L, M) {
+  const k = L.beads.length, n = B.n, nb = n + 1, nBc = k === 1 ? nb : nb * nb;
+  const wk = L.beads.map((b, q) => b.path && (!L.convoy || L.beads.findIndex(c => c.path) === q));
+  const tSz = L.beads.map((b, q) => wk[q] ? 2 * b.path.length : 1), nT = tSz.reduce((a, b) => a * b, 1);
+  const U = isFinite(M) ? M + 1 : 1, nO = B.nO, size = nO * nBc * nT * U;
+  const enc = (o, bs, ts, u) => {
+    let tc = 0, mul = 1;
+    for (let q = 0; q < k; q++) { if (wk[q]) tc += mul * (ts[q].i * 2 + (ts[q].d > 0 ? 1 : 0)); mul *= tSz[q]; }
+    return o + nO * ((k === 1 ? bs[0] : bs[0] * nb + bs[1]) + nBc * (tc + nT * (u || 0)));
+  };
+  const dec = s => {
+    const o = s % nO; s = (s - o) / nO;
+    const bc = s % nBc; s = (s - bc) / nBc;
+    let tc = s % nT; const u = (s - tc) / nT;
+    const ts = []; let shared = null;
+    for (let q = 0; q < k; q++) {
+      if (wk[q]) { const v = tc % tSz[q]; ts.push({ i: v >> 1, d: v & 1 ? 1 : -1 }); shared = shared || ts[q]; }
+      else ts.push(L.beads[q].path ? 'shared' : null);
+      tc = Math.floor(tc / tSz[q]);
     }
-    succ.push(row);
+    for (let q = 0; q < k; q++) if (ts[q] === 'shared') ts[q] = { i: shared.i, d: shared.d };
+    return { o, beads: k === 1 ? [bc] : [Math.floor(bc / nb), bc % nb], ts, u };
+  };
+  return { M, k, n, size, enc, dec, walk: walks(L) };
+}
+const isGoal = (L, st, n) => st.beads.every(b => b === n);
+// the successors of a state: [move, state] pairs
+function moves(B, L, sp, st) {
+  const out = [], n = sp.n, targets = tCells(L, st.ts), caught = st.beads.map(b => b === n ? 1 : 0);
+  if (caught.every(v => v)) return out;
+  if (!isFinite(sp.M) || st.u < sp.M) for (let m = 0; m < 4; m++) {
+    const o2 = B.turn(st.o, m); if (o2 < 0) continue;
+    const bs = st.beads.slice(), c2 = caught.slice();
+    settle(B, o2, bs, targets, c2);
+    c2.forEach((c, q) => { if (c) bs[q] = n; });
+    out.push([m, sp.enc(o2, bs, st.ts, isFinite(sp.M) ? st.u + 1 : 0)]);
   }
-  const goal = list.map(s => isGoal(dec(s).beads));
-  return { list, parent, via, succ, goal, enc, dec };
+  if (sp.walk) {
+    const ts2 = tTick(L, st.ts, st.beads, caught), s2 = sp.enc(st.o, st.beads, ts2, 0);
+    if (s2 !== sp.enc(st.o, st.beads, st.ts, st.u)) out.push([4, s2]);
+  }
+  return out;
+}
+// a set of state numbers (they can pass 2^32) with an index each: open addressing, grows by itself
+function StateIndex(dense) {
+  if (dense) { const a = new Int32Array(dense).fill(-1); return { get: s => a[s], put: (s, h) => { a[s] = h; } }; }
+  let cap = 1 << 16, keys = new Float64Array(cap).fill(-1), vals = new Int32Array(cap), used = 0;
+  const slot = (ks, c, s) => { let h = Math.imul((s >>> 0) ^ Math.imul(Math.floor(s / 4294967296), 0x9e3779b1), 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; let i = h & (c - 1); while (ks[i] !== -1 && ks[i] !== s) i = (i + 1) & (c - 1); return i; };
+  const grow = () => { const c2 = cap * 2, k2 = new Float64Array(c2).fill(-1), v2 = new Int32Array(c2); for (let i = 0; i < cap; i++) if (keys[i] !== -1) { const j = slot(k2, c2, keys[i]); k2[j] = keys[i]; v2[j] = vals[i]; } cap = c2; keys = k2; vals = v2; };
+  return {
+    get: s => { const i = slot(keys, cap, s); return keys[i] === -1 ? -1 : vals[i]; },
+    put: (s, h) => { if (used * 2 > cap) grow(); const i = slot(keys, cap, s); if (keys[i] === -1) used++; keys[i] = s; vals[i] = h; }
+  };
+}
+// growable typed arrays
+function Grow(T) { let a = new T(1 << 16), n = 0; return { push: v => { if (n === a.length) { const b = new T(a.length * 2); b.set(a); a = b; } a[n++] = v; return n - 1; }, at: i => a[i], set: (i, v) => { a[i] = v; }, get length() { return n; }, view: () => a.subarray(0, n) }; }
+// a breadth-first search from a list of start states; keeps each state's successors
+function explore(B, L, sp, starts, stopAtGoal) {
+  const idx = StateIndex(sp.size <= 6e7 ? sp.size : 0);
+  const list = Grow(Float64Array), parent = Grow(Int32Array), via = Grow(Int8Array), goal = Grow(Uint8Array), succ = Grow(Int32Array), sOff = Grow(Int32Array);
+  starts.forEach(s => { if (idx.get(s) < 0) { idx.put(s, list.length); list.push(s); parent.push(-1); via.push(-1); } });
+  let firstGoal = -1; sOff.push(0);
+  for (let h = 0; h < list.length; h++) {
+    const st = sp.dec(list.at(h)), g = isGoal(L, st, sp.n); goal.push(g ? 1 : 0);
+    if (g && firstGoal < 0) { firstGoal = h; if (stopAtGoal) break; }
+    if (!g) moves(B, L, sp, st).forEach(([m, s2]) => {
+      let t = idx.get(s2);
+      if (t < 0) { t = list.length; idx.put(s2, t); list.push(s2); parent.push(h); via.push(m); }
+      succ.push(t);
+    });
+    sOff.push(succ.length);
+  }
+  return { n: list.length, list: list.view(), parent: parent.view(), via: via.view(), succ: succ.view(), sOff: sOff.view(), goal: goal.view(), firstGoal };
 }
 // which explored states can still finish (a backward search from the goals)
-export function canFinish(ex) {
-  const N = ex.list.length, rev = Array.from({ length: N }, () => []), ok = new Uint8Array(N), q = [];
-  ex.succ.forEach((row, h) => row.forEach(t => { if (t >= 0) rev[t].push(h); }));
+function canFinish(ex) {
+  const N = ex.n, cnt = new Int32Array(N + 1);
+  for (let h = 0; h < N; h++) for (let a = ex.sOff[h]; a < ex.sOff[h + 1]; a++) cnt[ex.succ[a] + 1]++;
+  for (let i = 0; i < N; i++) cnt[i + 1] += cnt[i];
+  const rev = new Int32Array(cnt[N]), fill = cnt.slice(0, N);
+  for (let h = 0; h < N; h++) for (let a = ex.sOff[h]; a < ex.sOff[h + 1]; a++) rev[fill[ex.succ[a]]++] = h;
+  const ok = new Uint8Array(N), q = [];
   ex.goal.forEach((g, h) => { if (g) { ok[h] = 1; q.push(h); } });
-  for (let i = 0; i < q.length; i++) rev[q[i]].forEach(h => { if (!ok[h]) { ok[h] = 1; q.push(h); } });
+  for (let i = 0; i < q.length; i++) { const t = q[i]; for (let a = cnt[t]; a < cnt[t + 1]; a++) { const h = rev[a]; if (!ok[h]) { ok[h] = 1; q.push(h); } } }
   return ok;
 }
 // the start of a level: beads at their starts, settled at the first orientation
-export function startState(B, L, targets) {
-  const bs = L.beads.map(b => b.start), caught = bs.map((b, k) => b === targets[k] ? 1 : 0);
+export function startState(B, L) {
+  const ts = tInit(L), targets = tCells(L, ts), bs = L.beads.map(b => b.start), caught = bs.map((b, k) => b === targets[k] ? 1 : 0);
   settle(B, L.o0, bs, targets, caught);
-  return { o: L.o0, beads: bs, caught };
+  return { o: L.o0, beads: bs, caught, ts };
 }
-export const targetsOf = (L, driftIdx) => L.beads.map((b, k) => k === 0 && L.drift ? L.drift[driftIdx || 0] : b.target);
+// the turns the solver allows itself between two target steps
+export const speedOf = L => walks(L) ? (L.speed || 3) : Infinity;
 
-// Solve a level. Returns { ok, steps, plan, states, stuck }: plan is the list of turns (0 right,
-// 1 left, 2 up, 3 down); stuck counts reachable states from which the goal cannot be reached.
-// With drift, every place the target can drift to must be reachable from everywhere.
+// A plan from a state: the shortest list of moves (0 right, 1 left, 2 up, 3 down, 4 wait for the
+// target's step) that catches every target, never more than speedOf(L) turns between two steps.
+// st: { o, beads, caught, ts } and u, the turns already made since the last step.
+export function planFrom(B, L, st) {
+  const sp = space(B, L, speedOf(L)), bs = st.beads.map((b, q) => st.caught && st.caught[q] ? B.n : b);
+  const ex = explore(B, L, sp, [sp.enc(st.o, bs, st.ts, isFinite(sp.M) ? Math.min(sp.M, st.u || 0) : 0)], true);
+  if (ex.firstGoal < 0) return null;
+  const plan = []; for (let h = ex.firstGoal; ex.parent[h] >= 0; h = ex.parent[h]) plan.unshift(ex.via[h]);
+  return plan;
+}
+
+// Solve a level. Returns { ok, steps, turns, waits, plan, states, stuck }: plan is the shortest
+// list of moves; stuck counts states a player can reach from which the slow model cannot finish
+// (0 means no dead ends, however fast or slow the player turns).
 export function solve(B, L) {
-  const report = { ok: true, steps: 0, plan: [], states: 0, stuck: 0 };
-  const drift = L.drift || [null];
-  let free = null;
-  if (L.drift) { // every state the bead can be in while the target is somewhere else
-    const t = [-1], s0 = startState(B, L, t), ex = explore(B, [s0.o * B.n + s0.beads[0]], t);
-    free = ex.list;
-  }
-  drift.forEach((_, di) => {
-    const targets = targetsOf(L, di), s0 = startState(B, L, targets);
-    const enc0 = (targets.length === 1 ? s0.o * B.n + s0.beads[0] : s0.o * B.n * B.n + s0.beads[0] * B.n + s0.beads[1]);
-    const ex = explore(B, di === 0 || !free ? [enc0] : free.concat([enc0]), targets), ok = canFinish(ex);
-    let stuck = 0; ok.forEach(v => { if (!v) stuck++; });
-    report.stuck += stuck; report.states += ex.list.length;
-    if (di === 0) {
-      const g = ex.goal.findIndex(v => v); // breadth first: the first goal is a shortest one
-      if (g < 0) { report.ok = false; return; }
-      const plan = []; for (let h = g; ex.parent[h] >= 0; h = ex.parent[h]) plan.unshift(ex.via[h]);
-      report.plan = plan; report.steps = plan.length;
-    } else if (!ok[0]) report.ok = false;
-  });
+  const report = { ok: true, steps: 0, turns: 0, waits: 0, plan: [], states: 0, stuck: 0, reach: 0 };
+  const s0 = startState(B, L), M = speedOf(L), slow = space(B, L, M);
+  const a = explore(B, L, slow, [slow.enc(s0.o, s0.beads, s0.ts, 0)]);
+  if (a.firstGoal < 0) { report.ok = false; return report; }
+  const plan = []; for (let h = a.firstGoal; a.parent[h] >= 0; h = a.parent[h]) plan.unshift(a.via[h]);
+  Object.assign(report, { plan, steps: plan.length, turns: plan.filter(m => m < 4).length, waits: plan.filter(m => m === 4).length });
+  let ex = a;
+  if (isFinite(M)) {
+    // every state a fast player can reach, then from each with no turns left: can it finish?
+    const fast = space(B, L, Infinity), F = explore(B, L, fast, [fast.enc(s0.o, s0.beads, s0.ts, 0)]);
+    report.reach = F.n;
+    const starts = [slow.enc(s0.o, s0.beads, s0.ts, 0)];
+    F.list.forEach(s => { const st = fast.dec(s); starts.push(slow.enc(st.o, st.beads, st.ts, M)); });
+    ex = explore(B, L, slow, starts);
+  } else report.reach = a.n;
+  const ok = canFinish(ex);
+  let stuck = 0; ok.forEach(v => { if (!v) stuck++; });
+  report.stuck = stuck; report.states = ex.n;
+  if (stuck) report.ok = false;
   return report;
 }
 
 // ------------------------------------------------------------------ making mazes (for tools)
 export function rng(seed) { let s = (seed >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
 // a random spanning tree over the globe's grid (it wraps east and west), plus a few loops
-export function mazeLinks(seed, loops) {
-  const S = GLOBE, rows = S.rows, cols = S.cols, n = rows * cols, R = rng(seed), seen = new Uint8Array(n), links = [];
+export function mazeLinks(seed, loops, grid) {
+  const S = globeSpec(grid), rows = S.rows, cols = S.cols, n = rows * cols, R = rng(seed), seen = new Uint8Array(n), links = [];
   const nb = i => { const r = Math.floor(i / cols), c = i % cols, o = [r * cols + (c + 1) % cols, r * cols + (c + cols - 1) % cols]; if (r + 1 < rows) o.push(i + cols); if (r > 0) o.push(i - cols); return o; };
   const stack = [Math.floor(R() * n)]; seen[stack[0]] = 1;
   while (stack.length) {
