@@ -3,16 +3,17 @@
 <style>
   /* One committed dark look, and one face for every letter on the page: the game's caption
      face, built from the same pixels the game draws with (fonts/ch07-caption.ttf). It is set
-     only at whole multiples of its pixel (10px, 20px, 40px) so it stays sharp. Colors for the
-     broadcast are teletext's: red, yellow, cyan, green, white on black. */
+     only at whole multiples of its pixel (10px, 20px, 40px) so it stays sharp. Colors are the
+     game's one palette, Ash and Gold: ash greys, bone for words, gold for wealth and keys,
+     red only for what watches her. */
   @font-face { font-family: "CH07 Caption"; src: url(__CCFONT__) format("truetype"); font-display: block; }
   :root {
-    --ground: #030306;
-    --ink: #e8e6df;
-    --quiet: #8f8c99;
-    --red: #ff4d5e;
-    --yellow: #ffe94a;
-    --green: #62ff8c;
+    --ground: #0e0f12;
+    --ink: #ebe6d8;
+    --quiet: #8f8d87;
+    --red: #e3412b;
+    --yellow: #d6a03c;
+    --green: #f5ce77;
     --pix: "CH07 Caption", ui-monospace, Menlo, Consolas, monospace;
     color-scheme: dark;
   }
@@ -30,45 +31,19 @@
   /* the words the character generator draws, for screen readers only */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-  /* The start screen: tonight on CH 07, pick how her world looks. A teletext guide beside the
-     picture: no outlines, rows of color, the chosen row in its own look's color. */
-  #tv { position: relative; width: 100%; max-width: 1280px; display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); gap: 20px; align-items: stretch; background: var(--ground); }
-  .tv-screen { position: relative; align-self: start; background: #000; box-shadow: 0 0 0 8px #0c0b11, 0 0 0 9px #1c1a24, 0 0 70px var(--glow, rgba(242, 193, 78, 0.16)); aspect-ratio: 16 / 9; max-width: 100%; transition: box-shadow 300ms; }
-  .tv-screen canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
-  .tv-guide { display: flex; flex-direction: column; gap: 10px; min-width: 0; font-size: 20px; line-height: 1.2; }
-  .tv-ch { margin: 0; color: var(--yellow); }
-  .tv-ch b { font-weight: normal; background: var(--red); color: #fff; padding: 0 6px; margin-right: 12px; }
-  .tv-title { margin: 4px 0 0; font: 40px/1 var(--pix); color: #fff; overflow-wrap: anywhere; }
-  .tv-sub { margin: 0; }
-  .tv-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
-  .tv-list button { width: 100%; display: grid; grid-template-columns: 24px minmax(0, 1fr) 48px 48px; align-items: center; gap: 12px; padding: 4px 6px; background: transparent; border: 0; color: var(--ink); font: 20px/1.2 var(--pix); text-align: left; cursor: pointer; }
-  .tv-list button .n { color: var(--yellow); }
-  .tv-list button .name { overflow: hidden; white-space: nowrap; text-overflow: clip; }
-  .tv-list button .v { text-align: right; color: var(--quiet); }
-  .tv-list button .sw { display: grid; grid-template-columns: repeat(4, 1fr); height: 14px; }
-  .tv-list button[aria-selected="true"] { background: var(--sel, var(--yellow)); color: #000; }
-  .tv-list button[aria-selected="true"] .n, .tv-list button[aria-selected="true"] .v { color: #000; }
-  .tv-list button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-  .tv-votes { margin: 0; font-size: 10px; color: var(--quiet); }
-  .tv-votes b { font-weight: normal; color: var(--ink); }
-  /* two switches: story mode, and flashing (reduced also stops the shake) */
-  .tv-opts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
-  .tv-opts button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 8px; padding: 4px 6px; background: #0c0b11; border: 0; color: var(--ink); font: 10px/1.2 var(--pix); text-align: left; cursor: pointer; }
-  .tv-opts b { font-weight: normal; color: var(--ink); }
-  .tv-opts i { font-style: normal; color: var(--quiet); }
-  .tv-opts span { grid-column: 1 / -1; color: var(--quiet); }
-  .tv-opts button[aria-pressed="true"] i { color: #000; background: var(--green); padding: 0 4px; }
-  .tv-opts button:hover, .tv-opts button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-  .tv-go { margin-top: auto; display: grid; gap: 6px; }
-  #start, #continue { padding: 10px 12px; background: var(--sel, var(--yellow)); border: 0; color: #000; font: 40px/1 var(--pix); text-align: left; cursor: pointer; }
-  #start span, #continue span { display: block; margin-top: 8px; font-size: 10px; line-height: 1.2; }
-  #start:hover, #start:focus-visible, #continue:hover, #continue:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-  /* with a place to go back to, starting over is the quieter choice */
-  #start.second { padding: 6px 12px; background: transparent; color: var(--ink); font-size: 20px; box-shadow: inset 0 0 0 2px #1c1a24; }
-  #start.second span { display: none; }
-  .tv-note { margin: 0; font-size: 10px; color: var(--quiet); }
+  /* The start screen: the opening's first frame, in pixels, with the menu on it. The menu is
+     real buttons set in the caption face at the picture's own pixel size (--u, set by ui/vibe.js). */
+  #tv { position: relative; width: calc(var(--u, 4px) * 320); height: calc(var(--u, 4px) * 180); max-width: 100%; background: var(--ground); }
+  #tv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+  .tv-menu { position: absolute; right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); width: calc(var(--u, 4px) * 124); display: grid; padding: calc(var(--u, 4px) * 4) 0; background: var(--ground); }
+  .tv-menu button { position: relative; display: flex; justify-content: space-between; gap: calc(var(--u, 4px) * 6); padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 6) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; color: var(--quiet); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; }
+  .tv-menu button.main { color: var(--ink); }
+  .tv-menu button i, .tv-menu button b { font-style: normal; font-weight: normal; }
+  .tv-menu button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tv-menu button:hover, .tv-menu button:focus { outline: none; color: var(--ink); }
+  .tv-menu button:hover::before, .tv-menu button:focus::before { content: ">"; position: absolute; left: calc(var(--u, 4px) * 5); color: var(--yellow); }
+  .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); }
   .tv-note b { font-weight: normal; color: var(--yellow); }
-  @media (max-width: 760px) { #tv { grid-template-columns: minmax(0, 1fr); } .tv-title { font-size: 20px; } .tv-list button { grid-template-columns: 24px minmax(0, 1fr) 48px; } .tv-list button .sw { display: none; } }
 
   #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--yellow); color: #000; border: 0; font: 20px/1 var(--pix); cursor: pointer; }
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
@@ -98,26 +73,17 @@
     <div id="immune" class="sr">Story mode. N skips ahead.</div>
   </div>
   <div id="tv">
-    <div class="tv-screen"><canvas id="tv-canvas" width="320" height="180" aria-label="A preview of the chosen look"></canvas></div>
-    <div class="tv-guide">
-      <p class="tv-ch"><b>LIVE</b>CH 07 TONIGHT</p>
-      <h2 class="tv-title">Unseen Above</h2>
-      <p class="tv-sub">Pick how her world looks.</p>
-      <ol class="tv-list" id="tv-list" role="listbox" aria-label="Looks"></ol>
-      <p class="tv-votes"><b id="tv-count">0</b> votes from home so far. Yours counts too.</p>
-      <div class="tv-opts">
-        <button id="opt-story" type="button" aria-pressed="false"><b>STORY MODE</b><i>OFF</i><span>Nothing can kill her. N skips ahead.</span></button>
-        <button id="opt-flash" type="button" aria-pressed="false"><b>FLASHING</b><i>FULL</i><span>Reduced: dim, slow flashes and no shake.</span></button>
-      </div>
-      <div class="tv-go">
-        <button id="continue" type="button" hidden>CONTINUE<span>Episode 1</span></button>
-        <button id="start" type="button">BEGIN<span>Sound on. Arrows pick a look, Enter begins.</span></button>
-      </div>
-      <p class="tv-note"><b>Flashing lights and screen shake.</b> P pauses, and the pause menu turns them down. Best on a desktop with a keyboard.</p>
+    <canvas id="tv-canvas" width="320" height="180" role="img" aria-label="Unseen Above. Two siblings on an ash ridge look across a dead city at the one lit mansion."></canvas>
+    <div class="tv-menu" role="group" aria-label="Start">
+      <button id="continue" class="main" type="button" hidden>Continue<i>Episode 1</i></button>
+      <button id="start" class="main" type="button">Begin<span>Sound on. Enter begins.</span></button>
+      <button id="opt-story" type="button" aria-pressed="false"><b>Story mode</b><i>off</i><span>Nothing can kill her. N skips ahead.</span></button>
+      <button id="opt-flash" type="button" aria-pressed="false"><b>Flashing</b><i>full</i><span>Reduced: dim, slow flashes and no shake.</span></button>
     </div>
   </div>
 </div>
 <footer id="chrome-bottom">
+  <p class="tv-note" id="tv-note"><b>Flashing lights and screen shake.</b> P pauses, and the pause menu turns them down. Best on a desktop with a keyboard.</p>
   <p id="h-hint"></p>
   <ul class="keys">
     <li><b>Move</b> arrows or A/D</li>
@@ -130,11 +96,10 @@
     <li><b>Skip a line</b> Enter</li>
     <li><b>Restart episode</b> R</li>
     <li><b>Pause</b> P or Esc</li>
-    <li><b>Switch look</b> L</li>
     <li><b>Sound</b> M</li>
     <li><b>Skip the opening</b> Esc</li>
     <li><b>Satellite</b> drag with the mouse, K previews later screens</li>
-    <li><b>Story mode</b> on the guide or in the pause menu; N skips ahead</li>
+    <li><b>Story mode</b> on the title screen or in the pause menu; N skips ahead</li>
   </ul>
   <nav class="jump" aria-label="Jump to a part">
     <b>Jump to</b>

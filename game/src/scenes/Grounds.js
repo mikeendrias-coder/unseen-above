@@ -82,7 +82,7 @@ export class Grounds extends SideEpisode {
 
     // particles: fountain spray, ash outside the wall, sparkles on gold
     const fountain = this.marks.find(m => m.kind === 'fountain');
-    this.add.particles(fountain.x, fountain.y, 'dot', { speedY: { min: -46, max: -26 }, speedX: { min: -14, max: 14 }, gravityY: 90, lifespan: 900, frequency: 45, alpha: { start: 0.9, end: 0 }, tint: [hexNum(P.glassLit), 0xffffff] }).setDepth(1);
+    this.add.particles(fountain.x, fountain.y, 'dot', { speedY: { min: -46, max: -26 }, speedX: { min: -14, max: 14 }, gravityY: 90, lifespan: 900, frequency: 45, alpha: { start: 0.9, end: 0 }, tint: [hexNum(P.glassLit), 0xebe6d8] }).setDepth(1);
     this.add.particles(0, -6, 'dot', { x: { min: 0, max: LEVEL.gateX + 20 }, speedY: { min: 7, max: 16 }, speedX: { min: 2, max: 9 }, lifespan: 15000, frequency: 70, alpha: { start: 0.8, end: 0.2 }, tint: [hexNum(flat(P.dust)), hexNum(flat(P.rubbleHi))], deathZone: { type: 'onLeave', source: new Phaser.Geom.Rectangle(-20, -20, LEVEL.gateX + 60, VIEW_H + 40) } }).setDepth(6);
     this.sparkle = this.add.particles(0, 0, 'sparkle', { lifespan: 520, scale: { start: 0.2, end: 1, ease: 'Sine.easeOut' }, alpha: { start: 1, end: 0 }, emitting: false, blendMode: 'ADD' }).setDepth(6);
 
@@ -190,7 +190,7 @@ export class Grounds extends SideEpisode {
     g.fillStyle(soft, 0.06); g.fillRect(x - 40, v.y, 40, v.height);
     g.fillStyle(col, 0.12); g.fillRect(x - 10, v.y, 12, v.height);
     g.fillStyle(col, 0.35); g.fillRect(x - 2, v.y, 3, v.height);
-    g.fillStyle(0xffffff, 0.8); g.fillRect(x, v.y, 1, v.height);
+    g.fillStyle(0xebe6d8, 0.8); g.fillRect(x, v.y, 1, v.height);
     for (let y = (t * 120) % 12; y < v.height; y += 12) { g.fillStyle(col, 0.4); g.fillRect(x - 8, v.y + y, 9, 1); }
     // the satellite doing the scanning, at the top of the band
     if (!this.dead) SatelliteStrike.drawSat(this.fxG, P, x, v.y + 3, g, 0.6 + 0.4 * Math.sin(t * 20));
@@ -252,7 +252,7 @@ export class Grounds extends SideEpisode {
     // fireworks
     const fg = this.fireworksG; fg.clear();
     this.fireworks.forEach(f => {
-      if (f.phase === 'rise') { fg.fillStyle(0xffffff, 0.8); fg.fillRect(Math.round(f.x), Math.round(f.y), 1, 2); }
+      if (f.phase === 'rise') { fg.fillStyle(0xebe6d8, 0.8); fg.fillRect(Math.round(f.x), Math.round(f.y), 1, 2); }
       else { const a = Math.max(0, 1 - f.t / 1.6); f.parts.forEach(p => { fg.fillStyle(hexNum(p.col), a); fg.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }); }
     });
     // fires in the dead city
@@ -274,7 +274,7 @@ export class Grounds extends SideEpisode {
   hint() {
     const x = this.kid.x / TILE;
     if (this.leaving || this.done) return;
-    if (x < 14) return overlay.hint('Arrows or A/D move. Space jumps. Down crouches. E uses things. L switches the look. R restarts the episode.');
+    if (x < 14) return overlay.hint('Arrows or A/D move. Space jumps. Down crouches. E uses things. R restarts the episode.');
     if (x < 39) return overlay.hint('A lamp sweeps the garden. Hedges block its light: wait in their shadow, move when it swings away.');
     if (x < 56) return overlay.hint('A drone patrols the fountain. Its light cannot reach under the upper bowl.');
     if (x < 77) return overlay.hint('Two lamps on the wall. The statue plinths cast shadows.');

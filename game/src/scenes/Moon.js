@@ -67,7 +67,7 @@ export class Moon extends SideEpisode {
     this.commonLayers();
     this.eyeG = this.add.graphics().setDepth(4.5);
     // the end, drawn over everything in screen space
-    this.flashRect = this.addParallax(this.add.rectangle(160, 90, 330, 190, 0xffffff).setDepth(40).setAlpha(0), 0, 160, 90);
+    this.flashRect = this.addParallax(this.add.rectangle(160, 90, 330, 190, 0xebe6d8).setDepth(40).setAlpha(0), 0, 160, 90);
     this.lastImg = this.addParallax(this.add.image(0, 0, 'mn_last').setOrigin(0).setDepth(30).setVisible(false), 0);
     this.lastG = this.addParallax(this.add.graphics().setDepth(30.5).setBlendMode(Phaser.BlendModes.ADD), 0);
     this.tvImg = this.addParallax(this.add.image(TVSCREEN.x, TVSCREEN.y, 'mn_tvlive').setOrigin(0).setDepth(31).setVisible(false), 0, TVSCREEN.x, TVSCREEN.y);
@@ -154,8 +154,8 @@ export class Moon extends SideEpisode {
   lookable() { return this.mode === 'walk' || this.mode === 'room'; }
   doorReady() { return this.mode === 'walk' && !this.leaving; }
   // E on someone in the street: their next line, over their head
-  npcTalk(Nn) { this.bubbles.press('npc' + Nn.i, Nn.src, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xffffff, pitch: 560 + Nn.i * 90, leave: 64 }); }
-  npcSay(Nn, text) { this.bubbles.say('npc' + Nn.i, text, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xffffff, pitch: 700 + Nn.i * 90, leave: 64, hold: 900 }); }
+  npcTalk(Nn) { this.bubbles.press('npc' + Nn.i, Nn.src, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xebe6d8, pitch: 560 + Nn.i * 90, leave: 64 }); }
+  npcSay(Nn, text) { this.bubbles.say('npc' + Nn.i, text, () => ({ x: Nn.x, y: GROUND - 25 }), { ink: 0xebe6d8, pitch: 700 + Nn.i * 90, leave: 64, hold: 900 }); }
   // People push back: walking into someone gets a word from them; landing on a head gets her
   // put down, with a little hop to the side she came from.
   pushBack() {
@@ -192,7 +192,7 @@ export class Moon extends SideEpisode {
       if (this.heard.has(i) || cx < (R.x0 + R.x1) / 2 - 30) return;
       this.heard.add(i);
       const lines = MOON_OVERHEARD[i], seat = (j) => ({ x: R.x0 + 34 + j * 40, y: 88 });
-      lines.forEach((text, j) => this.time.delayedCall(j * 2300, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: 0xffffff, italic: true, pitch: 300 + j * 80, leave: 170, hold: 1300 })));
+      lines.forEach((text, j) => this.time.delayedCall(j * 2300, () => this.bubbles.say('room' + i, text, () => seat(j), { ink: 0xebe6d8, italic: true, pitch: 300 + j * 80, leave: 170, hold: 1300 })));
     });
   }
   describe(lines, it, x, y) { if (!it.lines) it.lines = lines; this.bubbles.look('item', it, () => ({ x, y })); }
@@ -202,7 +202,7 @@ export class Moon extends SideEpisode {
     this.robotProp.x = Math.round(R.x) - 5; this.robotThing.x0 = R.x - 8; this.robotThing.x1 = R.x + 8;
     this.robotImg.setTexture(near || talking ? 'mr_c' : Math.floor(this.clock * 4) % 2 ? 'mr_a' : 'mr_b').setPosition(Math.round(R.x), GROUND).setFlipX(R.dir < 0);
   }
-  robotTalk() { const R = this.robot; if (!this.robotSrc) this.robotSrc = { lines: MOON_ROBOT, i: 0, loop: true }; this.bubbles.press('robot', this.robotSrc, () => ({ x: R.x, y: GROUND - 8 }), { ink: 0x4ae8ff, pitch: 1180, leave: 64 }); }
+  robotTalk() { const R = this.robot; if (!this.robotSrc) this.robotSrc = { lines: MOON_ROBOT, i: 0, loop: true }; this.bubbles.press('robot', this.robotSrc, () => ({ x: R.x, y: GROUND - 8 }), { ink: 0xebe6d8, pitch: 1180, leave: 64 }); }
 
   // ------------------------------------------------------------------ the staff door, the playroom
   enterDoor() {
@@ -262,7 +262,7 @@ export class Moon extends SideEpisode {
     this.drawGirl();
     const g = this.liveG; g.clear();
     // the channels flicker; now and then one cuts to another picture
-    this.marks.forEach((mk, i) => { if (mk.kind !== 'tile') return; const f = Math.sin(t * 7 + i * 1.7) > 0.85 ? 0.12 : 0; if (f) { g.fillStyle(0xffffff, f); g.fillRect(mk.x, mk.y, mk.w, mk.h); } if (Math.floor(t * 2 + i) % 9 === 0) { g.fillStyle(n(M.screenGlow), 0.1); g.fillRect(mk.x, mk.y + ((t * 30 + i * 5) % mk.h), mk.w, 1); } });
+    this.marks.forEach((mk, i) => { if (mk.kind !== 'tile') return; const f = Math.sin(t * 7 + i * 1.7) > 0.85 ? 0.12 : 0; if (f) { g.fillStyle(0xebe6d8, f); g.fillRect(mk.x, mk.y, mk.w, mk.h); } if (Math.floor(t * 2 + i) % 9 === 0) { g.fillStyle(n(M.screenGlow), 0.1); g.fillRect(mk.x, mk.y + ((t * 30 + i * 5) % mk.h), mk.w, 1); } });
     // the screens' light moves on the backs of their heads; now and then someone lifts a glass
     LEVEL.rooms.forEach((R, ri) => {
       const sx = R.x0 + 22, sw = R.x1 - R.x0 - 44;
@@ -270,7 +270,7 @@ export class Moon extends SideEpisode {
         const hx = Math.round(sx + 10 + si * (sw - 20) / Math.max(1, R.seats - 1)), c = [M.screenGlow, M.pink, M.yellow, M.mint][(Math.floor(t * 0.7) + si + ri) % 4];
         g.fillStyle(n(c), 0.18 + 0.08 * Math.sin(t * 5 + si)); g.fillRect(hx - 3, 96, 7, 2);
         const lift = Math.sin(t * 0.9 + si * 2.1 + ri) > 0.93;
-        if (si === (ri + 1) % R.seats && lift) { g.fillStyle(n(M.adult), 1); g.fillRect(hx + 5, 99, 2, 6); g.fillStyle(0xffffff, 1); g.fillRect(hx + 5, 96, 2, 3); g.fillStyle(n(M.pink), 1); g.fillRect(hx + 5, 98, 2, 1); }
+        if (si === (ri + 1) % R.seats && lift) { g.fillStyle(n(M.adult), 1); g.fillRect(hx + 5, 99, 2, 6); g.fillStyle(0xebe6d8, 1); g.fillRect(hx + 5, 96, 2, 3); g.fillStyle(n(M.pink), 1); g.fillRect(hx + 5, 98, 2, 1); }
       }
     });
     // the vote bar keeps moving
@@ -283,7 +283,7 @@ export class Moon extends SideEpisode {
       const hw = Math.round(A.w / 2 * shut);
       g.fillStyle(0x000000, 1); g.fillRect(A.x, A.y, A.w, A.h);
       for (let i = 0; i < 6; i++) { g.fillStyle(n(this.P.voidEdge), 0.7); g.fillRect(A.x + 2 + ((i * 7 + Math.floor(t * 20)) % (A.w - 4)), A.y + 4 + ((i * 11) % (A.h - 8)), 1, 1); }
-      if (hw > 0) { g.fillStyle(n('#5a3d2a'), 1); g.fillRect(A.x, A.y, hw, A.h); g.fillStyle(n(M.wallHi), 1); g.fillRect(A.x + A.w - hw, A.y, hw, A.h); }
+      if (hw > 0) { g.fillStyle(n('#54432a'), 1); g.fillRect(A.x, A.y, hw, A.h); g.fillStyle(n(M.wallHi), 1); g.fillRect(A.x + A.w - hw, A.y, hw, A.h); }
       if (t > 1.6 && !this.shutSound) { this.shutSound = true; this.time.delayedCall(450, () => Sound.tone(110, 0.25, 'triangle', 0.04, 70)); }
     }
     // the kids
@@ -292,7 +292,7 @@ export class Moon extends SideEpisode {
     this.kidImgs.forEach((img, i) => { const pose = this.mode === 'talk' && this.talkI < 1 ? 'back' : poseOf(i); img.setTexture('mk_' + (i ? 'b' : 'a') + '_' + pose).setFlipX(false).setY(LEVEL.couch.y + 4 + (pose === 'cheer' ? Math.round(Math.abs(Math.sin(t * 9 + i)) * -2) : 0)); });
     // a red light on her chest, at the end
     const e = this.eyeG; e.clear();
-    if (this.vest > 0 && this.mode !== 'last') { const k = this.kid, cx = Math.round(k.x + k.w / 2), top = Math.round(k.y); const on = Math.floor(t * 4) % 2 === 0; e.fillStyle(on ? 0xff3b3b : 0x9c1f26, 1); e.fillRect(cx - 1, top + 7, 2, 2); if (on) { e.fillStyle(n(M.red), 0.28); e.fillRect(cx - 3, top + 6, 6, 4); e.fillRect(cx - 2, top + 5, 4, 6); e.fillStyle(0xffd0d0, 1); e.fillRect(cx - 1, top + 7, 1, 1); } }
+    if (this.vest > 0 && this.mode !== 'last') { const k = this.kid, cx = Math.round(k.x + k.w / 2), top = Math.round(k.y); const on = Math.floor(t * 4) % 2 === 0; e.fillStyle(on ? 0xe3412b : 0xe3412b, 1); e.fillRect(cx - 1, top + 7, 2, 2); if (on) { e.fillStyle(n(M.red), 0.28); e.fillRect(cx - 3, top + 6, 6, 4); e.fillRect(cx - 2, top + 5, 4, 6); e.fillStyle(0xebe6d8, 1); e.fillRect(cx - 1, top + 7, 1, 1); } }
     this.drawThings();
     this.drawLocks([], 1);
     this.drawHud();
@@ -324,16 +324,16 @@ export class Moon extends SideEpisode {
     });
     // the screen on the boulevard: her, live, walking where she walks
     const LV = LEVEL.live, sx = LV.x + 6 + Math.round((kc / (CW * TILE)) * (LV.w - 12));
-    g.fillStyle(n('#141a38'), 1); g.fillRect(LV.x, LV.y, LV.w, LV.h); g.fillStyle(n(M.midLo), 1); g.fillRect(LV.x, LV.y + LV.h - 9, LV.w, 9); g.fillStyle(n(M.trim), 1); g.fillRect(LV.x + 8, LV.y + LV.h - 22, 12, 13); g.fillRect(LV.x + 44, LV.y + LV.h - 18, 8, 9);
+    g.fillStyle(n('#1b1c21'), 1); g.fillRect(LV.x, LV.y, LV.w, LV.h); g.fillStyle(n(M.midLo), 1); g.fillRect(LV.x, LV.y + LV.h - 9, LV.w, 9); g.fillStyle(n(M.trim), 1); g.fillRect(LV.x + 8, LV.y + LV.h - 22, 12, 13); g.fillRect(LV.x + 44, LV.y + LV.h - 18, 8, 9);
     g.fillStyle(n(M.white), 1); g.fillRect(sx, LV.y + LV.h - 15, 2, 6); g.fillStyle(n(this.P.hair), 1); g.fillRect(sx, LV.y + LV.h - 16, 2, 1);
     if (Math.floor(t * 2) % 2 === 0) { g.fillStyle(n(M.red), 1); g.fillRect(LV.x + 3, LV.y + 3, 3, 3); }
-    pixText(g, 'LIVE', LV.x + 8, LV.y + 2, 0xffffff); pixText(g, 'CH 07', LV.x + LV.w - 22, LV.y + 2, n(M.yellow));
-    g.fillStyle(0xffffff, 0.06 + 0.04 * Math.sin(t * 9)); g.fillRect(LV.x, LV.y + ((t * 24) % LV.h), LV.w, 1);
+    pixText(g, 'LIVE', LV.x + 8, LV.y + 2, 0xebe6d8); pixText(g, 'CH 07', LV.x + LV.w - 22, LV.y + 2, n(M.yellow));
+    g.fillStyle(0xebe6d8, 0.06 + 0.04 * Math.sin(t * 9)); g.fillRect(LV.x, LV.y + ((t * 24) % LV.h), LV.w, 1);
     // water from the fountain, arcing down into the basin
     const F = LEVEL.fountain.x;
-    for (let i = 0; i < 10; i++) { const u = ((t * 0.9 + i / 10) % 1), side = i % 2 ? 1 : -1, x = F + side * (2 + u * 22), y = GROUND - 48 + u * u * 34 - u * 6; g.fillStyle(n('#bfe8ff'), 0.8 * (1 - u * 0.6)); g.fillRect(Math.round(x), Math.round(y), 1, 2); }
+    for (let i = 0; i < 10; i++) { const u = ((t * 0.9 + i / 10) % 1), side = i % 2 ? 1 : -1, x = F + side * (2 + u * 22), y = GROUND - 48 + u * u * 34 - u * 6; g.fillStyle(n('#ebe6d8'), 0.8 * (1 - u * 0.6)); g.fillRect(Math.round(x), Math.round(y), 1, 2); }
     // steam at the service end
-    for (let i = 0; i < 5; i++) { const u = ((t * 0.25 + i / 5) % 1), x = CW * TILE - 21 + Math.sin(t + i) * 3 + u * 6, y = 46 - u * 30; g.fillStyle(0xffffff, 0.16 * (1 - u)); g.fillCircle(x, y, 2 + u * 5); }
+    for (let i = 0; i < 5; i++) { const u = ((t * 0.25 + i / 5) % 1), x = CW * TILE - 21 + Math.sin(t + i) * 3 + u * 6, y = 46 - u * 30; g.fillStyle(0xebe6d8, 0.16 * (1 - u)); g.fillCircle(x, y, 2 + u * 5); }
     // beacons on the far towers, and a tram that crosses now and then on its rail
     const fg = this.farG; fg.clear(); this.farMarks.forEach((m, i) => { if (m.kind === 'beacon' && Math.floor(t * 1.2 + i * 0.37) % 2 === 0) { fg.fillStyle(n(M.red), 1); fg.fillRect(m.x, m.y, 1, 1); fg.fillStyle(n(M.red), 0.25); fg.fillRect(m.x - 1, m.y - 1, 3, 3); } });
     const tg = this.tramG; tg.clear(); const cyc = t % 18;
@@ -345,19 +345,19 @@ export class Moon extends SideEpisode {
     g.fillStyle(n(M.purple), 1); g.fillRect(x, y, S.w, S.h);
     if (this.mode === 'vest' || this.mode === 'last') return;
     const round2 = this.mode === 'talk' || this.mode === 'arrive' || (this.mode === 'room' && this.roomT > 2.2);
-    g.fillStyle(n('#ff3b5c'), 1); g.fillRect(x + 6, y + 6, 22, 9); pixText(g, 'LIVE', x + 8, y + 8, 0xffffff);
+    g.fillStyle(n('#e3412b'), 1); g.fillRect(x + 6, y + 6, 22, 9); pixText(g, 'LIVE', x + 8, y + 8, 0xebe6d8);
     pixText(g, 'CH 07', x + S.w - 26, y + 8, n(M.yellow));
     // the board the kids play: a path that draws itself to each target
     const bx = x + 100, by = y + 22, cs = 9, cols = 7, rows = 7;
-    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { g.fillStyle(n('#3a2878'), 1); g.fillRect(bx + i * cs + 1, by + j * cs + 1, cs - 2, cs - 2); }
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { g.fillStyle(n('#2e3036'), 1); g.fillRect(bx + i * cs + 1, by + j * cs + 1, cs - 2, cs - 2); }
     const path = [[0, 6], [1, 6], [2, 6], [2, 5], [2, 4], [3, 4], [4, 4], [4, 3], [4, 2], [5, 2], [6, 2], [6, 1], [6, 0]], u = this.mode === 'walk' ? (t * 1.6) % path.length : path.length;
     for (let i = 0; i < Math.floor(u); i++) { const [px, py] = path[i]; g.fillStyle(n(M.pink), 1); g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); }
     [[0, 6], [4, 4], [6, 0]].forEach(([px, py], i) => { g.fillStyle(n(i < 2 || u >= path.length ? M.yellow : M.blue), 1); g.fillCircle(bx + px * cs + cs / 2, by + py * cs + cs / 2, 3); });
     // the feed from Earth in the corner: the grounds at night
     const fx = x + 8, fy = y + 22, fw = 80, fh = 48;
-    g.fillStyle(n('#0d1226'), 1); g.fillRect(fx, fy, fw, fh); g.fillStyle(n('#1a2045'), 1); g.fillRect(fx, fy + fh - 8, fw, 8); g.fillStyle(n('#e2b146'), 1); g.fillRect(fx + 30, fy + 12, 40, 3);
-    for (let i = 0; i < 5; i++) { g.fillStyle(n('#cfc8b6'), 1); g.fillRect(fx + 32 + i * 8, fy + 15, 2, fh - 23); }
-    const gx = fx + 6 + ((t * 6) % 24); g.fillStyle(n('#f1e9d8'), 1); g.fillRect(Math.round(gx), fy + fh - 13, 2, 5); g.fillStyle(n('#2a1d16'), 1); g.fillRect(Math.round(gx), fy + fh - 14, 2, 1);
+    g.fillStyle(n('#1b1c21'), 1); g.fillRect(fx, fy, fw, fh); g.fillStyle(n('#1b1c21'), 1); g.fillRect(fx, fy + fh - 8, fw, 8); g.fillStyle(n('#d6a03c'), 1); g.fillRect(fx + 30, fy + 12, 40, 3);
+    for (let i = 0; i < 5; i++) { g.fillStyle(n('#b8b2a3'), 1); g.fillRect(fx + 32 + i * 8, fy + 15, 2, fh - 23); }
+    const gx = fx + 6 + ((t * 6) % 24); g.fillStyle(n('#ebe6d8'), 1); g.fillRect(Math.round(gx), fy + fh - 13, 2, 5); g.fillStyle(n('#261f15'), 1); g.fillRect(Math.round(gx), fy + fh - 14, 2, 1);
     pixText(g, 'SCORE ' + (round2 ? 2800 : 2400), x + 8, y + S.h - 22, n(M.mint));
     if (round2 && Math.floor(t * 2.5) % 2 === 0) { const s = 'ROUND 2 READY?', w = textWidth(s); g.fillStyle(0x000000, 0.4); g.fillRect(x + S.w / 2 - w / 2 - 4, y + S.h - 13, w + 8, 9); pixText(g, s, x + S.w / 2 - w / 2, y + S.h - 11, n(M.yellow)); }
     if (this.mode === 'room' && this.roomT < 2.2 && Math.floor(t * 8) % 2 === 0) pixText(g, '+400', bx + 70, by + 2, n(M.yellow));
@@ -367,7 +367,7 @@ export class Moon extends SideEpisode {
   drawHud() {
     const g = this.hudG; g.clear();
     if (this.mode === 'vest' || this.mode === 'last') return;
-    g.lineStyle(1, 0xffffff, 0.3);
+    g.lineStyle(1, 0xebe6d8, 0.3);
     [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineBetween(px, py, x, y); } });
     if (this.clock < 3 && Math.floor(this.clock * 3) % 2 === 0) pixText(g, 'NO SIGNAL', 44, 8, n(this.P.overlay), 1, 0.6);
   }

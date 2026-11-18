@@ -15,20 +15,20 @@ export const KX = (CW + 1) * T; // the playroom's left wall
 
 // the Moon's own palette, from the look board's Moon frames
 export const M = {
-  space: '#04050b', star: '#c9cce0', earth: '#2c4f8a', earthLand: '#3f6b4c', earthCloud: '#c9d6f0', earthShade: '#121f3a', fire: '#ff9a4a',
-  lunar: '#8b8d98', lunarHi: '#b4b6c1', lunarLo: '#5b5d68',
-  wall: '#e8e5f1', wallHi: '#fbfaff', wallLo: '#c8c3d9', trim: '#d6b25a', trimHi: '#ffe6a1', trimLo: '#987832',
-  floor: '#cbc6dc', floorHi: '#dfdbee', floorLo: '#a7a1bd', room: '#b9b2cf', roomLo: '#9f97b9',
-  screen: '#0a0e1c', bezel: '#2a2f45', screenGlow: '#9fd0ff',
-  sofa: '#7a5da6', sofaHi: '#9a7ec6', sofaLo: '#513c72',
-  adult: '#272233', adultHi: '#5a5274', glassHi: '#ffffff',
-  rich: '#ffd3e6', richLo: '#c497b0', richHair: '#e6c068', richHair2: '#8a5a3b',
-  pink: '#ff5fa2', yellow: '#ffd23f', mint: '#3ee6c1', blue: '#5b8cff', purple: '#2b1a5c',
-  rug: '#f2c6d8', rugLo: '#d8a1b9', white: '#ffffff', warm: '#fff4d6', robot: '#f4f2fb', robotLo: '#c8c3d9', robotLed: '#3ee6c1',
-  wood: '#3d3a52', red: '#ff3b3b',
+  space: '#0e0f12', star: '#8f8d87', earth: '#45474d', earthLand: '#6b6c70', earthCloud: '#b8b2a3', earthShade: '#1b1c21', fire: '#f5ce77',
+  lunar: '#6b6c70', lunarHi: '#8f8d87', lunarLo: '#45474d',
+  wall: '#ebe6d8', wallHi: '#ebe6d8', wallLo: '#b8b2a3', trim: '#d6a03c', trimHi: '#f2d58c', trimLo: '#8a5f1c',
+  floor: '#b8b2a3', floorHi: '#ebe6d8', floorLo: '#8f8d87', room: '#b8b2a3', roomLo: '#8f8d87',
+  screen: '#0e0f12', bezel: '#3a2f1f', screenGlow: '#f5ce77',
+  sofa: '#3a2f1f', sofaHi: '#54432a', sofaLo: '#261f15',
+  adult: '#1b1c21', adultHi: '#45474d', glassHi: '#ebe6d8',
+  rich: '#ebe6d8', richLo: '#b8b2a3', richHair: '#d6a03c', richHair2: '#54432a',
+  pink: '#d6a03c', yellow: '#f2d58c', mint: '#f5ce77', blue: '#b8b2a3', purple: '#261f15',
+  rug: '#f5ce77', rugLo: '#d6a03c', white: '#ebe6d8', warm: '#f2d58c', robot: '#ebe6d8', robotLo: '#b8b2a3', robotLed: '#d6a03c',
+  wood: '#3a2f1f', red: '#e3412b',
   // the city: towers in the haze, the dome's ribs, the service end
-  haze: '#1a1c33', hazeHi: '#2a2d4d', far: '#232646', farHi: '#34385f', mid: '#b7b1cf', midHi: '#d4cfe6', midLo: '#958eb2',
-  rib: '#8f9cc8', service: '#9a95ad', serviceLo: '#77728a', coat: '#3a3d55', coatHi: '#555a7c'
+  haze: '#1b1c21', hazeHi: '#2e3036', far: '#2e3036', farHi: '#45474d', mid: '#b8b2a3', midHi: '#ebe6d8', midLo: '#8f8d87',
+  rib: '#8a5f1c', service: '#8f8d87', serviceLo: '#6b6c70', coat: '#2e3036', coatHi: '#45474d'
 };
 
 export const LEVEL = {
@@ -101,16 +101,16 @@ function porthole(p, x, y, r) {
 export function channel(p, x, y, w, h, kind, seed) {
   const r = rng(seed), mid = y + Math.round(h * 0.62);
   p.rect(x - 1, y - 1, w + 2, h + 2, M.bezel); p.rect(x, y, w, h, M.screen);
-  if (kind === 'estate' || kind === 'grounds') { p.rect(x, y, w, h, '#0f1735'); p.poly([[x + 6, y + 11], [x + w / 2, y + 4], [x + w - 6, y + 11]], '#e2b146'); for (let i = 0; i < 4; i++) p.rect(x + 8 + i * ((w - 16) / 3.4), y + 11, 2, h - 15, '#cfc8b6'); p.rect(x + 4, y + h - 3, w - 8, 2, '#cfc8b6'); if (kind === 'grounds') { p.rect(x + 5, y + h - 8, 2, 5, '#f1e9d8'); p.px(x + 5, y + h - 9, '#2a1d16'); } }
-  else if (kind === 'street') { p.rect(x, y, w, h, '#1c1f27'); for (let i = 0; i < 5; i++) { const bh = 6 + Math.floor(r() * (h - 8)); p.rect(x + 2 + i * (w / 5), y + h - bh, w / 5 - 2, bh, r() < 0.5 ? '#3a3f4c' : '#2c303b'); } p.px(x + w * 0.6, y + h - 4, '#ff4d4d'); }
-  else if (kind === 'field') { p.rect(x, y, w, mid - y, '#3a3842'); p.rect(x, mid, w, y + h - mid, '#4a4740'); for (let i = 0; i < 9; i++) p.px(x + r() * w, mid + 1 + r() * (y + h - mid - 2), '#6a665c'); p.rect(x + w * 0.4, mid - 4, 2, 4, '#f1e9d8'); }
-  else if (kind === 'hall') { p.rect(x, y, w, h, '#0d1226'); p.rect(x, y + h - 5, w, 5, '#1a2045'); p.rect(x + w * 0.3, y + h - 11, 2, 6, '#f1e9d8'); p.rect(x + w * 0.5, y + h - 8, w * 0.5, 1, '#ff3b3b'); }
-  else if (kind === 'sat') { p.rect(x, y, w, h, '#2c3328'); for (let gy = 0; gy < 3; gy++) for (let gx = 0; gx < 5; gx++) if (r() < 0.75) p.rect(x + 2 + gx * (w / 5), y + 2 + gy * (h / 3), w / 5 - 3, h / 3 - 3, r() < 0.5 ? '#6b7562' : '#8a937e'); p.rect(x + w * 0.6 - 4, y + h * 0.45, 9, 1, '#ffb000'); p.rect(x + w * 0.6, y + h * 0.45 - 4, 1, 9, '#ffb000'); }
-  else if (kind === 'beach') { p.rect(x, y, w, h * 0.45, '#9fd3f0'); p.rect(x, y + h * 0.45, w, h * 0.25, '#2f7fc0'); p.rect(x, y + h * 0.7, w, h * 0.3, '#e8d39c'); p.px(x + w * 0.7, y + h * 0.78, '#ff5fa2'); }
-  else if (kind === 'crowd') { p.rect(x, y, w, h, '#2a2533'); for (let j = 0; j < 3; j++) for (let i = 0; i < 9; i++) p.rect(x + 1 + i * (w / 9) + (j % 2) * 2, y + 5 + j * 5, 2, 2, ['#f1d2b0', '#c48a5c', '#8a5a3b', '#5a3a26'][(i + j) % 4]); }
-  else if (kind === 'ridge') { p.rect(x, y, w, h, '#0b0d16'); p.poly([[x, y + h], [x + w * 0.3, y + h * 0.55], [x + w * 0.7, y + h * 0.7], [x + w, y + h * 0.5], [x + w, y + h]], '#1a1c26'); p.rect(x + w * 0.35, y + h * 0.5, 1, 3, '#f1e9d8'); p.rect(x + w * 0.38, y + h * 0.48, 1, 4, '#3f6f8f'); p.px(x + w * 0.8, y + 3, '#ece8d6'); }
-  else if (kind === 'bedroom') { p.rect(x, y, w, h, '#2a0f1c'); p.rect(x + 4, y + h - 9, w * 0.5, 5, '#e3ded0'); p.rect(x + w * 0.62, y + 4, 6, h - 6, '#000000'); p.rect(x + w * 0.62 - 1, y + 3, 8, 1, '#8a5cff'); p.rect(x + 7, y + h - 5, 4, 2, '#3f6f8f'); }
-  else { for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) if (r() < 0.4) p.px(x + xx, y + yy, r() < 0.5 ? '#5d6274' : '#a3a8bb'); }
+  if (kind === 'estate' || kind === 'grounds') { p.rect(x, y, w, h, '#1b1c21'); p.poly([[x + 6, y + 11], [x + w / 2, y + 4], [x + w - 6, y + 11]], '#d6a03c'); for (let i = 0; i < 4; i++) p.rect(x + 8 + i * ((w - 16) / 3.4), y + 11, 2, h - 15, '#b8b2a3'); p.rect(x + 4, y + h - 3, w - 8, 2, '#b8b2a3'); if (kind === 'grounds') { p.rect(x + 5, y + h - 8, 2, 5, '#ebe6d8'); p.px(x + 5, y + h - 9, '#261f15'); } }
+  else if (kind === 'street') { p.rect(x, y, w, h, '#1b1c21'); for (let i = 0; i < 5; i++) { const bh = 6 + Math.floor(r() * (h - 8)); p.rect(x + 2 + i * (w / 5), y + h - bh, w / 5 - 2, bh, r() < 0.5 ? '#45474d' : '#2e3036'); } p.px(x + w * 0.6, y + h - 4, '#e3412b'); }
+  else if (kind === 'field') { p.rect(x, y, w, mid - y, '#2e3036'); p.rect(x, mid, w, y + h - mid, '#45474d'); for (let i = 0; i < 9; i++) p.px(x + r() * w, mid + 1 + r() * (y + h - mid - 2), '#6b6c70'); p.rect(x + w * 0.4, mid - 4, 2, 4, '#ebe6d8'); }
+  else if (kind === 'hall') { p.rect(x, y, w, h, '#1b1c21'); p.rect(x, y + h - 5, w, 5, '#1b1c21'); p.rect(x + w * 0.3, y + h - 11, 2, 6, '#ebe6d8'); p.rect(x + w * 0.5, y + h - 8, w * 0.5, 1, '#e3412b'); }
+  else if (kind === 'sat') { p.rect(x, y, w, h, '#3a2f1f'); for (let gy = 0; gy < 3; gy++) for (let gx = 0; gx < 5; gx++) if (r() < 0.75) p.rect(x + 2 + gx * (w / 5), y + 2 + gy * (h / 3), w / 5 - 3, h / 3 - 3, r() < 0.5 ? '#6b6c70' : '#8f8d87'); p.rect(x + w * 0.6 - 4, y + h * 0.45, 9, 1, '#d6a03c'); p.rect(x + w * 0.6, y + h * 0.45 - 4, 1, 9, '#d6a03c'); }
+  else if (kind === 'beach') { p.rect(x, y, w, h * 0.45, '#ebe6d8'); p.rect(x, y + h * 0.45, w, h * 0.25, '#6b6c70'); p.rect(x, y + h * 0.7, w, h * 0.3, '#f2d58c'); p.px(x + w * 0.7, y + h * 0.78, '#d6a03c'); }
+  else if (kind === 'crowd') { p.rect(x, y, w, h, '#2e3036'); for (let j = 0; j < 3; j++) for (let i = 0; i < 9; i++) p.rect(x + 1 + i * (w / 9) + (j % 2) * 2, y + 5 + j * 5, 2, 2, ['#ebe6d8', '#d6a03c', '#8a5f1c', '#54432a'][(i + j) % 4]); }
+  else if (kind === 'ridge') { p.rect(x, y, w, h, '#0e0f12'); p.poly([[x, y + h], [x + w * 0.3, y + h * 0.55], [x + w * 0.7, y + h * 0.7], [x + w, y + h * 0.5], [x + w, y + h]], '#1b1c21'); p.rect(x + w * 0.35, y + h * 0.5, 1, 3, '#ebe6d8'); p.rect(x + w * 0.38, y + h * 0.48, 1, 4, '#6b6c70'); p.px(x + w * 0.8, y + 3, '#ebe6d8'); }
+  else if (kind === 'bedroom') { p.rect(x, y, w, h, '#1b1c21'); p.rect(x + 4, y + h - 9, w * 0.5, 5, '#ebe6d8'); p.rect(x + w * 0.62, y + 4, 6, h - 6, '#000000'); p.rect(x + w * 0.62 - 1, y + 3, 8, 1, '#6b6c70'); p.rect(x + 7, y + h - 5, 4, 2, '#6b6c70'); }
+  else { for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) if (r() < 0.4) p.px(x + xx, y + yy, r() < 0.5 ? '#6b6c70' : '#b8b2a3'); }
   p.glowRect(x, y, w, h, M.screenGlow, 0.08);
   p.mark('tile', x, y, { w, h, kind });
 }
@@ -148,8 +148,8 @@ function paintRoomBehindGlass(p, R, i) {
 // a door that does not match itself: the twin of the one in the bedroom, never used
 function oddDoor(p, D, clean) {
   p.rect(D.x - 3, D.y - 4, D.w + 6, D.h + 4, M.trim);
-  p.rect(D.x, D.y, D.w / 2, D.h, '#5a3d2a'); for (let y = D.y + 3; y < D.y + D.h - 3; y += 3) p.rect(D.x + 2, y, D.w / 2 - 4, 1, '#7a5638'); p.px(D.x + D.w / 2 - 2, D.y + 18, M.trim);
-  p.rect(D.x + D.w / 2, D.y, D.w / 2, D.h, M.wallHi); p.rect(D.x + D.w / 2 + 2, D.y + 4, D.w / 2 - 4, 12, '#bfe3f4'); p.rect(D.x + D.w / 2 + 2, D.y + 18, 2, 2, M.wallLo);
+  p.rect(D.x, D.y, D.w / 2, D.h, '#54432a'); for (let y = D.y + 3; y < D.y + D.h - 3; y += 3) p.rect(D.x + 2, y, D.w / 2 - 4, 1, '#54432a'); p.px(D.x + D.w / 2 - 2, D.y + 18, M.trim);
+  p.rect(D.x + D.w / 2, D.y, D.w / 2, D.h, M.wallHi); p.rect(D.x + D.w / 2 + 2, D.y + 4, D.w / 2 - 4, 12, '#ebe6d8'); p.rect(D.x + D.w / 2 + 2, D.y + 18, 2, 2, M.wallLo);
   p.rect(D.x + D.w / 2, D.y, 1, D.h, M.adult);
   if (clean) { p.rect(D.x + D.w / 2 - 5, D.y - 10, 10, 6, M.trimLo); ptext(p, '07', D.x + D.w / 2 - 3, D.y - 9, M.trimHi); }
 }
@@ -159,18 +159,18 @@ function oddDoor(p, D, clean) {
 export function paintSky() {
   const p = new Painter(320, 180), r = rng(9);
   p.rect(0, 0, 320, 180, M.space);
-  for (let y = 0; y < 180; y += 2) p.glowRect(0, y, 320, 2, '#1b2148', y / 180 * 0.5);
+  for (let y = 0; y < 180; y += 2) p.glowRect(0, y, 320, 2, '#1b1c21', y / 180 * 0.5);
   for (let i = 0; i < 120; i++) p.px(r() * 320, r() * 140, i % 11 ? M.star : M.white);
   // Earth, mostly in shadow, small fires on the dark side
   const ex = 76, ey = 44, er = 26;
-  p.circle(ex, ey, er + 2, '#0c1428');
+  p.circle(ex, ey, er + 2, '#1b1c21');
   earthDisc(p, ex, ey, er, true);
   for (let dy = -er; dy <= er; dy++) { const hw = Math.floor(Math.sqrt(er * er - dy * dy) + 0.35), sw = Math.round(hw * 1.2); p.rect(ex + hw - Math.min(2 * hw + 1, sw), ey + dy, Math.min(2 * hw + 1, sw), 1, M.earthShade); }
-  const rf = rng(4); for (let i = 0; i < 14; i++) { const a = rf() * Math.PI * 2, d = rf() * er * 0.9; const x = ex + Math.cos(a) * d, y = ey + Math.sin(a) * d; if (x > ex - er * 0.2) p.px(x, y, i % 3 ? M.fire : '#ffd08a'); }
-  p.softGlow(ex, ey, er + 10, '#3a5ea8', 0.1);
+  const rf = rng(4); for (let i = 0; i < 14; i++) { const a = rf() * Math.PI * 2, d = rf() * er * 0.9; const x = ex + Math.cos(a) * d, y = ey + Math.sin(a) * d; if (x > ex - er * 0.2) p.px(x, y, i % 3 ? M.fire : '#f2d58c'); }
+  p.softGlow(ex, ey, er + 10, '#6b6c70', 0.1);
   // the dome: ribs that arc over the city, a long highlight
   for (let i = 0; i < 7; i++) { const x0 = -40 + i * 66; for (let x = 0; x < 120; x++) p.glowRect(x0 + x, 6 + Math.round(Math.pow(x / 120 - 0.5, 2) * 40 + i * 2), 1, 1, M.rib, 0.55); }
-  p.glowPoly([[200, 0], [214, 0], [150, 180], [136, 180]], '#ffffff', 0.03);
+  p.glowPoly([[200, 0], [214, 0], [150, 180], [136, 180]], '#ebe6d8', 0.03);
   return p;
 }
 // far towers in the haze, slow: thin, lit windows, the CH 07 mast with its red light
@@ -193,7 +193,7 @@ export function paintMid(width) {
   for (let x = 0; x < width;) {
     const w = 30 + Math.floor(r() * 40), top = 62 + Math.floor(r() * 46);
     p.rect(x, top, w, 180 - top, M.midLo); p.rect(x, top, w, 2, M.mid); p.rect(x + w - 2, top, 2, 180 - top, M.floorLo);
-    for (let y = top + 6; y < 160; y += 9) { p.rect(x + 3, y, w - 6, 1, M.mid); for (let xx = x + 5; xx < x + w - 5; xx += 6) p.rect(xx, y + 2, 3, 4, r() < 0.3 ? '#e9dcc4' : M.roomLo); }
+    for (let y = top + 6; y < 160; y += 9) { p.rect(x + 3, y, w - 6, 1, M.mid); for (let xx = x + 5; xx < x + w - 5; xx += 6) p.rect(xx, y + 2, 3, 4, r() < 0.3 ? '#ebe6d8' : M.roomLo); }
     if (r() < 0.4) { const bw = Math.min(w - 8, 30); p.rect(x + 4, top - 18, bw, 14, M.bezel); p.rect(x + 5, top - 17, bw - 2, 12, [M.pink, M.purple, M.blue][Math.floor(r() * 3)]); ptext(p, ['CH 07', 'VOTE', 'LIVE', 'ROUND 2'][Math.floor(r() * 4)], x + 7, top - 13, M.white); }
     x += w + 4 + Math.floor(r() * 14);
   }
@@ -201,7 +201,7 @@ export function paintMid(width) {
   p.rect(0, 70, width, 3, M.wallLo); p.rect(0, 70, width, 1, M.wallHi);
   for (let x = 20; x < width; x += 90) { p.rect(x, 73, 4, 107, M.midLo); p.rect(x - 2, 73, 8, 2, M.wallLo); }
   // haze: the middle distance sits back behind the street
-  p.glowRect(0, 0, width, 180, '#262a4d', 0.28); p.glowRect(0, 120, width, 60, '#e8e5f1', 0.14);
+  p.glowRect(0, 0, width, 180, '#2e3036', 0.28); p.glowRect(0, 120, width, 60, '#ebe6d8', 0.14);
   return p;
 }
 
@@ -211,10 +211,10 @@ function lamp(p, x) {
   p.softGlow(x + 1, G - 53, 14, M.warm, 0.35); p.mark('lamp', x + 1, G - 53);
 }
 function bench(p, x) { p.rect(x, G - 10, 30, 3, M.trim); p.rect(x + 2, G - 7, 2, 7, M.trimLo); p.rect(x + 26, G - 7, 2, 7, M.trimLo); p.rect(x, G - 13, 30, 3, M.sofa); }
-function planter(p, x, r) { p.rect(x, G - 12, 12, 12, M.trim); p.rect(x + 1, G - 12, 10, 2, M.trimHi); for (let i = 0; i < 8; i++) p.ellipse(x + 6 + Math.round((r() - 0.5) * 12), G - 18 - Math.round(r() * 14), 3, 2, i % 2 ? '#5aa67a' : '#3f8a5f'); }
+function planter(p, x, r) { p.rect(x, G - 12, 12, 12, M.trim); p.rect(x + 1, G - 12, 10, 2, M.trimHi); for (let i = 0; i < 8; i++) p.ellipse(x + 6 + Math.round((r() - 0.5) * 12), G - 18 - Math.round(r() * 14), 3, 2, i % 2 ? '#8f8d87' : '#8f8d87'); }
 // the fountain, the twin of the one on the grounds: gold tiers, water that never stops
 function fountain(p, x) {
-  p.rect(x - 34, G - 12, 68, 12, M.trim); p.rect(x - 34, G - 12, 68, 2, M.trimHi); p.rect(x - 30, G - 10, 60, 6, '#8fd0f0');
+  p.rect(x - 34, G - 12, 68, 12, M.trim); p.rect(x - 34, G - 12, 68, 2, M.trimHi); p.rect(x - 30, G - 10, 60, 6, '#b8b2a3');
   p.rect(x - 3, G - 44, 6, 34, M.trimLo); p.rect(x - 16, G - 30, 32, 4, M.trim); p.rect(x - 16, G - 30, 32, 1, M.trimHi);
   p.rect(x - 9, G - 44, 18, 3, M.trim); p.circle(x, G - 48, 3, M.trimHi);
   p.mark('fountain', x, G - 48);
@@ -232,8 +232,8 @@ function exhibitDoor(p, A) {
   p.rect(A.x - 10, G - 4, A.w + 20, 4, M.trim); p.rect(A.x - 10, G - 4, A.w + 20, 1, M.trimHi);
   oddDoor(p, A, true);
   [A.x - 16, A.x + A.w + 14].forEach(x => { p.rect(x, G - 14, 2, 14, M.trimLo); p.circle(x + 1, G - 15, 1, M.trim); });
-  for (let i = 0; i <= 10; i++) p.px(A.x - 15 + i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#c23f78');
-  for (let i = 0; i <= 10; i++) p.px(A.x + A.w + 15 - i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#c23f78');
+  for (let i = 0; i <= 10; i++) p.px(A.x - 15 + i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#d6a03c');
+  for (let i = 0; i <= 10; i++) p.px(A.x + A.w + 15 - i * 2, G - 13 + Math.round(Math.sin(i / 10 * Math.PI) * 3), '#d6a03c');
 }
 // where the city stops being pretty: plain walls, a loading bay, pipes, the staff door
 function serviceEnd(p, x0, x1, D, r) {
@@ -242,8 +242,8 @@ function serviceEnd(p, x0, x1, D, r) {
   p.rect(x0, 56, x1 - x0, 3, M.serviceLo); p.rect(x0, 62, x1 - x0, 2, M.serviceLo);
   p.rect(x0 + 18, G - 44, 44, 44, M.serviceLo); for (let y = G - 42; y < G; y += 4) p.rect(x0 + 19, y, 42, 1, M.service);
   ptext(p, 'LOADING', x0 + 26, G - 52, M.serviceLo);
-  for (let i = 0; i < 3; i++) { const cx = x0 + 74 + i * 14; p.rect(cx, G - 12, 12, 12, '#6b5236'); p.rect(cx, G - 12, 12, 1, '#8d6d48'); }
-  p.rect(D.x - 3, D.y - 3, D.w + 6, D.h + 3, M.serviceLo); p.rect(D.x, D.y, D.w, D.h, '#6f6a83'); p.rect(D.x + 5, D.y + 6, 12, 8, M.wallHi); p.rect(D.x + D.w - 5, D.y + 18, 3, 2, '#9a95ad');
+  for (let i = 0; i < 3; i++) { const cx = x0 + 74 + i * 14; p.rect(cx, G - 12, 12, 12, '#54432a'); p.rect(cx, G - 12, 12, 1, '#8a5f1c'); }
+  p.rect(D.x - 3, D.y - 3, D.w + 6, D.h + 3, M.serviceLo); p.rect(D.x, D.y, D.w, D.h, '#6b6c70'); p.rect(D.x + 5, D.y + 6, 12, 8, M.wallHi); p.rect(D.x + D.w - 5, D.y + 18, 3, 2, '#8f8d87');
   p.rect(D.x - 4, D.y - 14, D.w + 8, 9, M.red); ptext(p, 'STAFF', D.x + 1, D.y - 12, M.white);
   p.rect(x1 - 24, 46, 6, 70, M.serviceLo); p.mark('steam', x1 - 21, 46);
 }
@@ -273,7 +273,7 @@ export function paintLevel(P, look) {
   p.rect(V.x + 8, V.y + 28, V.w - 16, 4, M.bezel); p.rect(V.x + 8, V.y + 28, Math.round((V.w - 16) * 0.62), 4, M.pink);
   ptext(p, 'THANKS FOR VOTING', mid('THANKS FOR VOTING'), V.y + 37, M.mint);
   p.mark('vote', V.x, V.y);
-  const LV = LEVEL.live; p.rect(LV.x + LV.w / 2 - 2, LV.y + LV.h, 4, G - LV.y - LV.h, M.trimLo); p.rect(LV.x - 3, LV.y - 3, LV.w + 6, LV.h + 6, M.bezel); p.rect(LV.x, LV.y, LV.w, LV.h, '#0d1226');
+  const LV = LEVEL.live; p.rect(LV.x + LV.w / 2 - 2, LV.y + LV.h, 4, G - LV.y - LV.h, M.trimLo); p.rect(LV.x - 3, LV.y - 3, LV.w + 6, LV.h + 6, M.bezel); p.rect(LV.x, LV.y, LV.w, LV.h, '#1b1c21');
   planter(p, 84 * T, r); bench(p, 92 * T);
   // the service end and the staff door
   serviceEnd(p, 96 * T, CW * T, LEVEL.door, r);
@@ -305,8 +305,8 @@ function paintPlayroom(p) {
   });
   // the couch the kids sit on, from behind
   const C = LEVEL.couch;
-  p.rect(C.x, C.y, C.w, C.h - 8, M.pink); p.rect(C.x, C.y, C.w, 2, '#ff8fc0'); p.rect(C.x - 6, C.y - 4, 8, C.h - 4, '#d94a88'); p.rect(C.x + C.w - 2, C.y - 4, 8, C.h - 4, '#d94a88');
-  p.rect(C.x, C.y + C.h - 8, C.w, 8, '#c23f78'); p.rect(C.x + 4, G - 2, 4, 2, M.trimLo); p.rect(C.x + C.w - 8, G - 2, 4, 2, M.trimLo);
+  p.rect(C.x, C.y, C.w, C.h - 8, M.pink); p.rect(C.x, C.y, C.w, 2, '#f2d58c'); p.rect(C.x - 6, C.y - 4, 8, C.h - 4, '#8a5f1c'); p.rect(C.x + C.w - 2, C.y - 4, 8, C.h - 4, '#8a5f1c');
+  p.rect(C.x, C.y + C.h - 8, C.w, 8, '#8a5f1c'); p.rect(C.x + 4, G - 2, 4, 2, M.trimLo); p.rect(C.x + C.w - 8, G - 2, 4, 2, M.trimLo);
 }
 
 // The two kids, painted per pose. Facing the screen (their backs to us), or turned to look at her.
@@ -337,14 +337,14 @@ export function paintRobot(led, step) {
 // The last shot: an old TV in a dark room on Earth. On the screen, the Moon.
 export function paintLastRoom() {
   const p = new Painter(320, 180);
-  p.rect(0, 0, 320, 180, '#07060c'); p.rect(0, 150, 320, 30, '#0d0b14');
-  p.line(160, 20, 138, 2, '#3a3442'); p.line(160, 20, 184, 4, '#3a3442'); // rabbit ears
-  p.rect(58, 20, 204, 126, '#2d2836'); p.rect(60, 22, 200, 2, '#463f52');
-  p.rect(70, 32, 150, 104, '#141119');
-  p.rect(228, 40, 22, 40, '#221e29'); for (let y = 42; y < 78; y += 3) p.rect(230, y, 18, 1, '#141119');
-  p.circle(239, 94, 5, '#463f52'); p.circle(239, 94, 2, '#141119'); p.circle(239, 112, 5, '#463f52'); p.circle(239, 112, 2, '#141119');
-  p.rect(96, 146, 128, 4, '#1b1722'); p.rect(84, 150, 152, 3, '#120f18');
-  p.rect(0, 164, 320, 16, '#030205'); p.ellipse(160, 166, 140, 5, '#030205');
+  p.rect(0, 0, 320, 180, '#000000'); p.rect(0, 150, 320, 30, '#0e0f12');
+  p.line(160, 20, 138, 2, '#2e3036'); p.line(160, 20, 184, 4, '#2e3036'); // rabbit ears
+  p.rect(58, 20, 204, 126, '#2e3036'); p.rect(60, 22, 200, 2, '#45474d');
+  p.rect(70, 32, 150, 104, '#0e0f12');
+  p.rect(228, 40, 22, 40, '#1b1c21'); for (let y = 42; y < 78; y += 3) p.rect(230, y, 18, 1, '#0e0f12');
+  p.circle(239, 94, 5, '#45474d'); p.circle(239, 94, 2, '#0e0f12'); p.circle(239, 112, 5, '#45474d'); p.circle(239, 112, 2, '#0e0f12');
+  p.rect(96, 146, 128, 4, '#1b1c21'); p.rect(84, 150, 152, 3, '#0e0f12');
+  p.rect(0, 164, 320, 16, '#000000'); p.ellipse(160, 166, 140, 5, '#000000');
   return p;
 }
 // what the old TV shows: the Moon, with the lit dome on its edge
@@ -366,10 +366,10 @@ export function paintTvMoon() {
 // glass; b: a man in a white suit; w: a waiter with a tray; c: a crew member on a break, in the
 // same coat as the creator, a cup in hand.
 const NPC = {
-  a: { hair: M.richHair, skin: M.rich, top: '#f2a7c8', topLo: '#d9789f', leg: '#d9789f', shoe: M.adult, long: true },
+  a: { hair: M.richHair, skin: M.rich, top: '#b8b2a3', topLo: '#8f8d87', leg: '#8f8d87', shoe: M.adult, long: true },
   b: { hair: M.richHair2, skin: M.rich, top: M.wallHi, topLo: M.wallLo, leg: M.wallLo, shoe: M.adult, tie: M.trim },
-  w: { hair: M.adult, skin: '#e0bf9f', top: M.wallHi, topLo: M.adult, leg: M.adult, shoe: '#121016', vest: M.adult },
-  c: { hair: '#5a4d4a', skin: '#e0bf9f', top: M.coat, topLo: '#262838', leg: '#262838', shoe: '#121016', long: true }
+  w: { hair: M.adult, skin: '#b8b2a3', top: M.wallHi, topLo: M.adult, leg: M.adult, shoe: '#0e0f12', vest: M.adult },
+  c: { hair: '#45474d', skin: '#b8b2a3', top: M.coat, topLo: '#2e3036', leg: '#2e3036', shoe: '#0e0f12', long: true }
 };
 export function paintNpc(kind, step) {
   const c = NPC[kind], p = new Painter(12, 24);
@@ -388,6 +388,6 @@ export function paintNpc(kind, step) {
   // what they carry
   if (kind === 'a') { p.rect(10, 9, 1, 4, c.top); p.rect(10, 6, 2, 3, M.white); p.px(10, 7, M.pink); }
   if (kind === 'w') { p.rect(9, 10, 3, 1, M.trim); p.rect(10, 7, 1, 3, M.white); p.rect(8, 11, 2, 2, c.top); }
-  if (kind === 'c') { p.rect(9, 11, 2, 3, M.white); p.px(10, 10, '#c8c3d9'); }
+  if (kind === 'c') { p.rect(9, 11, 2, 3, M.white); p.px(10, 10, '#b8b2a3'); }
   return p;
 }

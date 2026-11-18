@@ -73,7 +73,7 @@ function paintKeeper(P) {
   p.rect(200, 120, 70, 4, P.wood); p.rect(200, 120, 70, 1, P.woodHi); p.rect(204, 124, 3, 36, P.wood); p.rect(263, 124, 3, 36, P.wood);
   for (let i = 0; i < 7; i++) { p.circle(208 + i * 8, 116, 3, P.glassLit); p.rect(207 + i * 8, 118, 3, 2, P.colLo); }
   p.rect(230, 140, 26, 20, P.wood); p.rect(232, 124, 22, 16, P.device);
-  ['#c8c8c8', '#d6c84a', '#4ac6d6', '#4ad65e', '#d64ad0', '#d64a4a', '#4a5ed6'].forEach((c, i) => p.rect(234 + i * 3, 126, 3, 9, c));
+  ['#b8b2a3', '#f5ce77', '#b8b2a3', '#f2d58c', '#6b6c70', '#e3412b', '#6b6c70'].forEach((c, i) => p.rect(234 + i * 3, 126, 3, 9, c));
   p.rect(234, 135, 18, 3, P.void); p.mark('tv', 243, 136);
   // a crew coat on a hook, a pass on a lanyard
   p.rect(290, 44, 3, 3, P.device); p.poly([[284, 48], [298, 48], [302, 96], [280, 96]], P.fabricLo); p.rect(288, 50, 1, 40, P.fabric);
@@ -97,7 +97,7 @@ function paintWorkshop(P) {
   // a bench with a tray of cracked glasses and a lamp on an arm
   p.rect(48, 118, 92, 4, P.wood); p.rect(48, 118, 92, 1, P.woodHi); p.rect(52, 122, 3, 38, P.wood); p.rect(133, 122, 3, 38, P.wood);
   p.rect(58, 112, 40, 6, P.device); p.rect(59, 113, 38, 4, P.wallLine);
-  for (let i = 0; i < 8; i++) { const x = 61 + (i % 4) * 9, y = 113 + Math.floor(i / 4) * 2; p.rect(x, y, 3, 1, P.overlay); p.rect(x + 4, y, 3, 1, P.overlay); if (i % 3 === 0) p.px(x + 1, y, '#ffffff'); }
+  for (let i = 0; i < 8; i++) { const x = 61 + (i % 4) * 9, y = 113 + Math.floor(i / 4) * 2; p.rect(x, y, 3, 1, P.overlay); p.rect(x + 4, y, 3, 1, P.overlay); if (i % 3 === 0) p.px(x + 1, y, '#ebe6d8'); }
   p.rect(108, 96, 2, 22, P.device); p.rect(108, 96, 14, 2, P.device); p.rect(118, 98, 8, 4, P.colLo); p.glowPoly([[116, 102], [128, 102], [136, 118], [104, 118]], P.lamp, 0.12);
   // a beam on two sawhorses, sawn halfway through
   p.rect(160, 128, 92, 8, P.wood); p.rect(160, 128, 92, 1, P.woodHi); p.rect(204, 128, 2, 4, P.void); p.px(205, 132, P.dust); p.px(203, 133, P.dust);

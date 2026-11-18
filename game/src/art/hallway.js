@@ -11,12 +11,12 @@ export const TILE = 16, GROUND = 160;
 const T = TILE, G = GROUND;
 
 export const H = {
-  wall: '#2b2836', wallHi: '#3b3747', wallLo: '#1d1b25', panel: '#312d3d', floor: '#3a3546', floorHi: '#4d475c', floorLo: '#25222e',
-  pipe: '#5e5872', pipeHi: '#8d87a3', pipeLo: '#3e3a4d', cable: '#121016', tape: '#ffd23f', tapeLo: '#b8951f', work: '#ffe6b0',
-  steel: '#6f6a83', steelHi: '#9a95ad', steelLo: '#4a4659', ply: '#8a7356', plyHi: '#a88e6c', plyLo: '#5f4e3a',
-  crate: '#6b5236', crateHi: '#8d6d48', crateLo: '#47361f', screen: '#0a0e1c', glow: '#9fd0ff', red: '#ff3b3b', sand: '#7d6a55',
-  coat: '#3a3d55', coatHi: '#555a7c', coatLo: '#262838', skin: '#e0bf9f', skinLo: '#b38d73', hair: '#5a4d4a', hairHi: '#7d6e69',
-  band: '#1a1a22', blade: '#e9e7f5', bladeLo: '#9a97ad', gold: '#d6b25a', lanyard: '#ffd23f', badge: '#f4f2fb', glasses: '#4ae8ff'
+  wall: '#2e3036', wallHi: '#45474d', wallLo: '#1b1c21', panel: '#2e3036', floor: '#45474d', floorHi: '#6b6c70', floorLo: '#1b1c21',
+  pipe: '#6b6c70', pipeHi: '#8f8d87', pipeLo: '#45474d', cable: '#0e0f12', tape: '#d6a03c', tapeLo: '#8a5f1c', work: '#f2d58c',
+  steel: '#6b6c70', steelHi: '#8f8d87', steelLo: '#45474d', ply: '#54432a', plyHi: '#8a5f1c', plyLo: '#3a2f1f',
+  crate: '#3a2f1f', crateHi: '#54432a', crateLo: '#261f15', screen: '#0e0f12', glow: '#f5ce77', red: '#e3412b', sand: '#8f8d87',
+  coat: '#2e3036', coatHi: '#45474d', coatLo: '#1b1c21', skin: '#ebe6d8', skinLo: '#b8b2a3', hair: '#1b1c21', hairHi: '#45474d',
+  band: '#0e0f12', blade: '#ebe6d8', bladeLo: '#b8b2a3', gold: '#d6a03c', lanyard: '#d6a03c', badge: '#ebe6d8', glasses: '#e3412b'
 };
 
 export const ARENA = { x0: 20 * T, x1: 40 * T };
@@ -97,7 +97,7 @@ export function paintLevel() {
   // the continuity board: rows of photos, the same rooms over and over
   const bx = 12 * T + 6; p.rect(bx, 64, 40, 40, H.crateLo); p.rect(bx + 1, 65, 38, 38, H.sand);
   ptext(p, 'CONTINUITY', bx + 1, 57, H.steelHi);
-  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const x = bx + 3 + i * 9, y = 67 + j * 9; p.rect(x, y, 7, 7, H.badge); p.rect(x + 1, y + 1, 5, 4, j % 2 ? '#2a0f1c' : '#0f1735'); if ((i + j) % 2 === 0) p.rect(x + 2, y + 4, 3, 1, H.badge); p.px(x + 3, y - 1, H.red); }
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const x = bx + 3 + i * 9, y = 67 + j * 9; p.rect(x, y, 7, 7, H.badge); p.rect(x + 1, y + 1, 5, 4, j % 2 ? '#1b1c21' : '#2e3036'); if ((i + j) % 2 === 0) p.rect(x + 2, y + 4, 3, 1, H.badge); p.px(x + 3, y - 1, H.red); }
   // six feeds on a stand; one of them is this hallway
   const mx = 16 * T + 2;
   p.rect(mx + 18, 100, 4, G - 100, H.steelLo); p.rect(mx + 8, G - 3, 24, 3, H.steelLo);
@@ -114,7 +114,7 @@ export function paintLevel() {
   p.rect(20 * T, G + 2, 20 * T, 1, H.tape); p.rect(20 * T, G + 17, 20 * T, 1, H.tapeLo);
   [[25 * T, 'x'], [31 * T, 'x'], [37 * T, 'x']].forEach(([x]) => { p.line(x - 3, G + 6, x + 3, G + 12, H.tape); p.line(x + 3, G + 6, x - 3, G + 12, H.tape); });
   // ON AIR over the stage, lit live while the cameras roll (drawn by the scene)
-  p.rect(30 * T - 14, 36, 36, 11, H.band); p.rect(30 * T - 13, 37, 34, 9, '#3a1416'); p.mark('onair', 30 * T - 13, 37);
+  p.rect(30 * T - 14, 36, 36, 11, H.band); p.rect(30 * T - 13, 37, 34, 9, '#261f15'); p.mark('onair', 30 * T - 13, 37);
   // cable on the floor, coiled, and a ladder against a flat
   for (let i = 0; i < 3; i++) p.ellipse(27 * T, G - 2, 7 - i * 2, 2, H.cable);
   p.rect(38 * T, 72, 2, G - 72, H.steelLo); p.rect(38 * T + 10, 72, 2, G - 72, H.steelLo); for (let y = 78; y < G; y += 10) p.rect(38 * T, y, 12, 1, H.steelLo);
@@ -123,9 +123,9 @@ export function paintLevel() {
   // the console desk: a table with legs, the satellite screen, a red button
   const D = LEVEL.desk;
   p.rect(D.x, D.y, D.w, D.h, H.steel); p.rect(D.x, D.y, D.w, 1, H.steelHi); p.rect(D.x + 2, D.y + D.h, 2, G - D.y - D.h, H.steelLo); p.rect(D.x + D.w - 4, D.y + D.h, 2, G - D.y - D.h, H.steelLo);
-  p.rect(D.x + 6, D.y - 16, 22, 15, M.bezel); p.rect(D.x + 7, D.y - 15, 20, 13, '#1d3a2c');
-  for (let i = 0; i < 3; i++) p.rect(D.x + 9, D.y - 13 + i * 4, 10 + (i % 2) * 4, 1, '#6bff9d');
-  p.rect(D.x + 22, D.y - 11, 3, 3, '#ffb000'); p.mark('console', D.x + 17, D.y - 9);
+  p.rect(D.x + 6, D.y - 16, 22, 15, M.bezel); p.rect(D.x + 7, D.y - 15, 20, 13, '#1b1c21');
+  for (let i = 0; i < 3; i++) p.rect(D.x + 9, D.y - 13 + i * 4, 10 + (i % 2) * 4, 1, '#f5ce77');
+  p.rect(D.x + 22, D.y - 11, 3, 3, '#d6a03c'); p.mark('console', D.x + 17, D.y - 9);
   p.rect(D.x + 32, D.y - 3, 6, 3, H.steelLo); p.rect(D.x + 33, D.y - 4, 4, 2, H.red);
   // the rigs on the grid: a searchlight, two cameras, laser emitters on the walls
   const L = LEVEL.lamp; p.rect(L.x - 5, 14, 10, 4, H.steelLo); p.rect(L.x - 3, 18, 6, 4, H.steel);
@@ -138,7 +138,7 @@ export function paintLevel() {
   // the playroom door: round-topped, pink, a gold star
   const Dd = LEVEL.door, mid = Dd.x + Dd.w / 2;
   p.circle(mid, Dd.y + 8, Dd.w / 2 + 3, M.trim); p.rect(Dd.x - 3, Dd.y + 8, Dd.w + 6, Dd.h - 8, M.trim);
-  p.circle(mid, Dd.y + 8, Dd.w / 2, M.pink); p.rect(Dd.x, Dd.y + 8, Dd.w, Dd.h - 8, M.pink); p.rect(mid, Dd.y - 3, 1, Dd.h + 3, '#d94a88');
+  p.circle(mid, Dd.y + 8, Dd.w / 2, M.pink); p.rect(Dd.x, Dd.y + 8, Dd.w, Dd.h - 8, M.pink); p.rect(mid, Dd.y - 3, 1, Dd.h + 3, '#8a5f1c');
   p.poly([[mid, Dd.y + 3], [mid + 3, Dd.y + 9], [mid + 9, Dd.y + 9], [mid + 4, Dd.y + 13], [mid + 6, Dd.y + 19], [mid, Dd.y + 15], [mid - 6, Dd.y + 19], [mid - 4, Dd.y + 13], [mid - 9, Dd.y + 9], [mid - 3, Dd.y + 9]], M.yellow);
   ptext(p, 'PLAYROOM', mid - 15, Dd.y - 16, M.trim);
   return p;

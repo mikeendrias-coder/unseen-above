@@ -134,7 +134,7 @@ export class SatelliteStrike {
         s.paths.forEach(p => {
           const head = p.L * u;
           this.span(g, p, 0, head, 3, red, 0.4); this.span(c, p, 0, head, 1, white, 1);
-          const h = this.at(p, head); c.fillStyle(0xffffff, 1); c.fillRect(Math.round(h.x) - 1, Math.round(h.y) - 1, 2, 2);
+          const h = this.at(p, head); c.fillStyle(0xebe6d8, 1); c.fillRect(Math.round(h.x) - 1, Math.round(h.y) - 1, 2, 2);
           while (p.passed < p.pts.length - 2 && head >= p.cum[p.passed + 1]) { p.passed++; const v = p.pts[p.passed]; if (v.k) { this.spark(v.x, v.y, 6, 70, [white, red]); if (this.sound) Sound.tone(3200 - p.passed * 300, 0.035, 'square', 0.012); } else if (p.passed % 6 === 0) this.spark(v.x, v.y, 1, 20, [red]); }
         });
         // a lock box closes on her while the beam is on its way

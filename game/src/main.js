@@ -128,15 +128,15 @@ Sound.volume('music', state.settings.music); Sound.volume('sfx', state.settings.
 const saved = () => { const st = STEPS.find(s => s.id === state.reached); return st && st.id !== 'intro' ? st : null; };
 function syncGuide() {
   const st = saved();
-  if (cont) { cont.hidden = !st; const at = cont.querySelector('span'); if (at && st) at.textContent = st.label; }
-  if (go) { go.classList.toggle('second', !!st); go.firstChild.textContent = st ? 'FROM THE START' : 'BEGIN'; }
-  if (optStory) { optStory.setAttribute('aria-pressed', state.immune ? 'true' : 'false'); optStory.querySelector('i').textContent = state.immune ? 'ON' : 'OFF'; }
-  if (optFlash) { const r = !!state.settings.reduceFlash; optFlash.setAttribute('aria-pressed', r ? 'true' : 'false'); optFlash.querySelector('i').textContent = r ? 'REDUCED' : 'FULL'; }
+  if (cont) { cont.hidden = !st; const at = cont.querySelector('i'); if (at && st) at.textContent = st.label; }
+  if (go) { go.classList.toggle('second', !!st); go.firstChild.textContent = st ? 'From the start' : 'Begin'; }
+  if (optStory) { optStory.setAttribute('aria-pressed', state.immune ? 'true' : 'false'); optStory.querySelector('i').textContent = state.immune ? 'on' : 'off'; }
+  if (optFlash) { const r = !!state.settings.reduceFlash; optFlash.setAttribute('aria-pressed', r ? 'true' : 'false'); optFlash.querySelector('i').textContent = r ? 'reduced' : 'full'; }
 }
 const begin = entry => {
   if (playing) return;
   playing = true; stopPicker();
-  if (tv) tv.hidden = true;
+  if (tv) tv.hidden = true; const note = document.getElementById('tv-note'); if (note) note.hidden = true;
   Sound.ensure();
   if (!game) { start(entry); return; }
   showGame(true);

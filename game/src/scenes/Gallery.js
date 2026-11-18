@@ -43,7 +43,7 @@ export class Gallery extends SideEpisode {
     this.sparkle = this.add.particles(0, 0, 'sparkle', { lifespan: 520, scale: { start: 0.2, end: 1, ease: 'Sine.easeOut' }, alpha: { start: 1, end: 0 }, emitting: false, blendMode: 'ADD' }).setDepth(6);
     const H = LEVEL.hole;
     this.add.particles(0, 0, 'dot', { x: { min: H.x0 - 4, max: H.x1 + 24 }, y: { min: 18, max: 150 }, speedY: { min: 1, max: 5 }, speedX: { min: -2, max: 3 }, lifespan: 6000, frequency: 90, alpha: { values: [0, 0.55, 0.5, 0], interpolation: 'linear' }, tint: [hexNum(P.shaft), hexNum(flat(P.dust))], blendMode: 'ADD' }).setDepth(5);
-    this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 18, max: 55 }, angle: { min: 20, max: 160 }, gravityY: 260, lifespan: { min: 300, max: 700 }, tint: [hexNum(P.lamp), 0xffffff], emitting: false, blendMode: 'ADD' }).setDepth(6);
+    this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 18, max: 55 }, angle: { min: 20, max: 160 }, gravityY: 260, lifespan: { min: 300, max: 700 }, tint: [hexNum(P.lamp), 0xebe6d8], emitting: false, blendMode: 'ADD' }).setDepth(6);
 
     this.glasses = false; this.hudT = 0; this.sparkT = 0; this.zapT = 2;
     this.gl = new Glasses({ has: false });
@@ -87,7 +87,7 @@ export class Gallery extends SideEpisode {
       p.rect(0, 4, 12, 1, P.device); p.rect(1, 5, 10, 1, P.device); p.px(step ? 3 : 2, 6, P.crack); p.px(step ? 8 : 9, 6, P.crack);
     });
     robot('robot_a', P.robotLed, 0); robot('robot_b', P.robot, 1); robot('robot_c', P.overlay, 0);
-    add('glasses', 9, 3, p => { p.rect(0, 0, 4, 2, P.overlay); p.rect(5, 0, 4, 2, P.overlay); p.px(4, 0, P.device); p.px(1, 0, '#ffffff'); p.px(6, 0, '#ffffff'); p.rect(0, 2, 9, 1, P.device); });
+    add('glasses', 9, 3, p => { p.rect(0, 0, 4, 2, P.overlay); p.rect(5, 0, 4, 2, P.overlay); p.px(4, 0, P.device); p.px(1, 0, '#ebe6d8'); p.px(6, 0, '#ebe6d8'); p.rect(0, 2, 9, 1, P.device); });
   }
 
   update(time, delta) {
@@ -213,7 +213,7 @@ export class Gallery extends SideEpisode {
   }
   robotStyle() {
     // machines speak in caption cyan, in every look
-    return { ink: 0x4ae8ff, pitch: 1180, leave: 64 };
+    return { ink: 0xebe6d8, pitch: 1180, leave: 64 };
   }
   robotSay(text) { this.bubbles.say('robot', text, () => ({ x: this.robot.x, y: GROUND - 8 }), Object.assign(this.robotStyle(), { leave: 200 })); }
   robotTalk() {

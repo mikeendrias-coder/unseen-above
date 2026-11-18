@@ -37,6 +37,6 @@ export function makeSprites(scene, P) {
   });
   drone('drone_a', true); drone('drone_b', false);
   add('sparkle', 5, 5, p => { p.px(2, 0, P.goldHi); p.px(2, 4, P.goldHi); p.px(0, 2, P.goldHi); p.px(4, 2, P.goldHi); p.rect(1, 2, 3, 1, P.glint); p.rect(2, 1, 1, 3, P.glint); });
-  add('dot', 1, 1, p => p.px(0, 0, '#ffffff'));
-  add('dot2', 2, 2, p => p.rect(0, 0, 2, 2, '#ffffff'));
+  add('dot', 1, 1, p => p.px(0, 0, '#ebe6d8'));
+  add('dot2', 2, 2, p => p.rect(0, 0, 2, 2, '#ebe6d8'));
 }

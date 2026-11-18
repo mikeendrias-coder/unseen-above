@@ -53,7 +53,7 @@ export class Hallway extends SideEpisode {
     this.darkImg = this.add.image(0, 0, 'hw_dark').setOrigin(0).setDepth(5.6).setVisible(false);
     this.flashG = this.add.graphics().setDepth(5.7).setBlendMode(Phaser.BlendModes.ADD);
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
-    this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 30, max: 90 }, angle: { min: 200, max: 340 }, gravityY: 300, lifespan: { min: 200, max: 450 }, tint: [0xffffff, n(H.work)], emitting: false, blendMode: 'ADD' }).setDepth(7);
+    this.sparks = this.add.particles(0, 0, 'dot', { speed: { min: 30, max: 90 }, angle: { min: 200, max: 340 }, gravityY: 300, lifespan: { min: 200, max: 450 }, tint: [0xebe6d8, n(H.work)], emitting: false, blendMode: 'ADD' }).setDepth(7);
 
     this.gl = new Glasses({ has: true, on: false, cracked: true });
     this.view = { x: 0 };
@@ -344,7 +344,7 @@ export class Hallway extends SideEpisode {
     const c = this.cr;
     this.crImg.setTexture('cr_' + c.pose).setPosition(Math.round(c.x), G).setFlipX(c.face < 0);
     // a white flash on the frame a hit lands
-    if (c.flash > 0) this.crImg.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL); else this.crImg.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();
+    if (c.flash > 0) this.crImg.setTint(0xebe6d8).setTintMode(Phaser.TintModes.FILL); else this.crImg.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();
   }
   // where the creator's blade is this frame: [x0, y0, x1, y1]
   blade() {
@@ -522,14 +522,14 @@ export class Hallway extends SideEpisode {
     const SH = LEVEL.shutter, up = this.shutterOpen || 0, sh = Math.round((G - 34) * (1 - up));
     g.fillStyle(n(H.steel), 1); g.fillRect(SH.x, 34, SH.w, sh); for (let y = 36; y < 34 + sh; y += 4) { g.fillStyle(n(H.steelLo), 1); g.fillRect(SH.x, y, SH.w, 1); }
     // the console's screen glows; the satellite on it moves
-    const D = LEVEL.desk; g.fillStyle(n('#6bff9d'), 0.5 + 0.3 * Math.sin(t * 3)); g.fillRect(D.x + 9 + Math.round((t * 8) % 14), D.y - 6, 2, 1);
+    const D = LEVEL.desk; g.fillStyle(n('#f5ce77'), 0.5 + 0.3 * Math.sin(t * 3)); g.fillRect(D.x + 9 + Math.round((t * 8) % 14), D.y - 6, 2, 1);
     // ON AIR, lit while the cameras roll
     const onAir = this.mode === 'toss' || this.mode === 'fight' || this.mode === 'between' || (this.mode === 'yield' && this.cr.tally);
-    if (onAir) { g.fillStyle(n(H.red), 0.95); g.fillRect(30 * T - 13, 37, 34, 9); pixText(g, 'ON AIR', 30 * T - 10, 39, 0xffffff); }
-    else pixText(g, 'ON AIR', 30 * T - 10, 39, n('#5a2a2c'));
+    if (onAir) { g.fillStyle(n(H.red), 0.95); g.fillRect(30 * T - 13, 37, 34, 9); pixText(g, 'ON AIR', 30 * T - 10, 39, 0xebe6d8); }
+    else pixText(g, 'ON AIR', 30 * T - 10, 39, n('#3a2f1f'));
     // the sword on the floor, or in the air
     const s = this.sword;
-    if (s.floor) { g.fillStyle(n(H.blade), 1); g.fillRect(s.floor.x - 7, G - 2, 13, 1); g.fillStyle(n(H.bladeLo), 1); g.fillRect(s.floor.x - 7, G - 1, 13, 1); g.fillStyle(n(H.gold), 1); g.fillRect(s.floor.x + 6, G - 3, 1, 3); g.fillRect(s.floor.x + 7, G - 2, 3, 1); if (Math.floor(t * 3) % 3 === 0) { g.fillStyle(0xffffff, 1); g.fillRect(s.floor.x - 3, G - 3, 1, 1); } }
+    if (s.floor) { g.fillStyle(n(H.blade), 1); g.fillRect(s.floor.x - 7, G - 2, 13, 1); g.fillStyle(n(H.bladeLo), 1); g.fillRect(s.floor.x - 7, G - 1, 13, 1); g.fillStyle(n(H.gold), 1); g.fillRect(s.floor.x + 6, G - 3, 1, 3); g.fillRect(s.floor.x + 7, G - 2, 3, 1); if (Math.floor(t * 3) % 3 === 0) { g.fillStyle(0xebe6d8, 1); g.fillRect(s.floor.x - 3, G - 3, 1, 1); } }
     const a = this.armG; a.clear();
     if (s.fly) {
       const f = s.fly, u = Math.min(1, f.t / 0.7), x = f.sx + (f.ex - f.sx) * u, y = f.sy + (G - 2 - f.sy) * u - Math.sin(u * Math.PI) * 34, r = u * Math.PI * 5;
@@ -543,11 +543,11 @@ export class Hallway extends SideEpisode {
       a.lineStyle(1, n(H.blade), 1); a.lineBetween(b.hx, b.hy, b.tx, b.ty);
       a.fillStyle(n(H.gold), 1); a.fillRect(Math.round(b.hx) - 1, Math.round(b.hy), 3, 1);
       // a glint at the tip while they wind up: high or low
-      if ((c.st === 'windHi' || c.st === 'windLo' || c.st === 'raise') && Math.floor(t * 12) % 2 === 0) { a.fillStyle(0xffffff, 1); a.fillRect(Math.round(b.tx) - 1, Math.round(b.ty) - 1, 2, 2); }
+      if ((c.st === 'windHi' || c.st === 'windLo' || c.st === 'raise') && Math.floor(t * 12) % 2 === 0) { a.fillStyle(0xebe6d8, 1); a.fillRect(Math.round(b.tx) - 1, Math.round(b.ty) - 1, 2, 2); }
     } else { a.fillStyle(n(H.blade), 1); a.fillRect(c.x + 4, G - 1, 14, 1); }
     // the red light on the creator's headset: on air
     { const hd = POSES[c.pose].head, lx = Math.round(c.face > 0 ? c.x - 7 + hd[0] : c.x - 7 + 13 - hd[0]), ly = G - 26 + hd[1] + 4;
-      if (c.tally) { a.fillStyle(n(H.red), 0.25); a.fillRect(lx - 1, ly - 1, 3, 3); a.fillStyle(0xffd0d0, 1); a.fillRect(lx, ly, 1, 1); } else { a.fillStyle(n(H.band), 1); a.fillRect(lx, ly, 1, 1); } }
+      if (c.tally) { a.fillStyle(n(H.red), 0.25); a.fillRect(lx - 1, ly - 1, 3, 3); a.fillStyle(0xebe6d8, 1); a.fillRect(lx, ly, 1, 1); } else { a.fillStyle(n(H.band), 1); a.fillRect(lx, ly, 1, 1); } }
     // her sword: held up and forward, or mid swing with a trail
     if (s.have && this.girl.visible && !this.dead) {
       const cx = k.x + k.w / 2 + k.face * 2, cy = k.y + (k.crouch ? 4 : 7);
@@ -555,7 +555,7 @@ export class Hallway extends SideEpisode {
       const r = (k.face > 0 ? ang : 180 - ang) * Math.PI / 180, tx = cx + Math.cos(r) * 10, ty = cy + Math.sin(r) * 10;
       a.lineStyle(1, n(H.blade), 1); a.lineBetween(cx, cy, tx, ty);
       a.fillStyle(n(H.gold), 1); a.fillRect(Math.round(cx) - 1, Math.round(cy), 2, 1);
-      if (s.swing >= 0 && s.swing < 0.18) for (let i = 1; i <= 3; i++) { const aa = -120 + Math.min(1, Math.max(0, s.swing - i * 0.02) / 0.14) * 150, rr = (k.face > 0 ? aa : 180 - aa) * Math.PI / 180; a.lineStyle(1, 0xffffff, 0.5 / i); a.lineBetween(cx + Math.cos(rr) * 5, cy + Math.sin(rr) * 5, cx + Math.cos(rr) * 12, cy + Math.sin(rr) * 12); }
+      if (s.swing >= 0 && s.swing < 0.18) for (let i = 1; i <= 3; i++) { const aa = -120 + Math.min(1, Math.max(0, s.swing - i * 0.02) / 0.14) * 150, rr = (k.face > 0 ? aa : 180 - aa) * Math.PI / 180; a.lineStyle(1, 0xebe6d8, 0.5 / i); a.lineBetween(cx + Math.cos(rr) * 5, cy + Math.sin(rr) * 5, cx + Math.cos(rr) * 12, cy + Math.sin(rr) * 12); }
     }
     this.drawTraps(t);
     this.drawDarkness();
@@ -589,7 +589,7 @@ export class Hallway extends SideEpisode {
       if (cm.cone && cm.warn && seeing) { const blink = Math.floor(t * 16) % 2 === 0; tg.fillStyle(red, blink ? 0.12 : 0.05); tg.fillPoints(cm.cone, true); }
       const ledOn = cm.warn ? Math.floor(t * 16) % 2 === 0 : Math.floor(t * 1.5) % 2 === 0;
       if (ledOn) { tg.fillStyle(red, 1); tg.fillRect(cm.x - 3, cm.y - 2, 1, 1); }
-      if (cm.flash > 0 && cm.cone) { g.fillStyle(0xffffff, 0.5 * cm.flash * fx.level * (cm.lit == null ? 1 : cm.lit)); g.fillPoints(cm.cone, true); g.fillStyle(0xffffff, cm.flash); g.fillCircle(cm.x, cm.y + 2, 3); }
+      if (cm.flash > 0 && cm.cone) { g.fillStyle(0xebe6d8, 0.5 * cm.flash * fx.level * (cm.lit == null ? 1 : cm.lit)); g.fillPoints(cm.cone, true); g.fillStyle(0xebe6d8, cm.flash); g.fillCircle(cm.x, cm.y + 2, 3); }
     });
   }
   drawLock() {
@@ -619,9 +619,9 @@ export class Hallway extends SideEpisode {
     if (this.gl.on) this.gl.drawStatic(g, col);
     if (this.mode === 'fight' || this.mode === 'between' || this.mode === 'toss') {
       const c = this.cr, tag = 'CREATOR', tw = ccWidth(tag) + 8, x = 160 - Math.round((tw + 9 * 6 + 6) / 2), y = 6;
-      ccBox(g, x, y, tw, 11, 0xff4d5e, 1); ccText(g, tag, x + 4, y + 2, 0xffffff);
+      ccBox(g, x, y, tw, 11, 0xe3412b, 1); ccText(g, tag, x + 4, y + 2, 0xebe6d8);
       ccBox(g, x + tw, y, 9 * 6 + 6, 11, 0x000000, 0.85);
-      for (let i = 0; i < HP; i++) { g.fillStyle(0xffffff, i < c.hp ? (c.flash > 0 && i === c.hp ? 1 : 0.95) : 0.18); g.fillRect(x + tw + 4 + i * 6, y + 3, 4, 5); }
+      for (let i = 0; i < HP; i++) { g.fillStyle(0xebe6d8, i < c.hp ? (c.flash > 0 && i === c.hp ? 1 : 0.95) : 0.18); g.fillRect(x + tw + 4 + i * 6, y + 3, 4, 5); }
     }
   }
 

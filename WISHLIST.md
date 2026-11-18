@@ -7,9 +7,13 @@ Nothing comes off this list until Michael has seen it done.
 Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (built, Michael has not seen it) · `done` (Michael approved)
 
 ## 1. One aesthetic (first, blocks the rest of the art)
-- `deciding` **One look for the whole game.** The start screen (TV guide web page), the opening (smooth high-res art) and the episodes (320 x 180 pixels) are three different styles today. Michael wants something new, not one of the three. (Nov 17)
+- `doing` **One look for the whole game.** DECIDED Nov 17: A, Ash and Gold (grey ash world, only wealth in gold and warm light, only watchers in red), plus B's amber tracking box shown only when the satellite locks on to her. Captions stay in the pixel font for now. The start screen (TV guide web page), the opening (smooth high-res art) and the episodes (320 x 180 pixels) are three different styles today. Michael wants something new, not one of the three. (Nov 17)
   - Three directions drawn for him to pick from: A Ash and Gold, B Camera Feed, C Paper Stage. Mockup page: https://claude.ai/artifact/MHr3oU9nmzQNWKtHHWpVog (source: ~/Developer/unseen-above-archive/looks-mockup-template.html), Nov 17.
-- `todo` **Lock one palette.** The five player-chosen looks go away. (Nov 17)
+- `done, check` **Lock one palette.** The five player-chosen looks go away. (Nov 17)
+  - Nov 17: art/palettes.js is one look (Ash and Gold, 17 colors + the amber). L does nothing now. Every Earth episode, the Moon city, backstage, the playroom, captions, how-to pages and glasses HUD snapped to the palette.
+- `done, check` **Title screen and opening in the one look.** (Nov 17) The start screen is the opening's first frame in pixels (art/title.js) with the menu over it; Begin starts the film from that picture. The opening is rewritten as a pixel scene: same lines, sounds and timing, the drone show, searchlights, the amber lock-on box on her when the show's camera finds her.
+- `todo` **Kids' room cinematic** is still the old smooth high-res style (scenes/Kids.js, art/cinema.js). Rewrite in pixels next.
+- `todo` **Story check for Michael:** the Moon still has a "Tonight's look" vote board and the little kid names her look. With one locked look, keep the vote as lore, or cut it?
 - `todo` **Satellite screens keep their four-step change** (terminal, ground station, flat map, game show), redrawn in the chosen look's grid and type. (Nov 17)
 - `todo` **Captions get their own space.** A reserved strip outside the play area; captions never sit on top of the game. (Nov 17)
 

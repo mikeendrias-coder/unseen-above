@@ -299,7 +299,7 @@ export class TopDownEpisode extends Phaser.Scene {
   }
   drawNoise(g, dt) {
     this.noises.forEach(n => n.t += dt); this.noises = this.noises.filter(n => n.t < 0.7);
-    this.noises.forEach(n => { const u = n.t / 0.7; g.lineStyle(1, 0xffffff, 0.55 * (1 - u)); g.strokeCircle(n.x * T + 8, n.y * T + 8, 4 + u * n.r * T); });
+    this.noises.forEach(n => { const u = n.t / 0.7; g.lineStyle(1, 0xebe6d8, 0.55 * (1 - u)); g.strokeCircle(n.x * T + 8, n.y * T + 8, 4 + u * n.r * T); });
   }
   // the satellite slides in at the top of the view while anything locks on
   drawSatellite(g, glowG) {

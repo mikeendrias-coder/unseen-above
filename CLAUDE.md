@@ -13,6 +13,7 @@
 - Design must not look AI-generated or templated (no default display fonts, no stock gradients).
 
 ## Decisions so far
+- LOOK (Nov 17, replaces the five looks below): one locked palette, Ash and Gold (art/palettes.js ASH). Grey ash world; only wealth in gold/bronze/warm light; only watchers in red; amber only for the satellite/show lock-on box. No gradients or glows. Satellite screens keep their four-step progression. New colors must come from ASH.
 - Engine: Phaser 4.2.1 (open source). Not Phaser AE, not Phaser Editor.
 - Setting: a dead, ash-covered world; a perfectly untouched, over-the-top luxury mansion that decays the deeper you go; a bedroom at the center with a mismatched closet/bathroom door that opens onto a void.
 - Characters: an older brother and his younger sister (the player). The brother goes in for supplies; she follows. She finds him dying in the bedroom.

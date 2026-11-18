@@ -94,7 +94,7 @@ export class Fall extends SideEpisode {
     this.streakG = this.addParallax(this.add.graphics().setDepth(5.5), 0);
     this.blackG = this.addParallax(this.add.graphics().setDepth(15), 0);
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
-    this.dust = this.add.particles(0, 0, 'dot', { lifespan: 900, speedY: { min: 20, max: 60 }, speedX: { min: -10, max: 10 }, alpha: { start: 0.8, end: 0 }, tint: [hexNum(flat(P.dust)), 0xffffff], emitting: false }).setDepth(5);
+    this.dust = this.add.particles(0, 0, 'dot', { lifespan: 900, speedY: { min: 20, max: 60 }, speedX: { min: -10, max: 10 }, alpha: { start: 0.8, end: 0 }, tint: [hexNum(flat(P.dust)), 0xebe6d8], emitting: false }).setDepth(5);
     this.splinters = this.add.particles(0, 0, 'dot2', { lifespan: { min: 500, max: 1200 }, speed: { min: 40, max: 160 }, angle: { min: 200, max: 340 }, gravityY: 500, tint: [hexNum(P.wood), hexNum(P.woodHi), hexNum(flat(P.dust))], emitting: false }).setDepth(5);
     this.phase = 'walk'; this.t = 0; this.broke = null; this.cracked = false; this.spin = 0; this.chunks = []; this.black = 0;
     this.spawn();
@@ -197,7 +197,7 @@ export class Fall extends SideEpisode {
     if (this.phase === 'through' || this.phase === 'dark') { const hx = this.holeX || X0; bg.fillStyle(hexNum(P.void), 1); bg.fillRect(X0, ROT * TILE, X1 - X0, 6); bg.fillStyle(hexNum(P.wood), 1); bg.fillRect(X0, ROT * TILE, Math.max(0, hx - X0 - 10), 3); bg.fillRect(hx + 16, ROT * TILE, Math.max(0, X1 - hx - 16), 3); }
     // speed: thin streaks rushing up past her
     const sg = this.streakG; sg.clear();
-    if (this.phase === 'falling') { const v = Math.min(1, this.kid.vy / 300); for (let i = 0; i < 14; i++) { const x = (i * 53 + 17) % 320, y = 180 - ((t * 520 + i * 67) % 220); sg.fillStyle(0xffffff, 0.1 * v); sg.fillRect(x, Math.round(y), 1, 10 + 14 * v); } }
+    if (this.phase === 'falling') { const v = Math.min(1, this.kid.vy / 300); for (let i = 0; i < 14; i++) { const x = (i * 53 + 17) % 320, y = 180 - ((t * 520 + i * 67) % 220); sg.fillStyle(0xebe6d8, 0.1 * v); sg.fillRect(x, Math.round(y), 1, 10 + 14 * v); } }
     // a few red lights in the dark
     const lg = this.ledG; lg.clear();
     [[40, 30], [150, 26], [300, 52], [420, 90], [X0 + 20, G + 300], [X1 - 14, G + 460], [X0 + 90, G + 700]].forEach(([x, y], i) => { if (Math.sin(t * 2 + i * 1.7) > 0) { lg.fillStyle(hexNum(P.led), 1); lg.fillRect(x, y, 1, 1); lg.fillStyle(hexNum(P.led), 0.2); lg.fillCircle(x, y, 3); } });
@@ -220,7 +220,7 @@ export class Fall extends SideEpisode {
     if (this.cracked) {
       const u = Math.min(1, this.crackT / 0.25);
       const pts = [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23], [60, 30], [70, 44]];
-      g.lineStyle(1, 0xffffff, 0.7);
+      g.lineStyle(1, 0xebe6d8, 0.7);
       for (let i = 1; i < Math.ceil(pts.length * u); i++) g.lineBetween(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
       g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19); g.lineBetween(31, 18, 37, 13);
       if (Math.random() < 0.3) { g.fillStyle(col, 0.25); g.fillRect(0, Math.random() * 180, 320, 2); }

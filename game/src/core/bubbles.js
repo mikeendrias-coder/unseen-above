@@ -38,7 +38,7 @@ export class Bubbles {
     if (narrate) this.list.forEach((b, k) => { if (k !== key && b.narrate && !b.out) b.out = 0.01; });
     const lines = ccWrap(text, opts.width || (narrate ? 46 : 24)), total = lines.join('').length;
     this.list.set(key, { lines, at, t: 0, n: 0, total, out: 0, hold: opts.hold != null ? opts.hold : opts.ms != null ? opts.ms : Math.min(3600, 1300 + total * 32),
-      ink: opts.ink || 0xffffff, pitch: opts.pitch || 880, leave: opts.leave != null ? opts.leave : 72, src: opts.src || null, italic: !!opts.italic || narrate, narrate, order: ++this.order, cut: overlay.cuts });
+      ink: opts.ink || 0xebe6d8, pitch: opts.pitch || 880, leave: opts.leave != null ? opts.leave : 72, src: opts.src || null, italic: !!opts.italic || narrate, narrate, order: ++this.order, cut: overlay.cuts });
   }
   // E on something that talks. The first press shows its next line. Pressing again while the
   // line types finishes it; once it is out, the next line; after the last line, it closes.
@@ -138,7 +138,7 @@ export class Bubbles {
       const her = bodies[0];
       if (her && x < her.x1 + 1 && x + 11 > her.x0 - 1 && y < her.y1 && y + 13 > her.y0 - 1) y = Math.round(her.y0 - 15 + bob);
       g.fillStyle(BOX, A); g.fillRect(x, y, 11, 11); g.fillRect(x + 4, y + 11, 3, 1); g.fillRect(x + 5, y + 12, 1, 1);
-      ccText(g, p.label, x + 3, y + 2, p.ink || (p.label === '!' ? 0xffe94a : 0xffffff));
+      ccText(g, p.label, x + 3, y + 2, p.ink || (p.label === '!' ? 0xd6a03c : 0xebe6d8));
       this.prompt = null;
     }
   }

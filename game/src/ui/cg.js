@@ -10,7 +10,9 @@ import { ccText, ccWidth, ccWrap, ccBox, ccRich, ccCaptionBlock, plain, ADV } fr
 
 const W = 320, H = 180;
 // a broadcast palette that never changes with her world's look
-export const TV = { black: '#000000', white: '#ffffff', yellow: '#ffe94a', cyan: '#4ae8ff', red: '#ff4d5e', green: '#62ff8c', magenta: '#ff70e4', grey: '#a5a3b2', salmon: '#ff8a7a' };
+// The show's character generator, in the locked Ash and Gold palette: bone on black for words,
+// gold for keys and wealth, red only for what watches her. The old teletext names are kept as roles.
+export const TV = { black: '#0e0f12', white: '#ebe6d8', yellow: '#d6a03c', cyan: '#f2d58c', red: '#e3412b', green: '#f5ce77', magenta: '#b8b2a3', grey: '#8f8d87', salmon: '#ffd9d0' };
 
 const S = { caption: null, desc: null, capRect: null, cards: [], osd: [], bug: null, rec: null, immune: false, page: null, menu: null };
 let cv = null, ctx = null, running = false;
@@ -56,7 +58,7 @@ function drawCaption(t) {
   const x0 = Math.min(...r.boxes.map(b => b.x)), x1 = Math.max(...r.boxes.map(b => b.x + b.w));
   S.capRect = { x0, y0: r.top, x1, y1: bottom };
   // more to say: a small arrow after the last line once it is out
-  if (d && d.more && Math.floor(t * 3) % 2 === 0) { const b = r.boxes[n - 1]; ctx.fillStyle = '#ffffff'; ctx.fillRect(b.x + b.w + 2, bottom - 6, 3, 1); ctx.fillRect(b.x + b.w + 3, bottom - 5, 1, 1); }
+  if (d && d.more && Math.floor(t * 3) % 2 === 0) { const b = r.boxes[n - 1]; ctx.fillStyle = TV.white; ctx.fillRect(b.x + b.w + 2, bottom - 6, 3, 1); ctx.fillRect(b.x + b.w + 3, bottom - 5, 1, 1); }
 }
 
 // ------------------------------------------------------------------ lower thirds and title cards

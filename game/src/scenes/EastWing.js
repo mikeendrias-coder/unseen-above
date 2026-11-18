@@ -135,7 +135,7 @@ export class EastWing extends TopDownEpisode {
   onNoise(x, y, r, kind) {
     // the robot comes to look
     const R = this.robot, L = LEVEL.robot;
-    if (Math.hypot(R.x - x, R.y - y) <= Math.max(L.hear, r + 3) && R.mode !== 'off') { R.mode = 'investigate'; R.target = [x, y]; R.route = this.path([Math.round(R.x), Math.round(R.y)], [x, y]); R.wait = 0; this.bubbles.say('robot', '?', () => ({ x: R.x * T + 8, y: R.y * T + 2 }), { ink: 0xffe94a, pitch: 900, ms: 900 }); }
+    if (Math.hypot(R.x - x, R.y - y) <= Math.max(L.hear, r + 3) && R.mode !== 'off') { R.mode = 'investigate'; R.target = [x, y]; R.route = this.path([Math.round(R.x), Math.round(R.y)], [x, y]); R.wait = 0; this.bubbles.say('robot', '?', () => ({ x: R.x * T + 8, y: R.y * T + 2 }), { ink: 0xf5ce77, pitch: 900, ms: 900 }); }
     // a sensor in range of a noise fires once and needs time to recharge; if a pebble set it
     // off, the satellite shoots the pebble
     let seen = false;
@@ -290,7 +290,7 @@ export class EastWing extends TopDownEpisode {
       const x = s.x * T + 8, y = s.y * T + 8, on = this.sensorOn(s);
       g.lineStyle(1, red, on ? 0.7 : s.cool > 0 ? 0.12 : 0.25); g.strokeCircle(x, y, s.r * T);
       if (on) { g.fillStyle(red, 0.09); g.fillCircle(x, y, s.r * T); }
-      if (s.flash > 0) { g.lineStyle(2, 0xffffff, s.flash); g.strokeCircle(x, y, (1 - s.flash * 2) * s.r * T + 4); }
+      if (s.flash > 0) { g.lineStyle(2, 0xebe6d8, s.flash); g.strokeCircle(x, y, (1 - s.flash * 2) * s.r * T + 4); }
     });
     this.drawNoise(g, dt);
     // the chandelier from above: a gold ring, crystal arms, candles, eyes, chains to the pillars
@@ -303,7 +303,7 @@ export class EastWing extends TopDownEpisode {
       cg.lineStyle(3, hexNum(P.gold), 1); cg.strokeCircle(cx, cy, rr); cg.lineStyle(1, hexNum(P.goldHi), 1); cg.strokeCircle(cx, cy, rr - 2);
       for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + t * 0.2; cg.lineStyle(1, hexNum(P.glassLit), 0.9); cg.lineBetween(cx, cy, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); cg.fillStyle(hexNum(P.lamp), 1); cg.fillRect(cx + Math.cos(a) * rr - 1, cy + Math.sin(a) * rr - 1, 2, 2); }
       cg.fillStyle(hexNum(P.gold), 1); cg.fillCircle(cx, cy, 5 * sc);
-      if (ch.phase === 'up') { const eyes = C.eyes[ch.cut]; for (let e = 0; e < eyes; e++) { const a = (ch.angle + e * 360 / eyes) * Math.PI / 180; cg.fillStyle(0xffffff, 1); cg.fillCircle(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9, 2.5); cg.fillStyle(led, 1); cg.fillCircle(cx + Math.cos(a) * 10, cy + Math.sin(a) * 10, 1.2); } }
+      if (ch.phase === 'up') { const eyes = C.eyes[ch.cut]; for (let e = 0; e < eyes; e++) { const a = (ch.angle + e * 360 / eyes) * Math.PI / 180; cg.fillStyle(0xebe6d8, 1); cg.fillCircle(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9, 2.5); cg.fillStyle(led, 1); cg.fillCircle(cx + Math.cos(a) * 10, cy + Math.sin(a) * 10, 1.2); } }
     } else {
       // what is left after the crash
       cg.lineStyle(2, hexNum(P.goldLo), 1); cg.strokeEllipse(cx, cy + 6, 50, 26); for (let i = 0; i < 18; i++) { const a = i * 0.35; cg.fillStyle(hexNum(i % 2 ? P.glassLit : P.gold), 1); cg.fillRect(cx + Math.cos(a) * (18 + (i * 7) % 12), cy + 6 + Math.sin(a) * (10 + (i * 5) % 8), 2, 1); }
@@ -325,7 +325,7 @@ export class EastWing extends TopDownEpisode {
       lg.fillStyle(hexNum(P.device), 1); lg.fillRect(s.x * T + 5, s.y * T + 10, 6, 5);
       if (on) { lg.fillStyle(red, 0.16 + 0.06 * Math.sin(t * 20)); lg.fillCircle(lx, ly, 5); lg.fillStyle(red, 0.3); lg.fillCircle(lx, ly, 2.5); }
       lg.fillStyle(on || (blink && s.cool <= 0) ? red : hexNum(P.wallLine), 1); lg.fillRect(s.x * T + 7, s.y * T + 12, 2, 2);
-      if (s.flash > 0) { lg.fillStyle(0xffffff, Math.min(1, s.flash * 2)); lg.fillCircle(lx, ly, 1.5 + (0.5 - s.flash) * 8); }
+      if (s.flash > 0) { lg.fillStyle(0xebe6d8, Math.min(1, s.flash * 2)); lg.fillCircle(lx, ly, 1.5 + (0.5 - s.flash) * 8); }
     });
     const Cm = LEVEL.camera, ca = this.camAngle * Math.PI / 180; lg.fillStyle(hexNum(P.device), 1); lg.fillRect(Cm.x * T - 3, Cm.y * T - 3, 7, 5); lg.fillStyle(hexNum(P.glassLit), 1); lg.fillRect(Math.round(Cm.x * T + Math.cos(ca) * 3), Math.round(Cm.y * T + Math.sin(ca) * 3), 2, 2); if (blink || this.camSrc.lock > 0) { lg.fillStyle(led, 1); lg.fillRect(Cm.x * T - 2, Cm.y * T - 2, 1, 1); }
     const R = this.robot, ra = R.face * Math.PI / 180; lg.fillStyle(R.mode === 'investigate' ? red : hexNum(P.robotLed), 1); lg.fillRect(Math.round(R.x * T + 8 + Math.cos(ra) * 4), Math.round(R.y * T + 8 + Math.sin(ra) * 4), 2, 2);
@@ -333,9 +333,9 @@ export class EastWing extends TopDownEpisode {
     const fx = this.fxG; fx.clear();
     this.drawSatellite(fx, this.strikeFx.glow);
     this.strikeFx.update(dt);
-    if (this.fxBurst && this.fxBurst.t < 0.6) { const b = this.fxBurst; b.t += dt; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; fx.fillStyle(i % 2 ? 0xffffff : red, 1 - b.t / 0.6); fx.fillRect(Math.round(b.x + Math.cos(a) * b.t * 50), Math.round(b.y + Math.sin(a) * b.t * 40), 2, 2); } }
+    if (this.fxBurst && this.fxBurst.t < 0.6) { const b = this.fxBurst; b.t += dt; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; fx.fillStyle(i % 2 ? 0xebe6d8 : red, 1 - b.t / 0.6); fx.fillRect(Math.round(b.x + Math.cos(a) * b.t * 50), Math.round(b.y + Math.sin(a) * b.t * 40), 2, 2); } }
     // a hold ring while she cuts a chain
-    if (this.ch.hold > 0 && this.ch.holdAt != null) { const k = this.kidPx(); fx.lineStyle(2, 0xffffff, 0.9); fx.beginPath(); fx.arc(k.x, k.y - 14, 5, -Math.PI / 2, -Math.PI / 2 + this.ch.hold * Math.PI * 2); fx.strokePath(); }
+    if (this.ch.hold > 0 && this.ch.holdAt != null) { const k = this.kidPx(); fx.lineStyle(2, 0xebe6d8, 0.9); fx.beginPath(); fx.arc(k.x, k.y - 14, 5, -Math.PI / 2, -Math.PI / 2 + this.ch.hold * Math.PI * 2); fx.strokePath(); }
     if (this.nearThing && !this.bubbles.near(this.nearThing.tx * T + 8, 40)) this.bubbles.showPrompt(this.nearThing.tx * T + 8, this.nearThing.ty * T + 2, 'E');
     this.bubbles.update(dt, t);
     this.drawHud(dt);
@@ -347,16 +347,16 @@ export class EastWing extends TopDownEpisode {
     if (this.done) return;
     this.glitchT += dt;
     this.gl.drawMeter(g, 18, 166, col);
-    if (overlay.free(74, 165, 44, 9)) pixText(g, 'PEBBLES ' + this.pebbles, 76, 167, 0xffffff, 1, 0.75);
+    if (overlay.free(74, 165, 44, 9)) pixText(g, 'PEBBLES ' + this.pebbles, 76, 167, 0xebe6d8, 1, 0.75);
     if (!this.gl.on) return;
     this.gl.drawStatic(g, col);
     const a = this.glitchT < 2 ? fx.flicker(0.9, 0.1, 0.5) : 0.5, m = 5, s = 8;
     g.fillStyle(col, a);
     [[320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
     // the crack: from the top left corner, jagged, with a shard missing from the corner mark
-    g.fillStyle(0xffffff, 0.55);
-    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(px, py, x, y); } });
-    g.lineStyle(1, 0xffffff, 0.35); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19); g.lineBetween(31, 18, 37, 13);
+    g.fillStyle(0xebe6d8, 0.55);
+    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineStyle(1, 0xebe6d8, 0.45); g.lineBetween(px, py, x, y); } });
+    g.lineStyle(1, 0xebe6d8, 0.35); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19); g.lineBetween(31, 18, 37, 13);
     g.fillStyle(col, a); g.fillRect(m, m + 6, 1, 3);
     const label = this.glitchT < 3 && Math.random() < 0.3 ? 'V1EW' : 'VIEW'; if (Math.floor(this.clock * 3) % 5) pixText(g, label, 44, m + 3, col, 1, a);
     if (overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);

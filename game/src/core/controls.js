@@ -27,7 +27,7 @@ export function makeControls(scene) {
     advance: () => take(KC.SPACE, KC.ENTER, KC.E),
     skip: () => take(KC.ESC),
     restart: () => take(KC.R),
-    look: () => take(KC.L),
+    look: () => { take(KC.L); return false; }, // one locked look now: L does nothing
     nextScreen: () => take(KC.K),
     mute: () => take(KC.M),
     enterHeld: () => K.enter.isDown,

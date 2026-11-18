@@ -52,7 +52,7 @@ export class Bedroom extends SideEpisode {
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
     this.debris = this.add.particles(0, 0, 'dot2', { speedX: { min: -20, max: 20 }, speedY: { min: -10, max: 30 }, gravityY: 420, lifespan: { min: 500, max: 1100 }, tint: [hexNum(P.wood), hexNum(P.rubble), hexNum(P.woodHi)], emitting: false }).setDepth(6.45);
     this.dust = this.add.particles(0, 0, 'dot', { speedY: { min: -14, max: -4 }, speedX: { min: -8, max: 8 }, lifespan: 1400, alpha: { start: 0.6, end: 0 }, tint: [hexNum(flat(P.dust)), hexNum(P.shaft)], emitting: false }).setDepth(6.45);
-    this.motes = this.add.particles(0, 0, 'dot', { speedX: { min: -16, max: -4 }, speedY: { min: -6, max: 6 }, lifespan: 2200, alpha: { start: 0.9, end: 0 }, tint: [hexNum(P.voidEdge), 0xffffff], blendMode: 'ADD', emitting: false }).setDepth(6.7);
+    this.motes = this.add.particles(0, 0, 'dot', { speedX: { min: -16, max: -4 }, speedY: { min: -6, max: 6 }, lifespan: 2200, alpha: { start: 0.9, end: 0 }, tint: [hexNum(P.voidEdge), 0xebe6d8], blendMode: 'ADD', emitting: false }).setDepth(6.7);
 
     // the cameras, each on its own beat
     this.cams = LEVEL.cameras.map(c => { const cm = Object.assign({}, c, { angle: c.aim, cone: null, lock: 0, caught: false, flash: 0, snap: null, clicks: 0, warn: false }); this.resync(cm, 0.6 - 0.9); return cm; });
@@ -370,7 +370,7 @@ export class Bedroom extends SideEpisode {
   }
 
   say(text) {
-    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xffffff, pitch: 760 });
+    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xebe6d8, pitch: 760 });
   }
 
   // ------------------------------------------------------------------ drawing
@@ -398,7 +398,7 @@ export class Bedroom extends SideEpisode {
           const fl = f * fx.level * (cm.lit == null ? 1 : cm.lit); // reduced flashing: a dimmer flash
           lights.push({ poly: cm.cone, a: 0.9 * fl });
           lights.push({ x: cm.x + Math.cos(r) * cm.range * 0.55, y: cm.y + Math.sin(r) * cm.range * 0.55, r: cm.range * 0.6, soft: 0.9, a: 0.4 * fl });
-          fg.fillStyle(0xff4a4a, 0.85 * fl); fg.fillPoints(cm.cone, true);
+          fg.fillStyle(0xe3412b, 0.85 * fl); fg.fillPoints(cm.cone, true);
           lg.fillStyle(red, 0.08 * f); lg.fillPoints(cm.cone, true);
         }
       });
@@ -498,7 +498,7 @@ export class Bedroom extends SideEpisode {
       const r = cm.angle * Math.PI / 180, lx = Math.round(cm.x + Math.cos(r) * 3), ly = Math.round(cm.y + Math.sin(r) * 3);
       g.fillStyle(hexNum(P.device), 1); g.fillRect(cm.x - 3, cm.y - 2, 7, 5);
       g.fillStyle(hexNum(P.glass), 1); g.fillRect(lx - 1, ly - 1, 3, 3);
-      g.fillStyle(0xffffff, 0.3 + cm.flash * 0.7); g.fillRect(lx, ly - 1, 1, 1);
+      g.fillStyle(0xebe6d8, 0.3 + cm.flash * 0.7); g.fillRect(lx, ly - 1, 1, 1);
     });
     // the clock's pendulum and hands
     const C = LEVEL.clock, sw = Math.sin(t * Math.PI) * 3;
@@ -543,18 +543,18 @@ export class Bedroom extends SideEpisode {
         }
         const led = cm.warn ? Math.floor(t * 16) % 2 === 0 : Math.floor(t * 1.5) % 2 === 0;
         if (led || cm.caught) { g.fillStyle(red, 1); g.fillRect(cm.x - 2, cm.y - 1, 1, 1); }
-        if (cm.flash > 0.6) { g.fillStyle(0xffffff, cm.flash); g.fillCircle(cm.x, cm.y + 1, 3); }
+        if (cm.flash > 0.6) { g.fillStyle(0xebe6d8, cm.flash); g.fillCircle(cm.x, cm.y + 1, 3); }
       });
       // noise rings: white when heard, gold when the clock covers it
       this.noises.forEach(n => n.t += dt); this.noises = this.noises.filter(n => n.t < 0.6);
-      this.noises.forEach(n => { const u = n.t / 0.6; g.lineStyle(1, n.masked ? hexNum(P.gold) : 0xffffff, (n.masked ? 0.35 : 0.7) * (1 - u)); g.strokeCircle(n.x, n.y - 3, 3 + u * (n.masked ? 14 : 30)); });
+      this.noises.forEach(n => { const u = n.t / 0.6; g.lineStyle(1, n.masked ? hexNum(P.gold) : 0xebe6d8, (n.masked ? 0.35 : 0.7) * (1 - u)); g.strokeCircle(n.x, n.y - 3, 3 + u * (n.masked ? 14 : 30)); });
       const C = LEVEL.clock;
       this.rings.forEach(r => r.t += dt); this.rings = this.rings.filter(r => r.t < 1.2);
       this.rings.forEach(r => { const u = r.t / 1.2; g.lineStyle(1, hexNum(P.gold), 0.28 * (1 - u)); g.strokeCircle(C.x, 76, 8 + u * 56); if (u > 0.15) g.strokeCircle(C.x, 76, 8 + (u - 0.15) * 56); });
       // the moment a flash catches her: a white frame, like a viewfinder
       if (this.photo && this.photo.t < 0.5) {
         const ph = this.photo; ph.t += dt; const s = 10 + ph.t * 10, a = 1 - ph.t / 0.5;
-        g.lineStyle(1, 0xffffff, a); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { g.lineBetween(ph.x + sx * s, ph.y + sy * s, ph.x + sx * (s - 4), ph.y + sy * s); g.lineBetween(ph.x + sx * s, ph.y + sy * s, ph.x + sx * s, ph.y + sy * (s - 4)); });
+        g.lineStyle(1, 0xebe6d8, a); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { g.lineBetween(ph.x + sx * s, ph.y + sy * s, ph.x + sx * (s - 4), ph.y + sy * s); g.lineBetween(ph.x + sx * s, ph.y + sy * s, ph.x + sx * s, ph.y + sy * (s - 4)); });
       }
       // floor about to open: a glowing crack across it
       this.run.gaps.forEach(gp => {
@@ -583,7 +583,7 @@ export class Bedroom extends SideEpisode {
     if (t && !t.noPrompt) { const px = t.px != null ? t.px : (t.x0 + t.x1) / 2; if (!this.bubbles.near(px, 44)) this.bubbles.showPrompt(px, t.py != null ? t.py : t.y0 - 2, t.label); }
     if (t === this.bagThing && this.bag.hold > 0) {
       const g = this.fxG, x = LEVEL.bag.x + 1, y = GROUND - 26;
-      g.lineStyle(2, 0xffffff, 0.9); g.beginPath(); g.arc(x, y, 5, -Math.PI / 2, -Math.PI / 2 + this.bag.hold * Math.PI * 2); g.strokePath();
+      g.lineStyle(2, 0xebe6d8, 0.9); g.beginPath(); g.arc(x, y, 5, -Math.PI / 2, -Math.PI / 2 + this.bag.hold * Math.PI * 2); g.strokePath();
     }
     this.bubbles.update(this.game.loop.delta / 1000, this.clock);
   }
@@ -604,8 +604,8 @@ export class Bedroom extends SideEpisode {
     if (this.mode === 'house') this.gl.drawStatic(g, col);
     g.fillStyle(col, a);
     [[320 - m, m, -1, 1], [m, 180 - m, 1, -1], [320 - m, 180 - m, -1, -1]].forEach(([x, y, sx, sy]) => { g.fillRect(sx > 0 ? x : x - s, sy > 0 ? y : y - 1, s, 1); g.fillRect(sx > 0 ? x : x - 1, sy > 0 ? y : y - s, 1, s); });
-    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineStyle(1, 0xffffff, 0.45 * dim); g.lineBetween(px, py, x, y); } });
-    g.lineStyle(1, 0xffffff, 0.35 * dim); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19);
+    [[4, 4], [9, 7], [13, 6], [19, 11], [24, 12], [31, 18], [35, 17], [42, 23]].forEach(([x, y], i, arr) => { if (i) { const [px, py] = arr[i - 1]; g.lineStyle(1, 0xebe6d8, 0.45 * dim); g.lineBetween(px, py, x, y); } });
+    g.lineStyle(1, 0xebe6d8, 0.35 * dim); g.lineBetween(13, 6, 15, 1); g.lineBetween(24, 12, 22, 19);
     if (Math.floor(this.clock * 3) % 5) pixText(g, this.glitchT < 3 && Math.random() < 0.3 ? 'V1EW' : 'VIEW', 44, m + 3, col, 1, a);
     if (overlay.free(320 - m - 23, 180 - m - 9, 25, 8)) pixText(g, 'CH 07', 320 - m - 22, 180 - m - 8, col, 1, a);
   }
