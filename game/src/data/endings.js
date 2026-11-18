@@ -20,16 +20,16 @@ export const endingTitle = id => (ENDINGS.find(e => e.id === id) || ENDINGS[0]).
 export const endingsSeen = () => ENDINGS.filter(e => state.story.endings[e.id]).length;
 
 // The replies she can give at "Are you here for round two?". Story mode offers every one, so a
-// walkthrough can reach every ending.
+// walkthrough can reach every ending; so does a chapter link that asks for one (force: an ending id).
 export const REPLIES = [
   { id: 'lights', text: 'Who picks the lights?', ending: 'vest' },
   { id: 'yes', text: 'Yes.', ending: 'round2' },
   { id: 'turn', text: 'Turn it around.', ending: 'lookback', open: s => state.clueCount('who') >= WHO_NEEDED || (s.spared && s.gaveUp) },
   { id: 'sit', text: 'Sit down.', ending: 'couch', open: s => s.spared && state.clueCount('what') >= WHAT_NEEDED }
 ];
-export function replies() {
+export function replies(force) {
   const s = state.story;
-  return REPLIES.filter(r => !r.open || state.immune || r.open(s));
+  return REPLIES.filter(r => !r.open || state.immune || r.ending === force || r.open(s));
 }
 // no choice at all: the creator was beaten after giving up, and the playroom is empty
 export const emptyRoom = () => !!state.story.killedBroken;

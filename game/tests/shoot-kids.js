@@ -1,4 +1,4 @@
-// Screenshots of the kids' room preview at moments in its script: node tests/shoot-kids.js [look] [t,t,...]
+// Screenshots of the kids' room (a 320 x 180 pixel scene) at moments in its script: node tests/shoot-kids.js [look] [t,t,...]
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -12,7 +12,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.goto(BASE + '/local.html#kids');
   await p.click('#start');
   await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'kids', null, { timeout: 30000 });
-  const ts = (process.argv[3] || '4,9.6,13,14.7,16.5,21,25.5,27.5,30.5').split(',').map(Number);
+  const ts = (process.argv[3] || '3,5.6,7,8.5,10,11.3,12.5,15.5,18,20').split(',').map(Number);
   for (const t of ts) {
     await p.waitForFunction(t => window.__game.scene.t >= t, t, { timeout: 120000, polling: 50 });
     await p.screenshot({ path: `tests/out/k-${look}-${t}.png` });

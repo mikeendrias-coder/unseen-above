@@ -1,4 +1,4 @@
-// Episode 5 screenshots: the corridor, the playroom, the talk, the last shot. node tests/shoot-ep5.js [look]
+// Episode 5 screenshots: the corridor, the playroom, the talk, her reply slip, the last shot. node tests/shoot-ep5.js [look]
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -22,7 +22,10 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => window.__game.scene.scene.restart({ at: 'playroom' }));
   await p.waitForFunction(() => window.__game.scene.mode === 'room' && window.__game.scene.clock > 0.9, null, { timeout: 15000 }); await shot('playroom');
   await p.evaluate(() => { const s = window.__game.scene; s.kid.x = s.level.stand; });
-  await p.waitForFunction(() => window.__game.scene.mode === 'talk' && window.__game.scene.talkI >= 4, null, { timeout: 30000 }); await shot('talk');
+  await p.waitForFunction(() => window.__game.scene.mode === 'talk' && window.__game.scene.talkI >= 2, null, { timeout: 30000 }); await shot('talk');
+  await p.waitForFunction(() => window.__game.scene.mode === 'choose', null, { timeout: 30000 }); await p.waitForTimeout(400); await shot('reply');
+  await p.evaluate(() => { const s = window.__game.scene; s.pick = 0; s.choose(); });
+  await p.waitForFunction(() => window.__game.scene.talking, null, { timeout: 5000 });
   await p.evaluate(() => { const s = window.__game.scene; s.talkI = s.lines.length - 2; s.nextLine(); });
   await p.waitForTimeout(500); await shot('clicks');
   await p.waitForFunction(() => window.__game.scene.mode === 'last', null, { timeout: 15000 });

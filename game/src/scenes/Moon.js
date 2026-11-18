@@ -42,7 +42,7 @@ export class Moon extends SideEpisode {
     makeSprites(this, P);
     const lvl = paintLevel(P, look.name); lvl.toTexture(this, 'mn_level'); this.marks = lvl.marks;
     [true, false].forEach(bun => KID_POSES.forEach(pose => paintKid(bun, pose).toTexture(this, 'mk_' + (bun ? 'a' : 'b') + '_' + pose)));
-    ['back', 'side'].forEach(pose => paintSister(P, pose).toTexture(this, 'mk_sis_' + pose));
+    paintSister(P).toTexture(this, 'mk_sis_back');
     paintRobot(M.robotLed, 0).toTexture(this, 'mr_a'); paintRobot(M.robotLed, 1).toTexture(this, 'mr_b'); paintRobot(M.pink, 0).toTexture(this, 'mr_c');
     paintLastRoom().toTexture(this, 'mn_last');
     this.tvCanvas = document.createElement('canvas'); this.tvCanvas.width = TVSCREEN.w; this.tvCanvas.height = TVSCREEN.h; this.tvCtx = this.tvCanvas.getContext('2d');
@@ -270,7 +270,7 @@ export class Moon extends SideEpisode {
 
   // ------------------------------------------------------------------ her reply: a slip to fill in
   startChoose() {
-    this.mode = 'choose'; this.choices = replies(); this.pick = 0; this.chooseT = 0;
+    this.mode = 'choose'; this.choices = replies(this.force); this.pick = Math.max(0, this.choices.findIndex(r => r.ending === this.force)); this.chooseT = 0;
     overlay.caption('KID', 'Are you here for round two?');
     if (!this.pointerOn) {
       this.pointerOn = true;

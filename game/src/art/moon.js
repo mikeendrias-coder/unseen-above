@@ -153,7 +153,7 @@ function paintRoomBehindGlass(p, R, i) {
   p.rect(x0 - 3, top - 3, w + 6, 3, M.trim); p.rect(x0 - 3, bottom, w + 6, 4, M.trim); p.rect(x0 - 3, bottom + 4, w + 6, 1, M.trimLo);
   for (let x = x0 - 3; x <= x1; x += Math.round(w / 3)) { p.rect(x, top - 3, 3, bottom - top + 7, M.trim); p.rect(x + 1, top - 3, 1, bottom - top + 7, M.trimHi); }
   // the glass: two thin reflections, hard lines
-  [[x0 + 24, 0], [x0 + 30, 0], [x0 + Math.round(w * 0.6), 1]].forEach(([rx]) => { for (let y = top + 2; y < bottom - 2; y += 1) if ((y - top) % 23 < 15) p.px(rx - Math.round((y - top) * 0.2), y, M.glassHi); });
+  [x0 + 14, x0 + 18, x0 + Math.round(w * 0.55)].forEach((rx, i) => { for (let y = top + 3; y < top + (i === 1 ? 9 : 14); y++) p.px(rx - Math.round((y - top) * 0.5), y, M.glassHi); });
 }
 
 // a door that does not match itself: the twin of the one in the bedroom, never used
@@ -283,7 +283,7 @@ export function paintLevel(P, look) {
   // the wall at the end of the city, and the playroom beyond it
   p.rect(CW * T, 0, T, G, M.wallLo); p.rect(CW * T, 0, 1, G, M.trim);
   paintPlayroom(p);
-  p.rect((LEVEL.w - 1) * T, 0, T, G, M.wallLo);
+  p.rect((LEVEL.w - 1) * T, 0, T, G, '#261f15');
   return p;
 }
 
@@ -394,12 +394,11 @@ export function paintKid(bun, pose) {
   outline(p, '#0e0f12', true);
   return p;
 }
-// Her, from behind, sitting on the couch (only her head and shoulders show over its back), and
-// her from the side, sitting, for the empty room. Painted per look from the girl's own colors.
-export function paintSister(P, pose) {
+// Her, from behind, sitting on the couch: only her head and shoulders show over its back.
+// Painted per look from the girl's own colors.
+export function paintSister(P) {
   const p = new Painter(10, 14);
-  if (pose === 'back') { p.rect(1, 2, 7, 6, P.hair); p.rect(2, 1, 5, 1, P.hair); p.rect(1, 8, 7, 6, P.kid); p.rect(1, 8, 7, 1, P.kidLo); }
-  else { p.rect(2, 1, 5, 5, P.hair); p.rect(4, 2, 3, 3, P.kid); p.rect(2, 6, 5, 5, P.kid); p.rect(5, 9, 4, 2, P.kid); p.rect(7, 11, 2, 3, P.kidLo); }
+  p.rect(1, 2, 7, 6, P.hair); p.rect(2, 1, 5, 1, P.hair); p.rect(1, 8, 7, 6, P.kid); p.rect(1, 8, 7, 1, P.kidLo);
   outline(p, '#0e0f12', true);
   return p;
 }
