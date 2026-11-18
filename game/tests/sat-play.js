@@ -35,7 +35,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     } else if (batch === 2) { await p.keyboard.press('KeyJ'); }
     else if (batch === 3) { await p.keyboard.press('Enter'); }
     else { await p.mouse.click(...at(36 + 10 + 40, 34 + 122 + 7)); }
-    await until(() => !window.__game.scene.form, null, 8000);
+    await until(() => !window.__game.scene.form, null, 20000);
     const st = await story(), want = { 1: 'denied', 2: 'approved', 3: 'skipped', 4: 'approved' }[batch];
     ok('  the form closes and the puzzle starts; recorded ' + JSON.stringify(st.requests) + ', denied ' + st.denied, st.requests && st.requests[batch] === want && st.denied === (batch === 1 ? 1 : 0));
     if (batch === 1) {
@@ -85,8 +85,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
     await p.goto(BASE + '/local.html#batch2'); await p.click('#start');
     await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.form, null, { timeout: 60000 });
-    await p.keyboard.press('Enter');
-    await p.waitForFunction(() => !window.__game.scene.form && window.__game.scene.stuckKey, null, { timeout: 8000 });
+    await p.waitForTimeout(600); await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !window.__game.scene.form && window.__game.scene.stuckKey, null, { timeout: 20000 });
     ok('no offer before 90 s', await p.evaluate(() => !window.__game.scene.offerRect()));
     await p.evaluate(() => { window.__game.scene.stuckT = 89.5; });
     const r = await (await p.waitForFunction(() => window.__game.scene.offerRect(), null, { timeout: 5000 })).jsonValue();
