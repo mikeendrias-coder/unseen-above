@@ -5,6 +5,8 @@
 // once (batch 2), a blurred zone and a target that drifts (batch 3), and the cartoon Earth with
 // a girl in pink as the target (batch 4). Turn the surface; gravity rolls the bead down the screen.
 // Every screen celebrates a solved puzzle its own way, and every win plays the laser's charge.
+// Before the puzzles, a REQUEST form to stamp (sat/request.js), with a bulletin whose rules get
+// weaker each batch. A puzzle that runs long (90 s, 45 s for the ring) offers N on the screen.
 import { Music } from '../core/music.js';
 import { reviewKeys } from '../core/review.js';
 import { pixText, textWidth } from '../art/pixfont.js';
@@ -19,6 +21,8 @@ import { flat } from '../art/painter.js';
 import { WinFx, winSound, WIN_SECONDS, drawDeathMap } from '../sat/wins.js';
 import { buildBoard, stepOnce, solve } from '../sat/globe-logic.js';
 import { TurnView } from '../sat/globe-view.js';
+import { RequestForm } from '../sat/request.js';
+import { ccText, ccWidth } from '../art/ccfont.js';
 import LEVELS from '../data/globe-levels.json';
 
 const BATCHES = { 1: ['ring', 'g1'], 2: ['g2'], 3: ['g3'], 4: ['g4'] };
@@ -33,7 +37,13 @@ const TEXT = {
 };
 const ROLL = 0.075, BOUNCE = 0.3, TURN_SPEED = 1.9; // seconds per groove, per bounce; radians a second
 const DRIFT_AFTER = 30, DRIFT_EVERY = 9;            // batch 3: the target starts to move when you are slow
+const STUCK = { ring: 45 }, STUCK_GLOBE = 90;       // seconds on one puzzle before the screen offers N
+// where each screen puts that offer, and what it says: [x, y, w], label
+const OFFER = { 1: [[8, 104, 124], 'SOLVE IT FOR ME'], 2: [[12, 92, 124], 'SOLVE IT FOR ME'], 3: [[14, 132, 124], 'SOLVE IT FOR ME'], 4: [[16, 150, 124], 'FREE WIN!'] };
 const H = h => parseInt(h.slice(1), 16);
+// time spent on each puzzle, kept across retries (a restart rebuilds the scene), so the offer
+// still comes for someone who keeps pressing Backspace: 'batch:level' -> seconds
+const stuckTime = new Map();
 const hex2 = n => n.toString(16).toUpperCase().padStart(2, '0');
 const wrapPi = a => { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; };
 const ease = u => u * u * (3 - 2 * u);
@@ -69,7 +79,11 @@ export class Satellite extends Phaser.Scene {
     this.confetti = []; this.winFx = new WinFx(this); this.reveal = null;
     this.ctl = makeControls(this);
     if (!this.embedded) {
-      this.input.on('pointerdown', p => { const q = this.world(p); if (q.x > 150 && !this.solved && !this.ended) { this.drag = { x: q.x, y: q.y }; this.auto = null; } });
+      this.input.on('pointerdown', p => {
+        const q = this.world(p); if (this.form) return;
+        if (this.offerAt(q.x, q.y)) { this.skipAhead(); return; }
+        if (q.x > 150 && !this.solved && !this.ended) { this.drag = { x: q.x, y: q.y }; this.auto = null; }
+      });
       this.input.on('pointermove', p => this.onMove(p));
       this.input.on('pointerup', () => { this.drag = null; });
     } else { cam.setViewport(0, 0, 1, 1); this.roundN = data.round || 1; }
@@ -81,10 +95,24 @@ export class Satellite extends Phaser.Scene {
       else Music.play('sat' + Math.min(3, this.skinN));
     }
     this.drawStatic();
-    this.loadLevel(Math.min(data.at || 0, this.ids.length - 1), !!data.quiet);
+    // the request comes first, once per visit (a retry or a screen preview inside the batch skips it)
+    const withForm = !this.embedded && !data.formDone && !(data.at > 0);
+    this.loadLevel(Math.min(data.at || 0, this.ids.length - 1), !!data.quiet || withForm);
+    if (withForm) {
+      this.form = new RequestForm(this, this.batch, this.skinN, this.K, () => this.formClosed());
+      this.offerSkip = true; // the key bar lights N while the form is up (N skips it, story mode or not)
+      this.drawBoard(); // paint once: a win under the form needs the view
+    }
     if (this.embedded) this.autoSolve(data.autoDelay || 0, data.autoEvery || 0.2);
     if (!this.embedded) cam.fadeIn(500);
     if (!this.embedded) window.__game = { scene: this };
+  }
+  // the stamp is down (or skipped): the puzzle starts
+  formClosed() {
+    this.form = null; this.offerSkip = false;
+    const T = TEXT[this.level.id] || TEXT.g1, i = this.levelIdx;
+    overlay.hint(T.hint);
+    if (!this.ended && !this.solved) overlay.card(i === 0 ? 'SATELLITE · BATCH ' + this.batch : 'NOW THE REAL ONE', T.title, 3400, 'lowerLeft');
   }
   onRescale() { if (!this.embedded) this.cameras.main.setZoom(pixelZoom()); }
   world(p) { return this.cameras.main.getWorldPoint(p.x, p.y); }
@@ -215,22 +243,44 @@ export class Satellite extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ review, restart, winning
-  // review: N solves the puzzle on the screen
-  skipAhead() { if (!this.ended && !this.solved) this.win(); }
+  // N. On the form: outside story mode it skips the form; in story mode one N goes past the form
+  // and solves the first puzzle too, as N always did here. Either way not during the form's lock.
+  // Off the form: N solves the puzzle on the screen.
+  skipAhead() {
+    if (this.form) { if (!this.form.ready()) return; if (!state.immune) { this.form.dismiss(); return; } }
+    if (!this.ended && !this.solved) this.win();
+  }
   // Backspace, or the pause menu: this puzzle again from its start
   canRestart() { return !this.embedded && !this.ended; }
-  restartTake() { if (this.embedded) return false; this.scene.restart({ batch: this.batch, skin: this.skinN, quiet: true, preview: this.preview, at: this.levelIdx }); return true; }
+  restartTake() { if (this.embedded) return false; this.scene.restart({ batch: this.batch, skin: this.skinN, quiet: true, preview: this.preview, at: this.levelIdx, formDone: !this.form }); return true; }
   // a long time on one puzzle: the show offers N (no story mode needed)
   watchStuck(dt) {
     if (this.ended || this.solved || this.preview) return;
-    const key = 'l' + this.levelIdx;
-    if (key !== this.stuckKey) { this.stuckKey = key; this.stuckT = 0; this.offerSkip = false; }
-    this.stuckT += dt;
-    if (!this.offerSkip && this.stuckT > 90) { this.offerSkip = true; if (!state.immune) overlay.note('Stuck? N solves it', 6500); }
+    const key = this.batch + ':' + this.levelIdx;
+    if (key !== this.stuckKey) { this.stuckKey = key; this.stuckT = stuckTime.get(key) || 0; this.offerSkip = false; }
+    this.stuckT += dt; stuckTime.set(key, this.stuckT);
+    if (!this.offerSkip && this.stuckT > (STUCK[this.level.id] || STUCK_GLOBE)) {
+      this.offerSkip = true;
+      if (!state.immune) { overlay.note('Stuck? N solves it', 6500); Sound.tone(660, 0.06, 'square', 0.015); this.time.delayedCall(110, () => Sound.tone(880, 0.08, 'square', 0.015)); }
+    }
+  }
+  // the offer on the screen itself: a box with the N key, clickable
+  offerRect() { return this.offerSkip && !this.form && !this.solved && !this.ended && !state.immune && !this.embedded ? OFFER[this.skinN][0] : null; }
+  offerAt(x, y) { const r = this.offerRect(); return !!r && x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + 13; }
+  drawOffer(g) {
+    const r = this.offerRect(); if (!r) return;
+    const K = this.K, [x, y, w] = r, label = OFFER[this.skinN][1], blink = Math.floor(this.clock * 2) % 2 === 0;
+    g.fillStyle(H(K.accent), 1); g.fillRect(x, y, w, 13);
+    g.fillStyle(H(blink ? K.bg : K.accent), 1); g.fillRect(x + 2, y + 1, 10, 11);
+    g.fillStyle(H(blink ? K.accent : K.bg), 1); g.fillRect(x + 3, y + 2, 8, 8);
+    ccText(g, 'N', x + 4, y + 2, H(blink ? K.bg : K.accent));
+    ccText(g, label, x + 16 + Math.round((w - 18 - ccWidth(label)) / 2), y + 3, H(K.bg));
   }
   win() {
-    if (this.solved || this.ended) return;
+    if (this.solved || this.ended) { if (this.form) this.form.dismiss(); return; }
     this.solved = true; this.drag = null; this.auto = null; this.anim = null;
+    if (this.form) this.form.dismiss(); // a test, or story-mode N: the form goes too
+    if (!this.embedded) stuckTime.delete(this.batch + ':' + this.levelIdx);
     // N, or a test: the beads go home
     this.ph.beads = this.targets.slice(); this.ph.caught = this.ph.caught.map(() => 1);
     this.celebrate();
@@ -280,13 +330,15 @@ export class Satellite extends Phaser.Scene {
     this.clock += dt;
     if (this.embedded) { this.autoStep(dt); this.physics(dt); this.drawLive(); this.drawBoard(); this.winFx.update(dt, this.K); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
-    reviewKeys(this);
+    reviewKeys(this); // N: skipAhead() (the form, or the puzzle)
     if (c.nextScreen()) {
       const next = this.skinN % 4 + 1; overlay.note('Screen ' + next + ' · ' + SKINS[next].name, 1600);
-      this.scene.restart({ batch: this.batch, skin: next, quiet: true, score: this.score, preview: true, at: this.levelIdx });
+      this.scene.restart({ batch: this.batch, skin: next, quiet: true, score: this.score, preview: true, at: this.levelIdx, formDone: !this.form });
       return;
     }
-    if (c.restart() && (this.final ? (this.scene.restart({ batch: this.batch, skin: this.skinN, preview: this.preview }), true) : this.restartTake())) return;
+    if (c.restart() && (this.final ? (this.scene.restart({ batch: this.batch, skin: this.skinN, preview: this.preview, formDone: true }), true) : this.restartTake())) return;
+    // the request on the desk: nothing turns until it is stamped
+    if (this.form) { this.form.update(dt, c); c.endFrame(); return; }
     this.watchStuck(dt);
     if (this.final && c.advance()) { this.scene.start('intro', {}); return; }
     this.turnInput(dt);
@@ -363,6 +415,7 @@ export class Satellite extends Phaser.Scene {
       this.confetti.forEach(p => { p.t += 1 / 60; p.vy += 40 / 60; p.x += p.vx / 60; p.y += p.vy / 60; g.fillStyle(H(p.c), 1); g.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); });
       this.confetti = this.confetti.filter(p => p.y < 190);
     }
+    this.drawOffer(g);
   }
   drawBoard() {
     this.view.paint(this.yaw, this.B.ring ? this.B.S.tilt : this.pitch, this.clock);

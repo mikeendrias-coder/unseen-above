@@ -1,5 +1,10 @@
 // Plays every satellite puzzle in the browser along the solver's turns (the real physics, not
 // win()), checks the keys and a mouse drag turn the surface, and that each batch ends.
+// Each batch starts with the request form, which ignores stamps for 0.5 s and Enter for 1.2 s:
+// batch 1 clicks OPERATOR (the clue), stamps DENIED with K (then NOTED) and goes on with J;
+// batch 2 walks the fields with S (no clue for walking past OPERATOR), asks with L (the clue) and
+// stamps APPROVED with J; batch 3 skips with Enter; batch 4 clicks the APPROVED stamp. Then a
+// long time on one puzzle puts a clickable N on screen, and the time survives a retry.
 // node tests/sat-play.js  (serve dist first; UA_BASE picks the port)
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
@@ -14,14 +19,49 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
     await p.goto(BASE + '/local.html#batch' + batch); await p.click('#start');
     await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'satellite' && window.__game.scene.level);
+    // ---- the request form
+    const box = await (await p.$('canvas')).boundingBox(), sx = box.width / 320;
+    const at = (x, y) => [box.x + x * sx, box.y + y * sx];
+    ok('batch ' + batch + ': a request form comes first', await p.evaluate(() => !!window.__game.scene.form));
+    const yawF = await p.evaluate(() => window.__game.scene.yaw);
+    await p.keyboard.down('KeyD'); await p.waitForTimeout(300); await p.keyboard.up('KeyD');
+    ok('  nothing turns under the form', await p.evaluate(y => window.__game.scene.yaw === y, yawF));
+    const early = await p.evaluate(() => { const f = window.__game.scene.form; return f.ready() ? 'late' : (f.skip() === false && !!window.__game.scene.form ? 'held' : 'skipped'); });
+    if (early !== 'late') ok('  a skip during the first moment does nothing', early === 'held');
+    await until(() => window.__game.scene.form.ready(), null, 10000); // the stamps are up
+    if (batch === 3) await p.waitForTimeout(800); // Enter waits a little longer
+    const story = () => p.evaluate(() => JSON.parse(localStorage.getItem('unseen-above-v1') || '{}').story || {});
+    if (batch === 1) {
+      await p.mouse.click(...at(140, 34 + 25 + 2 * 16 + 3)); // the OPERATOR row
+      ok('  clicking OPERATOR records the clue', (await story()).clues.operator === true);
+      await p.keyboard.press('KeyK');
+      await until(() => window.__game.scene.form && window.__game.scene.form.stamp && window.__game.scene.form.stamp.noted, null, 5000);
+      ok('  K stamps DENIED, then NOTED goes on top', true);
+      await until(() => !window.__game.scene.form || window.__game.scene.form.stamp.t > 1.7, null, 10000);
+      const tJ = await p.evaluate(() => window.__game.scene.form ? window.__game.scene.form.stamp.t : 99);
+      await p.keyboard.press('KeyJ');
+      await until(() => !window.__game.scene.form, null, 10000);
+      ok('  J goes on from the denial (pressed at ' + tJ.toFixed(1) + ' s)', tJ < 4.4);
+    } else if (batch === 2) {
+      for (let i = 0; i < 3; i++) { await p.keyboard.press('KeyS'); await p.waitForTimeout(60); }
+      ok('  walking onto OPERATOR with S gives no clue', await p.evaluate(() => window.__game.scene.form.cursor === 2) && !((await story()).clues || {}).operator);
+      await p.keyboard.press('KeyL');
+      await until(() => window.__game.scene.form.checked.operator, null, 5000);
+      ok('  L on OPERATOR asks who, and records the clue', ((await story()).clues || {}).operator === true);
+      await p.keyboard.press('KeyJ');
+    }
+    else if (batch === 3) { await p.keyboard.press('Enter'); }
+    else { await p.mouse.click(...at(36 + 10 + 40, 34 + 122 + 7)); }
+    await until(() => !window.__game.scene.form, null, 20000);
+    const st = await story(), want = { 1: 'denied', 2: 'approved', 3: 'skipped', 4: 'approved' }[batch];
+    ok('  the form closes and the puzzle starts; recorded ' + JSON.stringify(st.requests) + ', denied ' + st.denied, st.requests && st.requests[batch] === want && st.denied === (batch === 1 ? 1 : 0));
     if (batch === 1) {
       // the keys turn the ring, and a drag does too
       const y0 = await p.evaluate(() => window.__game.scene.yaw);
       await p.keyboard.down('KeyD'); await p.waitForTimeout(400); await p.keyboard.up('KeyD');
       const y1 = await p.evaluate(() => window.__game.scene.yaw);
       ok('D turns the ring (' + (y1 - y0).toFixed(2) + ' rad)', y1 - y0 > 0.3);
-      const box = await (await p.$('canvas')).boundingBox(), sx = box.width / 320;
-      await p.mouse.move(box.x + 238 * sx, box.y + 120 * sx); await p.mouse.down();
+        await p.mouse.move(box.x + 238 * sx, box.y + 120 * sx); await p.mouse.down();
       await p.mouse.move(box.x + 200 * sx, box.y + 120 * sx, { steps: 8 }); await p.mouse.up();
       const y2 = await p.evaluate(() => window.__game.scene.yaw);
       ok('a drag to the left turns it back (' + (y2 - y1).toFixed(2) + ' rad)', y2 - y1 < -0.3);
@@ -31,6 +71,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
       ok('O cycles the ring through the four screens and back', await p.evaluate(() => window.__game.scene.skinN === 1 && window.__game.scene.level.id === 'ring'));
       await p.evaluate(() => window.__game.scene.restartTake());
       await until(() => window.__game.scene.level && window.__game.scene.clock > 0.3);
+      ok('a retry does not bring the form back', await p.evaluate(() => !window.__game.scene.form));
     }
     const n = await p.evaluate(() => window.__game.scene.ids.length);
     for (let i = 0; i < n; i++) {
@@ -52,6 +93,30 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     }
     await until(b => /END OF BATCH/.test(document.querySelector('#card').textContent), batch, 30000);
     ok('batch ' + batch + ' ends: ' + await p.evaluate(() => document.querySelector('#card').textContent.replace(/\s+/g, ' ').trim()), true);
+    await p.close();
+  }
+  // a long time on one puzzle: the screen offers N, and a click on it solves the puzzle
+  {
+    const p = await b.newPage({ viewport: { width: 1280, height: 860 } });
+    p.on('pageerror', e => errs.push(e.message));
+    await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
+    await p.goto(BASE + '/local.html#batch2'); await p.click('#start');
+    await p.waitForFunction(() => window.__game && window.__game.scene && window.__game.scene.form, null, { timeout: 60000 });
+    await p.waitForFunction(() => window.__game.scene.form.ready(), null, { timeout: 10000 }); await p.waitForTimeout(800); await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !window.__game.scene.form && window.__game.scene.stuckKey, null, { timeout: 20000 });
+    ok('no offer before 90 s', await p.evaluate(() => !window.__game.scene.offerRect()));
+    // 89 s, then a retry: the time is kept, so the offer still comes at 90
+    await p.evaluate(() => { window.__game.scene.stuckT = 89; });
+    await p.waitForFunction(() => window.__game.scene.stuckT > 89, null, { timeout: 5000 });
+    await p.evaluate(() => window.__game.scene.restartTake());
+    await p.waitForFunction(() => window.__game.scene.clock > 0.2 && window.__game.scene.stuckKey, null, { timeout: 10000 });
+    ok('a retry keeps the time spent (' + (await p.evaluate(() => window.__game.scene.stuckT)).toFixed(1) + ' s)', await p.evaluate(() => window.__game.scene.stuckT > 89));
+    const r = await (await p.waitForFunction(() => window.__game.scene.offerRect(), null, { timeout: 5000 })).jsonValue();
+    ok('after 90 s the screen offers N at ' + r.join(','), true);
+    const box = await (await p.$('canvas')).boundingBox(), sx = box.width / 320;
+    await p.mouse.click(box.x + (r[0] + 30) * sx, box.y + (r[1] + 6) * sx);
+    await p.waitForFunction(() => window.__game.scene.solved, null, { timeout: 5000 });
+    ok('a click on the offer solves the puzzle', true);
     await p.close();
   }
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 10).join('\n') : 'no errors');
