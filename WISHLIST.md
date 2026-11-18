@@ -53,18 +53,18 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 
 ## 5. Nov 17 (late): "do everything", polish for Nov 18 night (Michael walks the class through it)
 - Claude makes all decisions from Michael's preferences. No deploying or publishing (no `npm run publish`, no push) until Michael says. Quick tests only, or tests in a side agent.
-- `todo` **Look less generated, more like a real pixel game** in Ash and Gold. References Michael named: **Jump King** (character size, scale, jump dynamics), **Geometry Dash / Jetpack Joyride** (pace, restarts), **Papers, Please** (black and white, monotonous, bureaucratic tone). See docs/ART_DIRECTION.md.
-- `todo` **Go to a final design: build out every level** and everything on this list.
+- `done, check` (docs/ART_DIRECTION.md applied everywhere: no glows or gradients, paperwork UI, outlines, scale) **Look less generated, more like a real pixel game** in Ash and Gold. References Michael named: **Jump King** (character size, scale, jump dynamics), **Geometry Dash / Jetpack Joyride** (pace, restarts), **Papers, Please** (black and white, monotonous, bureaucratic tone). See docs/ART_DIRECTION.md.
+- `done, check` **Go to a final design: build out every level** and everything on this list.
 - `done, check` (THE VEST, END IT ALL, ROUND TWO, LOOK BACK, secret THE COUCH, false ending WE'LL BE RIGHT BACK; data/endings.js) **Endings crafted by Claude**, including a **secret ending** where she does not blow herself up (for example she sits on the couch with the kids).
 - `done, check` **Remake the Moon city people and the kids** (they looked weird): big, clear pixel characters, not the smooth animated style of the old opening.
 - `done, check` **Immunity mode** stays easy to reach for the class walkthrough.
 - `done, check` (ui/keys.js) **Instructions under the game become key buttons:** keys drawn like keyboard keys, what they do written under each, clickable, and toggles show on or off.
 - `doing` Movement done Nov 17 (double jump, wall slide and wall jump, fall damage by distance, 3 HP, sword costs HP). Fixed train of lines before the fight; dialogue cuts.
 
-- `todo` **Dialogue types out letter by letter, Pokemon style, and is snappy:** a press (J, Enter, Space or a click) finishes the line at once, the next press goes to the next line. Every dialogue and narration line. Michael suggested an existing asset for this (for example a Phaser text-typing plugin); our captions are drawn in our own pixel font, so we build it into ui/cg.js unless a library fits.
-- `todo` **Easy and snappy to play through; everything makes sense** for the class walkthrough tomorrow night.
-- `todo` **More features** from the referenced games (Jump King, Geometry Dash, Jetpack Joyride, Papers, Please) and for the presentation day itself (research agents, Nov 17).
-- `todo` **Final checks include an aesthetics cohesion pass** (everything in the one look).
+- `done, check` (ui/typer.js; one press finishes, next advances; rehearsal reset) **Dialogue types out letter by letter, Pokemon style, and is snappy:** a press (J, Enter, Space or a click) finishes the line at once, the next press goes to the next line. Every dialogue and narration line. Michael suggested an existing asset for this (for example a Phaser text-typing plugin); our captions are drawn in our own pixel font, so we build it into ui/cg.js unless a library fits.
+- `done, check` (Nov 18 final checks: playthrough, presenter run, story and dialogue edit; checkpoints; presenter mode; docs/RUN_SHEET.md) **Easy and snappy to play through; everything makes sense** for the class walkthrough tomorrow night.
+- `done, check` (instant takes with floor tape, landing/hit feel, progress bar, results slip, gold bait, heavy bag, satellite request forms and bulletins, presenter tools) **More features** from the referenced games (Jump King, Geometry Dash, Jetpack Joyride, Papers, Please) and for the presentation day itself (research agents, Nov 17).
+- `done, check` (pixel audit against the palette, art direction review, fixes merged) **Final checks include an aesthetics cohesion pass** (everything in the one look).
 
 ## Hosting
 - `done, check` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): repo made public (his call), GitHub Pages at https://mikeendrias-coder.github.io/unseen-above/ . `npm run publish` (in game/) rebuilds and updates it; Claude runs it after each change. Progress is saved in the browser (localStorage).
