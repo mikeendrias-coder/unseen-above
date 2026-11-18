@@ -1,0 +1,97 @@
+// The keys under the game (Michael, Nov 17): every control drawn as a key cap with what it does
+// in small type under it. Clicking one does what the key does: it sends the game the same key
+// the keyboard would (held while the pointer is down, for moving, jumping, crouching and
+// running). Switches (immunity, sound, flashing, glasses) latch down while on and stay in step
+// when changed from the keyboard or the menus. CH opens the chapter row (the jump links).
+import { state } from '../core/state.js';
+import { Sound } from '../core/sound.js';
+import { setStory } from '../core/review.js';
+import { overlay } from '../core/overlay.js';
+
+const KEYS = [
+  { cap: 'A', key: 'a', code: 'KeyA', kc: 65, label: 'left', hold: true },
+  { cap: 'D', key: 'd', code: 'KeyD', kc: 68, label: 'right', hold: true },
+  { cap: 'Space', key: ' ', code: 'Space', kc: 32, label: 'jump', hold: true },
+  { cap: 'S', key: 's', code: 'KeyS', kc: 83, label: 'crouch', hold: true },
+  { cap: 'W', key: 'w', code: 'KeyW', kc: 87, label: 'door' },
+  { cap: 'Shift', key: 'Shift', code: 'ShiftLeft', kc: 16, label: 'run', hold: true },
+  { cap: 'J', key: 'j', code: 'KeyJ', kc: 74, label: 'use' },
+  { cap: 'K', key: 'k', code: 'KeyK', kc: 75, label: 'throw' },
+  { cap: 'L', key: 'l', code: 'KeyL', kc: 76, label: 'glasses', sw: 'glasses' },
+  { cap: 'Enter', key: 'Enter', code: 'Enter', kc: 13, label: 'skip line' },
+  { cap: 'Bksp', key: 'Backspace', code: 'Backspace', kc: 8, label: 'restart' },
+  { cap: 'Esc', key: 'Escape', code: 'Escape', kc: 27, label: 'skip scene' },
+  { cap: 'P', key: 'p', code: 'KeyP', kc: 80, label: 'pause' },
+  { cap: 'M', label: 'sound', sw: 'sound' },
+  { cap: 'I', label: 'immunity', sw: 'immune' },
+  { cap: 'N', key: 'n', code: 'KeyN', kc: 78, label: 'skip ahead' },
+  { cap: 'Flash', label: 'flashing', sw: 'flash' },
+  { cap: 'CH', label: 'chapters', sw: 'chapters' }
+];
+
+// a key event the game cannot tell from a real one (Phaser reads keyCode)
+function send(type, k) {
+  const ev = new KeyboardEvent(type, { key: k.key, code: k.code, bubbles: true, cancelable: true });
+  Object.defineProperty(ev, 'keyCode', { get: () => k.kc }); Object.defineProperty(ev, 'which', { get: () => k.kc });
+  window.dispatchEvent(ev);
+}
+const scene = () => window.__game && window.__game.scene;
+const glasses = () => { const sc = scene(), g = sc && sc.gl; return g && g.has ? g : null; };
+
+// what each switch shows: [pressed, word under it]
+const SWITCH = {
+  immune: () => [state.immune, state.immune ? 'immune on' : 'immunity'],
+  sound: () => [!Sound.muted, Sound.muted ? 'sound off' : 'sound on'],
+  flash: () => [!!state.settings.reduceFlash, state.settings.reduceFlash ? 'flash reduced' : 'flash full'],
+  glasses: () => { const g = glasses(); return [!!(g && g.on), g ? (g.on ? 'glasses on' : 'glasses') : 'glasses'] },
+  chapters: () => { const n = document.getElementById('jump'); return [!!(n && !n.hidden), 'chapters']; }
+};
+
+export function initKeys() {
+  const bar = document.getElementById('keybar'); if (!bar) return;
+  const els = [];
+  KEYS.forEach(k => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'key' + (k.cap.length > 1 ? ' wide' : '') + (k.sw ? ' switch' : '');
+    const cap = document.createElement('span'); cap.className = 'cap'; cap.textContent = k.cap;
+    const lbl = document.createElement('span'); lbl.className = 'lbl'; lbl.textContent = k.label;
+    b.append(cap, lbl);
+    b.setAttribute('aria-label', (k.sw ? k.label : k.label + ', key ' + k.cap));
+    if (k.sw) b.setAttribute('aria-pressed', 'false');
+    if (k.sw === 'chapters') b.setAttribute('aria-controls', 'jump');
+    // the pointer never takes focus from the game, so Space and Enter stay the game's
+    b.addEventListener('mousedown', ev => ev.preventDefault());
+    let down = false;
+    const release = () => { if (!down) return; down = false; b.classList.remove('down'); if (k.hold) send('keyup', k); };
+    b.addEventListener('pointerdown', ev => {
+      if (ev.button !== 0) return;
+      ev.preventDefault(); down = true; b.classList.add('down');
+      try { b.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      act(k, true);
+    });
+    b.addEventListener('pointerup', release); b.addEventListener('pointercancel', release); b.addEventListener('lostpointercapture', release);
+    // from the keyboard (Tab to it, then Enter or Space): a tap
+    b.addEventListener('click', ev => { if (ev.detail === 0) { act(k, true); if (k.hold) setTimeout(() => send('keyup', k), 120); } });
+    bar.appendChild(b); els.push({ k, b, lbl });
+  });
+  function act(k) {
+    if (k.sw === 'immune') { setStory(!state.immune); overlay.note(state.immune ? 'Immunity on' : 'Immunity off', 1600); }
+    else if (k.sw === 'sound') { Sound.ensure(); overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000); }
+    else if (k.sw === 'flash') { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); overlay.note(r ? 'Flashing reduced' : 'Flashing full', 1400); }
+    else if (k.sw === 'chapters') { const n = document.getElementById('jump'); if (n) { n.hidden = !n.hidden; window.dispatchEvent(new Event('resize')); } }
+    else { send('keydown', k); if (!k.hold) setTimeout(() => send('keyup', k), 90); }
+    sync();
+  }
+  function sync() {
+    els.forEach(({ k, b, lbl }) => {
+      if (!k.sw) return;
+      const [on, word] = SWITCH[k.sw]();
+      if (b.getAttribute('aria-pressed') !== String(on)) b.setAttribute('aria-pressed', String(on));
+      if (lbl.textContent !== word) lbl.textContent = word;
+      if (k.sw === 'glasses') b.classList.toggle('off', !glasses());
+    });
+  }
+  sync();
+  setInterval(sync, 250); // the keyboard and the menus change these too
+  window.__keys = { sync };
+}

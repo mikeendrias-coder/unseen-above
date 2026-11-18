@@ -2,6 +2,7 @@
 // (ui/cg.js) in the caption face, on the pixel grid. The same words go into hidden HTML
 // elements too, so a screen reader hears them and tests can read them.
 import { cg, TV } from '../ui/cg.js';
+import { state } from './state.js';
 
 const el = id => document.getElementById(id);
 const timers = new Map();
@@ -13,11 +14,15 @@ let descText = ''; // the narration up now
 export const overlay = {
   // A caption. speaker: 'SISTER' | 'BROTHER' | ... | null (sounds use [BRACKETS] in the text).
   // opts.italic for a voice from off screen; opts.ms clears it after that long.
+  // opts.once: a key (any stable string); the line plays only the first time, ever (saved), so a
+  // retry never replays it. Returns false when it was skipped.
   caption(speaker, text, opts) {
+    if (opts && opts.once != null && !state.hear(opts.once)) return false;
     cg.caption(speaker, text, opts);
     capText = (speaker ? speaker + ': ' : '') + text;
     if (!cg.describing) say('cc', capText, true);
     if (opts && opts.ms) later('cc', opts.ms, () => { capText = ''; if (!cg.describing) say('cc', '', false); });
+    return true;
   },
   clearCaption() { cg.clearCaption(); capText = ''; if (!cg.describing) say('cc', '', false); },
   // Narration from a look with E: { lines, shown, alpha, more, ink } every frame, or null. It
@@ -50,13 +55,13 @@ export const overlay = {
   note(text, ms) { cg.osd(text, ms); say('note', text, true); later('note', ms || 1800, () => say('note', null, false)); },
   rec(ms) { cg.rec(ms); say('note', 'REC', true); later('note', ms || 2400, () => say('note', null, false)); },
 
-  // A how-to-play page (teletext). Any key or a click closes it, after a moment to read.
-  // spec: { num, title, band, lines } (lines may mark keys as {G})
+  // A how-to-play notice (a slip from the show). Any key or a click closes it, after a moment.
+  // spec: { num, title, lines, stamp } (lines may mark keys as {L})
   panel(spec, onClose) {
     const p = el('panel');
     cg.page(spec);
     if (p) {
-      p.querySelector('.panel-kicker').textContent = 'Page ' + spec.num;
+      p.querySelector('.panel-kicker').textContent = 'Notice ' + spec.num;
       p.querySelector('.panel-title').textContent = spec.title;
       p.querySelector('.panel-body').replaceChildren(...spec.lines.map(l => { const d = document.createElement('p'); d.textContent = l.replace(/[{}]/g, ''); return d; }));
       p.classList.add('on');

@@ -10,7 +10,7 @@ import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
@@ -39,8 +39,9 @@ export class SideEpisode extends Phaser.Scene {
     this.props = [];  // solid rectangles off the tile grid: low debris, furniture, a robot
     this.things = []; // things she can use with E
     this.scale.on('rescale', this.onRescale, this);
-    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); cg.hp(null); });
+    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); cg.hp(null); cg.lives(null); });
     syncImmunity();
+    startTakes(this); showStatus(this);
   }
   itemPanel(kind) { return itemPanel(this, kind); }
   // Review: with immunity on, N moves her to the next of this.skipPoints (x positions).
@@ -115,7 +116,7 @@ export class SideEpisode extends Phaser.Scene {
     const s = this.level.start;
     this.kid = { x: x != null ? x : s.x, y: s.y, w: K.w, h: K.hStand, vx: 0, vy: 0, onGround: true, crouch: false, coyote: 0, buffer: 0, holdT: 0, face: 1, walkT: 0,
       hp: K.hp, inv: 0, airJumps: 1, wall: 0, wallLock: 0, peakY: s.y };
-    cg.hp(state.immune ? null : this.kid.hp, K.hp);
+    showStatus(this, this.kid.hp, K.hp);
     this.dead = false; this.leaving = false; this.done = false;
     this.girl.setVisible(true);
   }
@@ -151,7 +152,7 @@ export class SideEpisode extends Phaser.Scene {
     this.time.delayedCall(260, () => {
       this.leaving = false; this.kid.vx = 0;
       Object.values(this.beds || {}).forEach(b => b.set(0.0001, 0.3));
-      this.events.once('wake', () => { this.ctl.endFrame(); if (this.kid) cg.hp(state.immune ? null : this.kid.hp, K.hp); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
+      this.events.once('wake', () => { this.ctl.endFrame(); if (this.kid) showStatus(this, this.kid.hp, K.hp); this.cameras.main.fadeIn(300); window.__game = { scene: this, state }; if (this.onWake) this.onWake(); });
       this.scene.launch('room', { id, from: this.scene.key, take: this.ep.take });
       this.scene.sleep();
     });
@@ -260,7 +261,7 @@ export class SideEpisode extends Phaser.Scene {
   // What watches her (lights, lasers, cameras, the strike) still kills outright, through die().
   hurt(n, id) {
     const k = this.kid; if (!k || this.dead || k.inv > 0 || state.immune || window.__noDeath) return;
-    k.hp = Math.max(0, k.hp - n); k.inv = K.inv; cg.hp(k.hp, K.hp);
+    k.hp = Math.max(0, k.hp - n); k.inv = K.inv; showStatus(this, k.hp, K.hp);
     Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800);
     fx.shake(this.cameras.main, 120, 0.006);
     if (k.hp <= 0) this.die({ id, direct: true });
@@ -284,12 +285,12 @@ export class SideEpisode extends Phaser.Scene {
       }
       state.addBody(this.epId, x, footY, src && src.id);
     };
-    beginDeath(this, src, impact, onImpact => { this.cameras.main.stopFollow(); return this.strikeFx.fire({ view: this.cameras.main.worldView, tx: x, ty: y, P: this.P, onImpact, from: this.satX }); });
+    beginDeath(this, src, impact, (onImpact, o) => { this.cameras.main.stopFollow(); return this.strikeFx.fire({ view: this.cameras.main.worldView, tx: x, ty: y, P: this.P, onImpact, from: this.satX, short: o && o.short }); });
   }
   groundBelow(x) { for (let ty = 0; ty < this.map.H; ty++) if (this.solidTile(Math.floor(x / TILE), ty) && !this.solidTile(Math.floor(x / TILE), ty - 1)) { if (ty * TILE > this.kid.y) return ty * TILE; } return 160; }
-  // a restart by choice (R, or the pause menu): the next take, no body
+  // a restart by choice (Backspace, or the pause menu): the next take, no body, no take used up
   canRestart() { return !this.dead && !this.leaving && !this.done; }
-  restartTake() { if (!this.canRestart()) return false; this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); return true; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; state.episode(this.epId).take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart({ retry: true })); return true; }
   // Mute, switch look, restart; while she is dying, a key skips the strike. Returns true when the
   // scene is restarting.
   commonKeys() {

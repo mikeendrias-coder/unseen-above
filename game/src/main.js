@@ -4,6 +4,7 @@ import { Sound } from './core/sound.js';
 import { overlay } from './core/overlay.js';
 import { initPicker } from './ui/vibe.js';
 import { initPause } from './ui/pause.js';
+import { initKeys } from './ui/keys.js';
 import { cg } from './ui/cg.js';
 import { STEPS } from './core/flow.js';
 import { state } from './core/state.js';
@@ -85,7 +86,7 @@ function start(entry) {
       game.scale.emit('rescale');
     }, 150);
   });
-  window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state };
+  window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state, cg };
 }
 function stopAll() {
   game.scene.getScenes(false).forEach(sc => { const s = sc.sys; if (s.isActive() || s.isPaused() || s.isSleeping()) game.scene.stop(s.settings.key); });
@@ -123,6 +124,7 @@ grab(); noteOn(window.self !== window.top || !document.hasFocus());
 const go = document.getElementById('start'), tv = document.getElementById('tv'), cont = document.getElementById('continue');
 const optStory = document.getElementById('opt-story'), optFlash = document.getElementById('opt-flash');
 let stopPicker = () => {};
+initKeys();
 // saved volumes, before any sound is made
 Sound.volume('music', state.settings.music); Sound.volume('sfx', state.settings.sfx);
 

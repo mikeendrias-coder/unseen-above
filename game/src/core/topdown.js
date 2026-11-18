@@ -12,10 +12,11 @@ import { Painter, hexNum, flat } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
+import { cg } from '../ui/cg.js';
 
 export const T = 16;
 export const LOCK_TD = 0.5;
@@ -50,7 +51,8 @@ export class TopDownEpisode extends Phaser.Scene {
     this.noises = []; this.flight = null; this.pebbles = 0; this.things = []; this.nearThing = null; this.sources = []; this.satX = null; this.floorPebbles = [];
     this.lights = []; this.par = [];
     this.scale.on('rescale', this.onRescale, this);
-    this.events.once('shutdown', () => this.scale.off('rescale', this.onRescale, this));
+    this.events.once('shutdown', () => { this.scale.off('rescale', this.onRescale, this); cg.lives(null); });
+    startTakes(this); showStatus(this, null);
   }
   onRescale() { this.cameras.main.setZoom(pixelZoom()); this.place(); }
   place() { const S = display.S; this.par.forEach(e => e.o.setScrollFactor(0).setPosition(e.x + 160 * (S - 1), e.y + 90 * (S - 1))); }
@@ -213,11 +215,11 @@ export class TopDownEpisode extends Phaser.Scene {
       }
       state.addBody(this.epId, tile.x * T + 8, tile.y * T + 13, src && src.id);
     };
-    beginDeath(this, src, impact, onImpact => this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: p.x, ty: p.y - 3, P, onImpact, from: this.satX }));
+    beginDeath(this, src, impact, (onImpact, o) => this.strikeFx.fire({ view: { x: this.view.x, y: this.view.y, width: 320, height: 180 }, tx: p.x, ty: p.y - 3, P, onImpact, from: this.satX, short: o && o.short }));
   }
   // a restart by choice (R, or the pause menu): the next take, no body
   canRestart() { return !this.dead && !this.leaving && !this.done; }
-  restartTake() { if (!this.canRestart()) return false; this.dead = true; this.ep.take++; this.cameras.main.fadeOut(200, 0, 0, 0); this.time.delayedCall(210, () => this.scene.restart({})); return true; }
+  restartTake() { if (!this.canRestart()) return false; this.dead = true; this.ep.take++; this.cameras.main.fadeOut(140, 0, 0, 0); this.time.delayedCall(150, () => this.scene.restart({ retry: true })); return true; }
   skipDeath() { return skipDeath(this); }
   // her bodies from earlier takes; each one can be looked at with E
   drawBodies() {

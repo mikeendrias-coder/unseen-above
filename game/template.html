@@ -14,6 +14,10 @@
     --red: #e3412b;
     --yellow: #d6a03c;
     --green: #f5ce77;
+    --boneLo: #b8b2a3;
+    --ash2: #2e3036;
+    --ash3: #45474d;
+    --ash4: #6b6c70;
     --pix: "CH07 Caption", ui-monospace, Menlo, Consolas, monospace;
     color-scheme: dark;
   }
@@ -56,17 +60,30 @@
   #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--yellow); color: #000; border: 0; font: 20px/1 var(--pix); cursor: pointer; }
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
   #h-hint { min-height: 1.6em; margin: 0 0 4px; color: var(--ink); }
-  .keys { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0 18px; color: var(--quiet); }
-  .keys b { font-weight: normal; color: var(--yellow); }
-  .jump { display: flex; flex-wrap: wrap; gap: 0 18px; margin-top: 4px; color: var(--quiet); }
-  .jump b { font-weight: normal; color: var(--ink); }
-  .jump a { color: var(--quiet); text-decoration: underline; text-decoration-color: var(--quiet); text-underline-offset: 2px; }
-  .jump a:hover, .jump a:focus-visible { color: var(--green); text-decoration-color: var(--green); }
+  /* The keys under the game: key caps with what they do under them. Hard edges, palette only. */
+  .keybar { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 6px; margin: 2px 0 0; }
+  .key { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 40px; padding: 0; background: none; border: 0; color: var(--quiet); font: 10px/1 var(--pix); cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; }
+  .key .cap { display: block; min-width: 14px; padding: 4px 6px 3px; background: var(--boneLo); color: var(--ground); border: 2px solid var(--ground); border-bottom-width: 2px; box-shadow: 0 3px 0 var(--ash3), 0 3px 0 2px var(--ground); line-height: 10px; text-align: center; transform: translateY(0); }
+  .key .lbl { display: block; margin-top: 3px; white-space: nowrap; }
+  .key:hover .cap { background: var(--ink); }
+  .key.down .cap, .key[aria-pressed="true"] .cap { transform: translateY(3px); box-shadow: 0 0 0 0 var(--ash3), 0 0 0 2px var(--ground); }
+  .key[aria-pressed="true"] .cap { background: var(--yellow); }
+  .key[aria-pressed="true"] .lbl { color: var(--ink); }
+  .key.off { opacity: 1; color: var(--ash3); }
+  .key.off .cap { background: var(--ash4); }
+  .key:focus { outline: none; }
+  .key:focus-visible .cap { outline: 2px solid var(--yellow); outline-offset: 3px; }
+  .key::-moz-focus-inner { border: 0; }
+  .jump { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; margin: 10px 0 0; }
+  .jump a { padding: 3px 6px; background: var(--ash2); color: var(--ink); text-decoration: none; border: 2px solid var(--ground); }
+  .jump a:hover { background: var(--ash3); }
+  .jump a:focus { outline: none; }
+  .jump a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { #blackout { transition: none; } }
 </style>
 <header id="chrome-top">
   <h1>Unseen Above <span>· CH 07</span></h1>
-  <div class="tag">Working build. The whole game, start to end. Keyboard needed.</div>
+  <div class="tag">A show in five episodes. Keyboard, or click the keys below.</div>
 </header>
 <button id="focus-note" type="button" hidden>Click the game to use the keyboard</button>
 <div id="stage">
@@ -78,14 +95,14 @@
     <div id="bug" class="sr"></div>
     <div id="note" class="sr"></div>
     <div id="panel" class="sr" role="dialog" aria-live="assertive"><div class="panel-kicker"></div><div class="panel-title"></div><div class="panel-body"></div><div class="panel-key">Any key or a click to go on</div></div>
-    <div id="immune" class="sr">Story mode. N skips ahead.</div>
+    <div id="immune" class="sr">Immunity on. N skips ahead.</div>
   </div>
   <div id="tv">
     <canvas id="tv-canvas" width="320" height="180" role="img" aria-label="Unseen Above. Two siblings on an ash ridge look across a dead city at the one lit mansion."></canvas>
     <div class="tv-menu" role="group" aria-label="Start">
       <button id="continue" class="main" type="button" hidden>Continue<i>Episode 1</i></button>
       <button id="start" class="main" type="button">Begin<span>Sound on. Enter begins.</span></button>
-      <button id="opt-story" type="button" aria-pressed="false"><b>Story mode</b><i>off</i><span>Nothing can kill her. N skips ahead.</span></button>
+      <button id="opt-story" type="button" aria-pressed="false"><b>Immunity</b><i>off</i><span>Nothing can kill her. N skips ahead.</span></button>
       <button id="opt-flash" type="button" aria-pressed="false"><b>Flashing</b><i>full</i><span>Reduced: dim, slow flashes and no shake.</span></button>
       <button id="opt-chapters" type="button" aria-expanded="false" aria-controls="chapters"><b>Chapters</b><i>&gt;</i></button>
     </div>
@@ -93,41 +110,24 @@
   </div>
 </div>
 <footer id="chrome-bottom">
-  <p class="tv-note" id="tv-note"><b>Flashing lights and screen shake.</b> P pauses, and the pause menu turns them down. Best on a desktop with a keyboard.</p>
+  <p class="tv-note" id="tv-note"><b>Flashing lights.</b> The Flash key below turns them down. Best with a keyboard.</p>
   <p id="h-hint"></p>
-  <ul class="keys">
-    <li><b>Move</b> A D (or arrows)</li>
-    <li><b>Jump</b> Space</li>
-    <li><b>Crouch</b> S</li>
-    <li><b>Door</b> W</li>
-    <li><b>Run</b> Shift</li>
-    <li><b>Use, talk</b> J</li>
-    <li><b>Throw, swing</b> K or click</li>
-    <li><b>Glasses</b> L</li>
-    <li><b>Skip a line</b> Enter</li>
-    <li><b>Restart episode</b> Backspace</li>
-    <li><b>Pause</b> P or Esc</li>
-    <li><b>Sound</b> M</li>
-    <li><b>Skip the opening</b> Esc</li>
-    <li><b>Satellite</b> drag with the mouse</li>
-    <li><b>Story mode</b> title screen or pause menu; N skips ahead</li>
-  </ul>
-  <nav class="jump" aria-label="Jump to a part">
-    <b>Jump to</b>
-    <a href="#opening">the opening</a>
-    <a href="#grounds">episode 1</a>
-    <a href="#batch1">satellite batch 1</a>
-    <a href="#gallery">episode 2</a>
-    <a href="#batch2">satellite batch 2</a>
-    <a href="#fall">episode 3</a>
-    <a href="#eastwing">episode 3, the east wing</a>
-    <a href="#batch3">satellite batch 3</a>
-    <a href="#bedroom">episode 4</a>
-    <a href="#batch4">satellite batch 4</a>
-    <a href="#kids">the kids&rsquo; room</a>
-    <a href="#moon">episode 5</a>
-    <a href="#hallway">episode 5, backstage</a>
-    <a href="#playroom">episode 5, the playroom</a>
+  <div id="keybar" class="keybar" role="group" aria-label="Keys. Click one to press it."></div>
+  <nav id="jump" class="jump" aria-label="Chapters" hidden>
+    <a href="#opening">opening</a>
+    <a href="#grounds">ep 1</a>
+    <a href="#batch1">sat 1</a>
+    <a href="#gallery">ep 2</a>
+    <a href="#batch2">sat 2</a>
+    <a href="#fall">ep 3</a>
+    <a href="#eastwing">ep 3 east wing</a>
+    <a href="#batch3">sat 3</a>
+    <a href="#bedroom">ep 4</a>
+    <a href="#batch4">sat 4</a>
+    <a href="#kids">kids&rsquo; room</a>
+    <a href="#moon">ep 5 moon</a>
+    <a href="#hallway">ep 5 backstage</a>
+    <a href="#playroom">ep 5 playroom</a>
   </nav>
 </footer>
 <script src="__PHASER_SRC__"></script>

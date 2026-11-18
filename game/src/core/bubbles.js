@@ -13,7 +13,7 @@ import { overlay } from './overlay.js';
 import { Sound } from './sound.js';
 
 const CPS = 40; // letters per second
-const BOX = 0x000000, A = CAPTION.alpha, R = CAPTION.row, PAD = 4;
+const BOX = CAPTION.box, A = CAPTION.alpha, R = CAPTION.row, PAD = 4;
 const lineList = src => typeof src.lines === 'function' ? src.lines() : src.lines;
 const hit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
@@ -133,12 +133,15 @@ export class Bubbles {
     });
     if (this.prompt) {
       // the key sits over the thing; if she is standing there, over her head instead
-      const p = this.prompt, bob = Math.round(Math.sin((clock || 0) * 5) * 1.5), x = Math.round(p.x - 5);
+      const p = this.prompt, bob = Math.floor((clock || 0) * 2.5) % 2 ? -1 : 0, x = Math.round(p.x - 5);
       let y = Math.round(p.y - 14 + bob);
       const her = bodies[0];
       if (her && x < her.x1 + 1 && x + 11 > her.x0 - 1 && y < her.y1 && y + 13 > her.y0 - 1) y = Math.round(her.y0 - 15 + bob);
-      g.fillStyle(BOX, A); g.fillRect(x, y, 11, 11); g.fillRect(x + 4, y + 11, 3, 1); g.fillRect(x + 5, y + 12, 1, 1);
-      ccText(g, p.label, x + 3, y + 2, p.ink || (p.label === '!' ? 0xd6a03c : 0xebe6d8));
+      // a key cap, as on the keyboard: dark rim, light face, a deeper bottom edge, the letter
+      g.fillStyle(0x0e0f12, 1); g.fillRect(x, y, 11, 12);
+      g.fillStyle(p.label === '!' ? 0xd6a03c : 0xb8b2a3, 1); g.fillRect(x + 1, y + 1, 9, 8);
+      g.fillStyle(0x45474d, 1); g.fillRect(x + 1, y + 9, 9, 2);
+      ccText(g, p.label, x + 3, y + 1, 0x0e0f12);
       this.prompt = null;
     }
   }

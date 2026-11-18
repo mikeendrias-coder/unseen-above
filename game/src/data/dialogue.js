@@ -215,7 +215,10 @@ export const DEATH_SAID = [
   [/ceiling/, '[THE CEILING CAME DOWN]'],
   [/creator/, '[THE LAST CUT]'],
   [/sensor/, '[A MOTION SENSOR CAUGHT HER MOVING]'],
-  [/robot/, '[THE {WHAT} SAW HER]']
+  [/robot/, '[THE {WHAT} SAW HER]', '[THE {WHAT} KNOCKED HER DOWN]'],
+  [/slab|debris|rubble|glass|shard|stair|floor|beam|statue|crate/, '[THE HOUSE CAME DOWN ON HER]', '[THE HOUSE CAME DOWN ON HER]'],
+  // anything else: a watcher saw her, or the house wore her down
+  [/./, '[SOMETHING UP THERE SAW HER]', '[SHE DID NOT GET UP]']
 ];
 export const DEATH_FALLBACK = '[SOMETHING UP THERE SAW HER]';
 export function deathLine(id, direct) {
