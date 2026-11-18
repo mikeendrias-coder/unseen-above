@@ -123,7 +123,7 @@ export class Gallery extends SideEpisode {
     look('polisher', 54 * T, 56 * T, M - 20, M, M - 12, N.polisher);
     look('camera', 64 * T + 8, 67 * T + 8, M - 20, M, 150, N.camera, { clue: 'cameraMoon' });
     // the laser port, once it has fired at her: the sound it made
-    this.emitterLook = look('emitter', 86 * T, 89 * T, G - 40, G, G - 34, N.emitter, { clue: 'laserTone' });
+    this.emitterLook = look('emitter', 76 * T + 4, 78 * T - 4, G - 40, G, G - 34, N.emitter, { clue: 'laserTone' });
     this.emitterLook.off = true;
   }
 

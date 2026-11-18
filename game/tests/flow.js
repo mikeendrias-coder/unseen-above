@@ -1,5 +1,5 @@
-// Flow checks: the opening hands off to episode 1, a death leaves a body and a new take, the
-// door ends the episode, satellite batch 1 leads to episode 2 (glasses, a laser death, a camera
+// Flow checks: the opening hands off to episode 1, a death leaves a body and a new take, looks
+// that hold clues (the mailbox, her footprints, the statue), the door ends the episode, satellite batch 1 leads to episode 2 (glasses, a laser death, a camera
 // death, the door), then batch 2 (the sorting shift), then episode 3 begins. Also loads every look.
 // Every step waits on game state, not on wall-clock time, so slow headless frames do not matter.
 const { chromium } = require('playwright');
@@ -22,15 +22,23 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => { const s = window.__game.scene; s.t = s.T.end - 0.05; });
   await scene('grounds');
   await cardOn('EPISODE 1'); ok('the opening hands off to ' + await card(), true);
-  // death: stand in the garden lamp until it strikes
+  // death: stand on a hedge top with the garden lamp held on her
   await fresh();
-  await p.evaluate(() => { const s = window.__game.scene; s.lights[0].a0 = s.lights[0].a1 = 139; s.kid.x = 560; s.kid.y = 146; });
+  await p.evaluate(() => { const s = window.__game.scene, L = s.lights[0]; s.kid.x = 25 * 16 + 4; s.kid.y = 22 * 16 - 14; s.kid.vy = 0; const a = Math.atan2(s.kid.y + 7 - L.y, s.kid.x + 4 - L.x) * 180 / Math.PI; L.a0 = L.a1 = a; });
   await until(() => window.__game.scene.ep.take === 2);
   await until(() => window.__game.scene.bodyLayer && window.__game.scene.bodyLayer.list.length === 1 && !window.__game.scene.dead);
-  ok('a lamp death leaves a body, take 2', true);
-  // the door
+  ok('a lamp death leaves a body, take 2 (' + await p.evaluate(() => window.__game.scene.ep.bodies[0].cause) + ')', true);
+  // things to look at: the mailbox (a clue, NOTED), the footprints (hers now too), the statue
   await fresh();
-  await p.evaluate(() => { const s = window.__game.scene; window.__noDeath = true; s.kid.x = 1698; s.kid.y = 112 - 14; s.kid.vy = 0; });
+  const lookAt = async (x, feet) => { await p.evaluate(([x, feet]) => { const s = window.__game.scene; window.__noDeath = true; s.kid.x = x; s.kid.y = feet - 14; s.kid.vy = 0; }, [x, feet]); await until(() => !!window.__game.scene.nearThing); await p.keyboard.press('KeyJ'); await p.waitForTimeout(300); };
+  await lookAt(10 * 16 + 2, 400);
+  ok('the mailbox holds the unsigned request (clue request1: ' + await p.evaluate(() => window.__game.state.hasClue('request1')) + ')', await p.evaluate(() => window.__game.state.hasClue('request1')));
+  await lookAt(5 * 16, 400);
+  ok('on take 2 the footprints are hers too (clue footprints)', await p.evaluate(() => window.__game.state.hasClue('footprints')));
+  await lookAt(52 * 16 + 2, 15 * 16);
+  ok('the statue says 07 (clue statue07)', await p.evaluate(() => window.__game.state.hasClue('statue07')));
+  // the door, at the top of the house
+  await p.evaluate(() => { const s = window.__game.scene; window.__noDeath = true; s.scan = null; s.kid.x = 96 * 16 + 4; s.kid.y = 80 - 14; s.kid.vy = 0; });
   await p.keyboard.down('ArrowUp'); await until(() => window.__game.scene.leaving); await p.keyboard.up('ArrowUp');
   await cardOn('END OF EPISODE 1'); ok('episode 1 door: ' + await card(), true);
   await scene('satellite');
@@ -42,26 +50,26 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await scene('gallery');
   await cardOn('EPISODE 2'); ok('episode 2 opens with ' + await card(), true);
   await fresh();
-  await p.evaluate(() => { window.__noDeath = false; const s = window.__game.scene; s.kid.x = 14 * 16 + 4; s.kid.y = 146; s.kid.vy = 0; });
+  await p.evaluate(() => { window.__noDeath = false; const s = window.__game.scene; s.kid.x = 14 * 16 + 4; s.kid.y = 336 - 14; s.kid.vy = 0; });
   await until(() => window.__game.scene.nearThing === window.__game.scene.cabinetThing);
   await p.keyboard.down('KeyE'); await p.waitForTimeout(150); await p.keyboard.up('KeyE');
   await until(() => window.__game.scene.glasses); ok('the drawer gives up the glasses', true);
   // a laser death: stand in the hall during a low shot
-  await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 1150; s.kid.y = 146; s.kid.vy = 0; s.laser.awake = true; const L = s.laserDef || { first: 1.2, tell: 0.7, charge: 0.5 }; window.__laserT = L.first + L.tell + L.charge + 0.1; });
+  await p.evaluate(() => { const s = window.__game.scene; s.kid.x = 80 * 16; s.kid.y = 336 - 14; s.kid.vy = 0; s.laser.awake = true; const L = s.laserDef || { first: 1.2, tell: 0.7, charge: 0.5 }; window.__laserT = L.first + L.tell + L.charge + 0.1; });
   await until(() => window.__game.scene.ep.take === 2);
   await p.evaluate(() => { window.__laserT = null; });
   await until(() => window.__game.scene.bodyLayer && window.__game.scene.bodyLayer.list.length === 1 && !window.__game.scene.dead);
   const laser = await p.evaluate(() => { const s = window.__game.scene; return { cause: s.ep.bodies[0].cause, glasses: s.glasses, awake: s.laser.awake }; });
   ok('a laser death leaves a body (' + laser.cause + '); the new take starts without glasses and with the laser asleep', laser.cause === 'laser' && !laser.glasses && !laser.awake);
-  // a camera death: hold the corridor camera still and stand in its view
+  // a camera death: hold the stair camera still, looking down on the landing, and stand there
   await fresh();
-  await p.evaluate(() => { const s = window.__game.scene; s.cams[0].a0 = s.cams[0].a1 = 70; s.kid.x = 556; s.kid.y = 146; s.kid.vy = 0; });
+  await p.evaluate(() => { const s = window.__game.scene; s.cams[0].a0 = s.cams[0].a1 = 90; s.kid.x = 26 * 16 + 4; s.kid.y = 18 * 16 - 14; s.kid.vy = 0; });
   await until(() => window.__game.scene.ep.take === 3);
   await until(() => window.__game.scene.bodyLayer && window.__game.scene.bodyLayer.list.length === 2 && !window.__game.scene.dead);
   ok('a camera death leaves a body (' + await p.evaluate(() => window.__game.scene.ep.bodies[1].cause) + '), take 3', true);
   // the door
   await fresh();
-  await p.evaluate(() => { const s = window.__game.scene; window.__noDeath = true; s.kid.x = 85 * 16 + 4; s.kid.y = 146; s.kid.vy = 0; });
+  await p.evaluate(() => { const s = window.__game.scene; window.__noDeath = true; s.kid.x = 87 * 16 + 6; s.kid.y = 336 - 14; s.kid.vy = 0; });
   await p.keyboard.down('ArrowUp'); await until(() => window.__game.scene.leaving); await p.keyboard.up('ArrowUp');
   await cardOn('END OF EPISODE 2'); ok('episode 2 door: ' + await card(), true);
   await scene('satellite');
