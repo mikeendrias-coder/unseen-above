@@ -22,7 +22,7 @@ import { Glasses } from '../core/glasses.js';
 import { reviewKeys, presenting } from '../core/review.js';
 import { fx } from '../core/fx.js';
 import { darkFill, hardHoles, checker, pxCircle } from '../core/topdown.js';
-import { Marks, Gold } from '../core/props.js';
+import { Marks, Gold, pushClear } from '../core/props.js';
 import { ASH } from '../art/palettes.js';
 
 const ARC = { ceiling: [35, 145], wall: [150, 200] };
@@ -334,6 +334,9 @@ export class Bedroom extends SideEpisode {
   }
 
   // ------------------------------------------------------------------ the floor going
+  // A deliberate call (Nov 18 audit): what hits her in the run (the slab) costs HP; falling
+  // through the floor, the collapse's or a gap's, is a fall into the dark under the house and
+  // ends the take (die 'the fall'), like any pit. There is nothing to stand on to come back to.
   updateCollapse(dt) {
     const C = this.collapse; if (!C || C.done) return;
     C.t += dt;
@@ -375,7 +378,15 @@ export class Bedroom extends SideEpisode {
         Sound.noise(0.6, 0.2, 1500); fx.shake(this.cameras.main, 220, 0.012);
         for (let i = 0; i < 14; i++) this.debris.emitParticleAt(L.x + Math.random() * L.w, L.bottom, 1);
         const r = this.slabProp;
-        if (!window.__noDeath && k.x < r.x + r.w && k.x + k.w > r.x && k.y < r.y + r.h && k.y + k.h > r.y) this.die({ id: 'the ceiling', direct: true });
+        // the house falling on her costs HP, like the chandelier in the gallery (what watches her
+        // takes lives); she is thrown back out from under it, hurt or not, never left inside it
+        if (!this.dead && k.x < r.x + r.w && k.x + k.w > r.x && k.y < r.y + r.h && k.y + k.h > r.y) {
+          this.hurt(2, 'the ceiling');
+          // while the floor is still going behind her, it throws her forward (out the far side,
+          // away from the collapse), never back toward the gap
+          const live = this.collapse && !this.collapse.done;
+          if (!this.dead) pushClear(this, r, live ? 1 : k.x + k.w / 2 < r.x + r.w / 2 ? -1 : 1);
+        }
       }
     }
   }

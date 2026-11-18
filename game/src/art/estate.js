@@ -27,7 +27,10 @@ export const LEVEL = {
   mailbox: { x: 10 * T + 6, y: GROUND },
   intercom: { x: 14 * T - 2, y: GROUND - 30 },
   // the burnt car outside the wall is solid; she can climb it
-  props: [{ id: 'car', x: 92, y: GROUND - 9, w: 34, h: 9 }, { id: 'car roof', x: 98, y: GROUND - 15, w: 20, h: 6 }],
+  // the gold urns at the terrace edge are solid too (11 x 12, she can stand on them); none past
+  // the crate, so nothing stops it on its way to the loggia
+  props: [{ id: 'car', x: 92, y: GROUND - 9, w: 34, h: 9 }, { id: 'car roof', x: 98, y: GROUND - 15, w: 20, h: 6 },
+    ...[40, 54].map(t => ({ id: 'urn', x: t * T + 3, y: ROWS.terrace * T - 12, w: 11, h: 12 }))],
   crate: { x: 57 * T, y: TERRACE - 22, w: 22, h: 22 },
   cradle: { x: 72 * T, w: 32, top: BALCONY, bottom: LOGGIA, speed: 30, pause: 1.0, roof: 24 },
   slabs: [{ x: 79 * T, y: BALCONY, w: 32 }, { x: 85 * T, y: BALCONY, w: 32 }],
@@ -313,6 +316,6 @@ export function paintLevel(P, map) {
   // E: the terrace lamp on its bracket; G: the balcony lamps hang from the cornice
   [[LEVEL.lights[1].x, LEVEL.lights[1].y], [LEVEL.lights[2].x, LEVEL.lights[2].y], [LEVEL.lights[3].x, LEVEL.lights[3].y]].forEach(([x, y]) => { p.rect(x - 5, y - 5, 11, 9, O); p.rect(x - 4, y - 4, 9, 7, P.device); p.rect(x - 3, y - 2, 7, 3, P.lamp); p.rect(x, y - 14, 1, 9, P.device); });
   // terrace edge urns, wealth for its own sake
-  [40, 54, 62].forEach(t => { const x = t * T + 8; p.rect(x - 5, TR - 12, 11, 12, O); p.rect(x - 4, TR - 11, 9, 4, P.gold); p.rect(x - 2, TR - 7, 5, 6, P.goldLo); p.rect(x - 3, TR - 2, 7, 2, P.gold); p.px(x - 2, TR - 10, P.goldHi); });
+  LEVEL.props.filter(r => r.id === 'urn').forEach(r => { const x = r.x + 5; p.rect(x - 5, TR - 12, 11, 12, O); p.rect(x - 4, TR - 11, 9, 4, P.gold); p.rect(x - 2, TR - 7, 5, 6, P.goldLo); p.rect(x - 3, TR - 2, 7, 2, P.gold); p.px(x - 2, TR - 10, P.goldHi); });
   return p;
 }

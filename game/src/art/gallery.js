@@ -33,7 +33,10 @@ export const LEVEL = {
   polisher: { x0: 56 * T + 6, x1: 59 * T + 6, speed: 26 },  // clear of the top of the atrium wall (N lands there)
   boards: [{ x: 60 * T, y: MEZZ, w: 32 }, { x: 62 * T, y: MEZZ, w: 32 }],
   dropper: { x: 69 * T + 8, hang: 150, warn: 0.45, footprint: 14 },
+  // solid things off the grid: none. The dust sheets on the atrium floor are soft cloth heaped
+  // against the back of the pit (drawn dark, behind her): she walks through them, no ledge
   props: [],
+  sheets: { x: 37 * T + 3, w: 130 },
   camLock: 0.55, // cameras take a little longer than lamps to lock on
   cameras: [
     // sweep: a smooth pan between two angles (degrees, y down), over the broken stair
@@ -259,7 +262,21 @@ export function paintLevel(P, map, dark) {
   const rail = (x0, x1) => { for (let x = x0; x < x1; x += 5) p.rect(x, M - 12, 2, 12, P.col); p.rect(x0, M - 13, x1 - x0, 2, P.colHi); };
   rail(33 * T, 37 * T - 2); rail(54 * T + 2, 60 * T); rail(64 * T, 73 * T);
   portrait(p, P, 40 * T, 46, 40, 52, 'house', false); portrait(p, P, 46 * T, 60, 30, 38, 'lady', false); portrait(p, P, 51 * T - 4, 44, 26, 34, 'man', true, 1);
-  for (let x = 37 * T + 4; x < 54 * T - 20; x += 26) { const h = 5 + (x * 7) % 5; p.rect(x - 1, G - h - 1, 26, h + 1, O); p.rect(x, G - h, 24, h, P.colLo); p.rect(x, G - h, 24, 1, P.col); p.rect(x + 6 + (x % 5), G - h + 1, 1, h - 1, P.rubble); p.rect(x + 15, G - h + 2, 1, h - 2, P.rubble); }
+  // the dust sheets: soft lumps of cloth heaped at the back of the pit floor (LEVEL.sheets), dark
+  // so they read as behind her, rounded tops, a fold or two; not solid. The far end stays bare for
+  // the robot's row of bodies
+  const SH = LEVEL.sheets;
+  for (let x = SH.x, i = 0; x < SH.x + SH.w - 6; i++) {
+    const w = Math.min(14 + (i * 7) % 11, SH.x + SH.w - x), h = 4 + (i * 5) % 5;
+    // a mound of cloth: each row from the floor up a little narrower, the top row lighter
+    for (let j = 0; j < h; j++) {
+      const ins = Math.round((j / h) * (j / h) * w * 0.35), y = G - 1 - j, top = j === h - 1;
+      p.rect(x + ins, y, w - ins * 2, 1, O);
+      if (w - ins * 2 > 2) p.rect(x + ins + 1, y, w - ins * 2 - 2, 1, top ? P.rubble : P.ground);
+    }
+    p.rect(x + 3 + (i % 4), G - h + 2, 1, h - 2, P.crack); if (w > 16) p.rect(x + w - 6, G - h + 3, 1, h - 3, P.crack);
+    x += w - 4;
+  }
   // ---- D, the worn upper gallery: stains and cracks, a missing portrait, the hole in the roof
   // pale marks where paintings used to hang: an outline in the wall's light tone, a nail
   [[54 * T + 10, 34, 24, 30], [64 * T + 2, 44, 32, 40], [66 * T + 12, 104, 20, 26], [71 * T - 2, 30, 22, 28], [55 * T + 4, 140, 18, 22]].forEach(([x, y, w, h]) => {
