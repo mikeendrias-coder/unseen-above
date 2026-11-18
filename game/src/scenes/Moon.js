@@ -19,7 +19,7 @@ import { state } from '../core/state.js';
 import { overlay } from '../core/overlay.js';
 import { display } from '../core/display.js';
 import { SideEpisode, K } from '../core/side.js';
-import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, LOOK_SAID, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
+import { MOON_OVERHEARD, MOON_ROBOT, PLAYROOM, MOON_PEOPLE, MOON_HEAD, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { reviewKeys } from '../core/review.js';
 import { fx } from '../core/fx.js';
 
@@ -81,7 +81,6 @@ export class Moon extends SideEpisode {
     LEVEL.rooms.forEach((R, i) => { const it = { n: 0 }; this.things.push({ x0: R.x0 + 10, x1: R.x1 - 10, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(ROOM_TEXT[i], it, (R.x0 + R.x1) / 2, 118) }); });
     const V = LEVEL.vote, A = LEVEL.arrive;
     const lookLine = { n: 0 }, doorLine = { n: 0 }, holeLine = { n: 0 };
-    this.things.push({ x0: V.x, x1: V.x + V.w, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(["Tonight's look: " + look.name + '.', 'Thank you for voting.'], lookLine, V.x + V.w / 2, V.y + V.h + 4) });
     this.things.push({ x0: A.x - 4, x1: A.x + A.w + 4, y0: A.y, y1: GROUND, label: 'E', use: () => this.describe(['The door she came out of.', 'On this side it has a number: 07.'], doorLine, A.x + A.w / 2, A.y - 12) });
     const VW = LEVEL.viewer, LV = LEVEL.live, liveLine = { n: 0 };
     this.things.push({ x0: VW.x - 8, x1: VW.x + 10, y0: 120, y1: GROUND, label: 'E', use: () => this.describe(['Earth, on its dark side.', 'Small fires everywhere.'], holeLine, VW.x, GROUND - 40) });
@@ -91,8 +90,7 @@ export class Moon extends SideEpisode {
     // (the stem is behind her), the crates at the service end. She can stand on all of it.
     const G = GROUND, F = LEVEL.fountain.x, N = NOTICE.moon;
     LEVEL.benches.forEach(x => { this.props.push({ id: 'bench', x, y: G - 13, w: 30, h: 6 }); this.addLook({ x0: x - 2, x1: x + 32, y0: G - 30, py: G - 14, lines: N.bench }); });
-    // (the third planter stands under the vote board, which is what E shows there)
-    LEVEL.planters.forEach((x, i) => { this.props.push({ id: 'planter', x, y: G - 12, w: 12, h: 12 }); if (i < 2) this.addLook({ x0: x - 4, x1: x + 16, y0: G - 30, py: G - 26, lines: N.planter }); });
+    LEVEL.planters.forEach((x, i) => { this.props.push({ id: 'planter', x, y: G - 12, w: 12, h: 12 }); this.addLook({ x0: x - 4, x1: x + 16, y0: G - 30, py: G - 26, lines: N.planter }); });
     LEVEL.crates.forEach(x => this.props.push({ id: 'crate', x, y: G - 12, w: 12, h: 12 }));
     this.props.push({ id: 'rim', x: F - 34, y: G - 12, w: 4, h: 12 }, { id: 'rim', x: F + 30, y: G - 12, w: 4, h: 12 }, { id: 'basin', x: F - 30, y: G - 4, w: 60, h: 4 },
       { id: 'tier', x: F - 16, y: G - 30, w: 32, h: 4 }, { id: 'bowl', x: F - 9, y: G - 44, w: 18, h: 3 });
@@ -100,7 +98,7 @@ export class Moon extends SideEpisode {
     // people out tonight: solid, they stop for her, they talk when she presses E
     this.npcs.forEach((Nn, i) => {
       Nn.i = i; Nn.prop = { id: 'person', x: Nn.x - 4, y: G - 23, w: 8, h: 23 }; this.props.push(Nn.prop);
-      Nn.src = { lines: () => MOON_PEOPLE[i].lines.map(l => l.replace('{look}', LOOK_SAID[state.look] || 'the gold one')), i: 0, loop: true };
+      Nn.src = { lines: () => MOON_PEOPLE[i].lines.slice(), i: 0, loop: true };
       Nn.thing = { x0: 0, x1: 0, y0: G - 24, y1: G, py: G - 25, label: 'E', use: () => this.npcTalk(Nn) };
       this.things.push(Nn.thing);
     });
@@ -226,7 +224,7 @@ export class Moon extends SideEpisode {
   startTalk() {
     this.mode = 'talk'; this.kid.vx = 0; this.kid.face = 1; this.talkI = -1;
     this.beds.show.stop(0.3); Sound.tone(392, 0.5, 'sine', 0.02, 196);
-    this.lines = PLAYROOM.map(l => Object.assign({}, l, { text: l.text.replace(/\{look\}/g, LOOK_SAID[state.look] || 'the gold one') }));
+    this.lines = PLAYROOM.map(l => Object.assign({}, l));
     this.nextLine();
   }
   nextLine() {
@@ -273,8 +271,6 @@ export class Moon extends SideEpisode {
         if (si === (ri + 1) % R.seats && lift) { g.fillStyle(n(M.adult), 1); g.fillRect(hx + 5, 99, 2, 6); g.fillStyle(0xebe6d8, 1); g.fillRect(hx + 5, 96, 2, 3); g.fillStyle(n(M.pink), 1); g.fillRect(hx + 5, 98, 2, 1); }
       }
     });
-    // the vote bar keeps moving
-    const V = LEVEL.vote; g.fillStyle(n(M.pink), 1); g.fillRect(V.x + 8, V.y + 28, Math.round((V.w - 16) * (0.6 + 0.05 * Math.sin(t * 0.7))), 4);
     if (this.mode === 'walk') this.drawCity(g, t, dt);
     this.drawPlayroomScreen(g, t);
     // the door she came out of stands open on the void for a moment, then swings shut

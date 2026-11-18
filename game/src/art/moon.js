@@ -2,7 +2,7 @@
 // its own colors (the five looks are her world's; the Moon looks the same whichever one was
 // picked). Earth hangs in the black over the dome. A plaza with a gold fountain, the door she
 // came out of on a plinth behind ropes, lounges behind glass where adults watch walls of Earth
-// channels, a tram, a vote board, a screen showing her live, and at the far end, where the
+// channels, a tram, a screen showing her live, and at the far end, where the
 // city stops being pretty, a staff door. The kids' playroom is reached from backstage.
 // Then the last shot: an old TV in a dark room on Earth, showing the Moon.
 import { Painter, rng } from './painter.js';
@@ -194,7 +194,7 @@ export function paintMid(width) {
     const w = 30 + Math.floor(r() * 40), top = 62 + Math.floor(r() * 46);
     p.rect(x, top, w, 180 - top, M.midLo); p.rect(x, top, w, 2, M.mid); p.rect(x + w - 2, top, 2, 180 - top, M.floorLo);
     for (let y = top + 6; y < 160; y += 9) { p.rect(x + 3, y, w - 6, 1, M.mid); for (let xx = x + 5; xx < x + w - 5; xx += 6) p.rect(xx, y + 2, 3, 4, r() < 0.3 ? '#ebe6d8' : M.roomLo); }
-    if (r() < 0.4) { const bw = Math.min(w - 8, 30); p.rect(x + 4, top - 18, bw, 14, M.bezel); p.rect(x + 5, top - 17, bw - 2, 12, [M.pink, M.purple, M.blue][Math.floor(r() * 3)]); ptext(p, ['CH 07', 'VOTE', 'LIVE', 'ROUND 2'][Math.floor(r() * 4)], x + 7, top - 13, M.white); }
+    if (r() < 0.4) { const bw = Math.min(w - 8, 30); p.rect(x + 4, top - 18, bw, 14, M.bezel); p.rect(x + 5, top - 17, bw - 2, 12, [M.pink, M.purple, M.blue][Math.floor(r() * 3)]); ptext(p, ['CH 07', 'ON AIR', 'LIVE', 'ROUND 2'][Math.floor(r() * 4)], x + 7, top - 13, M.white); }
     x += w + 4 + Math.floor(r() * 14);
   }
   // the tram's rail on pylons
@@ -263,16 +263,7 @@ export function paintLevel(P, look) {
   LEVEL.buildings.forEach(B => building(p, B, r));
   LEVEL.rooms.forEach((R, i) => paintRoomBehindGlass(p, R, i));
   [48, 64, 79].forEach(tx => lamp(p, tx * T + 4));
-  // the boulevard: the vote board on two posts, the live screen on a frame
-  const V = LEVEL.vote;
-  p.rect(V.x + 10, V.y + V.h, 3, G - V.y - V.h, M.trimLo); p.rect(V.x + V.w - 13, V.y + V.h, 3, G - V.y - V.h, M.trimLo);
-  p.rect(V.x - 2, V.y - 2, V.w + 4, V.h + 4, M.bezel); p.rect(V.x, V.y, V.w, V.h, M.purple);
-  const mid = s => V.x + Math.round((V.w - textWidth(s)) / 2);
-  ptext(p, "TONIGHT'S LOOK", mid("TONIGHT'S LOOK"), V.y + 5, M.yellow);
-  ptext(p, look.toUpperCase(), mid(look), V.y + 17, M.white);
-  p.rect(V.x + 8, V.y + 28, V.w - 16, 4, M.bezel); p.rect(V.x + 8, V.y + 28, Math.round((V.w - 16) * 0.62), 4, M.pink);
-  ptext(p, 'THANKS FOR VOTING', mid('THANKS FOR VOTING'), V.y + 37, M.mint);
-  p.mark('vote', V.x, V.y);
+  // the boulevard: the live screen on a frame
   const LV = LEVEL.live; p.rect(LV.x + LV.w / 2 - 2, LV.y + LV.h, 4, G - LV.y - LV.h, M.trimLo); p.rect(LV.x - 3, LV.y - 3, LV.w + 6, LV.h + 6, M.bezel); p.rect(LV.x, LV.y, LV.w, LV.h, '#1b1c21');
   planter(p, 84 * T, r); bench(p, 92 * T);
   // the service end and the staff door

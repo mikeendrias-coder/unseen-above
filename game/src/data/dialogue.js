@@ -46,21 +46,20 @@ export const MOON_OVERHEARD = [
 ];
 // DRAFT: the cleaning robot up here, the same model as the one in the gallery.
 export const MOON_ROBOT = ['Welcome home. Please wipe your feet.', 'You are early. Round two has not started.', 'The playroom is at the end. They are expecting a winner.'];
-// DRAFT, for Michael: the third dialogue scene, in the kids' playroom. {look} is the look the
-// player picked on the start screen, the way a kid would say it.
+// DRAFT, for Michael: the third dialogue scene, in the kids' playroom. (Nov 17: the look vote is
+// cut, so the two lines that named her look are redrafted; check them.)
 export const PLAYROOM = [
   { who: null, text: '[THE MUSIC STOPS]' },
   { who: 'KID', text: "You're the girl from channel seven." },
   { who: 'LITTLE KID', text: "She's smaller in real life." },
   { who: 'KID', text: 'Are you here for round two?' },
   { who: 'SISTER', text: 'Who picks the lights?' },
-  { who: 'LITTLE KID', text: 'We do. I like {look}.' },
-  { who: 'SISTER', text: 'My brother died in {look}.' },
+  { who: 'LITTLE KID', text: 'We do. We pick everything.' },
+  { who: 'SISTER', text: 'My brother died under your lights.' },
   { who: 'KID', text: 'He comes back. They always come back.' },
   { who: 'SISTER', text: 'I know.' },
   { who: null, text: '[CLICK. CLICK.]' }
 ];
-export const LOOK_SAID = { A: 'the gold one', B: 'the white one', C: 'the dark one', D: 'the green one', E: 'the black and white one' };
 
 // DRAFT, for Michael: the hallway behind the Moon city, where the creator of the show waits.
 // The creator built every set, trap and camera, resets the props between takes, and is owned
@@ -230,10 +229,10 @@ export function deathLine(id, direct) {
 }
 
 // DRAFT, for Michael: people out in the city. E talks to them (speech over their heads); bump
-// is what they say when she walks into them, head when she lands on one. {look} as above.
+// is what they say when she walks into them, head when she lands on one.
 export const MOON_PEOPLE = [
   { lines: ['Smile, sweetheart. No, toward the light.', 'Is this the one where she cries?'], bump: 'Careful, dear. This is silk.' },
-  { lines: ['Do not touch her. It might be part of it.', 'We voted for {look}.'], bump: 'She touched me!' },
+  { lines: ['Do not touch her. It might be part of it.', 'It is only television, dear.'], bump: 'She touched me!' },
   { lines: ['Not now. I am working.', 'Keep walking. They like it when you keep walking.'], bump: 'Excuse me.' },
   { lines: ['Look at her. Just like on the screen.', 'My son aims on Tuesdays.'], bump: 'Mind the phone!' },
   { lines: ['You are early. Round two is not set.', 'The staff door. Mind the cables.'], bump: 'Watch it.' }

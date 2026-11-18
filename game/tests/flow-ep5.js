@@ -54,7 +54,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('through the pink door: the playroom', true);
   await p.keyboard.down('ArrowRight'); await until(() => window.__game.scene.mode === 'talk', null, 10000); await p.keyboard.up('ArrowRight');
   const look = await p.evaluate(() => window.__game.scene.lines.find(l => /We do/.test(l.text)).text);
-  ok('the kids talk to her; the little one names her look: "' + look + '"', /the gold one/.test(look));
+  ok('the kids talk to her; the little one says: "' + look + '"', /We pick everything/.test(look));
   for (let i = 0; i < 20 && await p.evaluate(() => window.__game.scene.mode === 'talk'); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(150); }
   await until(() => window.__game.scene.mode === 'last', null, 15000);
   ok('two clicks, the flash, then the last shot', true);

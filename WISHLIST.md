@@ -13,7 +13,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
   - Nov 17: art/palettes.js is one look (Ash and Gold, 17 colors + the amber). L does nothing now. Every Earth episode, the Moon city, backstage, the playroom, captions, how-to pages and glasses HUD snapped to the palette.
 - `done, check` **Title screen and opening in the one look.** (Nov 17) The start screen is the opening's first frame in pixels (art/title.js) with the menu over it; Begin starts the film from that picture. The opening is rewritten as a pixel scene: same lines, sounds and timing, the drone show, searchlights, the amber lock-on box on her when the show's camera finds her.
 - `todo` **Kids' room cinematic** is still the old smooth high-res style (scenes/Kids.js, art/cinema.js). Rewrite in pixels next.
-- `todo` **Story check for Michael:** the Moon still has a "Tonight's look" vote board and the little kid names her look. With one locked look, keep the vote as lore, or cut it?
+- `done, check` **Cut the look vote on the Moon** (Michael, Nov 17). Vote board gone; the third planter is a planter. DRAFT lines redone, for Michael to check: playroom LITTLE KID "We do. We pick everything." / SISTER "My brother died under your lights."; a city person now says "It is only television, dear." The creator's "The kids voted for a fight tonight." stays (a different vote).
 - `todo` **Satellite screens keep their four-step change** (terminal, ground station, flat map, game show), redrawn in the chosen look's grid and type. (Nov 17)
 - `todo` **Captions get their own space.** A reserved strip outside the play area; captions never sit on top of the game. (Nov 17)
 
@@ -26,6 +26,9 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 
 ## 3. Story
 - `todo` **Multiple endings** (good, bad, others). Which one you get depends on which clues you found and interacted with, and on dialogue choices, maybe in the final cutscene. Current ending stays as one of them. Story calls stay Michael's. (Nov 17)
+
+## Hosting
+- `doing` **Self-host through GitHub** instead of itch.io (Michael, Nov 17): a link he can open any time; progress saved in the browser (localStorage, already how saves work).
 
 ## Bugs found
 - `todo` boss.js test fails: "I turns immunity on" (Nov 17 test run; the other 13 test files pass).
