@@ -134,8 +134,12 @@ export class Intro extends Phaser.Scene {
     const line = T.lines.find(l => t >= l.start && t < l.end);
     if (line !== this.curLine) {
       this.curLine = line;
-      // a press finishes the line; the next press goes to the next line (ui/typer.js takes the keys)
-      if (line) overlay.caption(line.who, line.text, { block: true, scene: this, onAdvance: () => this.nextLine(line) });
+      // a press finishes the line; the next press goes to the next line (ui/typer.js takes the keys).
+      // A line that would spend over 40% of its time typing shows whole (spec A4.6).
+      if (line) {
+        const next = T.lines.find(l => l.start > line.start), gap = (next ? next.start : T.goDown) - line.start;
+        overlay.caption(line.who, line.text, { block: true, scene: this, instant: typer.typeSeconds(line.text) > 0.4 * gap, onAdvance: () => this.nextLine(line) });
+      }
       else if (t >= T.goDown - 0.1 && t < T.later) overlay.clearCaption();
     }
     if (t >= T.lines[0].start && !this.hum) { this.hum = true; this.time.delayedCall(800, () => { this.music = Sound.lounge(0.02); }); }

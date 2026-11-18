@@ -47,7 +47,8 @@ function pattern(color, kind) {
 function dim(x, y, w, h) { ctx.fillStyle = pattern(INK, 'checker'); ctx.fillRect(x, y, w, h); }
 
 let lastT = 0;
-const held = () => !!(window.__paused || S.menu || (S.page && !S.page.closeAt));
+// the pause menu, a notice and the presenter's freeze (H) stop the line clock
+const held = () => !!(window.__paused || window.__frozen || S.menu || (S.page && !S.page.closeAt));
 function frame() {
   const t = now();
   // the strip caption types on real time; the pause menu and a notice stop its clock
@@ -60,6 +61,7 @@ function frame() {
   if (S.rec && t > S.rec.until) S.rec = null;
   if (S.flash && t > S.flash.until) S.flash = null;
   if (S.page && S.page.closeAt) S.page = null;
+  typer.tick(); // the hint line follows the caption (overlay.hint)
   ctx.clearRect(0, 0, W, H + STRIP);
   if (!busy()) { running = false; lastT = 0; return; }
   drawFlash();
@@ -98,8 +100,9 @@ function drawCaption(t) {
   const r = ccCaptionBlock(ctx, lines, 160, bottom, { italic: d ? true : c.italic, row: CAP_ROW, top: 1, shown, alpha: d ? d.alpha : 1, ink: d ? d.ink : undefined });
   const x0 = Math.min(...r.boxes.map(b => b.x)), x1 = Math.max(...r.boxes.map(b => b.x + b.w));
   S.capRect = { x0, y0: r.top, x1, y1: bottom };
-  // the line is out and a press moves it on: a small blinking arrow after the last line
-  if (d ? d.more : c.line.arrow()) { const b = r.boxes[n - 1], ax = b.x + b.w + 2, ay = bottom - 7; ctx.fillStyle = PAPER; ctx.fillRect(ax, ay, 5, 1); ctx.fillRect(ax + 1, ay + 1, 3, 1); ctx.fillRect(ax + 2, ay + 2, 1, 1); }
+  // the line is out and a press moves it on: a blinking arrow after the last line (7 x 4, so it
+  // still reads on a projector)
+  if (d ? d.more : c.line.arrow()) { const b = r.boxes[n - 1], ax = b.x + b.w + 2, ay = bottom - 8; ctx.fillStyle = PAPER; for (let i = 0; i < 4; i++) ctx.fillRect(ax + i, ay + i, 7 - i * 2, 1); }
 }
 
 // ------------------------------------------------------------------ stamps, key caps, paper
@@ -262,7 +265,7 @@ export const cg = {
     kick();
     return line;
   },
-  clearCaption() { S.caption = null; },
+  clearCaption() { S.caption = null; typer.tick(); },
   // the strip caption's line (ui/typer.js), or null
   get line() { return S.caption ? S.caption.line : null; },
   // narration from a look with J, set every frame while it is up (null clears it)

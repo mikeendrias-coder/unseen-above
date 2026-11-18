@@ -60,5 +60,9 @@ export const state = {
   // set a story flag or counter: state.storySet('spared', true)
   storySet(key, v) { mem.story[key] = v; save(); return v; },
   sawEnding(id) { mem.story.endings[id] = true; save(); },
+  // a run started from the title (Begin, From the start, a chapter; ui/typer.js): the lines heard
+  // and the how-to notices seen are forgotten, so a rehearsal on this computer never leaves the
+  // class run silent. Continue keeps them; clues, bodies, endings and settings stay.
+  newRun() { mem.story.heard = {}; mem.panels = {}; save(); },
   resetAll() { mem = fresh(); save(); }
 };

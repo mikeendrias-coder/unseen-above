@@ -15,6 +15,7 @@ import { state } from './state.js';
 import { typer, Line } from '../ui/typer.js';
 
 const BOX = CAPTION.box, A = CAPTION.alpha, R = CAPTION.row, PAD = 4;
+const NEAR = 96; // px: how near her a bubble must be for Enter to move it on
 const lineList = src => typeof src.lines === 'function' ? src.lines() : src.lines;
 const hit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
@@ -33,7 +34,8 @@ export class Bubbles {
   // opts: ink, pitch, width (letters a line), hold (ms after the text is out), leave (px from the
   // speaker before it closes; 0 = never), src (the talker whose lines E steps through), italic,
   // narrate (show it as narration at the foot of the screen), once (a key: said until it has been
-  // shown in full once, saved, so a retry does not say it again)
+  // shown in full once, saved, so a retry does not say it again), key (a key marked heard once the
+  // line is shown in full, said whatever: a talker's line the scene already picked)
   say(key, text, at, opts) {
     opts = opts || {};
     if (opts.once != null && state.heard(opts.once)) return false;
@@ -43,20 +45,25 @@ export class Bubbles {
     // narration has one place on screen: a new look replaces the last
     if (narrate) this.list.forEach((b, k) => { if (k !== key && b.narrate && !b.out) b.out = 0.01; });
     const lines = ccWrap(text, opts.width || (narrate ? 46 : 24)), total = lines.join('').length;
-    const b = { lines, at, opts, out: 0, hold: opts.hold != null ? opts.hold : opts.ms != null ? opts.ms : Math.min(3600, 1300 + total * 32),
+    // a one-off line reads half again as long in presenter mode (spec A4.7); a talker waits for J
+    const slow = state.settings.presenter && !opts.src ? 1.5 : 1;
+    const b = { lines, at, opts, out: 0, hold: slow * (opts.hold != null ? opts.hold : opts.ms != null ? opts.ms : Math.min(3600, 1300 + total * 32)),
       ink: opts.ink || 0xebe6d8, leave: opts.leave != null ? opts.leave : 72, src: opts.src || null, italic: !!opts.italic || narrate, narrate, order: ++this.order, cut: overlay.cuts };
     // Enter (or a click on the strip, for narration) moves it on as J does: a talker's next line,
     // or, for a one-off line, closed
-    b.line = new Line(lines.join(' '), { pitch: opts.pitch || 880, key: opts.once, scene: this.scene,
+    b.line = new Line(lines.join(' '), { pitch: opts.pitch || 880, key: opts.once != null ? opts.once : opts.key, scene: this.scene,
       onAdvance: () => { if (this.list.get(key) !== b || b.out) return; if (b.src) this.press(key, b.src, b.at, b.opts); else this.close(key); } });
     b.line.order = b.order;
+    // Enter reaches a bubble only near her (ui/typer.js target)
+    b.line.near = () => { const me = this.player ? this.player() : null; return !me || Math.abs(me.x - b.at().x) <= NEAR; };
     typer.addBubble(b.line);
     this.list.set(key, b);
     return true;
   }
   // E on something that talks. The first press shows its next line. Pressing again while the
   // line types finishes it; once it is out, the next line; after the last line, it closes.
-  // src: { lines: [..] or () => [..], i: next line, loop: keep the place between visits, from: where a loop restarts }
+  // src: { lines: [..] or () => [..], i: next line, loop: keep the place between visits, from: where a loop restarts,
+  //        key: a story key, or (i) => a key for line i, marked heard once that line is shown in full }
   press(key, src, at, opts) {
     const lines = lineList(src), b = this.list.get(key);
     if (src.i == null) src.i = 0;
@@ -66,7 +73,8 @@ export class Bubbles {
       if (performance.now() < b.line.lockUntil) return 'busy';
       if (src.i >= lines.length) { this.close(key); return 'closed'; }
     } else if (src.i >= lines.length) src.i = src.loop ? (src.from || 0) : 0;
-    this.say(key, lines[src.i], at, Object.assign({}, opts, { src }));
+    const hear = typeof src.key === 'function' ? src.key(src.i) : src.key;
+    this.say(key, lines[src.i], at, Object.assign({}, opts, { src }, hear != null ? { key: hear } : null));
     src.i++;
     return 'line';
   }
@@ -79,9 +87,11 @@ export class Bubbles {
   // is someone talking over this spot (so a key prompt there would sit under the words)
   near(x, r) { for (const b of this.list.values()) if (!b.out && !b.narrate && Math.abs(b.at().x - x) < r) return true; return false; }
   // a talker that is not a loop starts over next time; a loop keeps its place, wrapping at the end
+  // (a loop's line cut short, by walking off or another line, is said again next time)
   gone(b) {
     if (!b.src) return;
     const n = lineList(b.src).length;
+    if (b.src.loop && !b.line.shown && b.src.i > 0) b.src.i--;
     if (!b.src.loop) b.src.i = 0; else if (b.src.i >= n) b.src.i = b.src.from || 0;
   }
   // a key over something she can use: a black cap with the letter, bobbing
@@ -94,7 +104,7 @@ export class Bubbles {
     let note = null;
     const speech = [];
     this.list.forEach((b, key) => {
-      if (!b.out) b.line.step(dt * 1000, typer.fast(b.line));
+      if (!b.out && !typer.frozen()) b.line.step(dt * 1000, typer.fast(b.line));
       const p = b.at();
       // walked away: close quickly. A sound worth a caption cuts narration short.
       if (!b.out && b.leave && me && Math.abs(me.x - p.x) > b.leave) b.out = 0.14;

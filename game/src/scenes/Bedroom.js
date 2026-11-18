@@ -253,7 +253,7 @@ export class Bedroom extends SideEpisode {
     if (this.box.t > 0 || this.bag.have) return;
     this.box.t = LEVEL.musicBox.mask; this.box.note = 0;
     Sound.tone(900, 0.05, 'square', 0.01); // the key turns
-    if (state.hear('bd:musicbox')) overlay.sfx('[A MUSIC BOX PLAYS]', 1800);
+    overlay.sfx('[A MUSIC BOX PLAYS]', 1800, 'bd:musicbox'); // once ever (heard when shown)
   }
   updateBox(dt) {
     const B = this.box; if (B.t <= 0) return;
@@ -294,7 +294,7 @@ export class Bedroom extends SideEpisode {
   pullBag(held) {
     const B = this.bag; B.have = true; B.hold = 0; this.bagThing.off = true;
     Sound.tone(150, 0.2, 'triangle', 0.04, 90); Sound.noise(0.3, 0.06, 700);
-    if (state.hear('bd:bag')) this.say('His bag. Still heavy.'); // said once, not on every take
+    this.say('His bag. Still heavy.', 'bd:bag'); // said once, not on every take (heard once it is out)
     fx.shake(this.cameras.main, 160, 0.004); Sound.tone(70, 0.6, 'sawtooth', 0.03, 50); // the beam above shifts
     if (!held) { B.letGo = true; this.time.delayedCall(800, () => this.bringDown()); }
   }
@@ -428,7 +428,9 @@ export class Bedroom extends SideEpisode {
   // holding on to him: a tap says so once; held, the red lights close in, and at 15 s the show
   // cuts to a break (a false ending), then runs the scene again from the kneel
   holdOn() {
-    if (state.hear('bd:holdon')) this.bubbles.look('item', { lines: NOTICE.bedroom.hold }, () => ({ x: LEVEL.brother.x + 12, y: GROUND - 22 }));
+    // said once: heard once it is out, so a tap that cuts it short says it again next time
+    if (!this.holdSrc) this.holdSrc = { lines: NOTICE.bedroom.hold, key: 'bd:holdon' };
+    if (!state.heard('bd:holdon')) this.bubbles.look('item', this.holdSrc, () => ({ x: LEVEL.brother.x + 12, y: GROUND - 22 }));
   }
   updateStay(dt) {
     const held = this.nearThing === this.broThing && this.ctl.useHeld();
@@ -474,8 +476,9 @@ export class Bedroom extends SideEpisode {
     this.beds.breath.set(0.0001 + 0.06 * near * near, 0.4);
   }
 
-  say(text) {
-    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xebe6d8, pitch: 760 });
+  // once: a key; said until it has been shown in full once
+  say(text, once) {
+    this.bubbles.say('sis', text, () => ({ x: this.kid.x + this.kid.w / 2, y: this.kid.y - 2 }), { ink: 0xebe6d8, pitch: 760, once });
   }
 
   // ------------------------------------------------------------------ drawing

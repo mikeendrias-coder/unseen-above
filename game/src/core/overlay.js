@@ -3,6 +3,7 @@
 // elements too, so a screen reader hears them and tests can read them.
 import { cg, TV } from '../ui/cg.js';
 import { state } from './state.js';
+import { typer } from '../ui/typer.js';
 
 const el = id => document.getElementById(id);
 const timers = new Map();
@@ -10,6 +11,8 @@ const later = (key, ms, fn) => { clearTimeout(timers.get(key)); timers.set(key, 
 const say = (id, text, on) => { const e = el(id); if (!e) return; if (text != null) e.textContent = text; e.classList.toggle('on', !!on); };
 let capText = ''; // the scene's own caption, for when narration hands the strip back
 let descText = ''; // the narration up now
+let sceneHint = ''; // the scene's own hint
+const showHint = () => { const h = el('h-hint'), t = sceneHint || typer.cue(); if (h && h.textContent !== t) h.textContent = t; };
 
 export const overlay = {
   // A caption. speaker: 'SISTER' | 'BROTHER' | ... | null (sounds use [BRACKETS] in the text).
@@ -22,6 +25,7 @@ export const overlay = {
   // scene (its owner), instant, onShown.
   caption(speaker, text, opts) {
     if (opts && opts.once != null) { if (state.heard(opts.once)) return false; opts = Object.assign({}, opts, { key: opts.once }); }
+    // opts.key alone: marked heard once shown, but said whatever (the scene filtered it already)
     const line = cg.caption(speaker, text, opts);
     // the whole line at once for a screen reader (letter by letter would stutter)
     capText = (speaker ? speaker + ': ' : '') + text;
@@ -44,7 +48,8 @@ export const overlay = {
   free(x, y, w, h) { const r = cg.captionRect; return !r || x >= r.x1 || x + w <= r.x0 || y >= r.y1 || y + h <= r.y0; },
   // a sound, captioned for a moment: overlay.sfx('[GLASS CRACKS]'). It cuts any narration short
   // (bubbles.js watches cuts), so the sound is never hidden behind a look.
-  sfx(text, ms) { overlay.cuts++; overlay.caption(null, text, { ms: ms || 2200 }); },
+  // once: a key, as for caption (said until it has been shown once)
+  sfx(text, ms, once) { if (once != null && state.heard(once)) return false; overlay.cuts++; return overlay.caption(null, text, { ms: ms || 2200, once }); },
   cuts: 0,
 
   // The show's title: a red tag over a black title. place 'lower' for the start of something
@@ -85,7 +90,10 @@ export const overlay = {
     overlay.closePanel = () => close();
   },
   immune(on) { cg.immune(on); say('immune', null, on); },
-  hint(text) { const h = el('h-hint'); if (h && h.textContent !== text) h.textContent = text || ''; },
+  // the hint line under the game. While a blocking line waits for a press and the scene has no
+  // hint of its own, it says which keys move the line on (ui/typer.js cue).
+  hint(text) { sceneHint = text || ''; showHint(); },
   fade(on, ms) { const f = el('blackout'); if (!f) return; f.style.transitionDuration = (ms || 600) + 'ms'; f.classList.toggle('on', !!on); }
 };
+typer.hook({ tick: showHint });
 export { TV };

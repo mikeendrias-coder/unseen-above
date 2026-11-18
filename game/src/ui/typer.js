@@ -20,14 +20,27 @@
 //   free lines (she can move): Space stays jump. J on a talker steps its lines (bubbles.press).
 //   Enter, or a click on the caption strip, finishes or advances the strip caption, else the
 //   narration up, else the newest speech bubble.
+//   Enter acts on a bubble only when the strip is empty, and only on one near her.
 // A press on a line that is out moves it on only when its owner said how (onAdvance); a line a
 // scene times by itself (the fight) can refuse presses altogether (noSkip).
 //
+// Blocking talks (the bedroom, the playroom, the train into the fight) wait for a press: their
+// spoken lines never move on by a timer (spec A4.6, and the end arrow promises it); a [SOUND]
+// beat in a talk keeps its short timer (a press still moves it on). The hint line under the
+// game says which keys while one is up. Scripted test runs (navigator.webdriver) keep the old
+// read timer so the older flow tests still walk through; window.__textPatient overrides that
+// either way, and presenter mode (state.settings.presenter) always waits.
+// The fight's lines and cinematic cues (the opening, the kids' room) stay timed. In the opening a
+// press on a line that is out still jumps to the next line, as it did before typing (its hint
+// says so); a line that would spend over 40% of its time typing shows whole.
+//
 // The no-repeat rule: a line with a key is marked heard (state.hear) only once it is fully shown,
-// so a line cut short by a death plays again on the retry.
+// so a line cut short by a death, a walk away or another line plays again on the retry. Scenes
+// pass the key (overlay.caption once/key, overlay.sfx once, bubbles.say once/key, a talker's or
+// a look's src.key, a Hallway queue entry's key) instead of calling state.hear themselves.
 // The rehearsal trap: a run started from the title (Begin, From the start, a chapter) forgets the
-// lines heard and the notices seen, so a rehearsal never leaves the class run silent. Continue
-// keeps them.
+// lines heard and the notices seen (state.newRun), so a rehearsal never leaves the class run
+// silent. Continue keeps them.
 import { state } from '../core/state.js';
 import { Sound } from '../core/sound.js';
 
@@ -151,15 +164,27 @@ export function rowsShown(rows, n) {
 const TEXT_KEYS = new Set(['KeyJ', 'KeyE', 'Enter', 'NumpadEnter', 'Space']);
 const held = new Set();
 let pointerHeld = false;
-const hooks = { strip: () => null, narration: () => null, blocked: () => false, grid: () => null };
+const hooks = { strip: () => null, narration: () => null, blocked: () => false, grid: () => null, tick: () => {} };
 const bubbleLines = new Set();
 
 export const typer = {
   TYPE, Line, typeSeconds, rowsShown, voice,
-  // presenter mode can set this: blocking lines wait for a press, never a timer
-  patient: false,
-  // scenes that count down their own lines ask this before counting
-  waiting() { const s = hooks.strip(); return !!(typer.patient && s && s.block); },
+  // do blocking lines wait for a press (see the top)
+  patient() {
+    if (state.settings.presenter) return true;
+    if (typeof window === 'undefined') return true;
+    if (window.__textPatient != null) return !!window.__textPatient;
+    return !(typeof navigator !== 'undefined' && navigator.webdriver);
+  },
+  // scenes that count down their own lines ask this before counting: a blocking line is up and
+  // waits for a press. A [SOUND] in a talk is a beat, not something to read: it keeps its timer.
+  waiting() { const s = hooks.strip(); return !!(s && s.block && !s.sound && s.onAdvance && s.live && typer.patient()); },
+  // the line clock stops: the pause menu, a notice, the presenter's freeze (H)
+  frozen() { return !!(typeof window !== 'undefined' && (window.__paused || window.__frozen)) || hooks.blocked(); },
+  // the hint line under the game while a blocking line waits for a press (overlay.hint shows it
+  // when the scene has no hint of its own)
+  cue() { const s = hooks.strip(); return s && s.block && s.live && s.onAdvance && s.skippable ? 'Space, J or Enter: next line.' : ''; },
+  tick() { hooks.tick(); },
   // the time a scene line should stay up: its old total, or the typing plus a read, whichever is longer
   total(text, oldSeconds, start) { return Math.max(oldSeconds, typeSeconds(text, start) + TYPE.minRead); },
   // cg.js and bubbles.js tell the router where lines are
@@ -182,28 +207,17 @@ export const typer = {
     const enter = ev.code === 'Enter' || ev.code === 'NumpadEnter' || ev.click === 'strip';
     if (!enter) return null;
     if (d && d.live) return d;
-    if (s && s.live && s.skippable && (!s.shown || s.onAdvance)) return s;
-    let best = null; bubbleLines.forEach(l => { if (l.live && (!best || l.order > best.order)) best = l; });
+    // a caption on the strip takes the press, even one that is out and waits for nothing: the
+    // press never falls through to a bubble across the room
+    if (s && s.live) return s.skippable ? s : null;
+    // the strip is empty: the newest bubble near her
+    let best = null; bubbleLines.forEach(l => { if (l.live && (!l.near || l.near()) && (!best || l.order > best.order)) best = l; });
     return best;
   },
   press(ev) { const l = typer.target(ev || { code: 'Enter' }); return l ? l.press() : 'ignored'; },
   // a run from the title: forget the lines heard and the notices seen (see the top)
-  freshRun() {
-    const h = state.story.heard; Object.keys(h).forEach(k => delete h[k]); state.storySet('heard', h);
-    freshPanels = true; runPanels.clear();
-  }
+  freshRun() { state.newRun(); }
 };
-
-// Notices seen: state.js keeps them forever. After a fresh run they count as unseen until seen in
-// this run, so the class sees every how-to slip. (A state.newRun() in state.js would be the
-// cleaner home for this; it is outside this stream, so the check is wrapped here.)
-let freshPanels = false;
-const runPanels = new Set();
-{
-  const seen = state.seenPanel, mark = state.markPanel;
-  state.seenPanel = k => (freshPanels ? runPanels.has(k) : seen(k));
-  state.markPanel = k => { runPanels.add(k); mark(k); };
-}
 
 if (typeof window !== 'undefined') {
   window.__typer = typer;

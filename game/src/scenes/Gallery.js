@@ -84,7 +84,7 @@ export class Gallery extends SideEpisode {
     this.events.once('shutdown', () => Object.values(this.beds).forEach(b => b.stop(0.4)));
     this.takeNote({ fromCut }, 2, 'The Gallery');
     // on a later take the robot has tidied her old bodies into a row; it says so, once
-    if (this.tidied && state.hear('ep2:tidy')) this.time.delayedCall(1600, () => this.robotSay('Tidy for the next take.'));
+    if (this.tidied && !state.heard('ep2:tidy')) this.time.delayedCall(1600, () => this.robotSay('Tidy for the next take.', 'ep2:tidy'));
     window.__game = { scene: this, state };
   }
 
@@ -110,7 +110,8 @@ export class Gallery extends SideEpisode {
   addThings() {
     const N = NOTICE.gallery, G = GROUND, M = MEZZ, CB = LEVEL.cabinet, SD = LEVEL.staffDoor, LS = LEVEL.lightSwitch, PT = LEVEL.portrait;
     const once = (key, lines) => state.heard('look:ep2:' + key) ? lines.slice(-1) : lines;
-    const look = (key, x0, x1, y0, y1, py, lines, more) => { const t = this.addLook(Object.assign({ x0, x1, y0, y1, py, lines: once(key, lines) }, more)); const use = t.use; t.use = () => { state.hear('look:ep2:' + key); use(); }; return t; };
+    // heard once a line of it is out (ui/typer.js), not when it is asked for
+    const look = (key, x0, x1, y0, y1, py, lines, more) => { const t = this.addLook(Object.assign({ x0, x1, y0, y1, py, lines: once(key, lines) }, more)); t.src.key = 'look:ep2:' + key; return t; };
     this.cabinetThing = { x0: CB.x0, x1: CB.x1, y0: G - 16, y1: G, label: 'J', use: () => this.openDrawer() };
     this.robotThing = { x0: 0, x1: 0, y0: G - 10, y1: G, label: 'J', use: () => this.robotTalk() };
     this.switchThing = { x0: LS.x - 9, x1: LS.x + 9, y0: G - 30, y1: G, px: LS.x, py: LS.y - 4, label: 'J', use: () => this.flipLights() };
@@ -182,11 +183,11 @@ export class Gallery extends SideEpisode {
     Sound.noise(0.25, 0.05, 1200); Sound.tone(220, 0.12, 'triangle', 0.02, 180);
     // on a later take: the glasses are back in the drawer, as if she never took them
     // (said once: the drawer opens every take, its lines do not)
-    if (this.ep.take > 1 && state.hear('look:ep2:drawer2')) {
-      const src = { lines: NOTICE.gallery.drawer2 };
+    if (this.ep.take > 1 && !state.heard('look:ep2:drawer2')) {
+      const src = { lines: NOTICE.gallery.drawer2, key: 'look:ep2:drawer2' };
       this.time.delayedCall(350, () => { if (state.clue('drawer')) overlay.note('NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: LEVEL.cabinet.drawer.x + 8, y: GROUND - 16 })); });
     }
-    const R = this.robot; if (Math.abs(R.x - this.kid.x) < 200 && state.hear('ep2:sawthat')) this.time.delayedCall(500, () => this.robotSay('I saw that.'));
+    const R = this.robot; if (Math.abs(R.x - this.kid.x) < 200 && !state.heard('ep2:sawthat')) this.time.delayedCall(500, () => this.robotSay('I saw that.', 'ep2:sawthat'));
   }
   updateDrawer(dt) {
     const D = this.drawer;
@@ -210,8 +211,8 @@ export class Gallery extends SideEpisode {
     this.lightsOff = !this.lightsOff;
     this.levelImg.setTexture(this.lightsOff ? 'gl_dark' : 'gl_level');
     Sound.tone(this.lightsOff ? 300 : 420, 0.04, 'square', 0.02); Sound.noise(0.05, 0.03, 3000);
-    if (this.lightsOff && state.hear('look:ep2:switch')) { // said the first time only, never on a retry
-      const src = { lines: NOTICE.gallery.lightswitch };
+    if (this.lightsOff && !state.heard('look:ep2:switch')) { // said the first time only, never on a retry
+      const src = { lines: NOTICE.gallery.lightswitch, key: 'look:ep2:switch' };
       this.bubbles.look('item', src, () => ({ x: LEVEL.lightSwitch.x, y: LEVEL.lightSwitch.y - 6 }));
     }
   }
@@ -309,14 +310,16 @@ export class Gallery extends SideEpisode {
     this.polisherSprite.setTexture(Math.floor(this.clock * 12) % 2 ? 'polisher_a' : 'polisher_b').setPosition(Math.round(Q.x), MEZZ);
   }
   robotStyle() { return { ink: 0xebe6d8, pitch: 1180, leave: 64 }; }
-  robotSay(text) { this.bubbles.say('robot', text, () => ({ x: this.robot.x, y: GROUND - 9 }), Object.assign(this.robotStyle(), { leave: 200 })); }
+  // once: a key, heard once the line is out (a line cut short is said again next take)
+  robotSay(text, once) { this.bubbles.say('robot', text, () => ({ x: this.robot.x, y: GROUND - 9 }), Object.assign(this.robotStyle(), { leave: 200, once })); }
   // On a retry the robot picks up at the first line she has not heard yet (all heard: its last).
   robotTalk() {
     const unheard = (list, tag) => { const i = list.findIndex((l, n) => !state.heard('ep2:robot:' + tag + n)); return i < 0 ? list.length - 1 : i; };
-    if (!this.robotSrc) this.robotSrc = { lines: () => this.glasses || this.drawer.opening ? ROBOT_AFTER : ROBOT_BEFORE, i: unheard(ROBOT_BEFORE, 'b'), loop: true, from: 1 };
+    // each line is heard once it is out (ui/typer.js): walking off mid line leaves it unheard
+    if (!this.robotSrc) this.robotSrc = { lines: () => this.glasses || this.drawer.opening ? ROBOT_AFTER : ROBOT_BEFORE, i: unheard(ROBOT_BEFORE, 'b'), loop: true, from: 1, key: i => 'ep2:robot:' + (this.robotSrc.after ? 'a' : 'b') + i };
     const after2 = this.glasses || this.drawer.opening, src = this.robotSrc;
     if (after2 && !src.after) { src.after = true; src.i = unheard(ROBOT_AFTER, 'a'); src.from = 0; }
-    if (this.bubbles.press('robot', src, () => ({ x: this.robot.x, y: GROUND - 9 }), this.robotStyle()) === 'line') state.hear('ep2:robot:' + (src.after ? 'a' : 'b') + (src.i - 1));
+    this.bubbles.press('robot', src, () => ({ x: this.robot.x, y: GROUND - 9 }), this.robotStyle());
   }
 
   // ------------------------------------------------------------------ the door, story mode

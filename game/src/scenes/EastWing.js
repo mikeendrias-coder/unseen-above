@@ -106,7 +106,7 @@ export class EastWing extends TopDownEpisode {
     this.hp = 3; this.inv = 0; this.sparks = null; this.showHp();
     this.onWake = () => this.showHp();
     this.takeNote({ fromCut: data.fromCut && !data.fromFall }, 3, 'The East Wing');
-    if (data.fromFall && state.hear('ew:crack')) this.time.delayedCall(900, () => overlay.sfx('[GLASS CRACKS]', 1700));
+    if (data.fromFall && !state.heard('ew:crack')) this.time.delayedCall(900, () => overlay.sfx('[GLASS CRACKS]', 1700, 'ew:crack'));
     this.time.delayedCall(data.fromFall ? 1900 : 600, () => this.itemPanel('cracked'));
     window.__game = { scene: this, state };
   }
