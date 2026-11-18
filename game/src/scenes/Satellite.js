@@ -95,7 +95,7 @@ export class Satellite extends Phaser.Scene {
     // the request comes first, once per visit (a retry or a screen preview inside the batch skips it)
     const withForm = !this.embedded && !data.formDone && !(data.at > 0);
     this.loadLevel(Math.min(data.at || 0, this.ids.length - 1), !!data.quiet || withForm);
-    if (withForm) this.form = new RequestForm(this, this.batch, this.skinN, this.K, () => this.formClosed());
+    if (withForm) { this.form = new RequestForm(this, this.batch, this.skinN, this.K, () => this.formClosed()); this.drawBoard(); } // paint once: a win under the form needs the view
     if (this.embedded) this.autoSolve(data.autoDelay || 0, data.autoEvery || 0.2);
     if (!this.embedded) cam.fadeIn(500);
     if (!this.embedded) window.__game = { scene: this };
@@ -317,6 +317,7 @@ export class Satellite extends Phaser.Scene {
     this.clock += dt;
     if (this.embedded) { this.autoStep(dt); this.physics(dt); this.drawLive(); this.drawBoard(); this.winFx.update(dt, this.K); return; }
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
+    if (this.form && (c.skipAhead() || c.skipLine())) this.form.skip(); // N or Enter skips the request, story mode or not
     reviewKeys(this);
     if (c.nextScreen()) {
       const next = this.skinN % 4 + 1; overlay.note('Screen ' + next + ' · ' + SKINS[next].name, 1600);
