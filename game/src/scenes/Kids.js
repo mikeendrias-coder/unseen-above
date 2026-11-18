@@ -1,8 +1,8 @@
 // The kids' room on the Moon, after batch 4 (and a preview from its # link). A pixel scene at
 // 320 x 180, the same playroom she reaches at the end. Two kids on a gold couch play the
-// satellite game show on a giant screen: a board, a gold path drawn from target to target,
-// and a feed from Earth where a box closes on a small girl (the game she walks in on at the end).
-// They win and cheer. The screen cuts to static, then to the live feed from Earth, full frame:
+// satellite game show on a giant screen: the same game the player just played in batch 4, the
+// turning Earth with a maze in it, the girl in pink as the target, the amber box closing on her
+// (ending/showscreen.js; the game she walks in on at the end). They win and cheer. The screen cuts to static, then to the live feed from Earth, full frame:
 // the grounds at night, a girl in the open, the searchlight finds her, the satellite strikes the
 // moment the charge sound plays. Back in the room the next take walks in on the screen, the
 // little one turns round, and the show asks: ROUND 2, READY? Then black, and the Moon.
@@ -11,7 +11,8 @@ import { LOOKS } from '../art/palettes.js';
 import { Painter, hexNum, rng } from '../art/painter.js';
 import { makeSprites } from '../art/sprites.js';
 import { ccText, ccWidth } from '../art/ccfont.js';
-import { LEVEL as MOON, KX, paintPlayroom, paintKid, KID_POSES, BOARD, drawBoard, drawFeedBox, feedHouse, feedGatePost, feedRect } from '../art/moon.js';
+import { LEVEL as MOON, KX, paintPlayroom, paintKid, KID_POSES, feedHouse, feedGatePost, feedRect } from '../art/moon.js';
+import { ShowScreen } from '../ending/showscreen.js';
 import { PixLayer } from '../art/hallway.js';
 import { pixelZoom, display } from '../core/display.js';
 import { SatelliteStrike } from '../art/strike.js';
@@ -67,6 +68,7 @@ export class Kids extends Phaser.Scene {
     // the room
     this.roomImg = this.add.image(0, 0, 'kr_room').setOrigin(0).setDepth(0);
     this.screenG = this.add.graphics().setDepth(1);
+    this.show = new ShowScreen(this, SCR.x, SCR.y, SCR.w, SCR.h, 1.05);
     this.kidImgs = KIDS.map((k, i) => this.add.image(k.x, KY, 'mk_' + (i ? 'b' : 'a') + '_back').setOrigin(0.5, 1).setDepth(2));
     this.handG = this.add.graphics().setDepth(2.1);
     // the feed, full frame, over the room
@@ -148,7 +150,8 @@ export class Kids extends Phaser.Scene {
   drawScreen(t) {
     const g = this.screenG, { x, y, w, h } = SCR; g.clear();
     g.fillStyle(0x0e0f12, 1); g.fillRect(x, y, w, h);
-    if (t < T.cut) return this.drawShow(g, t);
+    this.show.setVisible(t < T.cut);
+    if (t < T.cut) return this.drawShow(t);
     if (t < T.back) return;
     // back in the room: the feed, small, on the giant screen; the next take walks in
     g.fillStyle(n('#1b1c21'), 1); g.fillRect(x, y, w, h); g.fillStyle(n('#2e3036'), 1); g.fillRect(x, y + 72, w, h - 72); g.fillStyle(n('#45474d'), 1); g.fillRect(x, y + 72, w, 1);
@@ -167,25 +170,11 @@ export class Kids extends Phaser.Scene {
       ccText(g, a, Math.round(x + w / 2 - ccWidth(a, 2) / 2), y + 18, n('#f2d58c'), { sx: 2, sy: 2 }); ccText(g, b, Math.round(x + w / 2 - ccWidth(b) / 2), y + 36, on ? 0xebe6d8 : n('#d6a03c'));
     }
   }
-  // The game show, the same one she walks in on at the end (art/moon.js): the board, a gold path
-  // drawing itself from target to target, and the feed from Earth in the corner. When the path
-  // reaches the last target the amber box locks on the girl in the feed: +400, round over.
-  drawShow(g, t) {
-    const { x, y, w, h } = SCR, solved = t >= T.solve;
-    g.fillStyle(0x0e0f12, 1); g.fillRect(x, y, w, h);
-    g.fillStyle(0xe3412b, 1); g.fillRect(x + 6, y + 6, 28, 11); ccText(g, 'LIVE', x + 8, y + 8, 0xebe6d8);
-    ccText(g, 'CH 07', x + w - 34, y + 8, n('#d6a03c'));
-    const bx = x + 100, by = y + 22, u = Math.min(BOARD.path.length, Math.max(0, (t - 0.8) / (T.solve - 0.8) * BOARD.path.length));
-    drawBoard(g, bx, by, u);
-    // the feed: she walks along the fence; the box closes in as the path gets near
-    const fx = x + 8, fy = y + 22, fw = 80, fh = 48, gx = fx + 6 + Math.min(24, t * 4);
-    drawFeedBox(g, fx, fy, fw, fh, gx);
-    const close = Math.min(1, Math.max(0, (t - 1) / (T.solve - 1.2))), bs = Math.round(22 - close * 14);
-    if (!solved || Math.floor(t * 8) % 2) { g.lineStyle(1, n('#ffb01f'), 1); g.strokeRect(Math.round(gx + 1 - bs / 2), Math.round(fy + fh - 10 - bs / 2), bs, bs); }
-    ccText(g, 'ROUND 1', x + 8, y + h - 12, n('#d6a03c'));
-    ccText(g, 'SCORE ' + (solved ? 2400 : 2000), x + 8, y + h - 22, n('#f5ce77'));
-    if (solved && Math.floor(t * 8) % 2 === 0) ccText(g, '+400', bx + 64, by + 2, n('#f2d58c'));
-    if (solved && t < T.solve + 0.15) { g.fillStyle(0xebe6d8, 1); g.fillRect(x, y, w, h); }
+  // The game show, the same one she walks in on at the end: the Earth turns, the beads roll after
+  // the girl, the amber box closes on her; when it locks, the zap: +400, round over.
+  drawShow(t) {
+    const solved = t >= T.solve, close = Math.min(1, Math.max(0, (t - 1) / (T.solve - 1.2)));
+    this.show.draw({ t, score: solved ? 2400 : 2000, round: 1, lock: close, zap: solved ? t - T.solve : null });
   }
 
   // ------------------------------------------------------------------ the kids

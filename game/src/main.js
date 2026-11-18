@@ -90,7 +90,7 @@ function start(entry) {
       fsFit();
     }, 150);
   });
-  window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state, cg, goStep, toggleFull };
+  window.__unseen = { game, display, Sound, overlay, itemPanel, pause, state, cg, goStep, toggleFull, toGuide }; // toGuide: the ending screen's TITLE and CHAPTERS (ending/finale.js)
 }
 function stopAll() {
   game.scene.getScenes(false).forEach(sc => { const s = sc.sys; if (s.isActive() || s.isPaused() || s.isSleeping()) game.scene.stop(s.settings.key); });

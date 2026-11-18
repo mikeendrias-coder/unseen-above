@@ -1,6 +1,6 @@
 // The end of the game: batch 4 hands on to the kids' room, the kids' room to the Moon. On the
 // Moon she walks the corridor, goes backstage, wins the fight, enters the playroom, the lines
-// play, she picks the first reply, two clicks, the last shot, and the small endings card.
+// play, she picks the first reply, two clicks, the last shot (the final beat), Enter, the ending screen.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -65,7 +65,11 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game.scene.mode === 'last', null, 15000);
   ok('two clicks, the flash, then the last shot', true);
   await until(() => !!window.__game.scene.ended && window.__game.scene.lastT > 4, null, 60000);
-  ok('it ends on the Moon on the old TV, and stays there: no end card, no hint (' + await p.evaluate(() => JSON.stringify(window.__game.scene.ended)) + ')', await p.evaluate(() => { const s = window.__game.scene; return s.tvImg.visible && s.ended.title === 'THE VEST' && !s.cardG && !(document.querySelector('#h-hint') || {}).textContent; }));
+  ok('it ends on the Moon on the old TV: the final beat plays, nothing over it yet (' + await p.evaluate(() => JSON.stringify(window.__game.scene.ended)) + ')', await p.evaluate(() => { const s = window.__game.scene; return s.tvImg.visible && s.ended.title === 'THE VEST' && s.finale.phase === 'beat' && !s.finale.cardUp; }));
+  ok('the hint says Enter skips: ' + await p.evaluate(() => document.querySelector('#h-hint').textContent), await p.evaluate(() => /Enter skips/.test(document.querySelector('#h-hint').textContent)));
+  await p.keyboard.press('Enter');
+  await until(() => window.__game.scene.finale.phase === 'card', null, 5000);
+  ok('Enter skips to the ending screen', true);
   ok('the ending is recorded as seen', await p.evaluate(() => window.__game.state.story.endings.vest === true));
   ok('the Moon episode is marked finished', await p.evaluate(() => window.__game.state.episode('ep5').done));
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
