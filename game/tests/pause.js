@@ -116,7 +116,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.press('Enter');
   await until(() => !document.getElementById('tv').hidden, null, 3000);
   const cont = await S(() => ({ hidden: document.getElementById('continue').hidden, label: document.getElementById('continue').innerText.replace(/\s+/g, ' '), start: document.getElementById('start').innerText.split('\n')[0] }));
-  ok('TITLE SCREEN brings the title back, with Continue (' + cont.label + ') and ' + cont.start, !cont.hidden && /Episode 2/.test(cont.label) && /From the start/.test(cont.start));
+  ok('TITLE SCREEN brings the title back, with Continue (' + cont.label + ') and ' + cont.start, !cont.hidden && /Ep(isode)? 2/.test(cont.label) && /From the start/.test(cont.start));
   await p.screenshot({ path: 'tests/out/pause-guide.png' });
   await p.click('#continue');
   await until(() => window.__game.scene.sys.settings.key === 'gallery' && window.__game.scene.clock > 0.3, null, 20000);

@@ -6,10 +6,12 @@ const KEY = 'unseen-above-v1';
 // settings: music and effects volume (0 to 5), reduced flashing, screen shake. A computer that
 // asks for reduced motion starts with flashing reduced and shake off.
 const calm = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
-const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm });
+// presenter: Michael's switch for the class walkthrough (ui and review.js read it; the typer reads
+// state.settings.presenter too). bigCaptions: the caption strip at double height (ui/cg.js).
+const defaults = () => ({ music: 5, sfx: 5, reduceFlash: calm, shake: !calm, presenter: false, bigCaptions: false });
 // story: what she found and did, for the endings (Nov 17). heard: lines already spoken, never replayed.
 const freshStory = () => ({ clues: {}, heard: {}, choice: null, creatorDeaths: 0, gaveUp: false, spared: false, killedBroken: false, endings: {} });
-const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false, panels: {}, immune: false, settings: defaults(), reached: null, story: freshStory() });
+const fresh = () => ({ look: 'A', episodes: {}, seenIntro: false, panels: {}, immune: false, settings: defaults(), reached: null, resume: null, story: freshStory() });
 let mem = fresh();
 try { const raw = window.localStorage.getItem(KEY); if (raw) mem = Object.assign(fresh(), JSON.parse(raw)); } catch (e) { /* private window or blocked storage: keep it in memory */ }
 if (!LOOK_KEYS.includes(mem.look)) mem.look = 'A';
@@ -45,6 +47,10 @@ export const state = {
   // the furthest part of the show she has reached in order (a step id in core/flow.js), for Continue
   get reached() { return mem.reached; },
   reach(step) { mem.reached = step; save(); },
+  // presenter mode: the part on screen now (a step id) and when, so a refresh goes straight back
+  get presenter() { return !!mem.settings.presenter; },
+  get resume() { return mem.resume; },
+  setResume(step) { if (mem.resume && mem.resume.id === step) { mem.resume.at = Date.now(); } else mem.resume = { id: step, at: Date.now() }; save(); },
   // deaths this visit, per episode (not saved): after three, the show offers to skip ahead
   died(id) { session[id] = (session[id] || 0) + 1; return session[id]; },
   diedHere(id) { return session[id] || 0; },
