@@ -8,7 +8,7 @@ Status: `todo` · `deciding` (waiting on Michael) · `doing` · `done, check` (b
 
 ## 1. One aesthetic (first, blocks the rest of the art)
 - `deciding` **One look for the whole game.** The start screen (TV guide web page), the opening (smooth high-res art) and the episodes (320 x 180 pixels) are three different styles today. Michael wants something new, not one of the three. (Nov 17)
-  - Three directions drawn for him to pick from: A Ash and Gold, B Camera Feed, C Paper Stage (mockup page, Nov 17).
+  - Three directions drawn for him to pick from: A Ash and Gold, B Camera Feed, C Paper Stage. Mockup page: https://claude.ai/artifact/MHr3oU9nmzQNWKtHHWpVog (source: ~/Developer/unseen-above-archive/looks-mockup-template.html), Nov 17.
 - `todo` **Lock one palette.** The five player-chosen looks go away. (Nov 17)
 - `todo` **Satellite screens keep their four-step change** (terminal, ground station, flat map, game show), redrawn in the chosen look's grid and type. (Nov 17)
 - `todo` **Captions get their own space.** A reserved strip outside the play area; captions never sit on top of the game. (Nov 17)
