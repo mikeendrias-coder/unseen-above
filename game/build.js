@@ -31,3 +31,5 @@ fs.copyFileSync(path.join(__dirname, 'node_modules/phaser/dist/phaser.min.js'), 
 console.log('built', (bundle.length / 1024).toFixed(1) + ' KB bundle');
 // the paper page: paper/paper.md into dist/paper.html (paper/build.js)
 require('./paper/build.js')({ out });
+// the trailer: dist/trailer.html, the real game played by a director (src/trailer/build.js)
+require('./src/trailer/build.js')({ out });
