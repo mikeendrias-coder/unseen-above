@@ -89,7 +89,7 @@
   .jump a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
   /* Presenter mode: a quiet tag at the right end of the caption strip (drawn under the
      captions, so a long caption covers it), and the freeze mark: two bars, top left. */
-  #ptag { position: absolute; right: calc(var(--u, 4px) * 4); top: calc(var(--u, 4px) * 202); font: calc(var(--u, 4px) * 10)/1 var(--pix); color: var(--ash3); white-space: nowrap; }
+  #ptag { position: absolute; right: calc(var(--u, 4px) * 4); bottom: 0; font: calc(var(--u, 4px) * 10)/1 var(--pix); color: var(--ash3); white-space: nowrap; }
   #freeze { position: absolute; left: calc(var(--u, 4px) * 6); top: calc(var(--u, 4px) * 6); width: calc(var(--u, 4px) * 7); height: calc(var(--u, 4px) * 8); }
   #freeze::before, #freeze::after { content: ""; position: absolute; top: 0; width: calc(var(--u, 4px) * 2); height: calc(var(--u, 4px) * 8); background: var(--ink); box-shadow: 0 0 0 var(--u, 4px) var(--ground); }
   #freeze::before { left: 0; } #freeze::after { right: 0; }

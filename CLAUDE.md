@@ -72,3 +72,14 @@
 - Pixel scenes are 320 x 180, scaled by whole numbers. Cinematic scenes use a 1280 x 720 design space.
 - Test in headless Chromium with Playwright (pre-installed; never reinstall it).
 - Commit to `dev`; Michael decides when to merge to `main`.
+
+## Presenting (Nov 18, for Michael's class walkthrough; run sheet: docs/RUN_SHEET.md)
+- Presenter mode (state.settings.presenter): the title switch, the Pres key under the game, the pause menu row, or `?present` in the link (`?present=0` off). On: immunity, flashing reduced, shake off, music 2 of 5, N skips ahead everywhere (even with immunity off), no "Stuck?" offers, a quiet PRESENTER tag at the right end of the caption strip (template #ptag) instead of the IMMUNE tag. Off: the settings before it come back (settings.presenterPrev). core/review.js setPresenter / presenting.
+- In presenter mode the address (#part) and the save (state.resume) follow the part on screen (main.js, every second), so a refresh, or reopening within 15 minutes, goes straight back into that part with no title screen. Lines heard are cleared on every jump and run start, so a rehearsal never silences class.
+- Number keys 0 to 9 (always, not only presenting): 0 opening, 1 ep1, 2 batch1, 3 ep2, 4 batch2, 5 ep3, 6 ep4, 7 kids, 8 moon, 9 backstage (vibe.js DIGITS). They, the Chapters list and the jump links all go through main.js goStep: the part starts with the show's own data (as Continue does), so it opens with its title card; backstage and the playroom get one from main.js. Chapters on the title also lists the five endings (?end=<id>#playroom) and give-up mode (?giveup=1#hallway); unseen endings read ---- unless presenting.
+- H holds the picture (ui/pause.js freeze): scenes pause, no menu, sound ducks, a two-bar mark top left (#freeze), window.__frozen. H again goes on; P or Esc from a hold opens the menu.
+- U (or the key, or the title row while presenting) puts #stage in full screen: the page around it hides (body.fs), the picture is centered (--fs-pad). A refusal shows a note. Esc leaves full screen, so use P for the menu there.
+- Big captions (state.settings.bigCaptions; title row while presenting, pause menu) is only a saved setting until ui/cg.js and core/display.js draw the strip at double height.
+- New game on the title (asks twice) calls newGame() from data/endings.js and resyncs Continue and Chapters.
+- On a satellite screen the keys under the game read "turn" for W A S D (W and S grey on the ring); the Controls notice has the globe line.
+- Test: tests/presenter.js (switch, chapters and endings, number keys, tag, N with immunity off, hold, refresh, full screen, satellite keys, an ending pick, New game, switch off).

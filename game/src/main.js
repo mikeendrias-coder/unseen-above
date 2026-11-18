@@ -268,6 +268,8 @@ function syncGuide() {
 const begin = entry => {
   if (playing) return;
   playing = true; stopPicker();
+  // presenting: a run from the title plays every line again (a rehearsal must not silence it)
+  if (presenting()) state.storySet('heard', {});
   if (tv) tv.hidden = true; const note = document.getElementById('tv-note'); if (note) note.hidden = true;
   Sound.ensure();
   { const st = document.getElementById('stage'); if (st) st.classList.add('playing'); }
@@ -291,7 +293,7 @@ if (go) {
   if (optFlash) optFlash.addEventListener('click', () => { const r = !state.settings.reduceFlash; state.set('reduceFlash', r); state.set('shake', !r); syncGuide(); });
   if (optPresent) optPresent.addEventListener('click', () => { setPresenter(!presenting()); guide(); if (optPresent) optPresent.focus({ preventScroll: true }); });
   if (optFull) optFull.addEventListener('click', () => { optFull.querySelector('i').textContent = ''; toggleFull(); syncGuide(); });
-  if (optCaps) optCaps.addEventListener('click', () => { state.set('bigCaptions', !state.settings.bigCaptions); syncGuide(); });
+  if (optCaps) optCaps.addEventListener('click', () => { state.set('bigCaptions', !state.settings.bigCaptions); syncGuide(); window.dispatchEvent(new Event('resize')); });
   // New game: the first click asks, a second within four seconds clears her run (story, takes,
   // bodies, lines heard, how-to slips seen; the look, settings and switches stay)
   if (optNew) optNew.addEventListener('click', () => {

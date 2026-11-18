@@ -141,7 +141,7 @@ export function initPause(game, hooks) {
     else if (r.id === 'flash') state.set('reduceFlash', !state.settings.reduceFlash);
     else if (r.id === 'shake') state.set('shake', !state.settings.shake);
     else if (r.id === 'presenter') setPresenter(!presenting());
-    else if (r.id === 'caps') state.set('bigCaptions', !state.settings.bigCaptions);
+    else if (r.id === 'caps') { state.set('bigCaptions', !state.settings.bigCaptions); window.dispatchEvent(new Event('resize')); } // the strip's height (core/display.js) may change
     if (r.id !== 'sfx') Sound.tone(r.id === 'music' ? 600 : 740, 0.05, 'triangle', 0.02);
     show(); return true;
   }
