@@ -27,8 +27,7 @@ const CONTROLS = {
     '{L} glasses. {Enter} skips a line.',
     '{Bksp} retries. {P} pauses. {M} sound.',
     '{I} immunity. {N} skips ahead.',
-    'Globe: {W} {A} {S} {D} or a drag turns it.',
-    '{H} holds. {U} full screen. {0} to {9} parts.'
+    'Globe: {W} {A} {S} {D} or a drag turns it.'
   ]
 };
 const bars = n => '█'.repeat(n) + '·'.repeat(5 - n);
@@ -79,7 +78,7 @@ export function initPause(game, hooks) {
     R.push({ id: 'shake', label: 'SCREEN SHAKE', value: state.settings.shake ? 'ON' : 'OFF', adjust: true, help: 'Off: the picture holds still.' });
     R.push({ id: 'controls', label: 'CONTROLS', help: 'Every key on one notice.' });
     R.push({ id: 'presenter', label: 'PRESENTER', value: presenting() ? 'ON' : 'OFF', adjust: true, help: 'For a class: immune, N skips, calm.' });
-    R.push({ id: 'caps', label: 'BIG CAPTIONS', value: state.settings.bigCaptions ? 'ON' : 'OFF', adjust: true, help: 'Captions at double height.' });
+    if (cg.canBigCaptions) R.push({ id: 'caps', label: 'BIG CAPTIONS', value: state.settings.bigCaptions ? 'ON' : 'OFF', adjust: true, help: 'Captions at double height.' });
     R.push({ id: 'guide', label: 'TITLE SCREEN', help: 'Back to the start. Your place is kept.' });
     return R;
   }
@@ -164,13 +163,15 @@ export function initPause(game, hooks) {
     if (!hooks.playing()) return;
     const k = ev.key;
     if (frozen) {
-      // held: H goes on, P or Esc opens the menu, the number keys and U (main.js) still work;
-      // every other key waits, so nothing happens behind the held picture
+      // held: H goes on, P or Esc opens the menu, M mutes (the scenes that read it are held), the
+      // number keys and U (main.js) still work; every other key waits, so nothing happens behind
+      // the held picture
       if (ev.ctrlKey || ev.metaKey || ev.altKey || /^F\d+$/.test(k) || /^[0-9uU]$/.test(k)) return;
       ev.preventDefault(); ev.stopPropagation();
       if (ev.repeat) return;
       if (k === 'h' || k === 'H') thaw();
       else if (k === 'p' || k === 'P' || k === 'Escape') { thaw(); openMenu(false); }
+      else if (k === 'm' || k === 'M') { Sound.ensure(); Sound.toggle(); }
       return;
     }
     if (!open) {

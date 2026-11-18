@@ -38,7 +38,7 @@ export function initPicker(onBegin, onChapter) {
       if (pick) b.addEventListener('click', () => { if (onChapter) onChapter(pick); }); else b.disabled = true;
       list.appendChild(b);
     };
-    STEPS.forEach(st => { const d = DIGITS.indexOf(st.id); add((d >= 0 ? d + ' ' : '') + (SHORT[st.id] || st.label), st.label + (d >= 0 ? ', key ' + d : ''), { step: st.id }); });
+    STEPS.forEach(st => { const d = DIGITS.indexOf(st.id); add((d >= 0 ? d + ' ' : '') + (SHORT[st.id] || st.label), st.label + (d >= 0 ? ', key ' + d : ''), { step: st.id }, d >= 0 ? '' : 'nonum'); });
     // the third column: a heading, the endings, give-up mode, Back
     const head = document.createElement('div'); head.className = 'head'; head.textContent = 'Endings'; head.setAttribute('aria-hidden', 'true'); list.appendChild(head);
     ['vest', 'round2', 'lookback', 'couch', 'endall'].forEach(id => {
@@ -54,6 +54,9 @@ export function initPicker(onBegin, onChapter) {
   showList(false);
   const buttons = () => [...tv.querySelectorAll(list && !list.hidden ? '.tv-chapters button' : '.tv-menu button')].filter(b => !b.hidden && !b.disabled);
   const first = buttons()[0]; if (first) try { first.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  // the pointer picks the row it moves onto (focus), so only one row is ever drawn as picked
+  const onOver = e => { const b = e.target.closest && e.target.closest('.tv-menu button, .tv-chapters button'); if (b && !b.disabled && document.activeElement !== b) b.focus({ preventScroll: true }); };
+  tv.addEventListener('pointerover', onOver);
   const onKey = e => {
     if (tv.hidden) return;
     const all = buttons(), i = all.indexOf(document.activeElement), inList = list && !list.hidden;
@@ -63,5 +66,5 @@ export function initPicker(onBegin, onChapter) {
     else if (e.key === 'Enter' && i < 0) { e.preventDefault(); onBegin(); }
   };
   window.addEventListener('keydown', onKey);
-  return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('resize', fit); if (open) open.removeEventListener('click', onOpen); };
+  return () => { tv.removeEventListener('pointerover', onOver); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', fit); if (open) open.removeEventListener('click', onOpen); };
 }

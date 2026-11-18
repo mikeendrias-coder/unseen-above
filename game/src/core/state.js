@@ -47,10 +47,18 @@ export const state = {
   // the furthest part of the show she has reached in order (a step id in core/flow.js), for Continue
   get reached() { return mem.reached; },
   reach(step) { mem.reached = step; save(); },
-  // presenter mode: the part on screen now (a step id) and when, so a refresh goes straight back
+  // presenter mode: the part on screen now (a step id), what was picked there (an ending for the
+  // playroom, give-up mode backstage) and when, so a refresh goes straight back into it
   get presenter() { return !!mem.settings.presenter; },
   get resume() { return mem.resume; },
-  setResume(step) { if (mem.resume && mem.resume.id === step) { mem.resume.at = Date.now(); } else mem.resume = { id: step, at: Date.now() }; save(); },
+  setResume(pick) {
+    const p = typeof pick === 'string' ? { step: pick } : pick || {};
+    mem.resume = { id: p.step, at: Date.now() };
+    if (p.end) mem.resume.end = p.end;
+    if (p.giveup) mem.resume.giveup = true;
+    save();
+  },
+  clearResume() { if (mem.resume) { mem.resume = null; save(); } },
   // deaths this visit, per episode (not saved): after three, the show offers to skip ahead
   died(id) { session[id] = (session[id] || 0) + 1; return session[id]; },
   diedHere(id) { return session[id] || 0; },

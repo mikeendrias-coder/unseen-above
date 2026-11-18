@@ -29,11 +29,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   // presenter on, from the title
   await p.click('#opt-present');
   const sv = await save();
-  ok('presenter on: immunity, flashing reduced, no shake, music 2 (' + JSON.stringify({ i: sv.immune, f: sv.settings.reduceFlash, s: sv.settings.shake, m: sv.settings.music }) + ')', sv.settings.presenter === true && sv.immune === true && sv.settings.reduceFlash === true && sv.settings.shake === false && sv.settings.music === 2);
-  ok('the title shows Full screen and Big captions now', await S(() => !document.getElementById('opt-full').hidden && !document.getElementById('opt-caps').hidden));
-  await p.click('#opt-caps');
-  ok('Big captions sets state.settings.bigCaptions', (await save()).settings.bigCaptions === true);
-  await p.click('#opt-caps');
+  ok('presenter on: immunity, flashing reduced, no shake, music 2 (' + JSON.stringify({ i: sv.immune, f: sv.settings.reduceFlash, s: sv.settings.shake, m: sv.settings.music }) + ')', sv.settings.presenter === true && sv.immune === true && sv.settings.reduceFlash === true && sv.settings.shake === false && sv.settings.music === 2 && sv.settings.sfx === 4);
+  ok('the title shows Full screen now; Big captions waits until the strip can draw them', await S(() => !document.getElementById('opt-full').hidden && document.getElementById('opt-caps').hidden)); // until ui/cg.js sets cg.canBigCaptions
   await p.screenshot({ path: 'tests/out/presenter-title.png' });
   await p.click('#opt-chapters');
   const list1 = await S(() => [...document.querySelectorAll('#chapters button.end:not(.back)')].map(x => x.textContent + (x.disabled ? '(x)' : '')));
@@ -71,6 +68,10 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const xa = await S(() => window.__game.scene.kid.x);
   await p.keyboard.down('KeyD'); await p.waitForTimeout(300); await p.keyboard.up('KeyD');
   ok('keys wait while held', (await S(() => window.__game.scene.kid.x)) === xa);
+  const m0 = await S(() => window.__unseen.Sound.muted);
+  await p.keyboard.press('KeyM');
+  ok('M mutes while held', (await S(() => window.__unseen.Sound.muted)) === !m0 && await S(() => window.__frozen === true));
+  await p.keyboard.press('KeyM');
   await p.screenshot({ path: 'tests/out/presenter-freeze.png' });
   await p.keyboard.press('KeyH');
   await until(() => window.__frozen === false, null, 3000);
@@ -127,6 +128,22 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.click('#chapters button:text("The couch")');
   await until(() => window.__game.scene.sys.settings.key === 'moon' && window.__game.scene.force === 'couch', null, 20000);
   ok('End: the couch opens the playroom with that ending asked for', true);
+  await p.waitForTimeout(1300);
+  await p.reload();
+  await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'moon' && window.__game.scene.clock > 0.2, null, 30000);
+  ok('a refresh keeps the ending picked (' + await S(() => window.__game.scene.force) + ')', (await S(() => window.__game.scene.force)) === 'couch');
+  // give-up mode from the chapters, then a refresh: still give-up mode
+  await p.keyboard.press('KeyP'); await until(() => window.__paused === true, null, 3000);
+  guard = 0; while (!/> title screen/.test(await S(() => document.getElementById('panel').innerText)) && guard++ < 14) await p.keyboard.press('ArrowDown');
+  await p.keyboard.press('Enter');
+  await until(() => !document.getElementById('tv').hidden, null, 3000);
+  await p.click('#opt-chapters');
+  await p.click('#chapters button:text("Give-up mode")');
+  await until(() => window.__game.scene.sys.settings.key === 'hallway' && window.__game.scene.clock > 0.2, null, 20000);
+  await p.waitForTimeout(1300);
+  await p.reload();
+  await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'hallway' && window.__game.scene.clock > 0.2, null, 30000);
+  ok('a refresh keeps give-up mode', await S(() => window.__game.scene.giveUp === true));
 
   // New game from the title: asks once, then clears; Continue and chapters follow
   await S(() => window.__game.state.reach('ep4'));
@@ -135,16 +152,37 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.keyboard.press('Enter');
   await until(() => !document.getElementById('tv').hidden, null, 3000);
   ok('Continue shows before a new game', await S(() => !document.getElementById('continue').hidden));
+  ok('back on the title the address is clean (' + await S(() => location.hash) + ')', await S(() => location.hash === ''));
+  await p.reload();
+  await p.waitForTimeout(1500);
+  ok('a refresh on the title stays on the title', await S(() => !document.getElementById('tv').hidden && !document.getElementById('stage').classList.contains('playing')));
   await p.click('#opt-new');
   ok('New game asks first', await S(() => document.querySelector('#opt-new i').textContent === 'sure?' && !document.getElementById('continue').hidden));
   await p.click('#opt-new');
   const ng = await save();
   ok('the second click clears her run; presenter mode stays', ng.reached === null && Object.keys(ng.story.heard).length === 0 && ng.settings.presenter === true && await S(() => document.getElementById('continue').hidden && /Begin/.test(document.getElementById('start').innerText)));
 
+  // Begin now starts the opening, not the last part shown
+  await p.click('#start');
+  await until(() => window.__game.scene.sys.settings.key === 'intro', null, 20000);
+  ok('after the title and New game, Begin opens the opening', true);
+  // a number key with a how-to slip up: the slip closes and the jump goes, one press
+  await S(() => { window.__noPanels = false; window.__unseen.itemPanel(window.__game.scene, 'dark', true); });
+  await until(() => window.__unseen.cg.pageUp, null, 3000);
+  await p.waitForTimeout(700);
+  await p.keyboard.press('Digit1');
+  await until(() => window.__game.scene.sys.settings.key === 'grounds' && window.__game.scene.clock > 0.2, null, 20000);
+  ok('one number key closes a slip and jumps', await S(() => !window.__unseen.cg.pageUp));
+  await S(() => { window.__noPanels = true; });
+  await p.keyboard.press('KeyP'); await until(() => window.__paused === true, null, 3000);
+  guard = 0; while (!/> title screen/.test(await S(() => document.getElementById('panel').innerText)) && guard++ < 14) await p.keyboard.press('ArrowDown');
+  await p.keyboard.press('Enter');
+  await until(() => !document.getElementById('tv').hidden, null, 3000);
+
   // presenter off puts the settings back
   await p.click('#opt-present');
   const off = await save();
-  ok('presenter off: the old settings come back (' + JSON.stringify({ i: off.immune, f: off.settings.reduceFlash, m: off.settings.music }) + ')', off.settings.presenter === false && off.immune === false && off.settings.music === 5);
+  ok('presenter off: the old settings come back (' + JSON.stringify({ i: off.immune, f: off.settings.reduceFlash, m: off.settings.music }) + ')', off.settings.presenter === false && off.immune === false && off.settings.music === 5 && off.settings.sfx === 5);
   console.log(errs.length ? 'ERRORS ' + errs.slice(0, 4).join(' | ') : 'no page errors');
   await b.close();
   process.exit(fails || errs.length ? 1 : 0);

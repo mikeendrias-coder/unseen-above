@@ -12,25 +12,27 @@ import { refreshStatus } from './death.js';
 export const STUCK_DEATHS = 3;
 // Presenter mode (Nov 18, for the class walkthrough): one switch (title, key cap, pause menu, or
 // ?present in the link). It turns immunity on, turns flashing down and the shake off, sets the
-// music low, lets N skip ahead everywhere (even with immunity off, to die on purpose), drops the
+// music to 2 and the effects to 4 of 5 (the research's levels: he talks over it, the effects carry
+// the story), lets N skip ahead everywhere (even with immunity off, to die on purpose), drops the
 // "Stuck?" offers, and swaps the IMMUNE tag over the picture for a quiet PRESENTER tag in the
 // caption strip. Turning it off puts those settings back. The typer reads state.settings.presenter.
 export const presenting = () => !!state.settings.presenter;
-const PRESENT_MUSIC = 2;
+const PRESENT_MUSIC = 2, PRESENT_SFX = 4;
 function tags() {
   overlay.immune(state.immune && !presenting());
   const t = document.getElementById('ptag');
-  if (t) { t.hidden = !presenting(); t.textContent = state.immune ? 'PRESENTER' : 'PRESENTER · CAN DIE'; }
+  if (t) { t.hidden = !presenting(); t.textContent = state.immune ? 'PRESENTER' : 'CAN DIE'; } // short: it fits the strip's right end
 }
 export function setPresenter(on) {
   on = !!on;
   if (on !== presenting()) {
     if (on) {
       const s = state.settings;
-      state.set('presenterPrev', { immune: state.immune, reduceFlash: !!s.reduceFlash, shake: s.shake !== false, music: s.music });
+      state.set('presenterPrev', { immune: state.immune, reduceFlash: !!s.reduceFlash, shake: s.shake !== false, music: s.music, sfx: s.sfx });
       state.set('presenter', true);
       state.set('reduceFlash', true); state.set('shake', false);
       if (s.music > PRESENT_MUSIC) { state.set('music', PRESENT_MUSIC); Sound.volume('music', PRESENT_MUSIC); }
+      if (s.sfx > PRESENT_SFX) { state.set('sfx', PRESENT_SFX); Sound.volume('sfx', PRESENT_SFX); }
       setStory(true);
     } else {
       const p = state.settings.presenterPrev || {};
@@ -38,6 +40,7 @@ export function setPresenter(on) {
       if (p.reduceFlash != null) state.set('reduceFlash', p.reduceFlash);
       if (p.shake != null) state.set('shake', p.shake);
       if (p.music != null) { state.set('music', p.music); Sound.volume('music', p.music); }
+      if (p.sfx != null) { state.set('sfx', p.sfx); Sound.volume('sfx', p.sfx); }
       setStory(!!p.immune);
     }
   }

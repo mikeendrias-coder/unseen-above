@@ -101,9 +101,15 @@ function jumpTo() {
   stopAll(); overlay.clearCaption(); overlay.hint('');
   game.scene.start(r.first, r.firstData);
 }
-// the pause menu's CHANNEL GUIDE: the show stops, the guide comes back (her place is kept)
+// the pause menu's CHANNEL GUIDE: the show stops, the guide comes back (her place is kept: a part
+// opened by a jump that lies past the one she reached becomes Continue's). The address and the
+// presenter's resume record are cleared, so Begin starts from the opening and a refresh on the
+// title stays on the title.
+const stepAt = id => STEPS.findIndex(s => s.id === id);
 function toGuide() {
+  const here = currentStep(); if (here && stepAt(here) > stepAt(state.reached)) state.reach(here);
   playing = false;
+  clearHash(); state.clearResume();
   stopAll(); Music.stop(0.5);
   cg.clearAll(); overlay.clearCaption(); overlay.hint(''); overlay.fade(false, 0);
   showGame(false);
@@ -119,8 +125,8 @@ function toGuide() {
 // playroom (the ?end= link), { giveup } backstage with the creator given up (the ?giveup= link).
 const OWN_CARD = { ep5b: ['EPISODE 5', 'Backstage'], ep5c: ['EPISODE 5', 'The playroom'] };
 function entryFor(pick) {
-  if (pick.end) return { first: 'moon', firstData: { at: 'playroom', force: pick.end }, card: OWN_CARD.ep5c };
-  if (pick.giveup) return { first: 'hallway', firstData: { giveUp: true }, card: OWN_CARD.ep5b };
+  if (pick.end) return { first: 'moon', firstData: { at: 'playroom', force: pick.end }, card: OWN_CARD.ep5c, step: 'ep5c' };
+  if (pick.giveup) return { first: 'hallway', firstData: { giveUp: true }, card: OWN_CARD.ep5b, step: 'ep5b' };
   const st = STEPS.find(s => s.id === pick.step); if (!st) return null;
   return { first: st.scene, firstData: Object.assign({}, st.data), card: OWN_CARD[st.id], step: st.id };
 }
@@ -129,6 +135,8 @@ function goStep(pick) {
   // presenting: lines heard in a rehearsal (or earlier tonight) play again after a jump
   if (presenting()) state.storySet('heard', {});
   if (e.step) setHash(e.step);
+  // and kept at once, so a refresh straight after a jump comes back here too
+  if (e.step && presenting()) { const k = { step: e.step }; if (pick.end) k.end = pick.end; if (pick.giveup) k.giveup = true; state.setResume(k); kept = JSON.stringify(k); keptAt = Date.now(); }
   if (!playing) begin(e);
   else {
     if (pause) pause.drop();
@@ -139,6 +147,7 @@ function goStep(pick) {
   return true;
 }
 const setHash = id => { try { if (HASH[id] && location.hash !== '#' + HASH[id]) history.replaceState(history.state, '', location.pathname + location.search + '#' + HASH[id]); } catch (e) { /* no address */ } };
+const clearHash = () => { try { if (location.hash) history.replaceState(history.state, '', location.pathname + location.search); } catch (e) { /* no address */ } };
 const stepOfHash = h => Object.keys(HASH).find(id => HASH[id] === String(h || '').replace('#', '')) || null;
 
 // ---- Presenter mode: where she is now, kept in the address and the save, so a refresh goes
@@ -151,21 +160,33 @@ function currentStep() {
   if (key === 'moon') return d.at === 'playroom' ? 'ep5c' : 'ep5';
   return KEY_STEP[key] || null; // a side room keeps the episode it opens from
 }
-let keptAt = 0;
+// and what was asked for there: an ending picked for the playroom, or give-up mode backstage
+function currentPick() {
+  const id = currentStep(); if (!id) return null;
+  const sc = window.__game.scene, d = sc.sys.settings.data || {};
+  if (id === 'ep5c' && d.force) return { step: id, end: d.force };
+  if (id === 'ep5b' && d.giveUp) return { step: id, giveup: true };
+  return { step: id };
+}
+let keptAt = 0, kept = '';
 setInterval(() => {
   if (!playing || !presenting()) return;
-  const id = currentStep(); if (!id) return;
-  setHash(id);
-  const r = state.resume;
-  if (!r || r.id !== id || Date.now() - keptAt > 30000) { keptAt = Date.now(); state.setResume(id); }
+  keepAwake();
+  const pick = currentPick(); if (!pick) return;
+  setHash(pick.step);
+  const sig = JSON.stringify(pick);
+  if (sig !== kept || Date.now() - keptAt > 30000) { keptAt = Date.now(); kept = sig; state.setResume(pick); }
 }, 1000);
 const RESUME_MS = 15 * 60 * 1000; // a saved part this fresh is where a reopened page goes back to
 
 // A screen wake lock while presenting, so a long pause to talk never dims the projector.
-let wake = null;
+// Asked for when the show starts, and again every second while presenting (so turning presenter
+// on mid-show takes it at once); a refusal is tried again 20 s later.
+let wake = null, wakeTried = 0;
 function keepAwake() {
-  if (!presenting() || !playing || wake || document.hidden || !navigator.wakeLock) return;
-  navigator.wakeLock.request('screen').then(w => { wake = w; w.addEventListener('release', () => { wake = null; }); }).catch(() => { /* refused: fine */ });
+  if (!presenting() || !playing || wake || document.hidden || !navigator.wakeLock || Date.now() - wakeTried < 20000) return;
+  wakeTried = Date.now();
+  navigator.wakeLock.request('screen').then(w => { wake = w; wakeTried = 0; w.addEventListener('release', () => { wake = null; }); }).catch(() => { /* refused: tried again later */ });
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
 
@@ -221,8 +242,10 @@ grab(); noteOn(window.self !== window.top || !document.hasFocus());
 window.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   if (e.key === 'u' || e.key === 'U') { e.preventDefault(); toggleFull(); return; }
-  if (!/^[0-9]$/.test(e.key) || cg.pageUp) return;
+  if (!/^[0-9]$/.test(e.key)) return;
   e.preventDefault(); e.stopPropagation();
+  // a how-to slip that is up closes, and the jump goes in the same press
+  if (cg.pageUp && overlay.closePanel) overlay.closePanel();
   goStep({ step: DIGITS[Number(e.key)] });
 }, true);
 
@@ -261,7 +284,8 @@ function syncGuide() {
   // full screen and big captions are presenter tools: on the title only while presenting (U and
   // the key under the game work for everyone)
   if (optFull) optFull.hidden = !presenting();
-  if (optCaps) optCaps.hidden = !presenting();
+  // big captions need the caption strip (ui/cg.js) to draw them; the row waits until it can
+  if (optCaps) optCaps.hidden = !presenting() || !cg.canBigCaptions;
   if (optFull && optFull.querySelector('i').textContent !== 'blocked') sw(optFull, fsOn(), fsOn() ? 'on' : 'off');
   sw(optCaps, !!state.settings.bigCaptions, state.settings.bigCaptions ? 'on' : 'off');
 }
@@ -283,7 +307,7 @@ const begin = entry => {
 const resume = () => { const st = saved(); begin(st ? { first: st.scene, firstData: Object.assign({}, st.data) } : null); };
 // Enter on the guide: Continue when there is a place to go back to
 const primary = () => (saved() ? resume() : begin(null));
-function guide() { syncGuide(); stopPicker = initPicker(primary, goStep); }
+function guide() { stopPicker(); syncGuide(); stopPicker = initPicker(primary, goStep); } // once: a second picker would move two rows per arrow
 
 if (go) {
   guide();
@@ -299,7 +323,7 @@ if (go) {
   if (optNew) optNew.addEventListener('click', () => {
     if (!armed) { armed = setTimeout(() => { armed = 0; syncGuide(); }, 4000); optNew.querySelector('i').textContent = 'sure?'; return; }
     clearTimeout(armed); armed = 0;
-    newGame(); guide();
+    newGame(); clearHash(); guide();
     const first = go; if (first) first.focus({ preventScroll: true });
   });
   // the key buttons under the picture change the same settings: the title menu follows them
@@ -321,9 +345,11 @@ if (go) {
   // a new # while the show is on goes there; on the guide, BEGIN will use it
   window.addEventListener('hashchange', () => { if (playing) jumpTo(); });
   // presenter mode: a refresh (or reopening within 15 minutes) goes straight back into the part
+  // (with the ending or give-up mode that was picked there)
   if (presenting()) {
     const fromHash = stepOfHash(location.hash), r = state.resume;
-    const id = fromHash || (r && Date.now() - r.at < RESUME_MS ? r.id : null);
-    if (id) goStep({ step: id });
+    const fresh = r && r.id && Date.now() - r.at < RESUME_MS;
+    const id = fromHash || (fresh ? r.id : null);
+    if (id) goStep(r && r.id === id ? { step: id, end: r.end, giveup: r.giveup } : { step: id });
   }
 } else begin(null);

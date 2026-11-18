@@ -48,20 +48,23 @@
   .tv-menu button[aria-pressed="true"] i { color: var(--ground); }
   .tv-menu button i, .tv-menu button b { font-style: normal; font-weight: normal; }
   .tv-menu button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .tv-menu button:hover, .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
-  .tv-menu button[aria-pressed="true"]:hover i, .tv-menu button[aria-pressed="true"]:focus i { color: var(--ground); background: var(--ink); padding: 0 calc(var(--u, 4px) * 2); }
-  .tv-menu button:hover::before, .tv-menu button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
+  /* one row is picked at a time: the pointer focuses the row it moves onto (ui/vibe.js), so
+     only :focus is drawn and a row moving under a still pointer never shows a second pick */
+  .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
+  .tv-menu button[aria-pressed="true"]:focus i { color: var(--ground); background: var(--ink); padding: 0 calc(var(--u, 4px) * 2); }
+  .tv-menu button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
   /* the chapter list: every part of the show, the endings and give-up mode, three columns */
   .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: auto auto auto; justify-content: space-between; grid-template-rows: repeat(8, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
-  .tv-chapters button { position: relative; padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 4) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; color: var(--ground); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
+  /* rows with a number key are dark; the parts between them (no key) are grey, so 0 to 9 reads
+     as one list down the first two columns */
+  .tv-chapters button { position: relative; padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 2) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 10); background: transparent; border: 0; color: var(--ground); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; white-space: nowrap; }
+  .tv-chapters button.nonum { color: var(--ash4); }
   .tv-chapters button.back { color: var(--red); }
   .tv-chapters .end, .tv-chapters .head { grid-column: 3; }
-  .tv-chapters button.back { color: var(--red); }
-  .tv-chapters .head { padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 4) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); color: var(--ash4); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); }
-  .tv-chapters button:disabled, .tv-chapters button:disabled:hover { color: var(--boneLo); background: transparent; cursor: default; }
-  .tv-chapters button:disabled:hover::before { content: none; }
-  .tv-chapters button:hover, .tv-chapters button:focus { outline: none; color: var(--ink); background: var(--ground); }
-  .tv-chapters button:hover::before, .tv-chapters button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
+  .tv-chapters .head { padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 2) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 10); color: var(--ash4); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); }
+  .tv-chapters button:disabled { color: var(--boneLo); background: transparent; cursor: default; }
+  .tv-chapters button:focus { outline: none; color: var(--ink); background: var(--ground); }
+  .tv-chapters button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 3); color: var(--ink); }
   .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); text-align: center; }
   .tv-note b { font-weight: normal; color: var(--yellow); }
 
@@ -87,9 +90,11 @@
   .jump a:hover { background: var(--ash3); }
   .jump a:focus { outline: none; }
   .jump a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
-  /* Presenter mode: a quiet tag at the right end of the caption strip (drawn under the
-     captions, so a long caption covers it), and the freeze mark: two bars, top left. */
-  #ptag { position: absolute; right: calc(var(--u, 4px) * 4); bottom: 0; font: calc(var(--u, 4px) * 10)/1 var(--pix); color: var(--ash3); white-space: nowrap; }
+  /* Presenter mode: a small quiet tag in the bottom right corner of the caption strip, under
+     the lives (captions keep to the middle 40 columns, so they never reach it). Half the caption
+     size, rounded down to a whole multiple of the face's 10px so it stays sharp. The freeze mark:
+     two bars, top left. */
+  #ptag { position: absolute; right: calc(var(--u, 4px) * 4); bottom: calc(var(--u, 4px) * 2); font: 10px/1 var(--pix); font-size: max(10px, round(down, calc(var(--u, 4px) * 5), 10px)); color: var(--ash3); white-space: nowrap; }
   #freeze { position: absolute; left: calc(var(--u, 4px) * 6); top: calc(var(--u, 4px) * 6); width: calc(var(--u, 4px) * 7); height: calc(var(--u, 4px) * 8); }
   #freeze::before, #freeze::after { content: ""; position: absolute; top: 0; width: calc(var(--u, 4px) * 2); height: calc(var(--u, 4px) * 8); background: var(--ink); box-shadow: 0 0 0 var(--u, 4px) var(--ground); }
   #freeze::before { left: 0; } #freeze::after { right: 0; }
