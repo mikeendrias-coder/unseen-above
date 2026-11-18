@@ -13,8 +13,6 @@ import { reviewKeys } from '../core/review.js';
 import { paintWardrobe } from '../art/bedroom.js';
 
 const G = 160;
-// hard light (art pass, Nov 17): a lamp's cone is a sparse grid of lighter pixels, no alpha
-function cone(p, pts, c) { p.spans(pts, (x, y, w) => { if (y % 2) return; for (let i = x + ((y / 2) % 2); i < x + w; i += 2) p.px(i, y, c); }); }
 // the door back to the house: a plain door with a 1 px outline
 function doorBack(p, P) { p.rect(17, G - 31, 18, 31, P.crack); p.rect(18, G - 30, 16, 30, P.wall); p.rect(19, G - 29, 14, 29, P.wallHi); p.px(30, G - 15, P.gold); p.rect(19, G - 1, 14, 1, P.wallLine); }
 
@@ -33,6 +31,10 @@ function paintStaff(P) {
   for (let x = 0; x < 320; x += 40) p.rect(x, 20, 1, 140, P.wallLine);
   p.rect(0, G, 320, 20, P.floorLo); for (let x = 0; x < 320; x += 10) p.rect(x, G + 3 + (x % 20 ? 0 : 6), 9, 1, P.floor);
   p.rect(0, G, 320, 1, P.colLo);
+  // no lamp here: the six monitors are the light. A flat lit patch of wall round them, and their
+  // light on the floor in front of the desk, hard edged
+  p.rect(38, 30, 120, 98, P.wall); p.rect(38, 30, 120, 1, P.wallHi);
+  p.rect(34, G, 128, 20, P.device); p.rect(34, G, 128, 1, P.col);
   // the door back
   doorBack(p, P);
   // a wall of monitors over a console desk
@@ -53,8 +55,6 @@ function paintStaff(P) {
   for (let i = 0; i < 4; i++) p.rect(253, 76 + i * 4, 8, 1, P.wallLine);
   // his bedroll, dropped by the far wall
   p.ellipse(296, G - 5, 14, 5, P.sibLo); p.ellipse(296, G - 6, 13, 3, P.sib); p.rect(287, G - 10, 2, 10, P.wood); p.rect(303, G - 10, 2, 10, P.wood); p.ellipse(284, G - 5, 3, 5, P.sibHi);
-  // a single lamp
-  p.rect(212, 18, 2, 10, P.device); p.rect(205, 27, 16, 5, P.crack); p.rect(206, 28, 14, 3, P.lamp); cone(p, [[206, 31], [220, 31], [250, G], [176, G]], P.wallHi);
   r();
   return p;
 }
@@ -62,9 +62,24 @@ function paintStaff(P) {
 function paintKeeper(P) {
   const p = new Painter(320, 180), r = rng(9);
   p.rect(0, 0, 320, 180, P.wallLo);
-  p.rect(0, 0, 320, 20, P.void); for (let x = 6; x < 320; x += 22) p.rect(x, 12, 14, 8, P.wood);
   for (let y = 24; y < G; y += 12) p.rect(0, y, 320, 1, P.wallLine);
+  // a shed roof, low and slanted: high over the door, down to the far wall, rafters along it
+  const roof = x => Math.round(14 + x * 30 / 320);
+  p.poly([[0, 0], [320, 0], [320, roof(320)], [0, roof(0)]], P.void);
+  for (let x = 0; x < 320; x++) p.px(x, roof(x), P.wood);
+  for (let x = 10; x < 320; x += 26) p.rect(x, roof(x) - 6, 3, 6, P.wood);
+  // a window over the bench: across the dark, the house, every window lit
+  const wx = 202, wy = 50, ww = 60, wh = 46;
+  p.rect(wx - 2, wy - 2, ww + 4, wh + 4, P.crack); p.rect(wx - 1, wy - 1, ww + 2, wh + 2, P.wood);
+  p.rect(wx, wy, ww, wh, P.skyTop); p.rect(wx, wy + wh - 8, ww, 8, P.ground); p.px(wx + 50, wy + 5, P.moon); p.px(wx + 8, wy + 9, P.star);
+  p.rect(wx + 10, wy + 18, 40, 20, P.wall); p.rect(wx + 22, wy + 12, 16, 6, P.wall); p.rect(wx + 10, wy + 18, 40, 1, P.wallHi);
+  for (let i = 0; i < 6; i++) p.rect(wx + 13 + i * 6, wy + 22, 3, 4, P.win); for (let i = 0; i < 6; i++) p.rect(wx + 13 + i * 6, wy + 30, 3, 4, i === 2 ? P.winLo : P.win);
+  p.rect(wx + 27, wy + 14, 6, 3, P.win);
+  p.rect(wx + ww / 2, wy, 1, wh, P.wood); p.rect(wx, wy + wh / 2, ww, 1, P.wood);
+  // its light: a flat, slanted patch down the wall and across the floor
+  p.poly([[wx, wy + wh + 1], [wx + ww, wy + wh + 1], [wx + ww - 10, G], [wx - 34, G]], P.wall);
   p.rect(0, G, 320, 20, P.rubble); p.rect(0, G, 320, 1, P.rubbleHi); for (let i = 0; i < 60; i++) p.px(r() * 320, G + 2 + r() * 16, P.dust);
+  p.poly([[168, G + 1], [252, G + 1], [246, 180], [150, 180]], P.rubbleHi); // the window's light on the floor
   // the door back
   doorBack(p, P);
   // tools on a pegboard
@@ -81,12 +96,10 @@ function paintKeeper(P) {
   ['#b8b2a3', '#f5ce77', '#b8b2a3', '#f2d58c', '#6b6c70', '#e3412b', '#6b6c70'].forEach((c, i) => p.rect(234 + i * 3, 126, 3, 9, c));
   p.rect(234, 135, 18, 3, P.void); p.mark('tv', 243, 136);
   // a crew coat on a hook, a pass on a lanyard
-  p.rect(290, 44, 3, 3, P.device); p.poly([[284, 48], [298, 48], [302, 96], [280, 96]], P.fabricLo); p.rect(288, 50, 1, 40, P.fabric);
+  p.rect(290, 46, 3, 3, P.device); p.poly([[284, 49], [298, 49], [302, 96], [280, 96]], P.fabricLo); p.rect(288, 50, 1, 40, P.fabric);
   p.rect(294, 60, 1, 14, P.hazard); p.rect(292, 74, 6, 8, P.colHi); p.rect(293, 76, 4, 1, P.device); p.rect(293, 78, 3, 1, P.device);
   // a list pinned by the door
   p.rect(40, 100, 18, 22, P.colHi); for (let i = 0; i < 5; i++) p.rect(42, 103 + i * 4, 12 - (i % 2) * 4, 1, P.device);
-  // one bare bulb
-  p.rect(160, 20, 1, 12, P.device); p.circle(160, 34, 3, P.lamp); cone(p, [[156, 36], [164, 36], [230, G], [90, G]], P.wallHi);
   return p;
 }
 
@@ -94,8 +107,10 @@ function paintKeeper(P) {
 function paintWorkshop(P) {
   const p = new Painter(320, 180), r = rng(14);
   p.rect(0, 0, 320, 180, P.wallLo);
-  p.rect(0, 0, 320, 18, P.void); for (let x = 10; x < 320; x += 30) p.rect(x, 12, 20, 6, P.wood);
   for (let y = 26; y < G; y += 14) p.rect(0, y, 320, 1, P.wallLine);
+  // no ceiling to speak of: two pipes along the top, on brackets
+  p.rect(0, 0, 320, 10, P.void); p.rect(0, 12, 320, 3, P.device); p.rect(0, 12, 320, 1, P.colLo); p.rect(0, 19, 320, 2, P.device);
+  for (let x = 24; x < 320; x += 48) { p.rect(x, 10, 2, 11, P.crack); p.px(x + 8, 15, P.crack); }
   p.rect(0, G, 320, 20, P.wood); p.rect(0, G, 320, 1, P.woodHi); for (let i = 0; i < 70; i++) p.px(r() * 320, G + 2 + r() * 16, P.dust);
   // the door back
   doorBack(p, P);
@@ -103,7 +118,9 @@ function paintWorkshop(P) {
   p.rect(48, 118, 92, 4, P.wood); p.rect(48, 118, 92, 1, P.woodHi); p.rect(52, 122, 3, 38, P.wood); p.rect(133, 122, 3, 38, P.wood);
   p.rect(58, 112, 40, 6, P.device); p.rect(59, 113, 38, 4, P.wallLine);
   for (let i = 0; i < 8; i++) { const x = 61 + (i % 4) * 9, y = 113 + Math.floor(i / 4) * 2; p.rect(x, y, 3, 1, P.overlay); p.rect(x + 4, y, 3, 1, P.overlay); if (i % 3 === 0) p.px(x + 1, y, '#ebe6d8'); }
-  p.rect(108, 96, 2, 22, P.device); p.rect(108, 96, 14, 2, P.device); p.rect(118, 98, 8, 4, P.colLo); cone(p, [[116, 102], [128, 102], [136, 118], [104, 118]], P.lamp);
+  // its light, thrown sideways off the bench: a flat wedge across the wall and the floor
+  p.poly([[126, 98], [126, 104], [250, G], [250, 54]], P.wall); p.poly([[132, G + 1], [250, G + 1], [262, 180], [134, 180]], P.woodHi);
+  p.rect(108, 96, 2, 22, P.device); p.rect(108, 96, 14, 2, P.device); p.rect(118, 97, 9, 6, P.crack); p.rect(119, 98, 7, 4, P.colLo); p.rect(126, 99, 1, 3, P.lamp);
   // a beam on two sawhorses, sawn halfway through
   p.rect(160, 128, 92, 8, P.wood); p.rect(160, 128, 92, 1, P.woodHi); p.rect(204, 128, 2, 4, P.void); p.px(205, 132, P.dust); p.px(203, 133, P.dust);
   [[166, 136], [238, 136]].forEach(([x, y]) => { p.line(x, y, x - 6, G, P.wood); p.line(x + 2, y, x + 8, G, P.wood); p.rect(x - 4, y, 10, 2, P.wood); });
@@ -113,8 +130,6 @@ function paintWorkshop(P) {
   p.rect(262, 70, 44, 3, P.wood); p.rect(266, 52, 30, 18, P.device); p.rect(268, 54, 26, 14, P.glass); p.mark('rec', 291, 55);
   p.rect(275, 60, 6, 1, P.wood); p.px(277, 58, P.kid); p.px(278, 59, P.kid); // her, falling, small
   p.rect(268, 92, 18, 24, P.colHi); p.rect(274, 90, 6, 3, P.device); for (let i = 0; i < 5; i++) p.rect(270, 96 + i * 4, 12 - (i % 2) * 4, 1, P.device);
-  // one bare bulb
-  p.rect(150, 20, 1, 12, P.device); p.circle(150, 34, 3, P.lamp); cone(p, [[146, 36], [154, 36], [220, G], [80, G]], P.wallHi);
   return p;
 }
 
@@ -142,15 +157,15 @@ const ROOMS = {
     use: { x0: 262, x1: 306, y: 48, key: 'tape', text: ['Her fall, on tape. Over and over.', 'Under the screen: KEEP THE FALL.'] }
   },
   wardrobe: {
-    paint: paintWardrobe, bg: 'wallLo',
+    paint: paintWardrobe, bg: 'wallLo', doorX: 286,
     items: [
-      { x0: 56, x1: 174, y: 54, text: ['Jackets on a rail. Her jacket, in her size.', 'Every one has the same tear in the left sleeve.'] },
-      { x0: 186, x1: 242, y: 38, text: ['Photos pinned in a row, all of her, in that jacket.', 'Each one is stamped CONTINUITY.'] },
-      { x0: 250, x1: 300, y: 42, text: ['A mirror ringed with bulbs.'] },
-      { x0: 60, x1: 168, y: 146, text: ['Small shoes in a row, worn down at the same heel.'] }
+      { x0: 18, x1: 70, y: 40, text: ['Jackets on a rail. Her jacket, in her size.', 'Every one has the same tear in the left sleeve.'] },
+      { x0: 118, x1: 166, y: 80, text: ['Photos pinned in a row, all of her, in that jacket.', 'Each one is stamped CONTINUITY.'] },
+      { x0: 186, x1: 232, y: 82, text: ['A mirror ringed with bulbs.'] },
+      { x0: 74, x1: 116, y: 146, text: ['Small shoes in a row, worn down at the same heel.'] }
     ],
     // the cord of the one bulb: J pulls it. In the dark, the light behind the mirror stays on.
-    use: { x0: 140, x1: 162, y: 40, key: 'cord', text: ['In the dark, a red light behind the mirror.'] }
+    use: { x0: 240, x1: 262, y: 40, key: 'cord', text: ['In the dark, a red light behind the mirror.'] }
   },
   staff: {
     paint: paintStaff, bg: 'wallLo',
@@ -182,13 +197,14 @@ export class Room extends SideEpisode {
     this.add.image(0, 0, 'room_art').setOrigin(0).setDepth(0);
     this.roomFx = this.add.graphics().setDepth(1);
     this.commonLayers();
-    this.spawn(40); this.kid.face = 1;
+    const dx = R.doorX || 18; this.doorX = dx;
+    this.spawn(dx < 160 ? 40 : dx - 22); this.kid.face = dx < 160 ? 1 : -1;
     R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'J', noPrompt: false, use: () => this.describe(it) }); });
     // one thing to do in each room, not only to look at
     this.act = { on: false, t: 0, n: 0 }; this.roomId = data.id || 'staff'; this.useSrc = null; // the scene object is reused from room to room
     if (R.use) this.things.push({ x0: R.use.x0, x1: R.use.x1, y0: Math.min(R.use.y + 4, 130), y1: G, py: R.use.y, label: 'J', use: () => this.doUse(R.use) });
     this.darkG = this.add.graphics().setDepth(1.5); // over the room, under her
-    this.things.push({ x0: 18, x1: 34, y0: G - 30, y1: G, label: 'J', door: true, use: () => this.leave() });
+    this.things.push({ x0: dx, x1: dx + 16, y0: G - 30, y1: G, label: 'J', door: true, use: () => this.leave() });
     this.hum = Sound.hum(0.02); Music.level(0.45, 0.5);
     this.events.once('shutdown', () => { this.hum.stop(0.2); overlay.hint(''); });
     this.cameras.main.fadeIn(300);
@@ -243,21 +259,21 @@ export class Room extends SideEpisode {
     }
     if (id === 'wardrobe') {
       const bulb = (this.marks || []).find(m => m.kind === 'bulb');
-      if (!A.on && bulb) { g.fillStyle(hexNum(P.lamp), 1); g.fillRect(bulb.x - 2, bulb.y - 2, 5, 5); g.fillStyle(hexNum(P.goldHi), 1); g.fillRect(bulb.x - 1, bulb.y - 1, 2, 2); this.coneRows(g, bulb.x, bulb.y + 3); }
+      if (!A.on && bulb) { g.fillStyle(hexNum(P.lamp), 1); g.fillRect(bulb.x - 2, bulb.y - 2, 5, 5); g.fillStyle(hexNum(P.goldHi), 1); g.fillRect(bulb.x - 1, bulb.y - 1, 2, 2); }
       if (A.on) {
-        // the bulb is off: the room goes black (she stays visible over it); the line of light
-        // under the door back, and the red light behind the mirror, are all that is left
+        // the bulb is off: the room goes black (she stays visible over it); the doorway she came
+        // in by, still lit, its light on the floor, and the red light behind the mirror
+        const dx = this.doorX;
         dg.fillStyle(0x000000, 1); dg.fillRect(0, 0, 320, 180);
-        dg.fillStyle(hexNum(P.wallLine), 1); for (let x = 19; x < 33; x += 2) dg.fillRect(x, G - 1, 1, 1);
-        dg.fillStyle(hexNum(P.wallHi), 1); dg.fillRect(19, G - 2, 14, 1);
+        dg.fillStyle(hexNum(P.wallHi), 1); dg.fillRect(dx, G - 30, 16, 30);
+        dg.fillStyle(hexNum(P.woodHi), 1); dg.fillRect(dx - 30, G, 46, 1); dg.fillRect(dx - 22, G + 1, 38, 1);
         const rec = (this.marks || []).find(m => m.kind === 'rec'); if (rec) { dg.fillStyle(hexNum(P.led), 1); dg.fillRect(rec.x, rec.y, 1, 1); dg.fillRect(rec.x - 1, rec.y, 3, 1); }
       }
       // the cord
-      g.fillStyle(hexNum(P.device), 1); g.fillRect(156, 30, 1, A.on ? 14 : 12); g.fillRect(155, A.on ? 44 : 42, 3, 2);
+      const cord = (this.marks || []).find(m => m.kind === 'cord');
+      if (cord) { g.fillStyle(hexNum(P.device), 1); g.fillRect(cord.x, cord.y, 1, A.on ? 14 : 12); g.fillRect(cord.x - 1, cord.y + (A.on ? 14 : 12), 3, 2); }
     }
   }
-  // the wardrobe bulb's light, as rows of lighter pixels down to the floor
-  coneRows(g, x, y) { g.fillStyle(hexNum(this.P.wallHi), 1); for (let yy = y; yy < G; yy += 2) { const hw = 4 + (yy - y) * 0.55; for (let xx = Math.round(x - hw) + ((yy / 2) % 2); xx < x + hw; xx += 2) g.fillRect(xx, yy, 1, 1); } }
 
   skipAhead() { this.leave(); }
   canRestart() { return false; } // a side room: the episode restarts from the episode

@@ -10,7 +10,9 @@ import { pixText } from '../art/pixfont.js';
 import { LOOKS } from '../art/palettes.js';
 import { T, W, H, LEVEL, buildMap, paintMap, isSolid, isOpaque } from '../art/eastwing.js';
 import { Glasses } from '../core/glasses.js';
-import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle } from '../core/topdown.js';
+import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle, darkFill, hardHoles } from '../core/topdown.js';
+import { ASH } from '../art/palettes.js';
+import { presenting } from '../core/review.js';
 import { Marks, Gold } from '../core/props.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -158,7 +160,10 @@ export class EastWing extends TopDownEpisode {
     const o = this.tileOf(), next = this.skipTiles.find(([x, y]) => x + y * 0.01 > o.x + o.y * 0.01 + 0.5 && !(x === o.x && y === o.y));
     if (o.x >= 31 && o.y <= 12) {
       if (!this.doorOpen && this.ch.phase === 'up') LEVEL.chandelier.chains.forEach((c, i) => { if (!this.cutChains.has(i)) { this.cutChain(i); const th = this.things.find(q => q.chain === i); if (th) th.off = true; } });
-      else if (this.doorOpen) this.placeTile(LEVEL.exit[0], LEVEL.exit[1] + 1);
+      else if (this.doorOpen) {
+        // the door is open: N brings her under it, and the next N takes her through
+        if (o.x === LEVEL.exit[0] && o.y === LEVEL.exit[1] + 1) this.leave(); else this.placeTile(LEVEL.exit[0], LEVEL.exit[1] + 1);
+      }
       return;
     }
     if (next) this.placeTile(next[0], next[1]);
@@ -431,6 +436,42 @@ export class EastWing extends TopDownEpisode {
     this.drawHud(dt);
   }
 
+  // The dark, with the shape of the wing in it: outside the lights, the walls that face a room
+  // are ash1 with an ash2 edge, so the rooms read; presenting, one step lighter, floors too.
+  drawDark() {
+    const ctx = this.darkCanvas.getContext('2d'), v = this.view;
+    darkFill(ctx);
+    ctx.drawImage(this.nightMap(presenting()), 1 - v.x, 1 - v.y);
+    const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 52 }].concat(this.lights);
+    hardHoles(ctx, all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a })), v.x + v.y);
+    this.darkTex.refresh();
+    this.darkImg.setPosition(v.x - 1, v.y - 1);
+  }
+  nightMap(lift) {
+    const key = lift ? 'nightLift' : 'night';
+    if (this[key]) return this[key];
+    const cv = this[key] = document.createElement('canvas'); cv.width = W * T; cv.height = H * T;
+    const ctx = cv.getContext('2d'), m = this.m, put = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+    const wall = (x, y) => x < 0 || y < 0 || x >= W || y >= H || isOpaque(m[y][x]) && m[y][x] !== 'P' && m[y][x] !== 'K';
+    const fill = lift ? ASH.ash2 : ASH.ash1, edge = lift ? ASH.ash3 : ASH.ash2, floor = lift ? ASH.ash1 : null;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const c = m[y][x], px = x * T, py = y * T;
+      if (wall(x, y)) {
+        let room = false; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (!wall(x + i, y + j)) room = true;
+        if (!room) continue;
+        put(px, py, T, T, fill);
+        if (!wall(x, y + 1)) put(px, py + T - 1, T, 1, edge); if (!wall(x, y - 1)) put(px, py, T, 1, edge);
+        if (!wall(x - 1, y)) put(px, py, 1, T, edge); if (!wall(x + 1, y)) put(px + T - 1, py, 1, T, edge);
+        continue;
+      }
+      if (c === 'o') continue; // a hole in the floor stays black
+      if (floor) put(px, py, T, T, floor);
+      // pillars, shelves, the desk, rubble: a block with a light top edge
+      if (c === 'P' || c === 'K' || c === 'T' || c === 'R') { put(px + 2, py + 2, T - 4, T - 4, fill); put(px + 2, py + 2, T - 4, 1, edge); }
+    }
+    return cv;
+  }
+
   // the cracked glasses, fixed to the screen
   drawHud(dt) {
     const g = this.hud, P = this.P, col = hexNum(P.overlay); g.clear();
@@ -456,8 +497,9 @@ export class EastWing extends TopDownEpisode {
 
   hint() {
     if (this.leaving || this.done) return;
-    if (this.doorOpen) return overlay.hint('The door is open. North wall of the ballroom.');
-    const o = this.tileOf(), r = ROOMS.find(q => o.x >= q.x0 && o.x <= q.x1 && o.y >= q.y0 && o.y <= q.y1);
+    const o = this.tileOf();
+    if (this.doorOpen) return overlay.hint(o.x === LEVEL.exit[0] && o.y === LEVEL.exit[1] + 1 ? 'The door is open. W goes up through it.' : 'The door is open. North wall of the ballroom.');
+    const r = ROOMS.find(q => o.x >= q.x0 && o.x <= q.x1 && o.y >= q.y0 && o.y <= q.y1);
     overlay.hint(r ? r.hint : '');
   }
 }

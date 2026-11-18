@@ -19,10 +19,11 @@ import { SideEpisode, inPoly, K } from '../core/side.js';
 import { goNext } from '../core/flow.js';
 import { BEDROOM, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
-import { reviewKeys } from '../core/review.js';
+import { reviewKeys, presenting } from '../core/review.js';
 import { fx } from '../core/fx.js';
 import { darkFill, hardHoles, checker, pxCircle } from '../core/topdown.js';
 import { Marks, Gold } from '../core/props.js';
+import { ASH } from '../art/palettes.js';
 
 const ARC = { ceiling: [35, 145], wall: [150, 200] };
 const STAY = 15; // seconds holding on to him before the show cuts away
@@ -167,9 +168,13 @@ export class Bedroom extends SideEpisode {
     if (this.mode === 'house') {
       if (this.leaving || this.dead) return;
       if (!this.bag.have) { const x = this.skipPoints.find(p => p > this.kid.x + 12); if (x != null) return this.placeAt(x); this.placeAt(LEVEL.bag.x - 6); return this.pullBag(); }
+      // at the doors already: the next N carries her in
+      if (this.atDoor() && this.kid.onGround) return this.enterDoor();
       return this.placeAt(85 * TILE + 6);
     }
     if (this.mode === 'bedroom') { this.kid.x = LEVEL.brother.kneel; return; }
+    // presenting: N never cuts his scene short (a stray press in class would lose it)
+    if ((this.mode === 'talk' || this.mode === 'dying') && presenting()) return;
     if (this.mode === 'talk') { this.talkI = BEDROOM.length - 1; return this.nextLine(); }
     if (this.mode === 'dying') { this.dyingT = Math.max(this.dyingT, 5.5); return; }
     if (this.mode === 'after') this.openVoid();
@@ -391,6 +396,8 @@ export class Bedroom extends SideEpisode {
     this.beds.breath.set(0.08, 1.5);
     Music.play('bedroom', { fade: 1, fadeIn: 4 });
     this.updateView(0);
+    // inside, the room is drawn flat in the dark (drawNight); she, he and her bag stand over it
+    this.girl.setDepth(6.5); this.bro.setDepth(6.45); this.eyeG.setDepth(6.55);
     this.cameras.main.fadeIn(rerun ? 600 : 1100);
     overlay.hint('');
   }
@@ -512,7 +519,7 @@ export class Bedroom extends SideEpisode {
     // checker), flat shapes for windows and broken ceilings, and red where a flash lands
     const lights = this.lights = [], reds = [];
     const k = this.kid, quad = (x0, x1, y0, x2, x3, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x3, y: y1 }, { x: x2, y: y1 }];
-    if (!this.dead && this.girl.visible) lights.push({ x: k.x + k.w / 2, y: k.y + 6, r: 30 });
+    if (this.mode === 'house' && !this.dead && this.girl.visible) lights.push({ x: k.x + k.w / 2, y: k.y + 6, r: presenting() ? 45 : 30 });
     if (this.mode === 'house') {
       this.cams.forEach(cm => {
         lights.push({ x: cm.x, y: cm.y, r: 6, a: cm.warn ? 1 : 0.5 });
@@ -543,13 +550,6 @@ export class Bedroom extends SideEpisode {
       if (this.collapse) { const x0 = (LEVEL.run.hang.tx + 1) * TILE, x1 = LEVEL.run.heap.tx * TILE; lights.push({ poly: quad(x0 - 6, x1 + 6, 0, x0 - 12, x1 + 12, GROUND) }); }
       // the line of cold light under the bedroom doors
       const D = LEVEL.door; lights.push({ x: D.x + D.w / 2, y: GROUND - 2, r: 14, a: Math.floor(t * 1.5) % 3 ? 0.5 : 1 });
-    } else {
-      const Wn = LEVEL.window, V = LEVEL.voidDoor;
-      lights.push({ poly: quad(Wn.x - 4, Wn.x + Wn.w + 4, Wn.y - 4, Wn.x - 4, Wn.x + Wn.w + 4, Wn.y + Wn.h + 4) });
-      lights.push({ poly: quad(Wn.x, Wn.x + Wn.w, Wn.y + Wn.h, Wn.x - 70, Wn.x + 20, GROUND + 2), dither: true });
-      const open = this.mode === 'void' ? Math.min(1, this.voidT / 0.8) : 0;
-      lights.push({ x: V.x + V.w / 2, y: V.y + V.h / 2, r: 24 + Math.round(open * 40), a: open > 0.3 ? 1 : 0.5 });
-      lights.push({ x: LEVEL.rec.x, y: LEVEL.rec.y, r: 7, a: 0.5 });
     }
     this.drawDark(vx, reds);
     this.drawOver(dt);
@@ -564,6 +564,8 @@ export class Bedroom extends SideEpisode {
     const ctx = this.darkCanvas.getContext('2d');
     darkFill(ctx);
     const toC = p => ({ x: p.x - vx + 1, y: p.y + 1 });
+    if (this.mode !== 'house') { ctx.clearRect(0, 0, 322, 182); ctx.drawImage(this.nightRoom(), 0, 0); this.darkTex.refresh(); this.darkImg.setPosition(vx - 1, -1); return; }
+    this.houseEdges(ctx, vx);
     hardHoles(ctx, this.lights.filter(l => !l.poly).map(l => Object.assign(toC(l), { r: l.r, a: l.a })), vx);
     // shapes of light (a flash's cone, a window, moonlight through a hole): row by row, lit or checker
     ctx.globalCompositeOperation = 'destination-out';
@@ -576,6 +578,93 @@ export class Bedroom extends SideEpisode {
     (reds || []).forEach(r => { ctx.fillStyle = redPattern(ctx, r.dense, vx); spans(r.poly.map(toC), (x, y, w) => ctx.fillRect(x, y, w, 1)); });
     this.darkTex.refresh();
     this.darkImg.setPosition(vx - 1, -1);
+  }
+
+  // The house in the dark: the shape of the rooms in one or two greys outside her light, so a
+  // projector still shows where the floor, the furniture and the walls are. Presenting, the
+  // dark itself is ash1, not black.
+  houseEdges(ctx, vx) {
+    const m = this.map.m, x0 = Math.floor(vx / TILE), put = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x - vx + 1), Math.round(y + 1), Math.round(w), Math.round(h)); };
+    if (presenting()) put(vx - 1, -1, 322, 182, ASH.ash1);
+    // the floor line and the ceiling line, where they are still there
+    for (let tx = x0; tx <= x0 + 21 && tx < LEVEL.w; tx++) {
+      if (m[10][tx]) put(tx * TILE, GROUND, TILE, 1, ASH.ash3);
+      if (m[0][tx]) put(tx * TILE, 16, TILE, 1, ASH.ash2);
+      // walls and fallen ceiling inside the house: a light top, darker sides
+      for (let ty = 1; ty <= 9; ty++) {
+        if (!m[ty][tx]) continue;
+        const x = tx * TILE, y = ty * TILE;
+        if (!m[ty - 1][tx]) put(x, y, TILE, 1, ASH.ash3);
+        if (tx > 0 && !m[ty][tx - 1]) put(x, y, 1, TILE, ASH.ash2);
+        if (tx < LEVEL.w - 1 && !m[ty][tx + 1]) put(x + TILE - 1, y, 1, TILE, ASH.ash2);
+        if (!m[ty + 1][tx]) put(x, y + TILE - 1, TILE, 1, ASH.ash2);
+      }
+    }
+    // furniture and rubble: a light top edge; the tall ones get their sides too
+    this.props.forEach(r => {
+      if (r.x + r.w < vx - 2 || r.x > vx + 322) return;
+      put(r.x, r.y, r.w, 1, ASH.ash3);
+      if (r.h > 12) { put(r.x, r.y, 1, r.h, ASH.ash2); put(r.x + r.w - 1, r.y, 1, r.h, ASH.ash2); }
+    });
+    // doors, the clock and the hall window: an outline
+    const box = (x, y, w, h, c) => { put(x, y, w, 1, c); put(x, y + h - 1, w, 1, c); put(x, y, 1, h, c); put(x + w - 1, y, 1, h, c); };
+    const D = LEVEL.door, SD = LEVEL.sideDoor, C = LEVEL.clock, HW = LEVEL.hallWindow;
+    box(D.x - 5, D.y - 8, D.w + 10, D.h + 8, ASH.ash3); box(SD.x - 2, SD.y - 2, SD.w + 4, SD.h + 2, ASH.ash2);
+    box(C.x - 10, 52, 20, GROUND - 52, ASH.ash2); box(HW.x - 3, HW.y - 3, HW.w + 6, HW.h + 6, ASH.ash2);
+  }
+
+  // The bedroom at night, drawn flat on the dark layer (no circles of light, no dither): grey
+  // walls, a solid shaft of moonlight from the window onto the floor where he sits, the bed in
+  // greys with dark outlines, the window and the mismatched door shown as they are. Built once.
+  nightRoom() {
+    if (this.nightC) return this.nightC;
+    const c = this.nightC = document.createElement('canvas'); c.width = 322; c.height = 182;
+    const ctx = c.getContext('2d'), put = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x - BX + 1), Math.round(y + 1), Math.round(w), Math.round(h)); };
+    const out = (x, y, w, h, col, edge) => { put(x - 1, y - 1, w + 2, h + 2, ASH.ash0); put(x, y, w, h, col); if (edge) put(x, y, w, 1, edge); };
+    const poly = (pts, col) => { ctx.fillStyle = col; spans(pts.map(([x, y]) => ({ x: x - BX + 1, y: y + 1 })), (x, y, w) => ctx.fillRect(x, y, w, 1)); };
+    const Wn = LEVEL.window, bd = LEVEL.bed, V = LEVEL.voidDoor, B = BX, bro = LEVEL.brother;
+    // the room: walls, the dark ceiling, the cornice, the wainscot, the floor
+    put(B, 0, 320, 180, ASH.ash1);
+    put(B, 0, 320, 16, ASH.ash0); for (let x = B; x < B + 320; x += 32) { put(x, 9, 30, 7, ASH.ash1); put(x, 9, 30, 1, ASH.ash2); }
+    put(B, 16, 320, 6, ASH.ash2); put(B, 16, 320, 1, ASH.ash3); put(B, 21, 320, 1, ASH.ash0);
+    put(B, 132, 320, 1, ASH.ash2);
+    put(B, GROUND, 320, 20, ASH.ash1);
+    // moonlight: one flat shaft down the wall and across the floor
+    const wl = Wn.x - 6, wr = Wn.x + Wn.w + 2, sl = Wn.x - 56, sr = Wn.x + 30;
+    poly([[wl, Wn.y + Wn.h], [wr, Wn.y + Wn.h], [sr, GROUND], [sl, GROUND]], ASH.ash2);
+    poly([[sl, GROUND], [sr, GROUND], [sr - 14, 180], [sl - 24, 180]], ASH.ash3);
+    put(B, GROUND, 320, 1, ASH.ash3); put(sl, GROUND, sr - sl, 1, ASH.ash4);
+    // the window shows as it is (cut out before the bed, which stands in front of it)
+    ctx.globalCompositeOperation = 'destination-out';
+    const r = Wn.w / 2 + 3, cx = Wn.x + Wn.w / 2;
+    for (let dy = -r; dy <= 0; dy++) { const hw = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35); put(cx - hw, Wn.y + dy, 2 * hw + 1, 1, '#000'); }
+    put(Wn.x - 3, Wn.y, Wn.w + 6, Wn.h + 3, '#000');
+    ctx.globalCompositeOperation = 'source-over';
+    // torn drapes either side of the window, dark
+    poly([[Wn.x - 14, 22], [Wn.x - 2, 22], [Wn.x - 4, 132], [Wn.x - 18, 128]], ASH.ash0);
+    poly([[Wn.x + Wn.w + 2, 22], [Wn.x + Wn.w + 14, 22], [Wn.x + Wn.w + 18, 96], [Wn.x + Wn.w + 4, 104]], ASH.ash0);
+    // the bed: canopy, posts, headboard, the sheets, a pillow, the foot board he leans on
+    out(bd.x0, 36, bd.x1 - bd.x0, 6, ASH.ash3, ASH.ash4);
+    [bd.x0, bd.x1 - 4].forEach(x => { out(x, 42, 4, GROUND - 42, ASH.ash3); put(x + 1, 42, 1, GROUND - 42, ASH.ash4); });
+    out(bd.x1 - 6, 96, 6, GROUND - 96, ASH.ash3, ASH.ash4);
+    out(bd.x0 + 4, 128, bd.x1 - bd.x0 - 10, 12, ASH.ash4, ASH.ash5);
+    out(bd.x0 + 4, 140, bd.x1 - bd.x0 - 10, 12, ASH.ash3, ASH.ash4);
+    out(bd.x1 - 28, 122, 18, 6, ASH.ash5, ASH.boneLo);
+    out(bd.x0 - 2, 144, 8, 16, ASH.ash3, ASH.ash4);
+    // the nightstand and its dark lamp; the door she came in by
+    out(B + 34, 140, 18, 20, ASH.ash2, ASH.ash3); put(B + 41, 128, 4, 12, ASH.ash2);
+    poly([[B + 36, 128], [B + 50, 128], [B + 47, 120], [B + 39, 120]], ASH.ash3);
+    out(B + 2, GROUND - 34, 20, 34, ASH.ash2, ASH.ash3); put(B + 12, GROUND - 34, 1, 34, ASH.ash1);
+    // the camera in the corner (its LED is drawn over this)
+    put(LEVEL.rec.x - 4, 22, 9, 2, ASH.ash3); put(LEVEL.rec.x - 1, 22, 2, 3, ASH.ash3);
+    // where he bled
+    put(bro.x - 2, GROUND, 28, 1, ASH.ash0); put(bro.x + 2, GROUND + 1, 18, 1, ASH.ash0);
+    // the door at the far end shows as it is, with a bone edge
+    ctx.globalCompositeOperation = 'destination-out';
+    put(V.x - 3, V.y - 4, V.w + 6, V.h + 4, '#000');
+    ctx.globalCompositeOperation = 'source-over';
+    const bone = ASH.bone; put(V.x - 4, V.y - 5, V.w + 8, 1, bone); put(V.x - 4, V.y - 5, 1, V.h + 5, bone); put(V.x + V.w + 3, V.y - 5, 1, V.h + 5, bone);
+    return c;
   }
 
   // the floor that is gone, gaps that open, the sky where the ceiling was
@@ -753,6 +842,9 @@ export class Bedroom extends SideEpisode {
   }
 
   hint() {
+    // inside: one line for what to do; none while he talks or goes
+    if (this.mode === 'bedroom') return overlay.hint('Go to him.');
+    if (this.mode === 'after') return overlay.hint(this.rerun ? 'The door. J opens it.' : 'Hold J to stay with him. Or J at the door.');
     if (this.mode !== 'house' || this.leaving) return overlay.hint('');
     const k = this.kid, x = (k.x + k.w / 2) / TILE;
     if (this.collapse && !this.collapse.done && x < 79) return overlay.hint('Run. With the bag, one jump: hold Space at the edge. Crouch under the slab.');
