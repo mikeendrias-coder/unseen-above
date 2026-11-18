@@ -53,7 +53,7 @@ export class Glasses {
     const tears = Math.floor(lv * 4 + Math.random() * 1.5);
     g.fillStyle(col, 1);
     for (let i = 0; i < tears; i++) { const y = Math.floor(Math.random() * 180), x0 = Math.floor(Math.random() * 2); for (let x = x0; x < 320; x += 2) g.fillRect(x, y, 1, 1); }
-    if (this.out > 0) { g.fillStyle(0x0e0f12, 1); for (let y = 0; y < 180; y += fx.reduced ? 6 : 3) g.fillRect(0, y, 320, 1); }
+    if (this.out > 0) { g.fillStyle(0x0e0f12, 1); for (let y = Math.floor(this.t * 30) % 4; y < 180; y += fx.reduced ? 8 : 4) g.fillRect(0, y, 320, 1); }
     // running hot: a red edge blinks around the view before they cut out
     if (this.on && this.heat > 0.72 && Math.floor(this.t * (fx.reduced ? 2 : 5)) % 2 === 0) { g.fillStyle(0xe3412b, 1); g.fillRect(0, 0, 320, 2); g.fillRect(0, 178, 320, 2); g.fillRect(0, 2, 2, 176); g.fillRect(318, 2, 2, 176); }
   }
