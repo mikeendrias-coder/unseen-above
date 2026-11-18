@@ -13,8 +13,11 @@ Talking points are yours: each stop has a blank line for them.
 - [ ] Press one key before you start talking: browsers start sound only after a key or a click.
 - [ ] Check the levels in the show, not on the title: press **0**, then **P**: music 2, effects 4. **P** again. Turn effects up if the room is big; the clicks and the strike carry the story.
 - [ ] **U** for full screen (or Full screen on the title). Esc leaves full screen, so in full screen use **P** for the menu.
+- [ ] Turn on Do Not Disturb, close chat apps and extra tabs (a notification or focus change opens the pause menu on screen). Plug in power.
+- [ ] Set the display to 1920x1080 when mirroring, then **U**: the picture should fill the screen.
+- [ ] Decide which ending you show, and whether to give a content note first (the default ending is the vest).
 - [ ] Darken the room. Check the bedroom (key **6**): it is lit only in red and projectors wash out dark scenes. Projector on a game or cinema mode.
-- [ ] Have the screen recording of a full run ready as a fallback. If the game fails, play it and talk over it.
+- [ ] Have the screen recording of a full run ready as a fallback (in the `Sync` folder with the offline copy). If the game fails, play it and talk over it.
 - [ ] Rehearse the route once on this laptop and browser. Then **P**, **Title screen**, **New game** again. The title clears the address, so **Begin** starts at the opening.
 
 ## Keys for tonight
@@ -32,7 +35,11 @@ Talking points are yours: each stop has a blank line for them.
 | **P** | Pause menu (presenter, big captions, music and effects levels, title screen) |
 | **M** | Mute at once (works while held with H too) |
 | **U** | Full screen on and off |
-| **F5** | A refresh goes straight back into the part you were in (presenter mode) |
+| **F5** (Mac: **Cmd+R**) | A refresh goes straight back into the part you were in (presenter mode) |
+
+On a Mac, **Backspace** is the **delete** key.
+
+Playroom reply to ending: **Who picks the lights?** gives THE VEST. **Yes.** gives ROUND TWO. **Turn it around.** gives LOOK BACK (the watchers made visible: the remedy beat).
 
 Endings and give-up mode: title screen, **Chapters**, right column. In presenter mode all five endings are open there.
 
@@ -41,15 +48,16 @@ Endings and give-up mode: title screen, **Chapters**, right column. In presenter
 | Time | Stop | Key | What to show |
 |---|---|---|---|
 | 0:00 | Title and the opening | 0 | Let it play until the lock-on box finds her. Then **N**. |
-| 1:30 | Ep 1, the Grounds | 1 | Walk, look at one thing with **J**. **Die once on purpose:** **N** twice (she lands at the foot of the hedge wall, on a tape mark). **I** once: NORMAL (the right end of the strip, LIVES, reads 5). Hold **A**: the garden lamp finds her. Her body stays and LIVES drops to 4; the next take starts here. Then **I** twice: ENDLESS (an infinity sign), then IMMUNE again (LIVES reads IMMUNE). Check it says IMMUNE before you go on. Then **N**, one section each: the 8th lands her at the door, the 9th goes in (or **W** there). Any key closes the END OF EPISODE report. |
-| 4:30 | Satellite, batch 1 | 2 | A request form comes first: **J** stamps APPROVED. Do not press **N** on the form: it skips the ring too. The ring: **A** and **D** turn it, then **N**. The globe: **W A S D** or a drag, then **N**. |
-| 5:30 | Ep 2, the Gallery | 3 | She has no glasses yet. Walk right past the staff door (**W** near the start goes into the staff room; **J** never opens a door), **Space** over the cleaning robot, **J** at the gold sideboard: the glasses (a notice pops up, any key). Then **L** takes them off and on. What watches her shows only with them on. **H** to hold while you explain. Rehearse this one. |
-| 7:30 | Ep 4, the Bedroom | 6 | Skipped on the way: batch 2, the fall and the east wing (one sentence: the glasses crack). **N** six times (a notice pops up at the bag: any key); **N** at the doors carries her in. In presenter mode **N** never skips his talk or his death. Walk to him. **Enter** for each line, 11 lines; never **N** here. After he dies, **W** at the door on the right, then any key. |
+| 1:30 | Ep 1, the Grounds | 1 | Walk, look at one thing with **J**. **Die once on purpose:** **N** twice (she lands at the foot of the hedge wall, on a tape mark). **I** once: NORMAL (the right end of the strip, LIVES, reads 5). Hold **A** and tap **Space** to hop the bench: the garden lamp finds her. Her body stays and LIVES drops to 4; the next take starts here. Then **I** twice: ENDLESS (an infinity sign), then IMMUNE again (LIVES reads IMMUNE). Check it says IMMUNE before you go on. Then keep pressing **N** until she is at the door (about 7 presses), then **W**. Any key closes the END OF EPISODE report. |
+| 4:30 | Satellite, batch 1 | 2 | A request form comes first. **The thesis on one screen:** **S S S** walks the cursor to OPERATOR, **L** asks who: "OPERATOR NOBODY. NO RULE SAYS SO." Then **K** (deny): "YOUR DENIAL IS NOTED. IT PROCEEDS." Do not press **N** on the form: it skips the ring too. The ring: **A** and **D** turn it, then **N**. The globe: **W A S D** or a drag, then **N**. |
+| 5:30 | Ep 2, the Gallery | 3 | She has no glasses yet. Walk right past the staff door (**W** near the start goes into the staff room; **J** never opens a door), **Space** over the cleaning robot and land on the floor at the sideboard's left end, **J** at the sideboard: the glasses (if it says "Gold...", step down and **J** again) (a notice pops up, any key). Then **L** takes them off and on. What watches her shows only with them on. **H** to hold while you explain. Rehearse this one. |
+| 7:30 | Ep 4, the Bedroom | 6 | Skipped on the way: batch 2, the fall and the east wing (one sentence: the glasses crack). A Lights off notice opens the part: any key. Then keep pressing **N** until she is in the bedroom (about 9 presses). In presenter mode **N** never skips his talk or his death. Walk to him. **Enter** for each line, 11 lines; never **N** here. After he dies, **W** at the door on the right, then any key. |
+| 10:00 | Satellite 4 (30 s) | title, Chapters, Satellite 4 | The payoff form: BULLETIN 4: ALL REQUESTS PRE-APPROVED, ENTRY TICKET, AREA EARTH, PURPOSE FIND HER!, SIGNED PLAYER 2, "OPERATOR NOBODY. WHO CARES!" No number key: use **P**, **Title screen**, **Chapters**. |
 | 10:30 | The kids' room | 7 | The reveal: the satellite game is a kids' show on the Moon. |
 | 11:30 | Ep 5, the Moon | 8 | Walk right, **Space** over benches and people. Two overheard lines play over the lounges. **N** at the staff door goes backstage. |
 | 13:30 | Backstage | 9 | The lines into the fight (always the same). Fight one round. **N** ends a round; **Enter** on the creator's line, then **N** again. After the yield lines (**Enter** each): **N**, then **W** at the pink door, any key on the report. |
-| 15:30 | The playroom and the end | after backstage | Walk right to the kids. **Enter** through their lines. **W** and **S** pick the reply, **J** says it. **Do not talk over the last shot.** |
-| 18:00 | Spare | | Questions. If asked: Chapters, right column, for another ending. |
+| 15:30 | The playroom and the end | after backstage | Walk right to the kids. **Enter** through their lines. **W** and **S** pick the reply, **J** says it (see the reply map above). **Do not talk over the last shot.** Then **A** and **D** flip the old TV: CH 12, CH 19, the basement. "It is not just her." |
+| 18:00 | How the game argues | title or ending screen, **About** | One screen linking each mechanic to the paper. Then questions. If asked: Chapters, right column, for another ending (LOOK BACK is the remedy). |
 
 ## Talking points
 
