@@ -16,68 +16,71 @@ import { goNext } from '../core/flow.js';
 import { fx } from '../core/fx.js';
 
 // '#' rubble wall  '=' a broken floor  'x' a floor that crumbles under her  'R' the rotten floor
-const ROWS = [
-  '####################', // 0
+const ROWS = [ // (43 rows; below them the void)
+  '####################',
   '#..................#',
   '#..................#',
   '#..................#',
   '#..................#',
-  '#..................#', // 5
   '#..................#',
   '#..................#',
   '#..................#',
   '#..................#',
-  '######.............#', // 10 the landing she arrives on
+  '#..................#',
+  '######.............#', // the landing she arrives on
   '######.............#',
-  '######=======......#', // 12
-  '######.............#',
-  '######.............#',
-  '######.......=====.#', // 15
+  '######=======......#', // a broken floor, a step down
   '######.............#',
   '######.............#',
-  '######=====........#', // 18
+  '######.............#',
+  '######.......=====.#',
   '######.............#',
   '######.............#',
-  '######.......xxxxx.#', // 21 crumbles
+  '######.............#',
+  '######=======......#',
   '######.............#',
   '######.............#',
-  '##########...======#', // 24 the shaft opens at cols 10 to 12
+  '######.............#',
+  '######.......xxxxx.#', // this one crumbles
+  '######.............#',
+  '######.............#',
+  '##########...======#', // the shaft opens at cols 10 to 12
   '##########...#######',
   '##########...#######',
   '##########...#######',
   '##########...#######',
   '##########...#######',
-  '###########..#######', // 30 a stub to rest on
+  '###########..#######', // a stub to rest on
   '##########...#######',
   '##########...#######',
   '##########...#######',
   '##########...#######',
-  '##########...#######', // 35
   '##########...#######',
   '##########...#######',
   '##########...#######',
-  '##########RRR#######'  // 39 the rotten floor
+  '##########...#######',
+  '##########RRR#######' // the rotten floor
 ];
-const W = 20, ROT = 39, H = 62, G = 160;
+const W = 20, ROT = 42, CR = 24, H = 64, G = 160;
 const LEVEL = { w: W, h: H, start: { x: 2 * TILE, y: G - 14 }, door: { x: -999, y: -999, w: 0, h: 0 } };
 const SX0 = 10 * TILE, SX1 = 13 * TILE; // the narrow shaft's walls
 // debris lanes: a column it falls down, how often, and when
 const LANES = [
   { col: 9, from: 1, period: 2.1, phase: 0.2 },
   { col: 15, from: 1, period: 2.4, phase: 1.3 },
-  { col: 7, from: 13, period: 2.2, phase: 0.6 },
-  { col: 10, from: 25, period: 1.9, phase: 0.0 },
-  { col: 12, from: 25, period: 1.9, phase: 0.95 },
-  { col: 10, from: 31, period: 1.9, phase: 0.5 }
+  { col: 8, from: 13, period: 2.2, phase: 0.6 },
+  { col: 10, from: 28, period: 1.9, phase: 0.0 },
+  { col: 12, from: 28, period: 1.9, phase: 0.95 },
+  { col: 10, from: 34, period: 1.9, phase: 0.5 }
 ];
 const WARN = 0.75; // dust trickles this long before a chunk comes down
 // N in story mode: the next ledge down
-const SKIP = [{ x: 120, y: 192 }, { x: 250, y: 240 }, { x: 140, y: 288 }, { x: 250, y: 384 }, { x: 162, y: 480 }, { x: 180, y: 624 }];
+const SKIP = [{ x: 120, y: 192 }, { x: 240, y: 256 }, { x: 140, y: 320 }, { x: 250, y: 432 }, { x: 162, y: 528 }, { x: 180, y: 672 }];
 
 function buildMap() {
   const m = [];
   for (let y = 0; y < H; y++) {
-    const row = ROWS[y] || (y === H - 1 ? '####################' : '##########...#######');
+    const row = ROWS[y] || (y === H - 1 ? '####################' : '##########...#######'); // the void column under the rotten floor
     m.push(row.split('').map(c => c === '.' ? 0 : 1));
   }
   return { W, H, m };
@@ -89,11 +92,11 @@ function paint(P) {
   const ash0 = P.crack, ash1 = P.skyTop, ash2 = P.ground, ash3 = P.rubble, ash4 = P.rubbleHi;
   // the back wall of the stair hall and the shaft: wallpaper strips that give out the deeper it goes
   p.rect(0, 0, w, HH, P.void);
-  for (let y = 0; y < 25 * TILE; y += 2) p.rect(0, y, w, 2, y < 12 * TILE ? P.wallLo : 'd:' + P.wallLo + ':' + ash1 + ':checker');
-  for (let x = 6; x < w; x += 26) p.rect(x, 20, 3, 24 * TILE - 30, P.wallLine);
+  for (let y = 0; y < 28 * TILE; y += 2) p.rect(0, y, w, 2, y < 12 * TILE ? P.wallLo : 'd:' + P.wallLo + ':' + ash1 + ':checker');
+  for (let x = 6; x < w; x += 26) p.rect(x, 20, 3, 27 * TILE - 30, P.wallLine);
   p.rect(0, 16, w, 2, P.goldLo); p.rect(0, 18, w, 1, ash0);
   // where the floors of the house met the back wall: a dotted scar, not a ledge
-  [11, 17].forEach(row => { const y = row * TILE + 6; for (let x = 0; x < w; x += 4) p.px(x, y, ash0); });
+  [11, 18, 23].forEach(row => { const y = row * TILE + 6; for (let x = 0; x < w; x += 4) p.px(x, y, ash0); });
   // frames still hanging, hung low, and a clean square where one fell
   [[60, 52], [228, 60]].forEach(([x, y]) => { p.rect(x - 1, y - 1, 18, 22, ash0); p.rect(x, y, 16, 20, P.goldLo); p.rect(x + 2, y + 2, 12, 16, P.wall); p.rect(x + 4, y + 6, 8, 8, P.wallHi); });
   p.rect(150, 58, 14, 18, P.wall);
@@ -103,16 +106,16 @@ function paint(P) {
   // the door she came through, shut behind her
   p.rect(1, G - 36, 18, 36, ash0); p.rect(2, G - 35, 16, 35, P.wood); p.rect(4, G - 32, 12, 12, P.woodHi); p.rect(4, G - 17, 12, 14, P.woodHi); p.px(14, G - 18, P.gold);
   // the deep shaft: plaster and brick, ash grey, no gold this far down
-  for (let y = 25 * TILE; y < HH; y += 16) for (let x = SX0; x < SX1; x += 16) { p.rect(x, y, 16, 16, y < 40 * TILE ? ash1 : P.void); if (y < 40 * TILE && r() < 0.5) p.rect(x + r() * 12, y + r() * 12, 4, 1, ash2); }
+  for (let y = 28 * TILE; y < HH; y += 16) for (let x = SX0; x < SX1; x += 16) { p.rect(x, y, 16, 16, y < ROT * TILE ? ash1 : P.void); if (y < ROT * TILE && r() < 0.5) p.rect(x + r() * 12, y + r() * 12, 4, 1, ash2); }
   // pipes down the back of the shaft, and a dumbwaiter cable
-  for (let y = 25 * TILE; y < 39 * TILE; y += 4) { p.px(SX0 + 20, y, ash2); p.px(SX0 + 22, y, ash2); }
-  p.rect(SX1 - 12, 25 * TILE, 1, 14 * TILE, ash3);
+  for (let y = 28 * TILE; y < ROT * TILE; y += 4) { p.px(SX0 + 20, y, ash2); p.px(SX0 + 22, y, ash2); }
+  p.rect(SX1 - 12, 28 * TILE, 1, 14 * TILE, ash3);
   // the tiles: rubble walls with a lit top edge, broken floors, the rotten floor
   for (let ty = 0; ty < H; ty++) for (let tx = 0; tx < W; tx++) {
     const c = kindAt(tx, ty), x = tx * TILE, y = ty * TILE, air = (a, b) => { const k = kindAt(a, b); return k === '.' || b < 0; };
     if (c === '#') {
       // masonry: two courses of bricks per tile, offset, dark mortar, a lit top on each brick
-      const deep = ty >= 25, base = deep ? ash1 : P.wallLo, hi = deep ? ash2 : P.wall, mort = ash0;
+      const deep = ty >= 28, base = deep ? ash1 : P.wallLo, hi = deep ? ash2 : P.wall, mort = ash0;
       p.rect(x, y, 16, 16, mort);
       for (let j = 0; j < 2; j++) {
         const off = (ty * 2 + j) % 2 ? 8 : 0;
@@ -141,7 +144,7 @@ function paint(P) {
   // the landing's lip, broken off where the floor went
   for (let i = 0; i < 5; i++) p.rect(6 * TILE - 2 + i * 3, G + 2 + (i % 2) * 3, 3, 3, ash3);
   // dust in the air
-  for (let i = 0; i < 90; i++) p.px(r() * w, r() * 40 * TILE, ash4);
+  for (let i = 0; i < 90; i++) p.px(r() * w, r() * ROT * TILE, ash4);
   return p;
 }
 
@@ -165,7 +168,7 @@ export class Fall extends SideEpisode {
     this.hudG = this.addParallax(this.add.graphics().setDepth(20), 0);
     this.dust = this.add.particles(0, 0, 'dot', { lifespan: 900, speedY: { min: 20, max: 60 }, speedX: { min: -10, max: 10 }, tint: [hexNum(P.dust), hexNum(P.rubbleHi)], emitting: false }).setDepth(5);
     this.splinters = this.add.particles(0, 0, 'dot2', { lifespan: { min: 500, max: 1100 }, speed: { min: 40, max: 160 }, angle: { min: 200, max: 340 }, gravityY: 500, tint: [hexNum(P.wood), hexNum(P.woodHi), hexNum(P.rubble)], emitting: false }).setDepth(5);
-    this.phase = 'walk'; this.t = 0; this.cracked = false; this.landed = false; this.whoosh = null; this.spin = 0; this.chunks = []; this.black = 0;
+    this.phase = 'walk'; this.t = 0; this.takeoffY = null; this.cracked = false; this.landed = false; this.whoosh = null; this.spin = 0; this.chunks = []; this.black = 0;
     // falling debris, one lane at a time; each lane knows where it lands
     this.lanes = LANES.map(L => { const x = L.col * TILE + 4; let y1 = (L.from + 1) * TILE; while (y1 < H * TILE && !this.solidTile(L.col, Math.floor(y1 / TILE))) y1 += TILE; return Object.assign({ x, y0: L.from * TILE, y1: Math.floor(y1 / TILE) * TILE, next: L.phase + L.period, warned: false, rock: null }, L); });
     this.crumble = { t: 0, on: false, gone: false, bits: [] };
@@ -197,6 +200,10 @@ export class Fall extends SideEpisode {
     if (this.phase === 'walk') {
       if (!this.dead && !this.leaving) {
         this.moveKid(dt); this.updateThings();
+        // here a fall is measured from where she left the floor (or a wall), not from the top of
+        // her jump: jumping down to the next floor never hurts more than stepping off it
+        if (k.onGround || k.wall) this.takeoffY = k.y;
+        else if (this.takeoffY != null && k.peakY < this.takeoffY) k.peakY = this.takeoffY;
         this.updateCrumble(dt);
         // the rotten floor: she lands on it and it goes
         if (!this.dead && k.onGround && Math.abs(k.y + k.h - ROT * TILE) < 1 && k.x + k.w > SX0 && k.x < SX1) this.rotCrack();
@@ -244,13 +251,13 @@ export class Fall extends SideEpisode {
   // the floor that crumbles: shakes under her, then goes
   updateCrumble(dt) {
     const C = this.crumble, k = this.kid; if (C.gone) return;
-    const ty = Math.floor((k.y + k.h + 1) / TILE), on = k.onGround && kindAt(Math.floor((k.x + k.w / 2) / TILE), ty) === 'x';
+    const ty = Math.floor((k.y + k.h + 1) / TILE), on = k.onGround && ty === CR && (kindAt(Math.floor(k.x / TILE), ty) === 'x' || kindAt(Math.floor((k.x + k.w - 1) / TILE), ty) === 'x');
     if (on && !C.on) { C.on = true; C.t = 0; Sound.tone(160, 0.3, 'sawtooth', 0.02, 90); }
     if (!C.on) return;
     C.t += dt;
     if (C.t >= 0.5) {
       C.gone = true;
-      for (let tx = 0; tx < W; tx++) if (kindAt(tx, 21) === 'x') { this.map.m[21][tx] = 0; C.bits.push({ x: tx * TILE, y: 21 * TILE, vy: 20 + Math.random() * 30 }); this.splinters.explode(5, tx * TILE + 8, 21 * TILE + 4); }
+      for (let tx = 0; tx < W; tx++) if (kindAt(tx, CR) === 'x') { this.map.m[CR][tx] = 0; C.bits.push({ x: tx * TILE, y: CR * TILE, vy: 20 + Math.random() * 30 }); this.splinters.explode(5, tx * TILE + 8, CR * TILE + 4); }
       Sound.noise(0.4, 0.12, 1300);
     }
   }
@@ -310,10 +317,10 @@ export class Fall extends SideEpisode {
     });
     // the crumbling floor: it shakes, then its boards drop away
     const C = this.crumble;
-    if (C.on && !C.gone) { const sh = Math.floor(t * 30) % 2; bg.fillStyle(ash0, 1); for (let tx = 13; tx <= 17; tx++) bg.fillRect(tx * TILE + 3 + sh * 5, 21 * TILE + 1, 1, 3); }
+    if (C.on && !C.gone) { const sh = Math.floor(t * 30) % 2; bg.fillStyle(ash0, 1); for (let tx = 13; tx <= 17; tx++) bg.fillRect(tx * TILE + 3 + sh * 5, CR * TILE + 1, 1, 3); }
     if (C.gone) {
-      bg.fillStyle(hexNum(P.void), 1); bg.fillRect(13 * TILE, 21 * TILE, 5 * TILE, 16);
-      C.bits.forEach(b => { b.vy += 600 * dt; b.y += b.vy * dt; if (b.y < 24 * TILE) { bg.fillStyle(ash0, 1); bg.fillRect(b.x - 1, Math.round(b.y) - 1, 18, 8); bg.fillStyle(hexNum(P.wood), 1); bg.fillRect(b.x, Math.round(b.y), 16, 6); } });
+      bg.fillStyle(hexNum(P.wallLo), 1); bg.fillRect(13 * TILE, CR * TILE, 5 * TILE, 16);
+      C.bits.forEach(b => { b.vy += 600 * dt; b.y += b.vy * dt; if (b.y < (CR + 3) * TILE) { bg.fillStyle(ash0, 1); bg.fillRect(b.x - 1, Math.round(b.y) - 1, 18, 8); bg.fillStyle(hexNum(P.wood), 1); bg.fillRect(b.x, Math.round(b.y), 16, 6); } });
     }
     // the rotten floor, once she is through it: a hole with splintered ends
     if (this.phase !== 'walk' && this.phase !== 'crack') { bg.fillStyle(hexNum(P.void), 1); bg.fillRect(SX0, ROT * TILE, SX1 - SX0, 6); bg.fillStyle(hexNum(P.rubble), 1); bg.fillRect(SX0, ROT * TILE, 5, 2); bg.fillRect(SX1 - 4, ROT * TILE, 4, 3); }
@@ -325,7 +332,7 @@ export class Fall extends SideEpisode {
     if (this.phase === 'falling' || this.phase === 'through') { sg.fillStyle(hexNum(P.rubble), 1); for (let i = 0; i < 10; i++) { const x = SX0 + 2 + ((i * 53 + 17) % (SX1 - SX0 - 4)), y = 180 - ((t * 520 + i * 67) % 220); sg.fillRect(x, Math.round(y), 1, 14); } }
     // a few red lights in the walls, blinking
     const lg = this.ledG; lg.clear();
-    [[40, 30], [300, 52], [9 * TILE + 4, 26 * TILE], [13 * TILE + 2, 33 * TILE], [11 * TILE, 45 * TILE]].forEach(([x, y], i) => { if (Math.sin(t * 2 + i * 1.7) > 0) { lg.fillStyle(hexNum(P.led), 1); lg.fillRect(x, y, 1, 1); } });
+    [[40, 30], [300, 52], [9 * TILE + 4, 29 * TILE], [13 * TILE + 2, 36 * TILE], [11 * TILE, 48 * TILE]].forEach(([x, y], i) => { if (Math.sin(t * 2 + i * 1.7) > 0) { lg.fillStyle(hexNum(P.led), 1); lg.fillRect(x, y, 1, 1); } });
     // the black she falls into
     const kg = this.blackG; kg.clear();
     if (this.black > 0) { kg.fillStyle(0x000000, this.black); kg.fillRect(-2, -2, 324, 184); }
@@ -357,7 +364,7 @@ export class Fall extends SideEpisode {
     if (this.phase !== 'walk') return overlay.hint('');
     const y = this.kid.y;
     if (y < 11 * TILE) overlay.hint('The floor is gone. Down is the only way.');
-    else if (y < 24 * TILE) overlay.hint('Dust falls first. Then the ceiling. Long drops hurt.');
+    else if (y < 27 * TILE) overlay.hint('Dust falls first. Then the ceiling. Long drops hurt.');
     else overlay.hint('Hold toward a wall to slide. Space jumps off it.');
   }
 }

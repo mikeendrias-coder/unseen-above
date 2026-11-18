@@ -17,12 +17,12 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'fall' && window.__game.scene.clock > 0.6);
   const quiet = () => p.evaluate(() => window.__game.scene.lanes.forEach(L => { L.next = 1e9; L.rock = null; })); // no debris for these checks
   // a free drop down the narrow shaft is too far
-  await quiet(); await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 180; k.y = 400; k.vx = 0; k.vy = 0; k.peakY = k.y; });
+  await quiet(); await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 180; k.y = 448; k.vx = 0; k.vy = 0; k.peakY = k.y; });
   await until(() => window.__game.scene.dead, null, 8000);
   await until(() => { const s = window.__game.scene; return s.sys.settings.key === 'fall' && s.ep.take === 2 && !s.dead && s.clock > 0.4; }, null, 20000);
   ok('a free drop down the shaft kills her (' + await p.evaluate(() => window.__game.scene.ep.bodies.map(b => b.cause).join()) + ')', await p.evaluate(() => window.__game.scene.ep.bodies.length === 1));
   // sliding down the wall (holding toward it) is safe, and the rotten floor gives way
-  await quiet(); await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 199; k.y = 400; k.vx = 0; k.vy = 0; k.peakY = k.y; });
+  await quiet(); await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 199; k.y = 448; k.vx = 0; k.vy = 0; k.peakY = k.y; });
   await p.keyboard.down('KeyD');
   await until(() => window.__game.scene.phase !== 'walk' || window.__game.scene.dead, null, 15000); await p.keyboard.up('KeyD');
   ok('a wall slide reaches the bottom unhurt (hp ' + await p.evaluate(() => window.__game.scene.kid.hp) + ')', await p.evaluate(() => !window.__game.scene.dead && window.__game.scene.kid.hp === 3));
