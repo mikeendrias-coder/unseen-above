@@ -3,6 +3,7 @@
 // the TV's own messages, review mode. node tests/shoot-text.js
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
+require('fs').mkdirSync('tests/out', { recursive: true });
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 1360, height: 880 }, deviceScaleFactor: 1 });
@@ -28,9 +29,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => { const o = window.__unseen.overlay; o.note('Sound off', 3000); o.sfx('[A DOOR UNLOCKS]', 3000); });
   await p.waitForTimeout(300); await shot('osd');
   // the how-to-play pages
-  for (const kind of ['glasses', 'cracked', 'pebbles', 'dark']) {
+  for (const kind of ['glasses', 'cracked', 'pebbles', 'dark', 'sword']) {
     await p.evaluate(k => window.__unseen.itemPanel(window.__game.scene, k, true), kind);
-    await p.waitForTimeout(150); await shot('page-search-' + kind);
     await p.waitForTimeout(900); await shot('page-' + kind);
     await p.keyboard.press('Space'); await p.waitForTimeout(400);
     await p.evaluate(() => { const g = window.__unseen.game; if (g.scene.isPaused('gallery')) g.scene.resume('gallery'); });
@@ -40,7 +40,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.waitForTimeout(200); await shot('caption');
   await p.evaluate(() => window.__unseen.overlay.clearCaption());
   // the take after a restart, and review mode
-  await p.keyboard.press('KeyR'); await p.waitForTimeout(1200); await shot('take');
+  await p.keyboard.press('Backspace'); await p.waitForTimeout(700); await shot('take');
   await p.keyboard.press('KeyI'); await p.waitForTimeout(300); await shot('immune'); await p.keyboard.press('KeyI');
   // an end card over black
   await p.evaluate(() => { document.getElementById('blackout').classList.add('on'); window.__unseen.overlay.card('END OF EPISODE 2', 'Take 3', 3400); });

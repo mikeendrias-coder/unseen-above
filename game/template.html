@@ -41,25 +41,27 @@
      real buttons set in the caption face at the picture's own pixel size (--u, set by ui/vibe.js). */
   #tv { position: relative; width: calc(var(--u, 4px) * 320); height: calc(var(--u, 4px) * 180); max-width: 100%; background: var(--ground); }
   #tv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
-  .tv-menu { position: absolute; right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); width: calc(var(--u, 4px) * 124); display: grid; padding: calc(var(--u, 4px) * 4) 0; background: var(--ground); }
-  .tv-menu button { position: relative; display: flex; justify-content: space-between; gap: calc(var(--u, 4px) * 6); padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 6) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; color: var(--quiet); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; }
-  .tv-menu button.main { color: var(--ink); }
+  .tv-menu { position: absolute; right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); width: calc(var(--u, 4px) * 124); display: grid; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
+  .tv-menu button { position: relative; display: flex; justify-content: space-between; gap: calc(var(--u, 4px) * 6); padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 6) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; border-bottom: var(--u, 4px) solid var(--boneLo); color: var(--ash4); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; }
+  .tv-menu button:last-child { border-bottom: 0; }
+  .tv-menu button.main { color: var(--ground); }
+  .tv-menu button[aria-pressed="true"] i { color: var(--ground); }
   .tv-menu button i, .tv-menu button b { font-style: normal; font-weight: normal; }
   .tv-menu button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .tv-menu button:hover, .tv-menu button:focus { outline: none; color: var(--ink); }
-  .tv-menu button:hover::before, .tv-menu button:focus::before { content: ">"; position: absolute; left: calc(var(--u, 4px) * 5); color: var(--yellow); }
+  .tv-menu button:hover, .tv-menu button:focus { outline: none; color: var(--ink); background: var(--ground); }
+  .tv-menu button:hover::before, .tv-menu button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
   /* the chapter list: every part of the show, on the picture, two columns */
-  .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 4) 0; background: var(--ground); }
-  .tv-chapters button { position: relative; padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 4) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; color: var(--quiet); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
-  .tv-chapters button.back { color: var(--ink); }
-  .tv-chapters button:hover, .tv-chapters button:focus { outline: none; color: var(--ink); }
-  .tv-chapters button:hover::before, .tv-chapters button:focus::before { content: ">"; position: absolute; left: calc(var(--u, 4px) * 5); color: var(--yellow); }
-  .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); }
+  .tv-chapters { position: absolute; left: calc(var(--u, 4px) * 10); right: calc(var(--u, 4px) * 10); bottom: calc(var(--u, 4px) * 6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; padding: calc(var(--u, 4px) * 3) calc(var(--u, 4px) * 2); background: var(--ink); border: var(--u, 4px) solid var(--ground); box-shadow: 0 0 0 var(--u, 4px) var(--ash3); }
+  .tv-chapters button { position: relative; padding: calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 4) calc(var(--u, 4px) * 1) calc(var(--u, 4px) * 12); background: transparent; border: 0; color: var(--ground); font: calc(var(--u, 4px) * 10)/1.2 var(--pix); text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
+  .tv-chapters button.back { color: var(--red); }
+  .tv-chapters button:hover, .tv-chapters button:focus { outline: none; color: var(--ink); background: var(--ground); }
+  .tv-chapters button:hover::before, .tv-chapters button:focus::before { content: "▶"; position: absolute; left: calc(var(--u, 4px) * 4); color: var(--ink); }
+  .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); text-align: center; }
   .tv-note b { font-weight: normal; color: var(--yellow); }
 
   #focus-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 6px 12px; background: var(--yellow); color: #000; border: 0; font: 20px/1 var(--pix); cursor: pointer; }
   #chrome-bottom { max-width: 1940px; margin: 10px auto 0; }
-  #h-hint { min-height: 1.6em; margin: 0 0 4px; color: var(--ink); }
+  #h-hint { min-height: 1.6em; margin: 0 0 4px; color: var(--quiet); text-align: center; }
   /* The keys under the game: key caps with what they do under them. Hard edges, palette only. */
   .keybar { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 6px; margin: 2px 0 0; }
   .key { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 40px; padding: 0; background: none; border: 0; color: var(--quiet); font: 10px/1 var(--pix); cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; }

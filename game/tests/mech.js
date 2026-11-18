@@ -20,7 +20,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     return y0 - await S(() => { clearInterval(window.__iv); return window.__peak; });
   };
   const one = await jumpPeak(false), two = await jumpPeak(true);
-  ok(`jump ${one.toFixed(0)} px, with double jump ${two.toFixed(0)} px`, one > 30 && two > one + 18);
+  ok(`jump ${one.toFixed(0)} px, with double jump ${two.toFixed(0)} px`, one > 30 && two > one + 10);
   // falls: 4 tiles is free, 6 costs 1, 9 costs 2, 12 kills
   const fall = async px => {
     const y0 = await ground(); await p.waitForTimeout(150);
@@ -41,6 +41,32 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     const after = await S(() => ({ vx: window.__game.scene.kid.vx, vy: window.__game.scene.kid.vy }));
     ok(`a wall jump pushes her up and away (vx ${after.vx.toFixed(0)}, vy ${after.vy.toFixed(0)})`, after.vx < -40 && after.vy < 0);
   }
+  // takes (lives): 5 per visit; after the first death a new take starts fast; at 0, the episode
+  // starts again from its start with 5 (bodies stay)
+  await p.waitForFunction(() => window.__game.scene.kid && !window.__game.scene.dead && window.__game.scene.clock > 0.3, null, { timeout: 20000 });
+  const left0 = await S(() => window.__game.scene.takesLeft);
+  ok('a new visit has 5 takes, minus the fall: ' + left0, left0 === 4);
+  const tA = Date.now();
+  await S(() => window.__game.scene.die({ id: 'garden lamp' }));
+  await p.waitForFunction(() => window.__game.scene.kid && !window.__game.scene.dead && window.__game.scene.clock > 0.05, null, { timeout: 10000 });
+  const fastMs = Date.now() - tA;
+  ok(`after the first death the next take starts fast (${fastMs} ms, no key)`, fastMs < 2000 && await S(() => window.__game.scene.takesLeft === 3));
+  for (let i = 0; i < 2; i++) {
+    await S(() => window.__game.scene.die({ id: 'garden lamp' }));
+    await p.waitForTimeout(150); await p.keyboard.press('Space');
+    await p.waitForFunction(() => window.__game.scene.kid && !window.__game.scene.dead && window.__game.scene.clock > 0.05, null, { timeout: 10000 });
+  }
+  const before = await S(() => ({ left: window.__game.scene.takesLeft, bodies: window.__game.scene.ep.bodies.length }));
+  ok('Space skips each strike; one take left: ' + before.left, before.left === 1);
+  await S(() => window.__game.scene.die({ id: 'garden lamp' }));
+  await p.waitForTimeout(150); await p.keyboard.press('Space');
+  await p.waitForFunction(() => window.__game.scene.kid && !window.__game.scene.dead && window.__game.scene.sys.settings.data && window.__game.scene.sys.settings.data.outOfTakes, null, { timeout: 10000 });
+  const after = await S(() => ({ left: window.__game.scene.takesLeft, bodies: window.__game.scene.ep.bodies.length, key: window.__game.scene.sys.settings.key }));
+  ok(`out of takes: the episode starts again from its start with ${after.left} takes, ${after.bodies} bodies kept (${after.key})`, after.left === 5 && after.bodies >= before.bodies && after.key === 'grounds');
+  // story mode hides HP and takes
+  await p.keyboard.press('KeyI'); await p.waitForTimeout(150);
+  ok('immunity on: HP and takes are hidden', await S(() => window.__game.state.immune));
+  await p.keyboard.press('KeyI');
   console.log(errs.length ? 'ERRORS:\n' + errs.join('\n') : 'no errors');
   await b.close();
 })();

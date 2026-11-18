@@ -48,7 +48,8 @@ export class Painter {
   }
   // Light and shade, hard-edged (Nov 17 final pass: no alpha haze anywhere). Each pixel under the
   // shape is mixed toward the light by a and snapped to the nearest palette color; where the mix
-  // is too small to reach a new color, the next color is laid as a 1-in-4 or checker dither. So a
+  // is too small to reach a new color, the next color is laid as a 1-in-4 or checker dither (or
+  // nothing, for a faint light). So a
   // lamp gives flat steps of lighter tone, and every color stays in the palette.
   shade(spans, c, a) {
     if (!(a > 0)) return;
@@ -66,7 +67,7 @@ export class Painter {
         if (same(n, o)) {
           const u = nearest(t, o); if (!u) continue;
           const du = u.map((v, k) => v - o[k]), len = du.reduce((s2, v) => s2 + v * v, 0), f = len ? du.reduce((s2, v, k) => s2 + v * (t[k] - o[k]), 0) / len : 0;
-          const on = f >= 0.375 ? (x + y) % 2 === 0 : f >= 0.125 ? (x % 2 === 0 && y % 2 === 0) : false;
+          const on = f >= 0.6 ? (x + y) % 2 === 0 : f >= 0.3 ? (x % 2 === 0 && y % 2 === 0) : false;
           if (!on) continue; n = u;
         }
         d[i] = n[0]; d[i + 1] = n[1]; d[i + 2] = n[2];

@@ -18,7 +18,7 @@ const ESC_SKIPS = ['intro', 'kids'];
 const CONTROLS = {
   num: 101, title: 'Controls', stamp: 'FILED',
   lines: [
-    '{A} {D} move. {Space} jumps, twice in the air.',
+    '{A} {D} move. {Space} jumps, twice.',
     '{S} crouches. {W} opens doors. {Shift} runs.',
     '{J} uses and talks. {K} throws and swings.',
     '{L} glasses. {Enter} skips a line.',
@@ -154,7 +154,7 @@ export function initPause(game, hooks) {
   }, true);
 
   // the mouse: a row under the pointer is picked; a click uses it
-  const grid = ev => { const c = document.getElementById('cg'), r = c && c.getBoundingClientRect(); return r && r.width ? { x: (ev.clientX - r.left) / r.width * 320, y: (ev.clientY - r.top) / r.height * 180 } : null; };
+  const grid = ev => { const c = document.getElementById('cg'), r = c && c.getBoundingClientRect(); return r && r.width ? { x: (ev.clientX - r.left) / r.width * 320, y: (ev.clientY - r.top) / r.height * 210 } : null; };
   window.addEventListener('pointerdown', ev => {
     if (!open) return;
     const foot = document.getElementById('chrome-bottom'); if (foot && foot.contains(ev.target)) return; // the keys under the game still work
