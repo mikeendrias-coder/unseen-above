@@ -38,12 +38,12 @@ export const LEVEL = {
   props: [],
   sheets: { x: 37 * T + 3, w: 130 },
   // furniture with physics (core/props.js piece), y the floor under it: a side table with a gold
-  // vase and a hall chair between the sideboard and the stair (clear of the tape mark at 19 T;
-  // the chair has room to go over toward the stair),
+  // vase and a hall chair between the sideboard and the stair (room to stand on either side of
+  // the chair, and for it to go over either way),
   // and, down in the atrium, an armchair and a table under dust sheets (things to climb out on)
   furniture: [
-    { kind: 'table', id: 'hall table', x: 17 * T + 2, y: ROWS.floor * T, w: 16, tone: 'wood', loose: [{ kind: 'vase', dx: 6 }] },
-    { kind: 'chair', id: 'hall chair', x: 18 * T + 4, y: ROWS.floor * T, back: -1, tone: 'gold' },
+    { kind: 'table', id: 'hall table', x: 17 * T + 2, y: ROWS.floor * T, w: 12, tone: 'wood', loose: [{ kind: 'vase', dx: 4 }] },
+    { kind: 'chair', id: 'hall chair', x: 18 * T + 8, y: ROWS.floor * T, back: -1, tone: 'gold' },
     { kind: 'chair', id: 'sheeted chair', x: 39 * T + 8, y: ROWS.floor * T, back: -1, tone: 'wood', cloth: 'boneLo' },
     { kind: 'table', id: 'sheeted table', x: 41 * T + 4, y: ROWS.floor * T, w: 26, tone: 'wood', cloth: 'boneLo', loose: [{ kind: 'candle', dx: 11 }] }
   ],

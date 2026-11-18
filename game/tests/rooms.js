@@ -1,8 +1,10 @@
 // The optional side rooms in episodes 3 and 4: in, look at something, back out where she was.
-// Then the furniture in all four side rooms (Nov 18): push a table and its things slide off,
-// climb from it to a high shelf, push a tin off the shelf so it opens, run into a lamp and a
-// chair to knock them over, K to stand one up, K a box off a ledge, push a trunk with a box
-// riding on it, and a stretch of random keys in every room with her never inside anything.
+// Then the furniture in all four side rooms (Nov 18): push a table and its things slide off (the
+// mug breaks), push the table under the high shelf and bump the tin off from below with real
+// keys, climb from the table to the shelf, walk into a lamp to knock it over, K to stand it up,
+// walk into a chair to push it and K it over, push a row of furniture with no jam (the staff
+// room from the door), K a box off a ledge, push a trunk until the hat box riding on it drops
+// off and opens, and a stretch of random keys in every room with her never inside anything.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 (async () => {
@@ -60,8 +62,26 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await put(40, 160); await hold('KeyD', 2.4);
   const t1 = await piece('work table'), fell = await p.evaluate(() => window.__game.scene.dyn.items.filter(i => i.y + i.h === 160).map(i => i.kind));
   ok('shed: walking into the work table pushes it (' + t0.x + ' to ' + t1.x + '); what was on it slid off (' + fell.join(', ') + ')', t1.x > t0.x + 30 && fell.length >= 1 && !await inside());
+  ok('the mug that fell off the table broke', await p.evaluate(() => window.__game.scene.dyn.items.find(i => i.kind === 'mug').broken));
   await shot('room-keeper-push');
+  // real keys only: push the table on under the shelf, jump on it, and jump to bump the shelf
+  // from below until the tin drops and opens
+  await room('keeper');
+  await put(40, 160, 1); await p.keyboard.down('KeyD');
+  await until(() => window.__game.scene.dyn.pieces.find(q => q.id === 'work table').x >= 108, null, 20000); await p.keyboard.up('KeyD');
+  const under = await piece('work table');
+  ok('the table is under the shelf (' + under.x + ')', under.x >= 104 && under.x + 30 <= 146 + 4);
+  await p.keyboard.down('KeyD'); await p.keyboard.down('Space'); await wait(0.2); await p.keyboard.up('KeyD'); await wait(0.15); await p.keyboard.up('Space'); await wait(0.6);
+  const onTable = await p.evaluate(() => { const k = window.__game.scene.kid; return k.onGround && Math.round(k.y + k.h) === 148; });
+  ok('she jumps onto the table under the shelf', onTable);
+  ok('the hint says what to do there: "' + await p.evaluate(() => window.__game.scene.hintNow) + '"', /shelf/.test(await p.evaluate(() => window.__game.scene.hintNow)));
+  let bumps = 0;
+  for (; bumps < 5 && !(await piece('tin')).open; bumps++) { await p.keyboard.down('Space'); await wait(0.35); await p.keyboard.up('Space'); await wait(0.9); }
+  const tinB = await piece('tin');
+  ok('jumping on the table bumps the shelf; the tin slides off, lands and opens (' + bumps + ' jumps, ' + JSON.stringify(tinB) + ')', tinB.open && bumps <= 4 && !await inside());
+  await shot('room-keeper-bump');
   // from the table's end, a double jump to the high shelf
+  await room('keeper');
   await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'work table'); q.x = 150; s.dyn.syncRects(q); s.dyn.items.forEach(i => { if (i.y + i.h === 148) i.y = 160 - i.h; }); });
   // she stands on the table just past the shelf's end: up first, then a second jump and left
   await put(152, 148, -1); await wait(0.2);
@@ -77,22 +97,22 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   });
   await until(() => window.__bot(), null, 6000).catch(() => {}); await p.evaluate(() => window.__botOff()); await wait(0.4);
   const up = await p.evaluate(() => { const s = window.__game.scene, k = s.kid, t = s.dyn.pieces.find(q => q.id === 'tin'); return { feet: Math.round(k.y + k.h), x: Math.round(k.x), ground: k.onGround, tin: t.x + ',' + t.y }; });
-  const onShelf = up.ground && (up.feet === 90 || up.feet === 82) && up.x < 146 && up.x > 96;
-  ok('from the table she climbs to the high shelf, out of reach from the floor (' + JSON.stringify(up) + ')', onShelf);
+  const onShelf = up.ground && (up.feet === 96 || up.feet === 88) && up.x < 146 && up.x > 96;
+  ok('from the table she climbs to the high shelf (' + JSON.stringify(up) + ')', onShelf);
   if (!onShelf) console.log('   the climb: ' + (await p.evaluate(() => window.__climb)).join(' | '));
-  if (!onShelf) await put(106, 90, 1);
+  if (!onShelf) await put(106, 96, 1);
   // she walks into the tin from whichever side she is on and pushes it off the end
   const side = await p.evaluate(() => { const s = window.__game.scene, k = s.kid, t = s.dyn.pieces.find(q => q.id === 'tin'); if (k.x > t.x) { k.x = t.x + t.w + 1; return 'KeyA'; } k.x = t.x - k.w - 1; return 'KeyD'; });
-  await p.evaluate(() => { const k = window.__game.scene.kid; k.y = 90 - 14; k.vx = 0; k.vy = 0; });
+  await p.evaluate(() => { const k = window.__game.scene.kid; k.y = 96 - 14; k.vx = 0; k.vy = 0; });
   await hold(side, 1.2); await wait(1.0);
   const tin = await piece('tin');
   ok('she pushes the tin off the shelf; it lands (on the floor or the table) and opens (' + JSON.stringify(tin) + ')', (tin.y + 8 === 160 || tin.y + 8 === 148) && tin.open);
   ok('the open tin says what was in it', await until(() => /tapes/.test(document.getElementById('cc').textContent), null, 4000).then(() => true, () => false));
   await shot('room-keeper-tin');
-  // a run into the lamp knocks it over and it goes dark; K stands it up, lit again
+  // walking into the lamp knocks it over and it goes dark; K stands it up, lit again
   await put(292, 160, -1); await hold('KeyA', 0.6); await wait(0.3);
   const l1 = await piece('work lamp');
-  ok('a run into the lamp knocks it over and it goes out (' + l1.pose + ', lit ' + l1.lit + ')', l1.pose === 'down' && !l1.lit && !await inside());
+  ok('walking into the lamp knocks it over and it goes out (' + l1.pose + ', lit ' + l1.lit + ')', l1.pose === 'down' && !l1.lit && !await inside());
   await shot('room-keeper-lamp');
   await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'work lamp'), k = s.kid; k.x = q.x + q.w + 1; k.face = -1; });
   await wait(0.1); await p.keyboard.press('KeyK'); await wait(0.4);
@@ -100,10 +120,31 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   ok('K stands the lamp back up, lit (' + l2.pose + ', lit ' + l2.lit + ')', l2.pose === 'up' && l2.lit && !await inside());
   // the staff room
   await room('staff');
-  await put(130, 160, 1); await hold('KeyD', 0.8);
+  const ch0 = await piece('chair');
+  await put(130, 160, 1); await hold('KeyD', 1.2);
+  const ch1 = await piece('chair');
+  ok('staff room: walking into the chair pushes it, upright (' + ch0.x + ' to ' + ch1.x + ', ' + ch1.pose + ')', ch1.x > ch0.x + 4 && ch1.pose === 'up' && !await inside());
+  await p.keyboard.press('KeyK'); await wait(0.5);
   const ch = await piece('chair');
-  ok('staff room: a run into the chair knocks it over (' + ch.pose + ')', ch.pose === 'down' && !await inside());
+  ok('K knocks it over (' + ch.pose + ')', ch.pose === 'down' && !await inside());
   await shot('room-staff-chair');
+  // the jam (review, Nov 18): from the door, hold D for 4 s. The chair, the side table and the
+  // bin go along as a row; nothing slides under the table, and she keeps moving
+  await room('staff');
+  await put(40, 160, 1); await hold('KeyD', 4);
+  const row = await p.evaluate(() => { const s = window.__game.scene, at = id => s.dyn.pieces.find(q => q.id === id); return { kid: Math.round(s.kid.x), chair: at('chair').x, table: at('side table').x, bin: at('bin').x }; });
+  ok('holding D from the door pushes chair, table and bin along as a row, no jam ' + JSON.stringify(row), row.table > 212 && row.kid > 205 && row.chair + 10 <= row.table && !await inside());
+  await shot('room-staff-row');
+  // K the chair over against the table: it goes over the other way and she steps back; then
+  // she pushes it, lying down, into the table, and the table moves too
+  await p.evaluate(() => { const k = window.__game.scene.kid; k.face = 1; });
+  await p.keyboard.press('KeyK'); await wait(0.5);
+  const ch2 = await piece('chair'), tb2 = await piece('side table');
+  ok('K tips the chair even pushed up against the table (' + ch2.pose + ')', ch2.pose === 'down' && !await inside());
+  await hold('KeyD', 1.5);
+  const ch3 = await piece('chair'), tb3 = await piece('side table');
+  ok('pushing the fallen chair into the table moves both (chair ' + ch2.x + ' to ' + ch3.x + ', table ' + tb2.x + ' to ' + tb3.x + ')', ch3.x > ch2.x && tb3.x > tb2.x && ch3.x + 18 <= tb3.x && !await inside());
+  await room('staff');
   await put(254, 90, 1); await wait(0.2); await p.keyboard.press('KeyK'); await wait(1.2);
   const bx = await piece('box');
   ok('on the locker, K knocks the box off; it lands open (' + JSON.stringify(bx) + ')', bx.y + 8 === 160 && bx.open);
@@ -116,12 +157,16 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const tb = await piece('toolbox');
   ok('workshop: K knocks the toolbox off the beam; it lands open (' + JSON.stringify(tb) + ')', tb.y + 7 === 160 && tb.open);
   await shot('room-workshop-toolbox');
-  // the wardrobe: push the trunk, the hat box rides on it; then K the hat box off
+  // the wardrobe: push the trunk; the hat box on it lags, slides off the back, lands and opens
   await room('wardrobe');
   const tr0 = await piece('trunk'), hb0 = await piece('hat box');
-  await put(18, 160, 1); await hold('KeyD', 1.2);
+  await put(18, 160, 1); await hold('KeyD', 4);
+  await wait(1.0);
   const tr1 = await piece('trunk'), hb1 = await piece('hat box');
-  ok('wardrobe: pushing the trunk carries the hat box (' + (tr1.x - tr0.x) + ' px, box ' + (hb1.x - hb0.x) + ' px)', tr1.x - tr0.x > 6 && hb1.x - hb0.x >= tr1.x - tr0.x && hb1.y === hb0.y);
+  ok('wardrobe: pushing the trunk, the hat box lags behind and drops off; it opens (trunk ' + (tr1.x - tr0.x) + ' px, box ' + JSON.stringify(hb1) + ')', tr1.x - tr0.x > 30 && hb1.y + 8 === 160 && hb1.open && !await inside());
+  await shot('room-wardrobe-push');
+  // K from beside the trunk aims at the box on top first
+  await room('wardrobe');
   await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'trunk'), k = s.kid; k.x = q.x - 9; k.y = 160 - 14; k.face = 1; });
   await wait(0.1); await p.keyboard.press('KeyK'); await wait(1.0);
   const hb2 = await piece('hat box');

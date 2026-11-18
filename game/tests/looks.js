@@ -3,7 +3,8 @@
 // take reads its take and what killed her. Then the city: people talk with E, say something when
 // she walks into them, put her down when she lands on a head; benches, planters and the fountain
 // are solid and she can stand on them. The grounds' furniture (Nov 18): she pushes the garden
-// bench, and crouched under the terrace table the drone overhead cannot see her. A frame of each
+// bench, gets under the terrace table with real keys, and crouched there the drone overhead
+// cannot see her. A frame of each
 // kind goes to tests/out.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
@@ -110,6 +111,15 @@ const norm = s => String(s).replace(/\s+/g, ' ').trim();
     await p.keyboard.down('ArrowLeft'); await wait(0.8); await p.keyboard.up('ArrowLeft');
     const b1 = await p.evaluate(() => window.__game.scene.dyn.pieces.find(q => q.id === 'garden bench').x);
     ok('she pushes the garden bench (' + b0 + ' to ' + b1 + ')', b1 < b0);
+    // real keys: from the fountain's rim she walks over the table, drops into the gap past it,
+    // crouches and crawls back under its top
+    await p.evaluate(() => { const k = window.__game.scene.kid; k.x = 770; k.y = 256 - 14; k.vx = 0; k.vy = 0; k.face = 1; });
+    await p.keyboard.down('KeyD'); await wait(1.0); await p.keyboard.up('KeyD'); await wait(0.2);
+    await p.keyboard.down('KeyS'); await p.keyboard.down('KeyA'); await wait(0.5); await p.keyboard.up('KeyA');
+    const crawl = await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'terrace table'), k = s.kid; return { x: Math.round(k.x), feet: Math.round(k.y + k.h), crouch: k.crouch, table: q.x + '-' + (q.x + q.w) }; });
+    await p.keyboard.up('KeyS');
+    const tq = await p.evaluate(() => { const q = window.__game.scene.dyn.pieces.find(q => q.id === 'terrace table'); return { x: q.x, w: q.w }; });
+    ok('with real keys she gets down beside the terrace table and crawls under it ' + JSON.stringify(crawl), crawl.crouch && crawl.feet === 272 && crawl.x >= tq.x && crawl.x + 8 <= tq.x + tq.w);
     // crouched under the table, with the drone parked right over it: no lock, no strike
     await p.evaluate(() => { window.__noDeath = false; const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'terrace table'), k = s.kid, D = s.drones[0]; k.x = q.x + 6; k.y = 272 - 9; k.h = 9; k.crouch = true; k.vx = 0; k.vy = 0; D.x0 = D.x1 = D.x = q.x + 10; D.speed = 0; });
     await p.keyboard.down('ArrowDown'); await wait(1.5);

@@ -1,4 +1,4 @@
-// Side rooms behind optional doors: one screen, no hazards, things to look at with E. The
+// Side rooms behind optional doors: one screen, no hazards, things to look at with J. The
 // episode sleeps while she is inside and wakes where she left it. Clues live here, never
 // anything she needs to finish.
 import { Music } from '../core/music.js';
@@ -12,6 +12,7 @@ import { pixText } from '../art/pixfont.js';
 import { reviewKeys } from '../core/review.js';
 import { paintWardrobe } from '../art/bedroom.js';
 import { Props } from '../core/props.js';
+import { ASH } from '../art/palettes.js';
 
 const G = 160;
 // the door back to the house: a plain door with a 1 px outline
@@ -87,9 +88,9 @@ function paintKeeper(P) {
   p.rect(40, 34, 60, 40, P.wood); for (let x = 44; x < 98; x += 5) for (let y = 38; y < 72; y += 5) p.px(x, y, P.woodHi);
   p.rect(48, 40, 2, 26, P.device); p.rect(44, 38, 10, 3, P.colLo); p.rect(60, 42, 2, 22, P.device); p.poly([[58, 62], [64, 62], [61, 69]], P.colLo);
   p.rect(72, 40, 12, 2, P.colLo); p.rect(77, 42, 2, 22, P.device); p.rect(88, 44, 9, 9, P.colLo); p.rect(91, 53, 3, 14, P.device);
-  // a high plank shelf on two brackets, out of reach from the floor (ROOMS.keeper.solids)
-  p.rect(103, 89, 44, 5, P.crack); p.rect(104, 90, 42, 3, P.wood); p.rect(104, 90, 42, 1, P.woodHi);
-  [110, 138].forEach(x => { p.rect(x, 93, 2, 8, P.device); for (let i = 0; i < 6; i++) p.px(x + 2 + Math.floor(i / 2), 93 + i, P.device); });
+  // a high plank shelf on two brackets, too high for one jump from the floor (ROOMS.keeper.solids)
+  p.rect(103, 95, 44, 5, P.crack); p.rect(104, 96, 42, 3, P.wood); p.rect(104, 96, 42, 1, P.woodHi);
+  [110, 138].forEach(x => { p.rect(x, 99, 2, 8, P.device); for (let i = 0; i < 6; i++) p.px(x + 2 + Math.floor(i / 2), 99 + i, P.device); });
   // a rack of drones on chargers, green lights
   p.rect(150, 36, 48, 42, P.device); p.rect(152, 38, 44, 38, P.wallLine);
   for (let i = 0; i < 6; i++) { const x = 155 + (i % 3) * 14, y = 44 + Math.floor(i / 3) * 18; p.rect(x, y, 11, 4, P.colLo); p.rect(x - 1, y - 1, 3, 1, P.colLo); p.rect(x + 9, y - 1, 3, 1, P.colLo); p.mark('led', x + 5, y + 5); }
@@ -144,6 +145,8 @@ function paintWorkshop(P) {
 // climbs them. reveal: a box that opens when it lands hard (knocked off a shelf, say) and becomes
 // a look. look: a look that follows the piece. loose: small things on top (core/props.js item).
 // solids: fixed ledges and tops (she stands on them; pieces and loose things land on them).
+// An item with gone: id stops being a look once that box has opened. hints: a hint line for a
+// stretch of the room (x0..x1) until that box has opened.
 const ROOMS = {
   keeper: {
     paint: paintKeeper, bg: 'wallLo',
@@ -151,21 +154,25 @@ const ROOMS = {
       { x0: 38, x1: 60, y: 94, text: ['A note by the door: lights on at dusk.', 'Lights on again at dawn. Never off.'] },
       { x0: 150, x1: 198, y: 36, text: ['Six drones charging on a rack.', 'Every one of them has a camera.'] },
       { x0: 200, x1: 270, y: 110, text: ['Spare searchlight bulbs. Hundreds of them.', 'And a little TV, stuck on channel 07.'] },
-      { x0: 278, x1: 304, y: 42, text: ['A crew coat on a hook.', 'The pass on it says SEASON 41.'] }
+      { x0: 278, x1: 304, y: 42, text: ['A crew coat on a hook.', 'The pass on it says SEASON 41.'] },
+      { x0: 104, x1: 146, y: 96, gone: 'tin', text: ['A tin, up on the high shelf.', 'Too high to reach from the floor.'] }
     ],
+    hints: [{ x0: 96, x1: 154, until: 'tin', text: 'Push the table under the shelf, climb up, and jump to bump the tin off.' }],
     // the small TV on the crate: J turns the dial. Every channel is 07.
     use: { x0: 228, x1: 258, y: 122, key: 'tv', text: ['She turns the dial. Every channel is 07.'] },
     // solid: the bench top (she walks under it), the crate and the TV on it, the high shelf
     solids: [{ id: 'bench', x: 200, y: 120, w: 70, h: 4 }, { id: 'crate', x: 230, y: 140, w: 26, h: 20 }, { id: 'tv', x: 232, y: 124, w: 22, h: 16 },
-      { id: 'shelf', x: 104, y: 90, w: 42, h: 3 }],
-    // the work table and the stool both reach the high shelf; the tin up there opens when it falls
+      { id: 'shelf', x: 104, y: 96, w: 42, h: 3 }],
+    // the tin on the high shelf opens when it falls. Standing on the work table under the shelf,
+    // a jump bumps the shelf and the tin slides toward the end (two bumps and it drops); from the
+    // table's end a double jump lands on the shelf itself
     furniture: [
       { kind: 'table', id: 'work table', x: 62, w: 30, tone: 'wood', loose: [{ kind: 'mug', dx: 4 }, { kind: 'jar', dx: 20, tone: 'ash4' }] },
       { kind: 'stool', id: 'stool', x: 182, tone: 'wood' },
       { kind: 'lamp', id: 'work lamp', x: 272, tone: 'grey' },
-      { kind: 'box', id: 'tin', x: 118, y: 90, w: 12, h: 8, tone: 'grey', reveal: ['A tin full of old tapes.', 'Seasons 38, 39 and 40. All ESTATE 07.'] }
+      { kind: 'box', id: 'tin', x: 118, y: 96, w: 12, h: 8, tone: 'grey', reveal: ['A tin full of old tapes.', 'Seasons 38, 39 and 40. All ESTATE 07.'] }
     ],
-    loose: [{ kind: 'can', x: 107, y: 90 }]
+    loose: [{ kind: 'can', x: 107, y: 96 }]
   },
   workshop: {
     paint: paintWorkshop, bg: 'wallLo',
@@ -195,7 +202,7 @@ const ROOMS = {
       { x0: 74, x1: 116, y: 146, text: ['A row of little shoes.', 'All worn down at the same heel.'] }
     ],
     // the cord of the one bulb: J pulls it. In the dark, the light behind the mirror stays on.
-    use: { x0: 240, x1: 262, y: 40, key: 'cord', text: ['She pulls the cord and the bulb goes out.', 'A red light is still on behind the mirror.'] },
+    use: { x0: 240, x1: 262, y: 40, key: 'cord', text: ['She pulls the cord. The bulb goes out.', 'A red light is still on behind the mirror.'] },
     solids: [{ id: 'table', x: 182, y: 134, w: 54, h: 4 }], // the mirror's table: she walks under it
     furniture: [
       { kind: 'trunk', id: 'trunk', x: 30, tone: 'wood' },
@@ -231,11 +238,11 @@ const PIECE_HINT = {
   trunk: "Walk into the trunk to push it. It's heavy.",
   crate: 'Walk into it to push it.',
   box: 'Press K to knock the box along, or walk into it.',
-  chair: 'Run into the chair, or press K, to knock it over.',
+  chair: 'Walk into the chair to push it. Press K to knock it over.',
   stool: 'Push the stool where you need it, then climb up. K knocks it over.',
-  bin: 'Run into the bin, or press K, to knock it over.',
-  lamp: 'Run into the lamp, or press K, to knock it over.',
-  down: 'Press K to stand it back up.'
+  bin: 'Walk into the bin to push it. Press K to knock it over.',
+  lamp: 'Walk into the lamp, or press K, to knock it over.',
+  down: 'Press K to stand it back up, or walk into it to push it.'
 };
 
 export class Room extends SideEpisode {
@@ -269,7 +276,9 @@ export class Room extends SideEpisode {
     (R.loose || []).forEach(l => this.dyn.item(Object.assign({}, l)));
     // the items are looks, so the room's one thing to do wins when both are in reach (the shed's TV
     // sits on its crate inside the bench's span)
-    R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'J', look: true, noPrompt: false, use: () => this.describe(it) }); });
+    this.hintZones = R.hints || [];
+    const goneWith = {};
+    R.items.forEach(it => { it.n = 0; const th = { x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'J', look: true, noPrompt: false, use: () => this.describe(it) }; this.things.push(th); if (it.gone) goneWith[it.gone] = th; });
     // one thing to do in each room, not only to look at
     this.act = { on: false, t: 0, n: 0 }; this.roomId = data.id || 'staff'; this.useSrc = null; // the scene object is reused from room to room
     if (R.use) this.things.push({ x0: R.use.x0, x1: R.use.x1, y0: Math.min(R.use.y + 4, 130), y1: G, py: R.use.y, label: 'J', use: () => this.doUse(R.use) });
@@ -281,7 +290,7 @@ export class Room extends SideEpisode {
       this.things.push(th); p.thing = th;
       if (f.reveal) p.onLand = q => {
         if (q.open) return;
-        q.open = true; th.off = false;
+        q.open = true; th.off = false; if (goneWith[q.id]) goneWith[q.id].off = true;
         Sound.tone(520, 0.05, 'square', 0.012); Sound.noise(0.08, 0.03, 2400);
         this.time.delayedCall(250, () => { if (!this.leaving) this.describe(it); });
       };
@@ -352,6 +361,8 @@ export class Room extends SideEpisode {
         dg.fillStyle(hexNum(P.wallHi), 1); dg.fillRect(dx, G - 30, 16, 30);
         dg.fillStyle(hexNum(P.woodHi), 1); dg.fillRect(dx - 30, G, 46, 1); dg.fillRect(dx - 22, G + 1, 38, 1);
         const rec = (this.marks || []).find(m => m.kind === 'rec'); if (rec) { dg.fillStyle(hexNum(P.led), 1); dg.fillRect(rec.x, rec.y, 1, 1); dg.fillRect(rec.x - 1, rec.y, 3, 1); }
+        // the furniture, barely: the top edge of each thing she could bump into, in the dark
+        dg.fillStyle(hexNum(ASH.ash2), 1); this.pieces.forEach(q => q.rects.forEach(r => dg.fillRect(r.x, r.y, r.w, 1)));
       }
       // the cord
       const cord = (this.marks || []).find(m => m.kind === 'cord');
@@ -361,8 +372,11 @@ export class Room extends SideEpisode {
 
   // what the hint line says: the furniture next to her, or how the room works
   hint() {
-    const k = this.kid, p = k && this.dyn.nearPiece(k);
-    const text = p ? (p.pose === 'down' ? PIECE_HINT.down : PIECE_HINT[p.kind]) : 'Press J to look at things. W at the door takes you back.';
+    const k = this.kid, p = k && this.dyn.nearPiece(k), cx = k ? k.x + k.w / 2 : 0;
+    const zone = k && this.hintZones.find(z => cx >= z.x0 && cx <= z.x1 && !(this.pieces.find(q => q.id === z.until) || {}).open);
+    const dark = this.roomId === 'wardrobe' && this.act.on;
+    const text = dark ? "It's dark in here. Find the cord again and press J to turn the light on."
+      : zone ? zone.text : p ? (p.pose === 'down' ? PIECE_HINT.down : PIECE_HINT[p.kind]) : 'Press J to look at things. W at the door takes you back.';
     if (text !== this.hintNow) { this.hintNow = text; overlay.hint(text); }
   }
 

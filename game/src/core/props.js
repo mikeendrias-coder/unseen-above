@@ -27,14 +27,17 @@
 //   const t = this.dyn.piece({ kind: 'table', x, y: floorY, w: 28, tone: 'wood', id: 'work table' });
 //   this.dyn.item({ kind: 'mug', x, y: t.y });                 // a loose thing on its top
 // Kinds (FURN below): table, chair, stool, bin, lamp, crate, box, trunk, bench. She pushes one by
-// walking into it (heavier is slower; a table carries what is on it, and loose things lag and
-// slide off the edge). Running into a chair, stool, bin or lamp knocks it over (three frame
-// swaps, no rotation); K (or F) next to one knocks it over, stands it back up, shoves a box (off a
-// shelf, say), bumps a heavy thing (what is on top wobbles and slides) or flicks a loose thing off.
-// She can stand and climb on all of them (they are rects in scene.props, so lights stop at them
-// too). Pieces fall, land on tiles or each other, and never move into a wall, another piece or
-// her. Loose things (item) fall, bounce, break if fragile, and get kicked when she walks into
-// them; they are never solid to her. spec.onLand(piece, speed) runs when a piece lands hard;
+// walking into it, upright or lying down (heavier is slower; a table carries what is on it, and
+// loose things and boxes on top lag and slide off the edge). A piece pushed into another pushes
+// that one too. Walking into a lamp knocks it over (three frame swaps, no rotation); K (or F)
+// next to a chair, stool, bin or lamp knocks it over or stands it back up, shoves a box (off a
+// shelf, say), bumps a heavy thing (what is on top wobbles and slides) or flicks a loose thing
+// off. A jump that bumps her head on a shelf or a piece from below makes what is on it jump
+// toward the nearer end (a few bumps and it falls off). She can stand and climb on all of them
+// (they are rects in scene.props, so lights stop at them too). Pieces fall, land on tiles or each
+// other, and never move into a wall, another piece (its whole box, so nothing slides under a
+// table) or her. Loose things (item) fall, bounce, break if fragile (a fall of about 7 px or
+// more: off any table), and get kicked when she walks into them; they are never solid to her. spec.onLand(piece, speed) runs when a piece lands hard;
 // spec.thing (a look) follows the piece. tone: wood, grey, gold, bone (the three tones it uses).
 // hardCone(g, cone points, color, view) draws a light the final-pass way: a 50% checker of one
 // flat color, its two edges solid (no alpha, no blending, no hatched rows).
@@ -439,15 +442,15 @@ export class Gold {
 // room". Pieces are pixel boxes that move a whole pixel at a time (never into a wall, another
 // piece or her), fall, carry what stands on them, and change pose by frame swaps (a chair goes
 // over in three frames: lean, lean further, down). No tweening, no rotation.
-//   w, h: upright size. push: px/s when she leans on it. tip: it can be knocked over (down: its
-//   size lying down; soft: lying, it is not solid; steady: a run into it only bumps it). light:
-//   K shoves it along.
+//   w, h: upright size. push: px/s when she leans on it. tip: K knocks it over (down: its size
+//   lying down; soft: lying, it is not solid; wobbly: walking into it knocks it over too). light:
+//   K shoves it along, and riding on another piece it lags behind.
 const FURN = {
   table: { w: 24, h: 12, push: 22 },
   chair: { w: 10, h: 18, push: 32, tip: true, down: [18, 7] },
-  stool: { w: 10, h: 10, push: 36, tip: true, down: [12, 7], steady: true }, // K tips it; a run only bumps it
+  stool: { w: 10, h: 10, push: 36, tip: true, down: [12, 7] },
   bin: { w: 8, h: 10, push: 40, tip: true, down: [12, 6] },
-  lamp: { w: 7, h: 26, push: 30, tip: true, down: [24, 4], soft: true },
+  lamp: { w: 7, h: 26, push: 30, tip: true, down: [24, 4], soft: true, wobbly: true },
   crate: { w: 16, h: 16, push: 22 },
   box: { w: 10, h: 8, push: 44, light: true },
   trunk: { w: 22, h: 14, push: 18 },
@@ -463,7 +466,7 @@ const TONES = {
   wood: ['bronzeLo', 'bronze', 'bronzeHi'], grey: ['ash2', 'ash3', 'ash4'], gold: ['goldLo', 'gold', 'goldHi'],
   bone: ['ash5', 'boneLo', 'bone'], card: ['ash4', 'ash5', 'boneLo']
 };
-const RUN_HIT = 60;     // she has to be going about full walking speed to knock a thing over by running into it
+const RUN_HIT = 60;     // she has to be going about full walking speed to knock a lamp over or make a table's things jump
 const TIP_FRAME = 0.07; // seconds a frame of a fall lasts
 const ovl = (ax, ay, aw, ah, b) => ax < b.x + b.w && ax + aw > b.x && ay < b.y + b.h && ay + ah > b.y;
 
@@ -503,11 +506,13 @@ const Furniture = {
   syncRects(p) { p.rects.forEach(r => { r.x = p.x + r.dx; r.y = p.y + r.dy; }); },
   // is the box (x, y, w, h) clear of tiles and of every solid thing but p's own parts; with
   // kidToo, p's parts at that offset must miss her as well (parts: lying parts to test instead)
-  fitsAt(p, x, y, w, h, kidToo, parts) {
+  // Another piece counts as its whole box (a table's legs and the room under it too), so a chair
+  // lying down never slides in under a table and jams it. noPieces: walls and fixed ledges only.
+  fitsAt(p, x, y, w, h, kidToo, parts, noPieces) {
     const s = this.scene, T = 16;
     const x0 = Math.floor(x / T), x1 = Math.floor((x + w - 0.001) / T), y0 = Math.floor(y / T), y1 = Math.floor((y + h - 0.001) / T);
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (s.solidTile(tx, ty)) return false;
-    if (s.props.some(r => r.solid !== false && !p.rects.includes(r) && ovl(x, y, w, h, r))) return false;
+    if (s.props.some(r => r.solid !== false && !p.rects.includes(r) && (r.piece ? !noPieces && ovl(x, y, w, h, r.piece) : ovl(x, y, w, h, r)))) return false;
     if (kidToo && s.kid && !s.dead) {
       const k = s.kid, ps = parts || this.partsOf(p);
       if (ps.some(([dx, dy, pw, ph]) => ovl(x + dx, y + dy, pw, ph, k))) return false;
@@ -524,12 +529,27 @@ const Furniture = {
   },
   ridersOf(p) { return this.pieces.filter(q => q !== p && !q.tip && p.rects.some(r => Math.abs(q.y + q.h - r.y) < 0.5 && q.x < r.x + r.w && q.x + q.w > r.x)); },
   itemsOn(p) { return this.items.filter(it => !it.broken && p.rects.some(r => Math.abs(it.y + it.h - r.y) < 0.5 && it.x < r.x + r.w && it.x + it.w > r.x)); },
-  // move a piece one pixel sideways, with what stands on it; false if it is blocked
+  // move a piece one pixel sideways, with what stands on it; false if it is blocked. Pushed into
+  // another piece on the floor, that one moves first (a row of them goes along, slow as ever);
+  // a wall, a fixed ledge or her stops the lot.
   moveBy(p, dx, depth) {
-    if (!this.fits(p, dx, 0, true)) return false;
+    depth = depth || 0;
+    if (!this.fits(p, dx, 0, true)) {
+      if (depth >= 4 || !this.fitsAt(p, p.x + dx, p.y, p.w, p.h, true, null, true)) return false;
+      const riders = this.ridersOf(p), nx = p.x + dx;
+      const block = this.pieces.filter(q => q !== p && q.rects.length && !riders.includes(q) && ovl(nx, p.y, p.w, p.h, q));
+      if (!block.length || block.some(q => q.tip || !q.grounded)) return false;
+      for (const q of block) if (!this.moveBy(q, dx, depth + 1)) return false;
+      if (!this.fits(p, dx, 0, true)) return false;
+    }
     const s = this.scene, k = s.kid, riders = this.ridersOf(p), its = this.itemsOn(p), onIt = k && !s.dead && this.onPiece(k, p);
     p.x += dx; this.syncRects(p);
-    if ((depth || 0) < 4) riders.forEach(q => this.moveBy(q, dx, (depth || 0) + 1));
+    // what stands on it goes along; a light thing (a box) lags a pixel in three, wobbling, so it
+    // creeps to the back edge and drops off
+    if (depth < 4) riders.forEach(q => {
+      if (FURN[q.kind].light) { q.carry = (q.carry || 0) + 1; q.wob = Math.max(q.wob, 0.12); if (q.carry % 3 === 0) return; }
+      this.moveBy(q, dx, depth + 1);
+    });
     // loose things lag a little behind and wobble, so they creep toward the edge and drop off
     its.forEach(it => { it.carry++; if (it.carry % 3 && this.itemFits(it, it.x + dx, it.y)) it.x += dx; it.wob = Math.max(it.wob, 0.12); });
     if (onIt && !s.boxHits(k.x + dx, k.y, k.w, k.h)) k.x += dx;
@@ -552,9 +572,10 @@ const Furniture = {
   },
 
   // ---------------------------------------------------------------- what she does to them
-  // a run into it: over it goes, or it thuds and what is on it jumps
+  // walking into it at full speed: a lamp goes over; anything else thuds and what is on it jumps
+  // (then she pushes it)
   impact(p, d) {
-    if (FURN[p.kind].tip && !FURN[p.kind].steady && p.pose === 'up') { if (this.tip(p, d)) return; }
+    if (FURN[p.kind].wobbly && p.pose === 'up') { if (this.tip(p, d)) return; }
     this.shake(p, d, 2); this.knock(p);
     if (FURN[p.kind].light) p.slide += d * 6;
   },
@@ -564,17 +585,23 @@ const Furniture = {
     const F = FURN[p.kind]; if (!F.tip || p.tip) return false;
     const floor = p.y + p.h;
     if (p.pose === 'up') {
-      const [dw, dh] = F.down, x0 = d > 0 ? p.x : p.x + p.w - dw, ps = F.soft ? [] : [[0, 0, dw, dh]];
+      const [dw, dh] = F.down, ps = F.soft ? [] : [[0, 0, dw, dh]];
       // room to lie down: clear of everything (a soft one, lying flat, only of walls), and not
-      // on her; if something is in the way it lies a little short of it
-      const room = xx => F.soft ? this.tilesClear(xx, floor - dh, dw, dh) : this.fitsAt(p, xx, floor - dh, dw, dh, true, ps) && !this.kidIn(xx, floor - dh, dw, dh);
-      let at = null;
-      for (let s = 0; s <= dw && at == null; s++) if (room(x0 - d * s)) at = x0 - d * s;
+      // on her; if something is in the way it lies a little short of it. No room away from her
+      // (pushed up against a table, say): it goes over the other way, and she steps back
+      const lie = (dd, kid) => {
+        const x0 = dd > 0 ? p.x : p.x + p.w - dw;
+        const room = xx => F.soft ? this.tilesClear(xx, floor - dh, dw, dh) : this.fitsAt(p, xx, floor - dh, dw, dh, kid, ps) && !(kid && this.kidIn(xx, floor - dh, dw, dh));
+        for (let s = 0; s <= dw; s++) if (room(x0 - dd * s)) return x0 - dd * s;
+        return null;
+      };
+      let dir = d, at = lie(d, true);
+      if (at == null) { dir = -d; at = lie(-d, false); }
       if (at == null) return false;
-      p.tip = { to: 'down', t: 0, dir: d, x: at };
+      p.tip = { to: 'down', t: 0, dir, x: at };
       Sound.tone(260, 0.05, 'square', 0.012, 200);
       // what was on it goes flying
-      this.itemsOn(p).forEach(it => { it.vx = d * 55; it.vy = -70; it.wob = 0.3; });
+      this.itemsOn(p).forEach(it => { it.vx = dir * 55; it.vy = -70; it.wob = 0.3; });
       return true;
     }
     const w = p.uw, h = p.uh, x0 = p.x + Math.round((p.w - w) / 2);
@@ -593,13 +620,17 @@ const Furniture = {
   kidIn(x, y, w, h) { const k = this.scene.kid; return !!(k && ovl(x, y, w, h, k)); },
   // K: the thing in front of her (not the one she stands on)
   strikeTarget(k) {
-    const f = k.face || 1, bx = f > 0 ? k.x + k.w - 2 : k.x - 12, by = k.y - 6, bw = 14, bh = k.h + 6, cx = k.x + k.w / 2;
+    const f = k.face || 1, bx = f > 0 ? k.x + k.w - 2 : k.x - 14, by = k.y - 10, bw = 16, bh = k.h + 10, cx = k.x + k.w / 2;
     let best = null, bd = 1e9;
     this.pieces.forEach(p => {
       if (p.tip || this.onPiece(k, p)) return;
       if (!ovl(bx, by, bw, bh, p)) return;
       // the nearest, and the one on top before the one under it (a box on a trunk)
-      const d = Math.abs(p.x + p.w / 2 - cx) + (p.y + p.h - (k.y + k.h)) * 0.6; if (d < bd) { bd = d; best = { p }; }
+      // and a chair, stool, bin, lamp or box right against her before a cup on a table behind it
+      const top = this.pieces.some(q => q !== p && this.ridersOf(q).includes(p)) ? -12 : 0;
+      const gap = Math.max(p.x - (k.x + k.w), k.x - (p.x + p.w), 0), F = FURN[p.kind];
+      const close = (F.tip || F.light) && gap <= 2 && p.y + p.h > k.y ? -20 : 0;
+      const d = Math.abs(p.x + p.w / 2 - cx) + (p.y + p.h - (k.y + k.h)) * 0.6 + top + close; if (d < bd) { bd = d; best = { p }; }
     });
     this.items.forEach(it => {
       if (it.broken || !ovl(bx, by, bw, bh, it)) return;
@@ -615,6 +646,22 @@ const Furniture = {
     if (F.light) { p.slide += d * 18; this.knock(p); this.shake(p, d, 1); return; }
     // too heavy to move far: it shifts a pixel and everything on it jumps
     this.moveBy(p, d); this.shake(p, d, 2); this.knock(p);
+  },
+  // a bump from below: things on rect r jump away from her (or, right over her head, toward the
+  // nearer end); a box slides most of the way, so two or three bumps knock it off
+  bonk(r, k) {
+    const cx = k.x + k.w / 2, on = (x, w, bottom) => Math.abs(bottom - r.y) < 0.5 && x < r.x + r.w && x + w > r.x;
+    const away = x => Math.abs(x - cx) >= 3 ? Math.sign(x - cx) : (x - r.x < r.x + r.w - x ? -1 : 1);
+    let hit = false;
+    this.pieces.forEach(p => {
+      if (p.tip || p === r.piece || !on(p.x, p.w, p.y + p.h)) return;
+      const d = away(p.x + p.w / 2); hit = true; p.wob = 0.3;
+      if (FURN[p.kind].light) p.slide += d * 14; else this.moveBy(p, d);
+      this.shake(p, d, 1);
+    });
+    this.items.forEach(it => { if (it.broken || !on(it.x, it.w, it.y + it.h)) return; hit = true; it.vx = away(it.x + it.w / 2) * 45; it.vy = -60; it.wob = 0.3; });
+    if (r.piece) { this.shake(r.piece, 0, 1); hit = true; }
+    if (hit) { Sound.noise(0.06, 0.04, 600); Sound.tone(120, 0.06, 'triangle', 0.02, 90); }
   },
   nearPiece(k) {
     let best = null, bd = 12;
@@ -711,6 +758,9 @@ const Furniture = {
     if (it.broken) return;
     it.wob = Math.max(0, it.wob - dt); it.kick = Math.max(0, it.kick - dt);
     const grounded = !this.itemFits(it, it.x, it.y + 1);
+    // resting on something: a fall that ended exactly on a pixel lands here (and breaks, or bounces)
+    if (grounded && it.vy > 0) { this.landItem(it); it.ay = 0; }
+    if (it.broken) return;
     if (grounded && it.vy >= 0) { it.vy = 0; it.ay = 0; const f = 420 * dt; it.vx = Math.abs(it.vx) <= f ? 0 : it.vx - Math.sign(it.vx) * f; }
     else it.vy = Math.min(MAXF, it.vy + GRAV * dt);
     it.ax += it.vx * dt;
@@ -727,7 +777,7 @@ const Furniture = {
   },
   landItem(it) {
     const v = it.vy; it.vy = 0;
-    if (it.fragile && v > 120) { // a fall of about 10 px or more: off a table, say
+    if (it.fragile && v > 100) { // a fall of about 7 px or more: off any table
       it.broken = true; it.shards = [];
       for (let i = 0; i < 5; i++) it.shards.push([Math.round((i - 2) * (2 + (i % 2))), i % 3 === 0 ? 'b' : 'a']);
       Sound.noise(0.1, 0.05, 5200); Sound.tone(2400, 0.05, 'square', 0.01, 1800);
@@ -745,6 +795,8 @@ const Furniture = {
     });
     // a hard landing on top: what is on it jumps
     if (this.preAir && k.onGround && this.preVy > 150) this.pieces.forEach(p => { if (this.onPiece(k, p)) this.shake(p, 0, 1); });
+    // her head bumps a shelf or a piece from below: what stands on it jumps
+    if (live && this.preVy < -30 && !k.onGround && k.vy === 0) { const r = s.props.find(r => r.solid !== false && ovl(k.x, k.y - 1, k.w, 1, r)); if (r) this.bonk(r, k); }
     // loose things on the floor get kicked when she walks through them
     if (live && Math.abs(k.vx) > 25) this.items.forEach(it => {
       if (it.broken || it.kick > 0 || !ovl(it.x, it.y, it.w, it.h, k) || Math.abs(k.y + k.h - (it.y + it.h)) > 2) return;

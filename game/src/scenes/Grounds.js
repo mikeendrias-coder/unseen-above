@@ -372,7 +372,7 @@ export class Grounds extends SideEpisode {
     if (x < 15) return overlay.hint('A and D to walk, Space to jump. J to look at things.');
     if (x < 34) return overlay.hint('Stay in the hedges’ shadow. Tap Space twice to jump higher.');
     if (x < 38) return overlay.hint('Jump back and forth between the walls to climb up.');
-    if (x < 56) return overlay.hint('The drone only looks straight down. Hide under the bowl or the table.');
+    if (x < 56) return overlay.hint('The drone only looks straight down. Get under the bowl, or crouch under the table.');
     if (x < 64 && k.y > 200) return overlay.hint('Push the crate and stay in its shadow. Then climb it.');
     if (x < 74) return overlay.hint('Ride the cradle up. Its roof hides you from the drone.');
     return overlay.hint('The foam slabs drop a second after you land. Keep moving.');
