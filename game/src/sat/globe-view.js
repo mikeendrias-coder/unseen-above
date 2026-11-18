@@ -16,7 +16,7 @@ export const PAL = {
   1: { surf: ['#1d5a2c', '#154a23', '#0e3519'], grid: '#1a4f27', floor: '#020403', edgeD: '#020403', edgeL: '#3dff74', outline: '#1d7a3a', blur: ['#0d2a14', '#14401f', '#1d7a3a'], beads: ['#c6ffd6', '#ffb347'], beadLo: '#1d7a3a', target: '#ff4d4d', gate: '#c6ffd6', inner: '#04100a', rim: '#1d7a3a' },
   2: { surf: ['#34485e', '#2a3a4c', '#1e2a37'], floor: '#0a1018', edgeD: '#05080c', edgeL: '#7f9fb0', outline: '#5f7f8a', blur: ['#2a3a4c', '#3c5066', '#5f7f8a'], beads: ['#ffb347', '#59d38a'], beadLo: '#0a1018', target: '#ff5a4a', gate: '#c8d6e5', inner: '#121a24', rim: '#5f7f8a' },
   3: { surf: ['#ffffff', '#f3f4f6', '#e2e5ea'], floor: '#aeb7c4', edgeD: '#7a8597', edgeL: '#d5dae1', outline: '#2f3a4a', blur: ['#9aa4b3', '#b7bfcb', '#7a8597'], beads: ['#3b6fd8', '#ff9f1c'], beadLo: '#1b3a80', target: '#d94a4a', gate: '#2f3a4a', inner: '#cfd5de', rim: '#2f3a4a' },
-  4: { surf: ['#7fa4ff', '#4f7fff', '#3a5fd6'], land: ['#3ee6a0', '#21b77e', '#1f9e6e'], ice: '#eef3ff', floor: '#1b0f3a', edgeD: '#1b0f3a', edgeL: '#ffd23f', outline: '#ffffff', blur: ['#b8a8ff', '#ff5fa2', '#4b3a96'], beads: ['#ffd23f', '#3ee6c1'], beadLo: '#1b0f3a', target: '#ff5fa2', gate: '#ffffff', inner: '#2b1a5c', rim: '#ffd23f', thick: true }
+  4: { surf: ['#7fa4ff', '#4f7fff', '#3a5fd6'], land: ['#3ee6a0', '#21b77e', '#1f9e6e'], ice: '#eef3ff', floor: '#1b0f3a', edgeD: '#1b0f3a', edgeL: '#ffd23f', outline: '#ffffff', blur: ['#b8a8ff', '#ff5fa2', '#4b3a96'], beads: ['#ffffff', '#3ee6c1'], beadLo: '#1b0f3a', target: '#ff5fa2', gate: '#ffffff', inner: '#2b1a5c', rim: '#ffd23f', thick: true }
 };
 
 // The far side of the cartoon Earth (the near side is the picture in wins.js): Asia, India,
@@ -119,7 +119,7 @@ export class TurnView {
   }
   paintRing(m) {
     const { w, h, ox, oy, mask, buf, col } = this, S = RING, R = S.R, hwB = S.hw, B = this.B, rows = S.rows, cols = S.cols;
-    const st = Math.sin(S.tilt), ct = Math.cos(S.tilt), colW = 2 * Math.PI / cols, rowH = 2 * hwB / rows, hw = 3.4;
+    const st = Math.sin(S.tilt), ct = Math.cos(S.tilt), colW = 2 * Math.PI / cols, rowH = 2 * hwB / rows, hw = 4;
     const phi = Math.atan2(m[2], m[0]); // the turn about the ring's axis
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const k = j * w + i, x = i - ox, y = j - oy, s = x / R;

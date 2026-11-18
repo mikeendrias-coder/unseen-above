@@ -26,12 +26,22 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
       const y2 = await p.evaluate(() => window.__game.scene.yaw);
       ok('a drag to the left turns it back (' + (y2 - y1).toFixed(2) + ' rad)', y2 - y1 < -0.3);
       await until(() => window.__game.scene.idle);
+      // O shows the same puzzle on the other three screens
+      for (let k = 0; k < 4; k++) { await p.keyboard.press('KeyO'); await until(k => window.__game.scene.skinN === (k + 1) % 4 + 1 && window.__game.scene.clock > 0.2, k); }
+      ok('O cycles the ring through the four screens and back', await p.evaluate(() => window.__game.scene.skinN === 1 && window.__game.scene.level.id === 'ring'));
       await p.evaluate(() => window.__game.scene.restartTake());
       await until(() => window.__game.scene.level && window.__game.scene.clock > 0.3);
     }
     const n = await p.evaluate(() => window.__game.scene.ids.length);
     for (let i = 0; i < n; i++) {
       await until(i => window.__game.scene.levelIdx === i && !window.__game.scene.solved && window.__game.scene.idle, i);
+      if (batch === 3) {
+        // dawdle: the target walks off along its path, and the puzzle can still be finished
+        const t0 = await p.evaluate(() => { const s = window.__game.scene; s.levelT = 29.8; return s.targets[0]; });
+        await until(t0 => window.__game.scene.targets[0] !== t0, t0, 10000);
+        ok('batch 3: the target drifts when you are slow (' + t0 + ' to ' + await p.evaluate(() => window.__game.scene.targets[0]) + ')', true);
+        await until(() => window.__game.scene.idle && !window.__game.scene.driftAnim);
+      }
       const t0 = Date.now();
       const steps = await p.evaluate(() => window.__game.scene.autoSolve(0, 0.12));
       const id = await p.evaluate(() => window.__game.scene.level.id);

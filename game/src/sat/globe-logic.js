@@ -11,7 +11,7 @@
 
 const D = Math.PI / 180;
 export const GLOBE = { rows: 6, cols: 12, latN: 72 * D, rowH: 24 * D, colW: 30 * D, step: 15 * D, yawN: 24, pMin: -6, pMax: 6 };
-export const RING = { rows: 3, cols: 16, R: 66, hw: 24, tilt: -35 * D, step: 11.25 * D, phiN: 32 };
+export const RING = { rows: 3, cols: 16, R: 66, hw: 28, tilt: -35 * D, step: 11.25 * D, phiN: 32 };
 // how steep a groove must be before a bead rolls (friction)
 export const SLOPE = 0.15;
 const norm = v => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -213,9 +213,10 @@ export function mazeLinks(seed, loops) {
   }
   return links;
 }
-// the orientation that puts a cell nearest the low point (where a bead rests)
+// the orientation that puts a cell nearest the low point (where a bead rests), with the
+// equator toward us rather than a pole where it can
 export function lowOrientation(B, cell) {
   let bo = 0, bs = -9; const g = B.g, p = [B.pos[cell * 3], B.pos[cell * 3 + 1], B.pos[cell * 3 + 2]];
-  for (let o = 0; o < B.nO; o++) { const v = apply(B.matrix(o), p[0], p[1], p[2]), l = Math.hypot(v[0], v[1], v[2]), s = (v[0] * g[0] + v[1] * g[1] + v[2] * g[2]) / l; if (s > bs) { bs = s; bo = o; } }
+  for (let o = 0; o < B.nO; o++) { const v = apply(B.matrix(o), p[0], p[1], p[2]), l = Math.hypot(v[0], v[1], v[2]), s = (v[0] * g[0] + v[1] * g[1] + v[2] * g[2]) / l - (B.ring ? 0 : 0.35 * Math.abs(B.angles(o).pitch) / (Math.PI / 2)); if (s > bs) { bs = s; bo = o; } }
   return bo;
 }
