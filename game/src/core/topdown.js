@@ -59,8 +59,10 @@ export function darkFill(ctx) {
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
-// A canvas the CPU draws on. The dark layers are drawn and uploaded to the GPU whenever they
-// change; a GPU canvas would be read back for every upload (Nov 18 perf pass: the stalls).
+// A canvas the CPU draws on, so sending a dark layer to the GPU is a plain copy. Measured Nov 18
+// on a real GPU (tests/perf.js, AMD, ANGLE on OpenGL): before this pass each dark upload took
+// about 200 ms (the east wing ran at 4 frames a second, the bedroom at 7 to 10). This flag alone
+// did not fix it; drawing the layer from prebuilt pictures and only when it changed did.
 export function cpuCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d', { willReadFrequently: true }); return c; }
 const checkers = new WeakMap();
 // a 2 x 2 checker pattern for this canvas, lined up with the world (parity = (view x + view y) % 2).
@@ -73,6 +75,12 @@ export function checker(ctx, parity) {
   }
   return pats[((parity % 2) + 2) % 2];
 }
+// whether a light (canvas px) touches a W x H canvas: the test hardHoles cuts with. Lights off the
+// view are left out of the dark's key, so a lamp moving out of sight does not redraw it.
+export function holeShows(l, W = 322, H = 182) {
+  const r = Math.round(l.a == null || l.a >= 0.75 ? l.r : l.r * 0.8), x = Math.round(l.x), y = Math.round(l.y);
+  return r > 0 && x >= -r && y >= -r && x <= W + r && y <= H + r;
+}
 // a key for a set of lights (canvas px), to tell whether the dark has to be drawn again
 export function lightsKey(lights) { let k = ''; for (const l of lights) k += Math.round(l.x) + ',' + Math.round(l.y) + ',' + l.r + ',' + (l.a == null ? 1 : l.a) + ';'; return k; }
 // Cut lights out of the dark: each light { x, y, r, a } (canvas px). A strong light (a >= 0.75,
@@ -83,7 +91,7 @@ export function hardHoles(ctx, lights, parity) {
   ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1;
   lights.forEach(l => {
     const strong = l.a == null || l.a >= 0.75, r = Math.round(strong ? l.r : l.r * 0.8), ri = strong ? Math.round(l.r * 0.6) : -1, x = Math.round(l.x), y = Math.round(l.y);
-    if (r <= 0 || x < -r || y < -r || x > W + r || y > H + r) return;
+    if (!holeShows(l, W, H)) return;
     for (let dy = -r; dy <= r; dy++) {
       const yy = y + dy; if (yy < 0 || yy >= H) continue;
       const ho = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35), hi = ri >= 0 && Math.abs(dy) <= ri ? Math.floor(Math.sqrt(ri * ri - dy * dy) + 0.35) : -1;
@@ -361,7 +369,7 @@ export class TopDownEpisode extends Phaser.Scene {
   drawDark() {
     const ctx = this.darkCanvas.getContext('2d'), v = this.view;
     const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 52 }].concat(this.lights);
-    const holes = all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a }));
+    const holes = all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a })).filter(l => holeShows(l));
     this.darkImg.setPosition(v.x - 1, v.y - 1);
     const key = v.x + ',' + v.y + '|' + lightsKey(holes);
     if (key === this.darkKey) return;

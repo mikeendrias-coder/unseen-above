@@ -37,23 +37,24 @@ export const Sound = (() => {
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g); out(g, wet); o.start(t0); o.stop(t0 + dur + 0.05);
   };
-  // Noise bursts: the buffers are made once per length (two takes of each, used in turn) instead
-  // of on every call (Nov 18 perf pass: a flash, a crash or a run of footsteps made dozens).
+  // Noise bursts: the buffers are made once per length (four takes of each, picked at random, and
+  // each played a little faster or slower) instead of on every call (Nov 18 perf pass: a flash, a
+  // crash or a run of footsteps made dozens). Repeated steps do not sound like one loop.
   const bursts = new Map();
   const burst = (c, dur) => {
     const key = Math.round(dur * 1000); let e = bursts.get(key);
     if (!e) {
       const mk = () => { const n = Math.max(1, Math.floor(c.sampleRate * dur)), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) { const u = 1 - i / n; d[i] = (Math.random() * 2 - 1) * u * u; } return buf; };
-      e = { bufs: [mk(), mk()], i: 0 }; bursts.set(key, e);
+      e = { bufs: [mk(), mk(), mk(), mk()], i: 0 }; bursts.set(key, e);
     }
-    e.i ^= 1; return e.bufs[e.i];
+    e.i = (e.i + 1 + Math.floor(Math.random() * 3)) % 4; return e.bufs[e.i];
   };
   const noise = (dur, vol, cutoff) => {
     const c = ensure(); if (!c) return;
     const buf = burst(c, dur);
     const s = c.createBufferSource(), g = c.createGain(), f = c.createBiquadFilter();
     f.type = 'lowpass'; f.frequency.value = cutoff || 4000;
-    s.buffer = buf; g.gain.value = vol || 0.12; s.connect(f); f.connect(g); out(g, 0.2); s.start();
+    s.buffer = buf; s.playbackRate.value = 0.9 + Math.random() * 0.2; g.gain.value = vol || 0.12; s.connect(f); f.connect(g); out(g, 0.2); s.start();
   };
   // brown noise for the beds, made once per length and shared (a bed starts on a random offset)
   const browns = new Map();

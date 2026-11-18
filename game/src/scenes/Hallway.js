@@ -720,10 +720,9 @@ export class Hallway extends SideEpisode {
     this.strikeFx.update(this.game.loop.delta / 1000);
     const L = this.lamp; if (L.lock > 0 && !this.dead) { const k = this.kid, r = 9 - Math.min(1, L.lock / LEVEL.lamp.lock) * 7, cx = k.x + k.w / 2, cy = k.y + k.h / 2; fx.lineStyle(1, n(this.P.hazard), 1); fx.strokeRect(Math.round(cx - 4 - r), Math.round(cy - 4 - r), Math.round(8 + 2 * r), Math.round(8 + 2 * r)); }
   }
-  // Lights off: solid dark with hard holes where there is light (her, the console, the creator).
-  // A flash lights the whole stage for its moment.
-  // The dark of the last round: solid, hard round holes where there is light, a checker ring at
-  // their edge (the look of PixLayer.dark). Nov 18 perf pass: worked out only inside each hole's
+  // The dark of the last round (lights off): solid, hard round holes where there is light (her,
+  // the console, the creator), a checker ring at their edge (the look of PixLayer.dark). A flash
+  // lights the whole stage for its moment. Nov 18 perf pass: worked out only inside each hole's
   // box (no square root for the whole picture), drawn on a canvas the CPU owns, and drawn and
   // uploaded only when the view or a hole moved. Round three ran at 20 frames a second before.
   drawDarkness() {

@@ -21,7 +21,7 @@ import { BEDROOM, NOTICE, lineSeconds } from '../data/dialogue.js';
 import { Glasses } from '../core/glasses.js';
 import { reviewKeys, presenting } from '../core/review.js';
 import { fx } from '../core/fx.js';
-import { darkFill, hardHoles, checker, pxCircle } from '../core/topdown.js';
+import { darkFill, hardHoles, holeShows, checker, pxCircle, cpuCanvas } from '../core/topdown.js';
 import { Marks, Gold, pushClear } from '../core/props.js';
 import { ASH } from '../art/palettes.js';
 
@@ -50,9 +50,6 @@ function rowsOf(pts) {
   if (pts.length > 6) rowCache.set(pts, r);
   return r;
 }
-// a canvas the CPU draws on (the dark layer is drawn and uploaded every time it changes; a GPU
-// canvas would have to be read back for each upload, which is what stalled the flashes)
-function cpuCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d', { willReadFrequently: true }); return c; }
 // red patterns for the dark canvas: a flash paints what it touches in red pixels. One pattern per
 // view parity, made once (no transform on every use).
 const redPats = new WeakMap();
@@ -66,6 +63,9 @@ function redPattern(ctx, dense, parity) {
 }
 // a short key for a light's shape: a cached cone by its identity, anything else by its points
 const polyIds = new WeakMap(); let polyN = 0;
+// a shape's left and right (world x), to leave shapes off the view out of the dark
+const polyXs = new WeakMap();
+const polySpan = pts => { let r = polyXs.get(pts); if (r) return r; let a = Infinity, b = -Infinity; for (const q of pts) { if (q.x < a) a = q.x; if (q.x > b) b = q.x; } r = [a, b]; if (pts.length > 6) polyXs.set(pts, r); return r; };
 const polyKey = pts => { if (pts.length <= 6) return pts.map(q => Math.round(q.x * 4) + ' ' + Math.round(q.y * 4)).join(' '); let id = polyIds.get(pts); if (!id) { id = ++polyN; polyIds.set(pts, id); } return '#' + id; };
 // a pixel line on a Graphics, solid or dotted
 function pxLine(g, x0, y0, x1, y1, color, dot) {
@@ -143,7 +143,7 @@ export class Bedroom extends SideEpisode {
     this.beds = { hum: Sound.hum(0.012), wind: Sound.wind(0.02), breath: Sound.breath(0.0001) };
     Music.play('dark', { fadeIn: 2.5 });
     this.events.once('shutdown', () => { Object.values(this.beds).forEach(b => b.stop(0.4)); overlay.clearCaption(); });
-    this.onWake = () => { this.updateView(1); this.beds.hum.set(0.012, 0.5); this.beds.wind.set(0.02, 0.5); };
+    this.onWake = () => { this.updateView(1); this.beds.hum.set(0.012, 0.5); this.beds.wind.set(0.02, 0.5); this.breathV = null; };
     // back from the break: the same scene, from the kneel, with nothing left to say
     if (data.rerun) { this.rerun = true; this.bag.have = true; this.goInside(true); }
     else {
@@ -609,9 +609,15 @@ export class Bedroom extends SideEpisode {
       if (this.darkKey !== 'night') { this.darkKey = 'night'; darkFill(ctx); ctx.clearRect(0, 0, 322, 182); ctx.drawImage(this.nightRoom(), 0, 0); this.darkTex.refresh(); }
       this.darkImg.setPosition(vx - 1, -1); return;
     }
+    // only what touches the view goes into the key and onto the canvas (a camera's lamp or a
+    // flash far off does not redraw it)
+    const ox = 1 - vx, oy = 1, onView = pts => { const [a, b] = polySpan(pts); return b + ox >= -1 && a + ox <= 323; };
+    const dots = [], polys = this.lights.filter(l => l.poly && onView(l.poly)), redsIn = (reds || []).filter(r => onView(r.poly));
+    this.lights.forEach(l => { if (!l.poly) { const h = { x: l.x + ox, y: l.y + oy, r: l.r, a: l.a }; if (holeShows(h)) dots.push(h); } });
     const pres = presenting(), sig = this.worldSig(), parts = [vx, pres ? 1 : 0, sig];
-    this.lights.forEach(l => { if (l.poly) parts.push('p' + (l.dither ? 'd' : ''), polyKey(l.poly)); else parts.push(Math.round(l.x), Math.round(l.y), l.r, l.a == null ? 1 : l.a); });
-    (reds || []).forEach(r => parts.push('r' + (r.dense ? 'd' : ''), polyKey(r.poly)));
+    dots.forEach(h => parts.push(Math.round(h.x), Math.round(h.y), h.r, h.a == null ? 1 : h.a));
+    polys.forEach(l => parts.push('p' + (l.dither ? 'd' : ''), polyKey(l.poly)));
+    redsIn.forEach(r => parts.push('r' + (r.dense ? 'd' : ''), polyKey(r.poly)));
     const key = parts.join(',');
     this.darkImg.setPosition(vx - 1, -1);
     if (key === this.darkKey) return;
@@ -622,18 +628,16 @@ export class Bedroom extends SideEpisode {
     if (ek !== this.edgeKey) { this.edgeKey = ek; this.houseEdges(pres); }
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, 322, 182); ctx.drawImage(this.edgeC, vx, 0, 322, 182, 0, 0, 322, 182);
-    const ox = 1 - vx, oy = 1;
-    hardHoles(ctx, this.lights.filter(l => !l.poly).map(l => ({ x: l.x + ox, y: l.y + oy, r: l.r, a: l.a })), vx);
+    hardHoles(ctx, dots, vx);
     // shapes of light (a flash's cone, a window, moonlight through a hole): row by row, lit or checker
     ctx.globalCompositeOperation = 'destination-out';
-    this.lights.forEach(l => {
-      if (!l.poly) return;
+    polys.forEach(l => {
       ctx.fillStyle = l.dither ? checker(ctx, vx) : '#000';
       const r = rowsOf(l.poly); for (let i = 0; i < r.length; i += 3) ctx.fillRect(r[i] + ox, r[i + 1] + oy, r[i + 2], 1);
     });
     ctx.globalCompositeOperation = 'source-over';
     // the flash itself: everything in the cone, her too, picked out in red pixels
-    (reds || []).forEach(rd => { ctx.fillStyle = redPattern(ctx, rd.dense, vx); const r = rowsOf(rd.poly); for (let i = 0; i < r.length; i += 3) ctx.fillRect(r[i] + ox, r[i + 1] + oy, r[i + 2], 1); });
+    redsIn.forEach(rd => { ctx.fillStyle = redPattern(ctx, rd.dense, vx); const r = rowsOf(rd.poly); for (let i = 0; i < r.length; i += 3) ctx.fillRect(r[i] + ox, r[i + 1] + oy, r[i + 2], 1); });
     this.darkTex.refresh();
   }
 

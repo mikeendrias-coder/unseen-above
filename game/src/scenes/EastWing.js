@@ -12,7 +12,7 @@ import { pixText } from '../art/pixfont.js';
 import { LOOKS, ASH } from '../art/palettes.js';
 import { T, W, H, LEVEL, buildMap, paintMap, isSolid, isOpaque, isWall, isNoisy, roomAt, nightCanvas } from '../art/eastwing.js';
 import { Glasses } from '../core/glasses.js';
-import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle, darkFill, hardHoles, lightsKey, cpuCanvas, MAX_PEBBLES } from '../core/topdown.js';
+import { TopDownEpisode, makeTopSprites, LOCK_TD, pxCircle, darkFill, hardHoles, holeShows, lightsKey, cpuCanvas, MAX_PEBBLES } from '../core/topdown.js';
 import { Marks, Gold } from '../core/props.js';
 import { Sound } from '../core/sound.js';
 import { state } from '../core/state.js';
@@ -557,7 +557,7 @@ export class EastWing extends TopDownEpisode {
   drawDark() {
     const ctx = this.darkCanvas.getContext('2d'), v = this.view;
     const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 52 }].concat(this.lights);
-    const holes = all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a }));
+    const holes = all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a })).filter(l => holeShows(l));
     this.darkImg.setPosition(v.x - 1, v.y - 1);
     const key = v.x + ',' + v.y + '|' + lightsKey(holes);
     if (key === this.darkKey) return;
