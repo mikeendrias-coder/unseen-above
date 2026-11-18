@@ -24,6 +24,14 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 export const PARTS = {};
 for (let n = 1; n <= 5; n++) PARTS[n] = (FROM_PAPER && FROM_PAPER[n]) || { n, roman: ROMAN[n - 1], title: 'Part ' + ROMAN[n - 1], text: 'Part ' + ROMAN[n - 1] + ' text goes here.', placeholder: true };
 export const BOOK_COUNT = 5;
+// what she says after reading each book for the first time (one per Part of the paper)
+const SAYS = {
+  1: 'Somebody wrote this all down. About satellites.',
+  2: 'One country gets a blur. We get nothing.',
+  3: 'Nobody signs. They just ask nicely, and it happens.',
+  4: 'So nobody is looking out for people like us.',
+  5: 'They were supposed to watch the watchers.'
+};
 export { paperUrl, openPaper };
 
 // ------------------------------------------------------------------ the book, in pixels
@@ -168,6 +176,8 @@ export function openBook(scene, n) {
       if (scene.ctl) scene.ctl.endFrame();
       if (scene.input && scene.input.keyboard && scene.input.keyboard.resetKeys) scene.input.keyboard.resetKeys();
       if (fresh) overlay.note('BOOKS ' + booksFound() + '/' + BOOK_COUNT, 1800);
+      // the first time she reads each one, she says something about it (Michael, Nov 18)
+      if (fresh && SAYS[n]) overlay.caption('SISTER', SAYS[n], { ms: 3600 });
     }, 0);
   };
   const closeIt = () => close(false);
