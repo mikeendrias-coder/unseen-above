@@ -1,0 +1,32 @@
+{
+  "titles": { "1": "REQUEST FOR LOCATION", "2": "TASKING REQUEST", "3": "LOCATION REQUEST", "4": "ENTRY TICKET!" },
+  "forms": { "1": "FORM 7A", "2": "FORM 7A", "3": "FORM 7A", "4": "ADMIT ONE" },
+  "batches": {
+    "1": {
+      "bulletin": "BULLETIN 1: CASE NUMBER REQUIRED.",
+      "fields": { "case": "", "area": "ESTATE 07, GALLERY", "purpose": "LOCATE SUBJECT", "signed": "~" },
+      "flaw": "case",
+      "notes": { "case": "MISSING" }
+    },
+    "2": {
+      "bulletin": "BULLETIN 2: CASE NUMBER NOW OPTIONAL.",
+      "fields": { "case": "", "area": "ESTATE 07, EAST WING", "purpose": "LOCATE SUBJECT", "signed": "" },
+      "flaw": "signed",
+      "notes": { "case": "BLANK. OPTIONAL NOW", "signed": "NOT SIGNED" }
+    },
+    "3": {
+      "bulletin": "BULLETIN 3: NO OPERATOR NAME NEEDED.",
+      "fields": { "case": "", "area": "ESTATE 07, BEDROOM", "purpose": "ENTERTAINMENT", "signed": "~" },
+      "flaw": "purpose",
+      "notes": { "case": "BLANK. OPTIONAL", "purpose": "NOT A REASON" }
+    },
+    "4": {
+      "bulletin": "BULLETIN 4: ALL REQUESTS PRE-APPROVED.",
+      "fields": { "case": "", "area": "EARTH", "purpose": "FIND HER!", "signed": "PLAYER 2" },
+      "flaw": "signed",
+      "notes": { "case": "BLANK. PRE-APPROVED", "signed": "A GAME ACCOUNT" }
+    }
+  },
+  "operator": { "value": "(not required)", "note": "NO NAME ON FILE" },
+  "after": { "approved": "FILED. TRACKING STARTS.", "denied": "DENIAL NOTED. REQUEST PROCEEDS." }
+}
