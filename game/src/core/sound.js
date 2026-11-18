@@ -186,6 +186,16 @@ export const Sound = (() => {
     shutter: vol => { const v = vol || 0.08; noise(0.06, v, 7000); tone(3400, 0.22, 'sine', v * 0.25, 700); },
     // The laser's charge. The satellite plays the same sound when a route is accepted (a clue).
     charge: () => tone(300, 0.55, 'sawtooth', 0.02, 900, 0.2),
+    // Nov 18 feel. Landings by height: 0 a step, 1 a thud with dust, 2 a crack and a stagger.
+    land: tier => {
+      if (tier >= 2) { noise(0.07, 0.16, 3200); tone(74, 0.22, 'sawtooth', 0.05, 38); noise(0.2, 0.1, 520); }
+      else if (tier === 1) { noise(0.1, 0.13, 520); tone(92, 0.14, 'sine', 0.07, 48); }
+      else { noise(0.035, 0.05, 1100); tone(150, 0.04, 'triangle', 0.018, 110); }
+    },
+    // the slate at the start of a take: a wooden clack
+    clack: () => { noise(0.025, 0.12, 6500); tone(330, 0.05, 'triangle', 0.05, 190); setTimeout(() => noise(0.02, 0.09, 5200), 55); },
+    // a rubber stamp on paper (the results slip, BEST)
+    stamp: vol => { const v = vol || 1; noise(0.06, 0.15 * v, 700); tone(112, 0.09, 'sine', 0.06 * v, 60); },
     chime: () => { tone(1568, 0.5, 'sine', 0.03, null, 0.5); setTimeout(() => tone(2093, 0.6, 'sine', 0.025, null, 0.5), 90); },
     toggle() { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.9; return muted; },
     get muted() { return muted; },

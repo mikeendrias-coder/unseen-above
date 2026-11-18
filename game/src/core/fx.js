@@ -1,7 +1,8 @@
 // Flashes and shakes, kept safe. However many things flash at once, the screen flashes at most
 // three times in any second (the WCAG and Xbox limit for seizure risk). With "reduced flashing"
 // on (the pause menu, or a computer that asks for reduced motion) a flash is dim and slow, and
-// with screen shake off nothing shakes. Scenes call these instead of the camera's own.
+// with screen shake off nothing shakes. Scenes call these instead of the camera's own. The view
+// itself only moves when she is hurt or struck (kick); nothing else shakes it.
 import { state } from './state.js';
 import { cg } from '../ui/cg.js';
 import { ASH } from '../art/palettes.js';
@@ -15,6 +16,23 @@ function allow() {
   recent.push(now); return true;
 }
 
+// The kick rides on the camera's shake step (it runs as the camera draws, after the zoom, so
+// its numbers are game pixels), once per camera.
+function rig(cam) {
+  const e = cam.shakeEffect; if (!e || e.__kickRig) return;
+  const own = e.preRender.bind(e);
+  e.preRender = () => {
+    own();
+    const k = cam.__kick, now = performance.now(); if (!k || now < k.from) return;
+    if (now > k.until) { cam.__kick = null; return; }
+    k.i++;
+    const x = (k.i % 2 ? 1 : -1) * k.n, y = k.n > 1 ? (k.i % 4 < 2 ? 1 : -1) : 0;
+    cam.matrix.translate(x, y);
+    cam.__kickMax = Math.max(cam.__kickMax || 0, Math.abs(x), Math.abs(y));
+  };
+  e.__kickRig = true;
+}
+
 export const fx = {
   get reduced() { return !!state.settings.reduceFlash; },
   get shakeOn() { return state.settings.shake !== false; },
@@ -26,7 +44,28 @@ export const fx = {
     const color = red ? ASH.red : lum > 150 ? ASH.bone : lum > 70 ? ASH.ash5 : ASH.ash4;
     cg.flash(color, fx.reduced ? 60 : Math.min(90, ms || 90), fx.reduced ? 'q25' : 'checker');
   },
-  shake(cam, ms, k) { if (cam && fx.shakeOn) cam.shake(ms, fx.reduced ? k * 0.5 : k); },
+  // A shake of the house (a collapse, a chandelier, a door slam). Nov 18 feel rule: the view
+  // moves only when she loses HP or the strike hits her (kick, through juice.hit), so the house
+  // no longer shakes it. Scenes still call this; the sound and the dust carry those moments.
+  shake() { /* the view holds still: see kick */ },
+  // Phaser's own camera shake, turned off for a camera (a few props call it directly): the same
+  // rule as shake. juice.prime calls this for each episode's camera.
+  guard(cam) {
+    if (!cam || cam.__shakeGuard) return;
+    cam.__shakeGuard = true;
+    cam.shake = function () { return this; };
+  },
+  // A kick of at most px game pixels (Nov 18 juice: 1 or 2 px, when she is hurt or struck).
+  // Not Phaser's random shake (at 1 px it often rounds to nothing): whole pixels that alternate
+  // side to side each frame, after a delay (a hit-stop holds still first). Reduced: 1 px.
+  kick(cam, px, ms, house, delay) {
+    if (!cam || !fx.shakeOn) return;
+    const n = fx.reduced ? 1 : Math.max(1, Math.min(house ? 3 : 2, Math.round(px || 1))), t = performance.now() + (delay || 0);
+    rig(cam);
+    const k = cam.__kick;
+    if (k && performance.now() < k.until && k.n > n) return; // a bigger kick is already going
+    cam.__kick = { from: t, until: t + (ms || 120), n, i: 0 };
+  },
   // a flash a scene draws itself (a camera's flash lighting the room): false if it would be one
   // flash too many this second; scale its brightness by fx.level
   allowFlash: allow,

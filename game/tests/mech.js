@@ -49,7 +49,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   if (wall == null) ok('no wall found to test a wall jump on (skipped)', true);
   else {
     await p.keyboard.down('KeyD'); await track();
-    await S(x => { const s = window.__game.scene, k = s.kid; s.placeAt(x); k.y -= 30; k.vy = 0; k.onGround = false; window.__minVx = 0; window.__minVy = 0; }, wall);
+    await S(x => { const s = window.__game.scene, k = s.kid; s.placeAt(x); k.y -= 30; k.vy = 0; k.onGround = false; k.coyote = 0; window.__minVx = 0; window.__minVy = 0; }, wall); // no coyote time left from placeAt
     await until(() => window.__game.scene.kid.wall === 1, 1000);
     await p.keyboard.press('Space'); await p.waitForTimeout(150); await p.keyboard.up('KeyD');
     const after = await untrack();
