@@ -1,5 +1,6 @@
 // The endings (Nov 17, Claude's call, from research/design_pass_nov17.md section 2). Every one
-// ends on the old TV in a dark room on Earth. The playroom picks one, in this order:
+// ends on the old TV in a dark room on Earth: a final beat (ending/beats.js), then the ending
+// screen (ending/finale.js, Nov 18). The playroom picks one, in this order:
 //   END IT ALL   the creator was beaten after giving up (story.killedBroken). No kids, no choice.
 //   THE COUCH    she answers "Sit with them." (secret: she spared the creator and found 5 "what" clues)
 //   LOOK BACK    she answers "Turn it around." (5 "who" clues, or she spared the creator who gave up)
@@ -9,15 +10,17 @@ import { state } from '../core/state.js';
 
 export const WHO_NEEDED = 5, WHAT_NEEDED = 5;
 
+// epitaph: the one line on the ending screen (ending/finale.js), under the ending's name
 export const ENDINGS = [
-  { id: 'vest', title: 'THE VEST', when: 'Default: she asks who picks the lights.' },
-  { id: 'endall', title: 'END IT ALL', when: 'The creator gave up after six deaths, and she hit them nine times anyway.' },
-  { id: 'round2', title: 'ROUND TWO', when: 'She answers "Yes." to round two.' },
-  { id: 'lookback', title: 'LOOK BACK', when: 'She answers "Turn it around." (5 who-aims clues, or she spared the creator who gave up).' },
-  { id: 'couch', title: 'THE COUCH', when: 'Secret. She answers "Sit with them." (she spared the creator and found 5 what-she-is clues).' }
+  { id: 'vest', title: 'THE VEST', epitaph: 'She picked the last light.', when: 'Default: she asks who picks the lights.' },
+  { id: 'endall', title: 'END IT ALL', epitaph: 'Nobody watched. It ran anyway.', when: 'The creator gave up after six deaths, and she hit them nine times anyway.' },
+  { id: 'round2', title: 'ROUND TWO', epitaph: 'Now she picks the lights.', when: 'She answers "Yes." to round two.' },
+  { id: 'lookback', title: 'LOOK BACK', epitaph: 'For once, the kids were on TV.', when: 'She answers "Turn it around." (5 who-aims clues, or she spared the creator who gave up).' },
+  { id: 'couch', title: 'THE COUCH', epitaph: 'She sat down. The show went on.', when: 'Secret. She answers "Sit with them." (she spared the creator and found 5 what-she-is clues).' }
 ];
 export const endingTitle = id => (ENDINGS.find(e => e.id === id) || ENDINGS[0]).title;
 export const endingsSeen = () => ENDINGS.filter(e => state.story.endings[e.id]).length;
+export const endingOf = id => ENDINGS.find(e => e.id === id) || ENDINGS[0];
 
 // The replies she can give at "Are you here for round two?". Story mode opens "Turn it around."
 // for a walkthrough, but never the secret: "Sit with them." shows only when it is earned, or when a

@@ -1,6 +1,6 @@
 // The five endings (Nov 17). From the playroom link with a story set up in the save: which replies
 // the slip offers, and that each reply (or the empty room) plays its ending through to the old
-// TV, recorded as seen, with no end card over the last shot.
+// TV, recorded as seen; then (Nov 18) each final beat, the ending screen, the channels and its buttons.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 const WHAT5 = { footprints: true, drawer: true, oldBody: true, bagNote: true, lostGlasses: true };
@@ -78,6 +78,49 @@ const WHO5 = { statue07: true, request1: true, cameraMoon: true, laserTone: true
   await p.evaluate(() => { window.__game.state.immune = true; location.hash = 'newgame'; });
   await p.waitForTimeout(800);
   ok('#newgame clears the story, keeps story mode', await p.evaluate(() => { const st = window.__unseen.state; return Object.keys(st.story.endings).length === 0 && !st.story.killedBroken && st.immune === true && location.hash === ''; }));
+  // Nov 18 (Michael: "nothing to skip or is happening, no ending screen"): every ending plays a
+  // final beat that moves, Enter or a click skips it, then the ending screen; the TV flips channels
+  const spot = (px, py) => p.evaluate(([x, y]) => { const c = window.__game.scene.game.canvas.getBoundingClientRect(), S = window.__unseen.display.S, k = c.width / window.__game.scene.game.canvas.width; return { x: c.left + x * k * S, y: c.top + y * k * S }; }, [px, py]);
+  const KINDS = [['moon', 'vest'], ['rerun', 'endall'], ['ridge', 'round2'], ['playroom', 'lookback'], ['couch', 'couch']];
+  await open({});
+  for (const [kind, id] of KINDS) {
+    await p.evaluate(([k, i]) => window.__game.scene.showLast(k, i), [kind, id]);
+    const len = await p.evaluate(() => window.__finale.beat.end);
+    await until(() => window.__finale.t > 4);
+    const a = await p.evaluate(() => window.__game.scene.tvCanvas.toDataURL());
+    await until(() => window.__finale.t > 6.5);
+    const moved = a !== await p.evaluate(() => window.__game.scene.tvCanvas.toDataURL());
+    const skipBy = kind === 'moon' ? 'Enter' : 'click';
+    if (skipBy === 'Enter') await p.keyboard.press('Enter'); else { const q = await spot(150, 60); await p.mouse.click(q.x, q.y); }
+    await until(() => window.__finale.phase === 'card', null, 5000);
+    ok(id + ': a ' + len + ' s final beat that moves, skipped with ' + skipBy, len >= 15 && len <= 40 && moved);
+  }
+  ok('the ending screen counts every ending found: ' + await p.evaluate(() => Object.keys(window.__game.state.story.endings).join(',')), await p.evaluate(() => Object.keys(window.__game.state.story.endings).length === 5));
+  // TV AGAIN: A and D or the knobs flip about five channels; Enter goes back to the form
+  await until(() => window.__finale.cardT > 0.5, null, 5000);
+  await p.keyboard.press('Enter');
+  await until(() => window.__finale.phase === 'tv', null, 3000);
+  const names = [];
+  for (let i = 0; i < 6; i++) { names.push(await p.evaluate(() => { const c = window.__finale.channel; return 'CH ' + c.n + (c.name ? ' ' + c.name : ''); })); await p.keyboard.press('KeyD'); await p.waitForTimeout(120); }
+  ok('TV AGAIN: D flips through ' + names.join(', '), new Set(names).size === 6 && await p.evaluate(() => window.__finale.ch === 0));
+  const knob = await spot(239, 112); await p.mouse.click(knob.x, knob.y); await p.waitForTimeout(120);
+  ok('a click on the bottom knob turns the channel down: ' + await p.evaluate(() => window.__finale.channel.n), await p.evaluate(() => window.__finale.channel.n === 44));
+  await p.keyboard.press('Enter'); await until(() => window.__finale.phase === 'card', null, 3000);
+  ok('Enter goes back to the ending screen', true);
+  // the climax takes the set back: flip away during LOOK BACK, the show brings channel 7 back
+  await open({});
+  await p.evaluate(() => window.__game.scene.showLast('playroom', 'lookback'));
+  await until(() => window.__finale.t > 5); await p.keyboard.press('KeyA');
+  ok('during the beat A flips away: ' + await p.evaluate(() => window.__finale.channel.n), await p.evaluate(() => window.__finale.ch !== 0));
+  await until(() => window.__finale.t > window.__finale.beat.climax + 0.2, null, 40000);
+  ok('at the climax the show takes the set back to channel 7', await p.evaluate(() => window.__finale.ch === 0));
+  await until(() => window.__finale.phase === 'card', null, 30000);
+  ok('left alone, the beat runs out into the ending screen', true);
+  // CHAPTERS: the title screen, its chapter list open
+  await until(() => window.__finale.cardT > 0.5, null, 5000);
+  await p.keyboard.press('KeyD'); await p.keyboard.press('Enter');
+  await until(() => { const tv = document.getElementById('tv'), l = document.getElementById('chapters'); return tv && !tv.hidden && l && !l.hidden; }, null, 8000);
+  ok('CHAPTERS opens the title screen with the chapter list', true);
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
   await b.close();
 })().catch(e => { console.log('FAIL ' + e.message.split('\n')[0]); process.exit(1); });

@@ -13,6 +13,8 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.goto(BASE + '/local.html?scene=kids'); await p.click('#start');
   await until(() => window.__game && window.__game.scene && window.__game.scene.sys.settings.key === 'kids');
   ok('kids starts on its own, nothing embedded: ' + await active(), (await active()) === 'kids');
+  await until(() => window.__game.scene.t > 2, null, 30000);
+  ok('their screen shows the game she plays: the globe show, the girl the target', await p.evaluate(() => window.__game.scene.show.visible));
   await until(() => window.__game.scene.solvedAt != null, null, 30000); ok('the kids finish the round', true);
   await until(() => window.__game.scene.feed.visible, null, 30000); ok('the screen cuts to the feed from Earth', true);
   await until(() => window.__game.scene.hitAt != null, null, 30000); ok('the satellite strikes the girl on the feed', true);

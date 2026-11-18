@@ -430,31 +430,9 @@ export function paintSister(P) {
   return p;
 }
 
-// ------------------------------------------------------------------ the kids' game
-// The game the kids play on their giant screen, the same in their room (Kids.js) and when she
-// walks in (Moon.js): a 7 x 7 board where a gold path draws itself from target to target, and in
-// the corner the feed from Earth, a small girl on the grounds at night. g is a Phaser Graphics.
+// ------------------------------------------------------------------ screens in the playroom
+// (the kids' game itself is ending/showscreen.js: the batch 4 globe show, Nov 18)
 const hx = c => parseInt(c.slice(1), 16);
-export const BOARD = { cols: 7, rows: 7, cs: 9,
-  path: [[0, 6], [1, 6], [2, 6], [2, 5], [2, 4], [3, 4], [4, 4], [4, 3], [4, 2], [5, 2], [6, 2], [6, 1], [6, 0]],
-  targets: [[0, 6], [4, 4], [6, 0]] };
-// u: how many cells of the path are drawn (0 to path.length)
-export function drawBoard(g, bx, by, u) {
-  const B = BOARD, cs = B.cs;
-  g.fillStyle(hx('#2e3036'), 1);
-  for (let j = 0; j < B.rows; j++) for (let i = 0; i < B.cols; i++) g.fillRect(bx + i * cs + 1, by + j * cs + 1, cs - 2, cs - 2);
-  g.fillStyle(hx(M.trim), 1);
-  for (let i = 0; i < Math.min(B.path.length, Math.floor(u)); i++) { const [px, py] = B.path[i]; g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); }
-  B.targets.forEach(([px, py], i) => { const reached = Math.floor(u) > B.path.findIndex(q => q[0] === px && q[1] === py); g.fillStyle(hx(reached ? M.yellow : '#8f8d87'), 1); g.fillRect(bx + px * cs + 2, by + py * cs + 2, cs - 4, cs - 4); });
-}
-// the feed in the corner: the grounds at night, the gate, a girl at gx (screen x); returns her x
-export function drawFeedBox(g, fx, fy, fw, fh, gx) {
-  g.fillStyle(hx('#1b1c21'), 1); g.fillRect(fx, fy, fw, fh);
-  g.fillStyle(hx('#2e3036'), 1); g.fillRect(fx, fy + fh - 8, fw, 8);
-  g.fillStyle(hx('#d6a03c'), 1); g.fillRect(fx + 30, fy + 12, 40, 3);
-  g.fillStyle(hx('#b8b2a3'), 1); for (let i = 0; i < 5; i++) g.fillRect(fx + 32 + i * 8, fy + 15, 2, fh - 23);
-  g.fillStyle(hx('#ebe6d8'), 1); g.fillRect(Math.round(gx), fy + fh - 13, 2, 5); g.fillStyle(hx('#261f15'), 1); g.fillRect(Math.round(gx), fy + fh - 14, 2, 1);
-}
 // Earth on a screen, the same as the one in the porthole: grey seas, lighter land, a band of
 // cloud, the night side, small fires
 export function drawEarth(g, x, y, r, t) {
@@ -541,15 +519,14 @@ export function paintLastRoom() {
 }
 export const TVSCREEN = { x: 72, y: 34, w: 146, h: 100, moon: { x: 140, y: 88, r: 36 }, dome: { x: 164, y: 58 } };
 
-// What the old TV shows, drawn every frame with whole-pixel rects into the TV's own canvas.
-// kind: moon (the vest; blast from 0 to 1 and beyond), rerun, ridge, playroom, couch.
-// o: { t, blast, bug (the CH 07 mark; false once it goes dark), bite, pieces }
+// The Moon on the old TV, drawn every frame with whole-pixel rects into the TV's own canvas
+// (THE VEST; ending/beats.js draws every ending's beat, and calls this for the Moon).
+// o: { t, blast (seconds since the blast), bug (the CH 07 mark; false once it goes dark), bite, pieces }
 const TVW = TVSCREEN.w, TVH = TVSCREEN.h;
 const stars = (() => { const r = rng(5); return Array.from({ length: 70 }, (_, i) => [Math.floor(r() * TVW), Math.floor(r() * TVH), i % 9 ? '#8f8d87' : '#ebe6d8']); })();
 const glyphRect = x => (a, b, w, h) => x.fillRect(a, b, w, h);
 export function tvText(x, s, px, py, c) { x.fillStyle = c; pixText({ fillStyle: () => {}, fillRect: glyphRect(x) }, s, px, py, c, 1, 1); }
 function disc(x, cx, cy, r, c) { x.fillStyle = c; for (let dy = -r; dy <= r; dy++) { const hw = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35); x.fillRect(cx - hw, cy + dy, 2 * hw + 1, 1); } }
-function figureBack(x, cx, by, hair, body, small) { x.fillStyle = '#0e0f12'; x.fillRect(cx - 5, by - (small ? 14 : 16), 11, small ? 14 : 16); x.fillStyle = body; x.fillRect(cx - 4, by - 7, 9, 7); x.fillStyle = hair; x.fillRect(cx - 3, by - (small ? 13 : 15), 7, small ? 6 : 8); }
 export function drawTv(x, kind, o) {
   const t = o.t || 0;
   x.fillStyle = '#0e0f12'; x.fillRect(0, 0, TVW, TVH);
@@ -586,50 +563,6 @@ export function drawTv(x, kind, o) {
         });
       }
     }
-  } else if (kind === 'rerun' || kind === 'ridge') {
-    // Earth at night: a ridge, or the grounds of the house with its gold gate
-    x.fillStyle = '#1b1c21'; x.fillRect(0, 0, TVW, TVH);
-    stars.slice(0, 30).forEach(([sx, sy]) => { if (sy < 50) { x.fillStyle = '#45474d'; x.fillRect(sx, sy, 1, 1); } });
-    if (kind === 'ridge') {
-      x.fillStyle = '#2e3036'; for (let px = 0; px < TVW; px++) { const h = 62 + Math.round(Math.sin(px / 19) * 6 + Math.sin(px / 7) * 2); x.fillRect(px, h, 1, TVH - h); }
-      x.fillStyle = '#ebe6d8'; x.fillRect(118, 18, 3, 3); // the Moon, small, far off
-      // a new girl on the ridge, looking at the house lights below
-      const gx = 52; x.fillStyle = '#0e0f12'; x.fillRect(gx - 1, 50, 5, 12); x.fillStyle = '#8f8d87'; x.fillRect(gx, 53, 3, 8); x.fillStyle = '#1b1c21'; x.fillRect(gx, 51, 3, 3);
-      x.fillStyle = '#d6a03c'; [[96, 84], [104, 86], [110, 83]].forEach(([a, b]) => x.fillRect(a, b, 1, 1));
-      // the lower third: TAKE 1
-      if (t > 1.2) { x.fillStyle = '#e3412b'; x.fillRect(6, 80, 34, 9); tvText(x, 'TAKE 1', 9, 82, '#ebe6d8'); }
-    } else {
-      x.fillStyle = '#2e3036'; x.fillRect(0, 70, TVW, 30); x.fillStyle = '#45474d'; x.fillRect(0, 70, TVW, 1);
-      const fr = feedRect(x); feedHouse(fr, 42, 70);
-      x.fillStyle = '#261f15'; x.fillRect(0, 62, 30, 8); x.fillRect(120, 62, 26, 8);
-      feedGatePost(fr, 34, 70); feedGatePost(fr, 114, 70);
-      // the same girl walking up to the gate, again; it loops
-      const gx = 10 + Math.floor((t * 9) % 60); x.fillStyle = '#0e0f12'; x.fillRect(gx - 1, 61, 5, 10); x.fillStyle = '#8f8d87'; x.fillRect(gx, 63, 3, 7); x.fillStyle = '#1b1c21'; x.fillRect(gx, 62, 3, 2);
-      if (Math.floor(t * 1.5) % 2 === 0) { x.fillStyle = '#e3412b'; x.fillRect(6, 6, 40, 11); tvText(x, 'RERUN', 11, 8, '#ebe6d8'); }
-    }
-  } else if (kind === 'playroom') {
-    // the playroom, seen from its own camera: gold wall, the couch, two kids squinting at us
-    x.fillStyle = '#3a2f1f'; x.fillRect(0, 0, TVW, TVH);
-    x.fillStyle = '#54432a'; for (let yy = 8; yy < 60; yy += 12) for (let xx = 6 + (yy % 24 ? 6 : 0); xx < TVW; xx += 12) x.fillRect(xx, yy, 2, 2);
-    x.fillStyle = '#0e0f12'; x.fillRect(23, 59, 100, 30); x.fillStyle = '#d6a03c'; x.fillRect(24, 60, 98, 28); x.fillStyle = '#8a5f1c'; x.fillRect(24, 80, 98, 8);
-    [[56, true], [90, false]].forEach(([cx, bun], i) => {
-      const sh = Math.floor(t * 3 + i) % 2;
-      x.fillStyle = '#0e0f12'; x.fillRect(cx - 9, 37, 19, 34);
-      x.fillStyle = '#ebe6d8'; x.fillRect(cx - 8, 54, 17, 16);
-      x.fillStyle = bun ? '#f2d58c' : '#d6a03c'; x.fillRect(cx - 7, 38, 15, 6); if (bun) x.fillRect(cx - 3, 34, 7, 4); else { x.fillStyle = '#d6a03c'; x.fillRect(cx - 7, 34, 15, 3); }
-      x.fillStyle = '#b8b2a3'; x.fillRect(cx - 6, 44, 13, 9);
-      // eyes screwed shut, a hand up against the light
-      x.fillStyle = '#0e0f12'; x.fillRect(cx - 4, 47, 3, 1); x.fillRect(cx + 2, 47, 3, 1); x.fillRect(cx - 1, 50 + sh, 3, 1);
-      x.fillStyle = '#b8b2a3'; x.fillRect(cx + (i ? -10 : 6), 42 - sh, 5, 4);
-    });
-    tvText(x, 'LIVE', 8, 6, '#e3412b');
-  } else if (kind === 'couch') {
-    // three small figures on a couch from behind, watching a screen that shows Earth
-    x.fillStyle = '#1b1c21'; x.fillRect(0, 0, TVW, TVH);
-    x.fillStyle = '#0e0f12'; x.fillRect(42, 10, 62, 36); x.fillStyle = '#2e3036'; x.fillRect(44, 12, 58, 32);
-    disc(x, 73, 28, 11, '#45474d'); x.fillStyle = '#6b6c70'; x.fillRect(66, 22, 6, 4); x.fillRect(74, 30, 5, 3); x.fillStyle = '#d6a03c'; [[70, 32], [78, 24], [68, 28]].forEach(([a, b]) => { if (Math.floor(t * 2 + a) % 3) x.fillRect(a, b, 1, 1); });
-    x.fillStyle = '#d6a03c'; x.fillRect(28, 66, 90, 18); x.fillStyle = '#8a5f1c'; x.fillRect(28, 78, 90, 6); x.fillRect(24, 62, 6, 22); x.fillRect(116, 62, 6, 22);
-    figureBack(x, 54, 68, '#f2d58c', '#ebe6d8', true); figureBack(x, 73, 68, '#1b1c21', '#8f8d87', false); figureBack(x, 92, 68, '#d6a03c', '#ebe6d8', true);
   }
   // the channel mark, in the caption face (the 3x5 H reads as an A at this size)
   if (o.bug !== false) ccText(x, 'CH 07', TVW - 4 - ccWidth('CH 07'), 4, '#d6a03c');
