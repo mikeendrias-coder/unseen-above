@@ -1,6 +1,8 @@
 // Episode 2 extras: the robot talks, the drawer gives up the glasses, the staff room, the light
 // switch, the portrait's eyes, the chandelier that drops (it hurts: the house), the clues (the
-// broken camera, the laser port, the drawer on a later take), the robot's row of bodies.
+// broken camera, the laser port, the drawer on a later take), the robot's row of bodies, and the
+// hall furniture (Nov 18): a run knocks the hall chair over and the robot complains; K flicks the
+// vase off the side table and it breaks; the sheeted table in the atrium holds her.
 // Screenshots of each; checks game state at every step.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
@@ -97,6 +99,24 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene, m = s.gold.list[5], k = s.kid; k.x = m.x - 4; k.y = m.y - 14; k.vx = 0; k.vy = 0; });
   await until(() => window.__game.scene.gold.count > 0);
   ok('a gold piece is picked up and counted (' + JSON.stringify(await p.evaluate(() => window.__game.state.story.gold)) + ' of ' + JSON.stringify(await p.evaluate(() => window.__game.state.story.goldPlaced)) + ')', await p.evaluate(() => window.__game.state.story.gold.ep2 >= 1 && window.__game.state.story.goldPlaced.ep2 === window.__game.scene.gold.list.length));
+  // the hall furniture: from the foot of the stair she runs into the hall chair; over it goes
+  const wait = async sec => { const t0 = await p.evaluate(() => window.__game.scene.clock); await until(t => window.__game.scene.clock >= t, t0 + sec); };
+  await until(() => window.__game.scene.clock > 2.2); // after the robot's own line about tidying (1.6 s into a later take)
+  await p.evaluate(() => { window.__noDeath = true; const s = window.__game.scene; s.bubbles.clear('robot'); s.robot.x = 200; s.robot.dir = 1; const k = s.kid; k.x = 310; k.y = 322; k.vx = 0; k.vy = 0; k.face = -1; });
+  await p.keyboard.down('KeyA'); await wait(0.4); await p.keyboard.up('KeyA'); await wait(0.9);
+  const chair = await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'hall chair'), b = s.bubbles.list.get('robot'); return { pose: q.pose, said: b ? b.lines.join(' ') : null, inside: s.boxHits(s.kid.x, s.kid.y, s.kid.w, s.kid.h) }; });
+  ok('a run into the hall chair knocks it over (' + chair.pose + '); the robot says "' + chair.said + '"', chair.pose === 'down' && /chair/.test(chair.said || '') && !chair.inside);
+  await shot('hall-chair');
+  // from the top of the sideboard, K flicks the vase off the side table; it breaks on the marble
+  await p.evaluate(() => { const s = window.__game.scene, k = s.kid; k.x = 262; k.y = 320 - 14; k.vx = 0; k.vy = 0; k.face = 1; });
+  await wait(0.1); await press('KeyK'); await wait(0.8);
+  const vase = await p.evaluate(() => { const v = window.__game.scene.dyn.items.find(i => i.kind === 'vase'); return { broken: v.broken, y: v.y + v.h }; });
+  ok('K flicks the gold vase off the hall table and it breaks (' + JSON.stringify(vase) + ')', vase.broken && vase.y === 336);
+  await shot('hall-vase');
+  // the sheeted table in the atrium holds her (something to climb out of the pit on)
+  await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'sheeted table'), k = s.kid; k.x = q.x + 8; k.y = 280; k.vx = 0; k.vy = 0; k.onGround = false; });
+  await wait(0.8);
+  ok('she can stand on the sheeted table in the atrium', await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'sheeted table'), k = s.kid; return k.onGround && Math.round(k.y + k.h) === q.y; }));
   console.log(errs.length ? 'ERRORS:\n' + errs.slice(0, 8).join('\n') : 'no errors');
   await b.close();
 })().catch(e => { console.log('FAIL ' + e.message.split('\n')[0]); process.exit(1); });

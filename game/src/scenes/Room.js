@@ -11,6 +11,7 @@ import { SideEpisode } from '../core/side.js';
 import { pixText } from '../art/pixfont.js';
 import { reviewKeys } from '../core/review.js';
 import { paintWardrobe } from '../art/bedroom.js';
+import { Props } from '../core/props.js';
 
 const G = 160;
 // the door back to the house: a plain door with a 1 px outline
@@ -45,16 +46,14 @@ function paintStaff(P) {
   p.rect(40, 128, 116, 4, P.wood); p.rect(40, 128, 116, 1, P.woodHi); p.rect(44, 132, 108, 28, P.wallLo); p.rect(44, 132, 108, 1, P.crack); p.rect(48, 136, 100, 2, P.wood);
   for (let i = 0; i < 14; i++) p.px(52 + i * 7, 124 + (i % 2) * 2, i % 3 ? P.led : P.robotLed);
   p.rect(60, 120, 30, 8, P.device); p.rect(62, 121, 26, 5, P.glass);
-  // a chair pushed back
-  p.rect(160, 138, 14, 3, P.fabricLo); p.rect(171, 120, 3, 21, P.fabricLo); p.rect(165, 141, 2, 19, P.device); p.rect(161, G - 1, 12, 1, P.device);
   // a corkboard with a schedule
   p.rect(186, 46, 52, 40, P.woodHi); p.rect(188, 48, 48, 36, P.wood);
   p.rect(192, 52, 20, 26, P.colHi); for (let i = 0; i < 6; i++) p.rect(194, 55 + i * 4, 14 - (i % 3) * 3, 1, P.device); p.px(201, 52, P.led);
   p.rect(216, 56, 16, 12, P.col); p.rect(218, 59, 10, 1, P.device); p.rect(218, 62, 8, 1, P.device); p.px(223, 56, P.overlay);
-  // a locker, open a crack: boxes of spare glasses
-  p.rect(250, 70, 26, 90, P.device); p.rect(251, 71, 24, 88, P.wallLine); p.rect(251, 71, 12, 88, P.device);
-  for (let i = 0; i < 4; i++) { p.rect(264, 80 + i * 18, 10, 8, P.void); p.rect(265, 82 + i * 18, 3, 1, P.overlay); p.rect(269, 82 + i * 18, 3, 1, P.overlay); }
-  for (let i = 0; i < 4; i++) p.rect(253, 76 + i * 4, 8, 1, P.wallLine);
+  // a locker, open a crack: boxes of spare glasses. Its top is a ledge (ROOMS.staff.solids)
+  p.rect(249, 89, 28, 71, P.crack); p.rect(250, 90, 26, 70, P.device); p.rect(250, 90, 26, 1, P.colLo); p.rect(251, 92, 24, 67, P.wallLine); p.rect(251, 92, 12, 67, P.device);
+  for (let i = 0; i < 4; i++) { p.rect(264, 98 + i * 15, 10, 8, P.void); p.rect(265, 100 + i * 15, 3, 1, P.overlay); p.rect(269, 100 + i * 15, 3, 1, P.overlay); }
+  for (let i = 0; i < 4; i++) p.rect(253, 96 + i * 4, 8, 1, P.wallLine);
   // his bedroll, dropped by the far wall
   p.ellipse(296, G - 5, 14, 5, P.sibLo); p.ellipse(296, G - 6, 13, 3, P.sib); p.rect(287, G - 10, 2, 10, P.wood); p.rect(303, G - 10, 2, 10, P.wood); p.ellipse(284, G - 5, 3, 5, P.sibHi);
   r();
@@ -85,12 +84,15 @@ function paintKeeper(P) {
   // the door back
   doorBack(p, P);
   // tools on a pegboard
-  p.rect(44, 40, 70, 46, P.wood); for (let x = 48; x < 112; x += 5) for (let y = 44; y < 84; y += 5) p.px(x, y, P.woodHi);
-  p.rect(52, 46, 2, 30, P.device); p.rect(48, 44, 10, 3, P.colLo); p.rect(64, 48, 2, 26, P.device); p.poly([[62, 74], [68, 74], [65, 82]], P.colLo);
-  p.rect(78, 46, 12, 2, P.colLo); p.rect(83, 48, 2, 24, P.device); p.rect(96, 50, 10, 10, P.colLo); p.rect(99, 60, 3, 18, P.device);
+  p.rect(40, 34, 60, 40, P.wood); for (let x = 44; x < 98; x += 5) for (let y = 38; y < 72; y += 5) p.px(x, y, P.woodHi);
+  p.rect(48, 40, 2, 26, P.device); p.rect(44, 38, 10, 3, P.colLo); p.rect(60, 42, 2, 22, P.device); p.poly([[58, 62], [64, 62], [61, 69]], P.colLo);
+  p.rect(72, 40, 12, 2, P.colLo); p.rect(77, 42, 2, 22, P.device); p.rect(88, 44, 9, 9, P.colLo); p.rect(91, 53, 3, 14, P.device);
+  // a high plank shelf on two brackets, out of reach from the floor (ROOMS.keeper.solids)
+  p.rect(103, 89, 44, 5, P.crack); p.rect(104, 90, 42, 3, P.wood); p.rect(104, 90, 42, 1, P.woodHi);
+  [110, 138].forEach(x => { p.rect(x, 93, 2, 8, P.device); for (let i = 0; i < 6; i++) p.px(x + 2 + Math.floor(i / 2), 93 + i, P.device); });
   // a rack of drones on chargers, green lights
-  p.rect(128, 52, 64, 50, P.device); p.rect(130, 54, 60, 46, P.wallLine);
-  for (let i = 0; i < 6; i++) { const x = 134 + (i % 3) * 19, y = 60 + Math.floor(i / 3) * 20; p.rect(x, y, 13, 4, P.colLo); p.rect(x - 1, y - 1, 4, 1, P.colLo); p.rect(x + 10, y - 1, 4, 1, P.colLo); p.mark('led', x + 6, y + 5); }
+  p.rect(150, 36, 48, 42, P.device); p.rect(152, 38, 44, 38, P.wallLine);
+  for (let i = 0; i < 6; i++) { const x = 155 + (i % 3) * 14, y = 44 + Math.floor(i / 3) * 18; p.rect(x, y, 11, 4, P.colLo); p.rect(x - 1, y - 1, 3, 1, P.colLo); p.rect(x + 9, y - 1, 3, 1, P.colLo); p.mark('led', x + 5, y + 5); }
   // a work bench with searchlight bulbs, a small TV on a crate
   p.rect(200, 120, 70, 4, P.wood); p.rect(200, 120, 70, 1, P.woodHi); p.rect(204, 124, 3, 36, P.wood); p.rect(263, 124, 3, 36, P.wood);
   for (let i = 0; i < 7; i++) { p.circle(208 + i * 8, 116, 3, P.glassLit); p.rect(207 + i * 8, 118, 3, 2, P.colLo); }
@@ -103,7 +105,7 @@ function paintKeeper(P) {
   p.rect(290, 46, 3, 3, P.device); p.poly([[284, 49], [298, 49], [302, 96], [280, 96]], P.fabricLo); p.rect(288, 50, 1, 40, P.fabric);
   p.rect(294, 60, 1, 14, P.hazard); p.rect(292, 74, 6, 8, P.colHi); p.rect(293, 76, 4, 1, P.device); p.rect(293, 78, 3, 1, P.device);
   // a list pinned by the door
-  p.rect(40, 100, 18, 22, P.colHi); for (let i = 0; i < 5; i++) p.rect(42, 103 + i * 4, 12 - (i % 2) * 4, 1, P.device);
+  p.rect(40, 96, 18, 22, P.colHi); for (let i = 0; i < 5; i++) p.rect(42, 99 + i * 4, 12 - (i % 2) * 4, 1, P.device);
   return p;
 }
 
@@ -137,57 +139,103 @@ function paintWorkshop(P) {
   return p;
 }
 
-// Room data. Texts are short and literal; a function gets the episode's take number.
+// Room data. Looks are things she notices, said plainly; a function gets the episode's take.
+// furniture: real pieces (core/props.js piece): she pushes them, knocks them over (a run or K),
+// climbs them. reveal: a box that opens when it lands hard (knocked off a shelf, say) and becomes
+// a look. look: a look that follows the piece. loose: small things on top (core/props.js item).
+// solids: fixed ledges and tops (she stands on them; pieces and loose things land on them).
 const ROOMS = {
   keeper: {
     paint: paintKeeper, bg: 'wallLo',
     items: [
-      { x0: 40, x1: 60, y: 98, text: ['A list: lights on at dusk. Lights on at dawn.', 'There is no line for lights off.'] },
-      { x0: 128, x1: 192, y: 50, text: ['Six drones on chargers. Each one has a camera.'] },
-      { x0: 200, x1: 270, y: 110, text: ['Spare searchlight bulbs. Hundreds.', 'A small TV. CH 07. Stand by.'] },
-      { x0: 278, x1: 304, y: 42, text: ['A crew coat. The pass says SEASON 41.'] }
+      { x0: 38, x1: 60, y: 94, text: ['A note by the door: lights on at dusk.', 'Lights on again at dawn. Never off.'] },
+      { x0: 150, x1: 198, y: 36, text: ['Six drones charging on a rack.', 'Every one of them has a camera.'] },
+      { x0: 200, x1: 270, y: 110, text: ['Spare searchlight bulbs. Hundreds of them.', 'And a little TV, stuck on channel 07.'] },
+      { x0: 278, x1: 304, y: 42, text: ['A crew coat on a hook.', 'The pass on it says SEASON 41.'] }
     ],
     // the small TV on the crate: J turns the dial. Every channel is 07.
     use: { x0: 228, x1: 258, y: 122, key: 'tv', text: ['She turns the dial. Every channel is 07.'] },
-    // solid: the bench top (she walks under it), the crate and the TV on it
-    solids: [{ id: 'bench', x: 200, y: 120, w: 70, h: 4 }, { id: 'crate', x: 230, y: 140, w: 26, h: 20 }, { id: 'tv', x: 232, y: 124, w: 22, h: 16 }]
+    // solid: the bench top (she walks under it), the crate and the TV on it, the high shelf
+    solids: [{ id: 'bench', x: 200, y: 120, w: 70, h: 4 }, { id: 'crate', x: 230, y: 140, w: 26, h: 20 }, { id: 'tv', x: 232, y: 124, w: 22, h: 16 },
+      { id: 'shelf', x: 104, y: 90, w: 42, h: 3 }],
+    // the work table and the stool both reach the high shelf; the tin up there opens when it falls
+    furniture: [
+      { kind: 'table', id: 'work table', x: 62, w: 30, tone: 'wood', loose: [{ kind: 'mug', dx: 4 }, { kind: 'jar', dx: 20, tone: 'ash4' }] },
+      { kind: 'stool', id: 'stool', x: 182, tone: 'wood' },
+      { kind: 'lamp', id: 'work lamp', x: 272, tone: 'grey' },
+      { kind: 'box', id: 'tin', x: 118, y: 90, w: 12, h: 8, tone: 'grey', reveal: ['A tin full of old tapes.', 'Seasons 38, 39 and 40. All ESTATE 07.'] }
+    ],
+    loose: [{ kind: 'can', x: 107, y: 90 }]
   },
   workshop: {
     paint: paintWorkshop, bg: 'wallLo',
     items: [
-      { x0: 52, x1: 104, y: 106, text: ['A tray of cracked glasses. Dozens of pairs.', 'A label on the tray: FIX BEFORE NEXT TAKE.'] },
-      { x0: 160, x1: 252, y: 118, text: ['A beam on two sawhorses, sawn halfway through.', 'The same size as the one that broke under her.'] },
-      { x0: 266, x1: 288, y: 88, text: [take => 'A clipboard. Episode 3, take ' + take + '. The fall: done.'] }
+      { x0: 52, x1: 104, y: 106, text: ['A tray of cracked glasses. Dozens of them.', 'The label says FIX BEFORE NEXT TAKE.'] },
+      { x0: 160, x1: 252, y: 118, text: ['A beam, sawn halfway through.', 'Same size as the one that broke under her.'] },
+      { x0: 266, x1: 288, y: 88, text: [take => 'A clipboard. Episode 3, take ' + take + '.', 'Next to THE FALL, someone wrote DONE.'] }
     ],
     // the small screen: J plays the tape. Her fall, over and over.
-    use: { x0: 262, x1: 306, y: 48, key: 'tape', text: ['Her fall, on tape. Over and over.', 'Under the screen: KEEP THE FALL.'] },
+    use: { x0: 262, x1: 306, y: 48, key: 'tape', text: ['Her fall, on tape, over and over.', 'A note under the screen: KEEP THE FALL.'] },
     // solid: the bench top and its tray (she walks under the bench), the beam on the sawhorses
-    solids: [{ id: 'bench', x: 48, y: 118, w: 92, h: 4 }, { id: 'tray', x: 58, y: 112, w: 40, h: 6 }, { id: 'beam', x: 160, y: 128, w: 92, h: 8 }]
+    solids: [{ id: 'bench', x: 48, y: 118, w: 92, h: 4 }, { id: 'tray', x: 58, y: 112, w: 40, h: 6 }, { id: 'beam', x: 160, y: 128, w: 92, h: 8 }],
+    furniture: [
+      { kind: 'chair', id: 'chair', x: 112, back: 1, tone: 'wood' },
+      { kind: 'stool', id: 'stool', x: 144, tone: 'grey' },
+      { kind: 'box', id: 'toolbox', x: 238, y: 128, w: 12, h: 7, tone: 'grey', reveal: ['A toolbox full of spare lenses.', 'Each one has a take number on it.'] },
+      { kind: 'bin', id: 'bucket', x: 270, tone: 'grey', spill: 'bronzeHi', look: ['A bucket of sawdust.', 'From the beam, probably.'] }
+    ],
+    loose: [{ kind: 'mug', x: 122, y: 118 }]
   },
   wardrobe: {
     paint: paintWardrobe, bg: 'wallLo', doorX: 286,
     items: [
-      { x0: 18, x1: 70, y: 40, text: ['Jackets on a rail. Her jacket, in her size.', 'Every one has the same tear in the left sleeve.'] },
-      { x0: 118, x1: 166, y: 80, text: ['Photos of her in a row, all in that jacket.', 'Each one is stamped CONTINUITY.'] },
-      { x0: 186, x1: 232, y: 82, text: ['A mirror ringed with bulbs.'] },
-      { x0: 74, x1: 116, y: 146, text: ['Small shoes in a row, worn down at the same heel.'] }
+      { x0: 18, x1: 70, y: 40, text: ['A rail of jackets, all her size.', 'Same tear in the left sleeve on every one.'] },
+      { x0: 118, x1: 166, y: 80, text: ['Photos of her, all in that jacket.', 'Every one is stamped CONTINUITY.'] },
+      { x0: 186, x1: 232, y: 82, text: ['A mirror with bulbs all round it.', 'A note on the glass: SAME AS TAKE 1.'] },
+      { x0: 74, x1: 116, y: 146, text: ['A row of little shoes.', 'All worn down at the same heel.'] }
     ],
     // the cord of the one bulb: J pulls it. In the dark, the light behind the mirror stays on.
-    use: { x0: 240, x1: 262, y: 40, key: 'cord', text: ['In the dark, a red light behind the mirror.'] },
-    solids: [{ id: 'table', x: 182, y: 134, w: 54, h: 4 }] // the mirror's table: she walks under it
+    use: { x0: 240, x1: 262, y: 40, key: 'cord', text: ['She pulls the cord and the bulb goes out.', 'A red light is still on behind the mirror.'] },
+    solids: [{ id: 'table', x: 182, y: 134, w: 54, h: 4 }], // the mirror's table: she walks under it
+    furniture: [
+      { kind: 'trunk', id: 'trunk', x: 30, tone: 'wood' },
+      { kind: 'box', id: 'hat box', x: 36, y: 146, w: 10, h: 8, tone: 'card', reveal: ['A hat box with a wig in it.', 'Same color as her hair. Same cut.'] },
+      { kind: 'stool', id: 'stool', x: 160, tone: 'wood' },
+      { kind: 'bin', id: 'bin', x: 244, tone: 'wood', spill: 'boneLo', look: ['A bin full of torn-off sleeves.', 'Every one of them is a left sleeve.'] }
+    ]
   },
   staff: {
     paint: paintStaff, bg: 'wallLo',
     items: [
-      { x0: 46, x1: 150, y: 34, text: ['Six feeds from the house.', 'One of them is this room.'] },
-      { x0: 186, x1: 238, y: 44, text: [take => 'A schedule. Tonight: episode 2, take ' + take + '.', 'Every take has a line. Most are crossed out.'] },
-      { x0: 250, x1: 276, y: 68, text: ['Spare glasses. Boxes of them.'] }
+      { x0: 46, x1: 150, y: 34, text: ['Six live feeds from the house.', 'One of them is this room.'] },
+      { x0: 186, x1: 238, y: 44, text: [take => 'The schedule. Tonight: episode 2, take ' + take + '.', 'Every take gets a line. Most are crossed out.'] },
+      { x0: 250, x1: 276, y: 100, text: ['Spare glasses. Boxes and boxes of them.'] }
     ],
     // his bedroll (Option C): J unrolls it; inside, his route through the house, in his hand
-    use: { x0: 280, x1: 312, y: 146, key: 'bedroll', text: ['His map of the house. It ends in the bedroom.'] },
-    // the console desk is against the back wall (drawn dark, she walks in front of it): no solids,
-    // so the quiet room has no climb between the door and the bedroll (spawnX still works per room)
+    use: { x0: 280, x1: 312, y: 146, key: 'bedroll', text: ['His bedroll. His map of the house is inside.', 'His route ends at the bedroom.'] },
+    // the console desk is against the back wall (drawn dark, she walks in front of it); the
+    // locker's top is a ledge, too high to jump to from the floor
+    solids: [{ id: 'locker top', x: 250, y: 90, w: 26, h: 2 }],
+    furniture: [
+      { kind: 'chair', id: 'chair', x: 164, back: 1, tone: 'grey' },
+      { kind: 'table', id: 'side table', x: 210, w: 20, tone: 'wood', loose: [{ kind: 'cup', dx: 3 }, { kind: 'tin', dx: 12, tone: 'ash3' }] },
+      { kind: 'bin', id: 'bin', x: 238, tone: 'grey', look: ['The bin is full of old scripts.', 'Her lines, mostly. All crossed out.'] },
+      { kind: 'box', id: 'box', x: 262, y: 90, w: 12, h: 8, tone: 'card', reveal: ['A box of old clapperboards.', 'Every one says EPISODE 2. Hundreds.'] }
+    ]
   }
+};
+
+// The hint line, by what is next to her: plain words, the way a friend would tell you.
+const PIECE_HINT = {
+  table: 'Walk into the table to push it. You can climb on it, too.',
+  trunk: "Walk into the trunk to push it. It's heavy.",
+  crate: 'Walk into it to push it.',
+  box: 'Press K to knock the box along, or walk into it.',
+  chair: 'Run into the chair, or press K, to knock it over.',
+  stool: 'Push the stool where you need it, then climb up. K knocks it over.',
+  bin: 'Run into the bin, or press K, to knock it over.',
+  lamp: 'Run into the lamp, or press K, to knock it over.',
+  down: 'Press K to stand it back up.'
 };
 
 export class Room extends SideEpisode {
@@ -209,26 +257,48 @@ export class Room extends SideEpisode {
     this.roomFx = this.add.graphics().setDepth(1);
     this.commonLayers();
     const dx = R.doorX || 18; this.doorX = dx;
-    this.props = (R.solids || []).map(r => Object.assign({}, r)); // furniture she can stand on or bump into
+    this.props = (R.solids || []).map(r => Object.assign({}, r)); // fixed tops and ledges she can stand on
     this.spawn(R.spawnX != null ? R.spawnX : dx < 160 ? 40 : dx - 22); this.kid.face = dx < 160 ? 1 : -1;
+    // the furniture: real pieces under the dark of the wardrobe's bulb (depth 1.2 < 1.5)
+    this.dyn = new Props(this, { depth: 1.2 });
+    this.pieces = (R.furniture || []).map(f => {
+      const p = this.dyn.piece(Object.assign({}, f, { y: f.y != null ? f.y : G }));
+      (f.loose || []).forEach(l => this.dyn.item(Object.assign({}, l, { x: p.x + l.dx, y: p.y })));
+      return p;
+    });
+    (R.loose || []).forEach(l => this.dyn.item(Object.assign({}, l)));
     // the items are looks, so the room's one thing to do wins when both are in reach (the shed's TV
     // sits on its crate inside the bench's span)
     R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'J', look: true, noPrompt: false, use: () => this.describe(it) }); });
     // one thing to do in each room, not only to look at
     this.act = { on: false, t: 0, n: 0 }; this.roomId = data.id || 'staff'; this.useSrc = null; // the scene object is reused from room to room
     if (R.use) this.things.push({ x0: R.use.x0, x1: R.use.x1, y0: Math.min(R.use.y + 4, 130), y1: G, py: R.use.y, label: 'J', use: () => this.doUse(R.use) });
+    // looks that ride on the furniture: a box that opens when it lands hard says what was in it
+    (R.furniture || []).forEach((f, i) => {
+      const p = this.pieces[i], text = f.reveal || f.look; if (!text) return;
+      const it = { x0: p.x, x1: p.x + p.w, y: p.y, text, n: 0, piece: p };
+      const th = { x0: p.x - 2, x1: p.x + p.w + 2, y0: p.y, y1: p.y + p.h, label: 'J', look: true, off: !!f.reveal, use: () => this.describe(it) };
+      this.things.push(th); p.thing = th;
+      if (f.reveal) p.onLand = q => {
+        if (q.open) return;
+        q.open = true; th.off = false;
+        Sound.tone(520, 0.05, 'square', 0.012); Sound.noise(0.08, 0.03, 2400);
+        this.time.delayedCall(250, () => { if (!this.leaving) this.describe(it); });
+      };
+    });
     this.darkG = this.add.graphics().setDepth(1.5); // over the room, under her
     this.things.push({ x0: dx, x1: dx + 16, y0: G - 30, y1: G, label: 'W', door: true, use: () => this.leave() }); // a door: W, never J
     this.hum = Sound.hum(0.02); Music.level(0.45, 0.5);
     this.events.once('shutdown', () => { this.hum.stop(0.2); overlay.hint(''); });
     this.cameras.main.fadeIn(300);
-    overlay.hint('J looks at things. W at the door goes back.');
+    this.hintNow = null; this.hint();
     window.__game = { scene: this, state };
   }
 
   describe(it) {
     if (!it.src) it.src = { lines: () => it.text.map(raw => typeof raw === 'function' ? raw(this.take) : raw) };
-    this.bubbles.look('item', it.src, () => ({ x: (it.x0 + it.x1) / 2, y: it.y }), { leave: 70 });
+    const at = it.piece ? () => ({ x: it.piece.x + it.piece.w / 2, y: it.piece.y }) : () => ({ x: (it.x0 + it.x1) / 2, y: it.y });
+    this.bubbles.look('item', it.src, at, { leave: 70 });
   }
 
   doUse(u) {
@@ -289,6 +359,13 @@ export class Room extends SideEpisode {
     }
   }
 
+  // what the hint line says: the furniture next to her, or how the room works
+  hint() {
+    const k = this.kid, p = k && this.dyn.nearPiece(k);
+    const text = p ? (p.pose === 'down' ? PIECE_HINT.down : PIECE_HINT[p.kind]) : 'Press J to look at things. W at the door takes you back.';
+    if (text !== this.hintNow) { this.hintNow = text; overlay.hint(text); }
+  }
+
   skipAhead() { this.leave(); }
   canRestart() { return false; } // a side room: the episode restarts from the episode
   leave() {
@@ -304,8 +381,9 @@ export class Room extends SideEpisode {
     this.clock += dt;
     if (c.mute()) overlay.note(Sound.toggle() ? 'Sound off' : 'Sound on', 1000);
     reviewKeys(this);
-    if (!this.leaving) { this.moveKid(dt); this.updateThings(); }
+    if (!this.leaving) { this.dyn.step(dt, () => this.moveKid(dt)); this.updateThings(); this.hint(); }
     this.drawGirl();
+    this.dyn.draw();
     const g = this.roomFx; g.clear();
     if (Math.floor(this.clock * 2) % 2 === 0) (this.marks || []).forEach(mk => { if (mk.kind === 'rec') { g.fillStyle(hexNum(this.P.led), 1); g.fillRect(mk.x, mk.y, 1, 1); } });
     (this.marks || []).forEach((mk, i) => { if (mk.kind === 'led' && Math.sin(this.clock * 2 + i) > 0) { g.fillStyle(hexNum(this.P.robotLed), 1); g.fillRect(mk.x, mk.y, 1, 1); } });

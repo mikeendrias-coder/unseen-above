@@ -23,6 +23,19 @@
 // delay s after she stands on it, then drops; back: s later it is there again (0: never).
 // Swing: a chandelier or rope on a fixed swing; touching its end in the air, she holds on;
 // Space lets go with the swing's speed plus a jump, S drops straight off.
+// Furniture (Nov 18, Michael: "there should be physics and interactivity with them"):
+//   const t = this.dyn.piece({ kind: 'table', x, y: floorY, w: 28, tone: 'wood', id: 'work table' });
+//   this.dyn.item({ kind: 'mug', x, y: t.y });                 // a loose thing on its top
+// Kinds (FURN below): table, chair, stool, bin, lamp, crate, box, trunk, bench. She pushes one by
+// walking into it (heavier is slower; a table carries what is on it, and loose things lag and
+// slide off the edge). Running into a chair, stool, bin or lamp knocks it over (three frame
+// swaps, no rotation); K (or F) next to one knocks it over, stands it back up, shoves a box (off a
+// shelf, say), bumps a heavy thing (what is on top wobbles and slides) or flicks a loose thing off.
+// She can stand and climb on all of them (they are rects in scene.props, so lights stop at them
+// too). Pieces fall, land on tiles or each other, and never move into a wall, another piece or
+// her. Loose things (item) fall, bounce, break if fragile, and get kicked when she walks into
+// them; they are never solid to her. spec.onLand(piece, speed) runs when a piece lands hard;
+// spec.thing (a look) follows the piece. tone: wood, grey, gold, bone (the three tones it uses).
 // hardCone(g, cone points, color, view) draws a light the final-pass way: a 50% checker of one
 // flat color, its two edges solid (no alpha, no blending, no hatched rows).
 import { Sound } from './sound.js';
@@ -40,7 +53,10 @@ const C = k => hexNum(ASH[k]);
 export class Props {
   constructor(scene, opts) {
     this.scene = scene; this.list = []; this.riding = null; this.letGo = 0; this.lastSwing = null; this.t = 0;
-    this.g = scene.add.graphics().setDepth((opts && opts.depth) || 3.6);
+    this.opts = opts || {}; this.pieces = []; this.items = []; this.swingT = 0; this.preVx = 0; this.preVy = 0; this.preAir = false;
+    const d = this.opts.depth || 3.6;
+    this.lightG = scene.add.graphics().setDepth(d - 0.05); // lamps' light, under the furniture
+    this.g = scene.add.graphics().setDepth(d);
   }
   own(r) { this.scene.props.push(r); return r; }
   // is this box clear of tiles, other props (not skip) and, if asked, her
@@ -81,7 +97,10 @@ export class Props {
   // ------------------------------------------------------------------ per frame
   // The whole frame for her: props move, then she moves (unless she hangs on a swing), then
   // what she stands on reacts.
-  step(dt, move) { this.update(dt); if (!this.riding) move(); this.after(dt); }
+  step(dt, move) {
+    const k = this.scene.kid; if (k) { this.preVx = k.vx; this.preVy = k.vy; this.preAir = !k.onGround; }
+    this.update(dt); if (!this.riding) move(); this.after(dt);
+  }
   update(dt) {
     this.t += dt; this.letGo = Math.max(0, this.letGo - dt);
     const s = this.scene, k = s.kid;
@@ -92,9 +111,11 @@ export class Props {
       else if (p.kind === 'crumble') this.tickCrumble(p, dt, k);
     });
     if (this.riding) this.ride(dt, k);
+    if (this.pieces.length || this.items.length) this.updateFurniture(dt, k);
   }
-  after() {
+  after(dt) {
     const s = this.scene, k = s.kid; if (!k || s.dead) { this.riding = null; return; }
+    if (this.pieces.length || this.items.length) this.afterFurniture(dt || 0, k);
     this.list.forEach(p => {
       if (p.kind === 'crumble' && p.state === 'solid' && this.standsOn(k, p.r)) { p.state = 'shake'; p.t = 0; Sound.noise(0.18, 0.04, 700); Sound.tone(140, 0.12, 'triangle', 0.02, 110); }
       if (p.kind === 'swing' && !this.riding && !(this.letGo && p === this.lastSwing) && !k.onGround && !s.leaving) {
@@ -207,6 +228,7 @@ export class Props {
   draw() {
     const g = this.g, P = this.scene.P; g.clear();
     this.list.forEach(p => { if (p.draw) p.draw(g, p, P); else this['draw_' + p.kind](g, p); });
+    if (this.pieces.length || this.items.length || this.swingT > 0) this.drawFurniture(g);
   }
   px(g, x, y, w, h, c) { g.fillStyle(c, 1); g.fillRect(Math.round(x), Math.round(y), w, h); }
   draw_crate(g, p) {
@@ -411,3 +433,463 @@ export class Gold {
     this.pops.forEach(p => { const r = p.t < 0.12 ? 2 : 4; g.fillStyle(C(p.t < 0.12 ? 'bone' : 'goldHi'), 1); g.fillRect(p.x - r, p.y, 1, 1); g.fillRect(p.x + r, p.y, 1, 1); g.fillRect(p.x, p.y - r, 1, 1); g.fillRect(p.x, p.y + r, 1, 1); });
   }
 }
+
+// ------------------------------------------------------------------ furniture (Nov 18)
+// Michael: "there should be physics and interactivity with them, like the tables in the closed
+// room". Pieces are pixel boxes that move a whole pixel at a time (never into a wall, another
+// piece or her), fall, carry what stands on them, and change pose by frame swaps (a chair goes
+// over in three frames: lean, lean further, down). No tweening, no rotation.
+//   w, h: upright size. push: px/s when she leans on it. tip: it can be knocked over (down: its
+//   size lying down; soft: lying, it is not solid; steady: a run into it only bumps it). light:
+//   K shoves it along.
+const FURN = {
+  table: { w: 24, h: 12, push: 22 },
+  chair: { w: 10, h: 18, push: 32, tip: true, down: [18, 7] },
+  stool: { w: 10, h: 10, push: 36, tip: true, down: [12, 7], steady: true }, // K tips it; a run only bumps it
+  bin: { w: 8, h: 10, push: 40, tip: true, down: [12, 6] },
+  lamp: { w: 7, h: 26, push: 30, tip: true, down: [24, 4], soft: true },
+  crate: { w: 16, h: 16, push: 22 },
+  box: { w: 10, h: 8, push: 44, light: true },
+  trunk: { w: 22, h: 14, push: 18 },
+  bench: { w: 28, h: 10, push: 14 }
+};
+// loose things: size, and whether they break when they land hard
+const ITEM = {
+  cup: [3, 3, true], mug: [4, 4, true], jar: [4, 5, true], vase: [4, 7, true], bottle: [2, 6, true], bulb: [3, 4, true],
+  book: [6, 2, false], can: [4, 5, false], candle: [3, 7, false], paper: [3, 1, false], tin: [5, 3, false], brush: [6, 2, false]
+};
+// three tones per material (dark, base, light), from ASH only
+const TONES = {
+  wood: ['bronzeLo', 'bronze', 'bronzeHi'], grey: ['ash2', 'ash3', 'ash4'], gold: ['goldLo', 'gold', 'goldHi'],
+  bone: ['ash5', 'boneLo', 'bone'], card: ['ash4', 'ash5', 'boneLo']
+};
+const RUN_HIT = 60;     // she has to be going about full walking speed to knock a thing over by running into it
+const TIP_FRAME = 0.07; // seconds a frame of a fall lasts
+const ovl = (ax, ay, aw, ah, b) => ax < b.x + b.w && ax + aw > b.x && ay < b.y + b.h && ay + ah > b.y;
+
+const Furniture = {
+  piece(spec) {
+    const F = FURN[spec.kind] || FURN.crate;
+    const p = Object.assign({ pose: 'up', frame: 0, vy: 0, ay: 0, grounded: false, push: F.push, acc: 0, wob: 0, rects: [], slide: 0, contact: false, back: -1, tone: 'wood', dir: 1 }, spec);
+    p.kind = FURN[spec.kind] ? spec.kind : 'crate'; p.id = spec.id || p.kind;
+    p.w = spec.w || F.w; p.h = spec.h || F.h; p.uw = p.w; p.uh = p.h;
+    p.x = Math.round(spec.x); p.y = Math.round(spec.y) - p.h;
+    p.lit = p.kind === 'lamp' && spec.lit !== false;
+    this.setRects(p); this.pieces.push(p);
+    return p;
+  },
+  item(spec) {
+    const I = ITEM[spec.kind] || ITEM.cup;
+    const it = Object.assign({ vx: 0, vy: 0, ax: 0, ay: 0, wob: 0, carry: 0, kick: 0, broken: false }, spec);
+    it.w = I[0]; it.h = I[1]; it.fragile = spec.fragile != null ? spec.fragile : I[2];
+    it.x = Math.round(spec.x); it.y = Math.round(spec.y) - it.h;
+    this.items.push(it); return it;
+  },
+  // the solid parts of a piece, relative to its top-left, in its current pose
+  partsOf(p) {
+    const w = p.w, h = p.h;
+    if (p.pose === 'down') return FURN[p.kind].soft ? [] : [[0, 0, w, h]];
+    if (p.kind === 'table') return [[0, 0, w, 3]];                                    // she crouches under it
+    if (p.kind === 'chair') return [[0, h - 10, w, 10], [p.back < 0 ? 0 : w - 2, 0, 2, h - 10]];
+    if (p.kind === 'lamp') return [[1, 0, w - 2, h]];
+    return [[0, 0, w, h]];
+  },
+  setRects(p) {
+    const s = this.scene;
+    s.props = s.props.filter(r => !p.rects.includes(r));
+    p.rects = this.partsOf(p).map(([dx, dy, w, h]) => ({ id: p.id, kind: 'piece', piece: p, dx, dy, x: p.x + dx, y: p.y + dy, w, h }));
+    s.props.push(...p.rects);
+  },
+  syncRects(p) { p.rects.forEach(r => { r.x = p.x + r.dx; r.y = p.y + r.dy; }); },
+  // is the box (x, y, w, h) clear of tiles and of every solid thing but p's own parts; with
+  // kidToo, p's parts at that offset must miss her as well (parts: lying parts to test instead)
+  fitsAt(p, x, y, w, h, kidToo, parts) {
+    const s = this.scene, T = 16;
+    const x0 = Math.floor(x / T), x1 = Math.floor((x + w - 0.001) / T), y0 = Math.floor(y / T), y1 = Math.floor((y + h - 0.001) / T);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (s.solidTile(tx, ty)) return false;
+    if (s.props.some(r => r.solid !== false && !p.rects.includes(r) && ovl(x, y, w, h, r))) return false;
+    if (kidToo && s.kid && !s.dead) {
+      const k = s.kid, ps = parts || this.partsOf(p);
+      if (ps.some(([dx, dy, pw, ph]) => ovl(x + dx, y + dy, pw, ph, k))) return false;
+    }
+    return true;
+  },
+  fits(p, dx, dy, kidToo) { return this.fitsAt(p, p.x + dx, p.y + dy, p.w, p.h, kidToo); },
+  kidUnder(p, dy) { const k = this.scene.kid; return !!(k && !this.scene.dead && this.partsOf(p).some(([dx, ddy, w, h]) => ovl(p.x + dx, p.y + ddy + dy, w, h, k))); },
+  // she stands on one of p's parts
+  onPiece(k, p) { return k.onGround && p.rects.some(r => Math.abs(k.y + k.h - r.y) < 1.5 && k.x + k.w > r.x && k.x < r.x + r.w); },
+  // she is right beside a part of p, on side dir (1: p is to her right), level with it
+  touching(p, k, dir) {
+    return p.rects.some(r => k.y < r.y + r.h - 0.5 && k.y + k.h > r.y + 0.5 && (dir > 0 ? Math.abs(k.x + k.w - r.x) <= 1.01 : Math.abs(r.x + r.w - k.x) <= 1.01));
+  },
+  ridersOf(p) { return this.pieces.filter(q => q !== p && !q.tip && p.rects.some(r => Math.abs(q.y + q.h - r.y) < 0.5 && q.x < r.x + r.w && q.x + q.w > r.x)); },
+  itemsOn(p) { return this.items.filter(it => !it.broken && p.rects.some(r => Math.abs(it.y + it.h - r.y) < 0.5 && it.x < r.x + r.w && it.x + it.w > r.x)); },
+  // move a piece one pixel sideways, with what stands on it; false if it is blocked
+  moveBy(p, dx, depth) {
+    if (!this.fits(p, dx, 0, true)) return false;
+    const s = this.scene, k = s.kid, riders = this.ridersOf(p), its = this.itemsOn(p), onIt = k && !s.dead && this.onPiece(k, p);
+    p.x += dx; this.syncRects(p);
+    if ((depth || 0) < 4) riders.forEach(q => this.moveBy(q, dx, (depth || 0) + 1));
+    // loose things lag a little behind and wobble, so they creep toward the edge and drop off
+    its.forEach(it => { it.carry++; if (it.carry % 3 && this.itemFits(it, it.x + dx, it.y)) it.x += dx; it.wob = Math.max(it.wob, 0.12); });
+    if (onIt && !s.boxHits(k.x + dx, k.y, k.w, k.h)) k.x += dx;
+    return true;
+  },
+  itemFits(it, x, y) {
+    const s = this.scene, T = 16;
+    const x0 = Math.floor(x / T), x1 = Math.floor((x + it.w - 0.001) / T), y0 = Math.floor(y / T), y1 = Math.floor((y + it.h - 0.001) / T);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (s.solidTile(tx, ty)) return false;
+    return !s.props.some(r => r.solid !== false && ovl(x, y, it.w, it.h, r));
+  },
+  // what is on p jumps a pixel and slides n px toward dir (0: a little either way)
+  shake(p, dir, n) {
+    p.wob = Math.max(p.wob, 0.16);
+    this.itemsOn(p).forEach((it, i) => {
+      it.wob = 0.3; const d = dir || (i % 2 ? 1 : -1);
+      for (let j = 0; j < (n || 0); j++) if (this.itemFits(it, it.x + d, it.y)) it.x += d;
+    });
+    this.ridersOf(p).forEach(q => { q.wob = Math.max(q.wob, 0.16); if (dir && (FURN[q.kind].light || FURN[q.kind].tip)) for (let j = 0; j < (n || 0); j++) this.moveBy(q, dir); });
+  },
+
+  // ---------------------------------------------------------------- what she does to them
+  // a run into it: over it goes, or it thuds and what is on it jumps
+  impact(p, d) {
+    if (FURN[p.kind].tip && !FURN[p.kind].steady && p.pose === 'up') { if (this.tip(p, d)) return; }
+    this.shake(p, d, 2); this.knock(p);
+    if (FURN[p.kind].light) p.slide += d * 6;
+  },
+  knock(p) { const heavy = !FURN[p.kind].light && !FURN[p.kind].tip; Sound.noise(0.06, heavy ? 0.05 : 0.035, heavy ? 420 : 900); Sound.tone(heavy ? 90 : 160, 0.07, 'triangle', 0.025, heavy ? 60 : 120); },
+  // knock it over toward d, or stand it back up; false if there is no room
+  tip(p, d) {
+    const F = FURN[p.kind]; if (!F.tip || p.tip) return false;
+    const floor = p.y + p.h;
+    if (p.pose === 'up') {
+      const [dw, dh] = F.down, x0 = d > 0 ? p.x : p.x + p.w - dw, ps = F.soft ? [] : [[0, 0, dw, dh]];
+      // room to lie down: clear of everything (a soft one, lying flat, only of walls), and not
+      // on her; if something is in the way it lies a little short of it
+      const room = xx => F.soft ? this.tilesClear(xx, floor - dh, dw, dh) : this.fitsAt(p, xx, floor - dh, dw, dh, true, ps) && !this.kidIn(xx, floor - dh, dw, dh);
+      let at = null;
+      for (let s = 0; s <= dw && at == null; s++) if (room(x0 - d * s)) at = x0 - d * s;
+      if (at == null) return false;
+      p.tip = { to: 'down', t: 0, dir: d, x: at };
+      Sound.tone(260, 0.05, 'square', 0.012, 200);
+      // what was on it goes flying
+      this.itemsOn(p).forEach(it => { it.vx = d * 55; it.vy = -70; it.wob = 0.3; });
+      return true;
+    }
+    const w = p.uw, h = p.uh, x0 = p.x + Math.round((p.w - w) / 2);
+    let at = null;
+    for (const s of [0, 1, -1, 2, -2, 3, -3, 4, -4, 6, -6]) if (at == null && this.fitsAt(p, x0 + s, floor - h, w, h, true, [[0, 0, w, h]])) at = x0 + s;
+    if (at == null) return false;
+    p.tip = { to: 'up', t: 0, dir: p.dir, x: at };
+    Sound.tone(200, 0.05, 'square', 0.012, 260);
+    return true;
+  },
+  tilesClear(x, y, w, h) {
+    const s = this.scene, T = 16, x0 = Math.floor(x / T), x1 = Math.floor((x + w - 0.001) / T), y0 = Math.floor(y / T), y1 = Math.floor((y + h - 0.001) / T);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (s.solidTile(tx, ty)) return false;
+    return true;
+  },
+  kidIn(x, y, w, h) { const k = this.scene.kid; return !!(k && ovl(x, y, w, h, k)); },
+  // K: the thing in front of her (not the one she stands on)
+  strikeTarget(k) {
+    const f = k.face || 1, bx = f > 0 ? k.x + k.w - 2 : k.x - 12, by = k.y - 6, bw = 14, bh = k.h + 6, cx = k.x + k.w / 2;
+    let best = null, bd = 1e9;
+    this.pieces.forEach(p => {
+      if (p.tip || this.onPiece(k, p)) return;
+      if (!ovl(bx, by, bw, bh, p)) return;
+      // the nearest, and the one on top before the one under it (a box on a trunk)
+      const d = Math.abs(p.x + p.w / 2 - cx) + (p.y + p.h - (k.y + k.h)) * 0.6; if (d < bd) { bd = d; best = { p }; }
+    });
+    this.items.forEach(it => {
+      if (it.broken || !ovl(bx, by, bw, bh, it)) return;
+      const d = Math.abs(it.x + it.w / 2 - cx) - 4 + (it.y + it.h - (k.y + k.h)) * 0.6; if (d < bd) { bd = d; best = { it }; }
+    });
+    return best;
+  },
+  strike(t, d) {
+    this.swingT = 0.16; this.swingDir = d;
+    if (t.it) { const it = t.it; it.vx = d * 85; it.vy = -95; it.wob = 0.3; Sound.tone(900, 0.03, 'square', 0.01); return; }
+    const p = t.p, F = FURN[p.kind];
+    if (F.tip) { if (!this.tip(p, d)) { this.shake(p, d, 1); this.knock(p); } return; }
+    if (F.light) { p.slide += d * 18; this.knock(p); this.shake(p, d, 1); return; }
+    // too heavy to move far: it shifts a pixel and everything on it jumps
+    this.moveBy(p, d); this.shake(p, d, 2); this.knock(p);
+  },
+  nearPiece(k) {
+    let best = null, bd = 12;
+    this.pieces.forEach(p => { const d = Math.max(p.x - (k.x + k.w), k.x - (p.x + p.w), 0); if (d < bd && k.y < p.y + p.h && k.y + k.h > p.y - 4) { bd = d; best = p; } });
+    return best;
+  },
+
+  // ---------------------------------------------------------------- per frame
+  updateFurniture(dt, k) {
+    const s = this.scene, c = s.ctl, live = k && !s.dead && !s.leaving && !s.done;
+    this.swingT = Math.max(0, this.swingT - dt);
+    // she leans on one: it moves (one at a time), and so does she, at its speed
+    const dir = live && c && c.right ? (c.right() ? 1 : 0) - (c.left() ? 1 : 0) : 0;
+    let pushing = null;
+    if (dir && k.onGround) for (const p of this.pieces) {
+      if (p.tip || !p.grounded || !p.push || !this.touching(p, k, dir)) { p.acc = 0; continue; }
+      if (!p.acc) this.shake(p, dir, 0);
+      p.acc += p.push * dt; pushing = p;
+      while (p.acc >= 1) {
+        p.acc -= 1;
+        if (!this.moveBy(p, dir)) { p.acc = 0; break; }
+        if (!s.boxHits(k.x + dir, k.y, k.w, k.h)) k.x += dir;
+        p.moved = (p.moved || 0) + 1; if (p.moved % 6 === 0) Sound.noise(0.05, 0.018, 380 + p.push * 6);
+      }
+      k.vx = dir * Math.min(Math.abs(k.vx), p.push);
+      break;
+    }
+    this.pushing = pushing;
+    this.pieces.forEach(p => {
+      p.wob = Math.max(0, p.wob - dt);
+      if (p.tip) return this.tipStep(p, dt);
+      // a shove (K on a box): a few px a frame until it is used up or blocked
+      if (p.slide) {
+        const st = Math.sign(p.slide), n = Math.min(Math.abs(p.slide), Math.max(1, Math.round(110 * dt)));
+        for (let i = 0; i < n; i++) { if (!this.moveBy(p, st)) { p.slide = 0; break; } p.slide -= st; }
+      }
+      this.fallPiece(p, dt);
+      if (p.thing) { const t = p.thing; t.x0 = p.x - 2; t.x1 = p.x + p.w + 2; t.y0 = p.y; t.y1 = p.y + p.h; if (t.followPy !== false) t.py = p.y; }
+    });
+    this.items.forEach(it => this.moveItem(it, dt));
+  },
+  fallPiece(p, dt) {
+    const supported = !this.fits(p, 0, 1, false) || this.kidUnder(p, 1);
+    if (supported && p.vy <= 0) { p.grounded = true; p.vy = 0; p.ay = 0; return; }
+    p.grounded = false; p.vy = Math.min(MAXF, p.vy + GRAV * dt); p.ay += p.vy * dt;
+    while (p.ay >= 1) {
+      p.ay -= 1;
+      if (!this.fits(p, 0, 1, false)) { this.landPiece(p); return; }
+      if (this.kidUnder(p, 1)) {
+        // her head is in the way: it slides off her to the side it is mostly on, or sits on her
+        const k = this.scene.kid, side = p.x + p.w / 2 < k.x + k.w / 2 ? -1 : 1;
+        if (this.fits(p, side, 0, true)) { p.x += side; this.syncRects(p); continue; }
+        this.landPiece(p); return;
+      }
+      p.y += 1; this.syncRects(p);
+    }
+  },
+  landPiece(p) {
+    const v = p.vy; p.vy = 0; p.ay = 0; p.grounded = true;
+    if (v > 110) { this.knock(p); this.shake(p, 0, 1); }
+    if (p.onLand && v > 110) p.onLand(p, v);
+  },
+  tipStep(p, dt) {
+    const T = p.tip; T.t += dt;
+    if (T.to === 'down') {
+      p.frame = T.t < TIP_FRAME ? 1 : 2;
+      if (T.t < TIP_FRAME * 2) return;
+      const [dw, dh] = FURN[p.kind].down, floor = p.y + p.h;
+      p.tip = null; p.pose = 'down'; p.frame = 3; p.dir = T.dir; p.w = dw; p.h = dh; p.x = T.x; p.y = floor - dh;
+      if (p.kind === 'lamp') { p.lit = false; Sound.noise(0.05, 0.03, 5000); }
+      this.setRects(p); this.knock(p);
+      Sound.noise(0.09, 0.05, 1100);
+      if (p.kind === 'bin' && !p.spilt) { p.spilt = true; for (let i = 0; i < 4; i++) this.item({ kind: 'paper', tone: p.spill, x: p.x + (T.dir > 0 ? p.w - 2 : 0), y: floor - 1, vx: T.dir * (30 + i * 18), vy: -40 - i * 10 }); }
+      this.unstick(p, T.dir);
+      if (p.onTip) p.onTip(p, 'down');
+    } else {
+      p.frame = T.t < TIP_FRAME ? 2 : 1;
+      if (T.t < TIP_FRAME * 2) return;
+      const floor = p.y + p.h;
+      p.tip = null; p.pose = 'up'; p.frame = 0; p.w = p.uw; p.h = p.uh; p.x = T.x; p.y = floor - p.h;
+      if (p.kind === 'lamp') p.lit = true;
+      this.setRects(p); Sound.noise(0.05, 0.03, 700);
+      this.unstick(p, -T.dir);
+      if (p.onTip) p.onTip(p, 'up');
+    }
+  },
+  // she is never left inside a piece
+  unstick(p, side) {
+    const s = this.scene, k = s.kid; if (!k) return;
+    const r = p.rects.find(r => ovl(k.x, k.y, k.w, k.h, r));
+    if (r) pushClear(s, r, side || 1, false);
+  },
+  moveItem(it, dt) {
+    if (it.broken) return;
+    it.wob = Math.max(0, it.wob - dt); it.kick = Math.max(0, it.kick - dt);
+    const grounded = !this.itemFits(it, it.x, it.y + 1);
+    if (grounded && it.vy >= 0) { it.vy = 0; it.ay = 0; const f = 420 * dt; it.vx = Math.abs(it.vx) <= f ? 0 : it.vx - Math.sign(it.vx) * f; }
+    else it.vy = Math.min(MAXF, it.vy + GRAV * dt);
+    it.ax += it.vx * dt;
+    while (Math.abs(it.ax) >= 1) { const st = Math.sign(it.ax); it.ax -= st; if (this.itemFits(it, it.x + st, it.y)) it.x += st; else { it.vx = -it.vx * 0.3; it.ax = 0; break; } }
+    it.ay += it.vy * dt;
+    while (Math.abs(it.ay) >= 1) {
+      const st = Math.sign(it.ay); it.ay -= st;
+      if (this.itemFits(it, it.x, it.y + st)) { it.y += st; continue; }
+      if (st > 0) this.landItem(it); else it.vy = 0;
+      it.ay = 0; break;
+    }
+    // stuck inside something (a piece slid over it): up and out
+    if (!this.itemFits(it, it.x, it.y)) for (let i = 0; i < 24 && !this.itemFits(it, it.x, it.y); i++) it.y -= 1;
+  },
+  landItem(it) {
+    const v = it.vy; it.vy = 0;
+    if (it.fragile && v > 120) { // a fall of about 10 px or more: off a table, say
+      it.broken = true; it.shards = [];
+      for (let i = 0; i < 5; i++) it.shards.push([Math.round((i - 2) * (2 + (i % 2))), i % 3 === 0 ? 'b' : 'a']);
+      Sound.noise(0.1, 0.05, 5200); Sound.tone(2400, 0.05, 'square', 0.01, 1800);
+      if (it.onBreak) it.onBreak(it);
+    } else if (v > 80) { it.vy = -v * 0.25; it.vx *= 0.6; Sound.tone(700 + it.w * 60, 0.03, 'square', 0.012); }
+  },
+  afterFurniture(dt, k) {
+    const s = this.scene, c = s.ctl, live = !s.dead && !s.leaving && !s.done;
+    // a run into one: over it goes (or a thud)
+    const d = Math.sign(this.preVx);
+    this.pieces.forEach(p => {
+      const now = !p.tip && (this.touching(p, k, 1) || this.touching(p, k, -1));
+      if (live && now && !p.contact && d && Math.abs(this.preVx) >= RUN_HIT && this.touching(p, k, d) && this.pushing !== p) this.impact(p, d);
+      p.contact = now;
+    });
+    // a hard landing on top: what is on it jumps
+    if (this.preAir && k.onGround && this.preVy > 150) this.pieces.forEach(p => { if (this.onPiece(k, p)) this.shake(p, 0, 1); });
+    // loose things on the floor get kicked when she walks through them
+    if (live && Math.abs(k.vx) > 25) this.items.forEach(it => {
+      if (it.broken || it.kick > 0 || !ovl(it.x, it.y, it.w, it.h, k) || Math.abs(k.y + k.h - (it.y + it.h)) > 2) return;
+      it.vx = k.vx * 1.2; it.vy = -45; it.kick = 0.4; Sound.tone(800, 0.025, 'square', 0.008);
+    });
+    // K: knock it, shove it, stand it up (only when there is something to hit: K is free otherwise)
+    if (live && this.opts.strike !== false && c && c.throwP) { const t = this.strikeTarget(k); if (t && c.throwP()) this.strike(t, k.face || 1); }
+    // never inside a piece, whatever moved
+    if (s.boxHits(k.x, k.y, k.w, k.h)) { const r = this.pieces.length && s.props.find(r => r.kind === 'piece' && r.solid !== false && ovl(k.x, k.y, k.w, k.h, r)); if (r) pushClear(s, r, k.x + k.w / 2 < r.x + r.w / 2 ? -1 : 1, false); }
+  },
+
+  // ---------------------------------------------------------------- drawing: frames, no rotation
+  drawFurniture(g) {
+    const s = this.scene, P = s.P, lg = this.lightG; lg.clear();
+    this.pieces.forEach(p => { if (p.kind === 'lamp' && p.lit && !p.tip) { const x = p.x + (p.wob > 0 && Math.floor(p.wob * 30) % 2 ? 1 : 0), f = p.y + p.h; hardCone(lg, [{ x: x + 1, y: p.y + 6 }, { x: x + p.w - 1, y: p.y + 6 }, { x: x + p.w + 9, y: f }, { x: x - 10, y: f }], C(p.light || 'bronzeHi'), null); } });
+    this.pieces.forEach(p => this.drawPiece(g, p));
+    this.items.forEach(it => this.drawItem(g, it));
+    // her K: a quick swipe of the arm, two frames
+    const k = s.kid;
+    if (this.swingT > 0 && k && !s.dead) {
+      const d = this.swingDir || 1, x = d > 0 ? k.x + k.w : k.x - 1, y = Math.round(k.y + 5), f = this.swingT > 0.08;
+      g.fillStyle(C('ash0'), 1); g.fillRect(Math.round(x + (d > 0 ? 0 : -4)), y - 1, 5, 3);
+      g.fillStyle(C('bone'), 1); g.fillRect(Math.round(x + (d > 0 ? 0 : -3)), y, f ? 4 : 2, 1);
+      if (!f) { g.fillStyle(C('boneLo'), 1); g.fillRect(Math.round(x + d * 5), y - 2, 1, 1); g.fillRect(Math.round(x + d * 6), y + 1, 1, 1); }
+    }
+  },
+  // a piece's upright picture as rects [x, y, w, h, tone], relative to its top-left; tone is
+  // 0 dark, 1 base, 2 light, 'o' outline, or an ASH key
+  uprightArt(p) {
+    const w = p.uw, h = p.uh, out = [];
+    const R = (x, y, ww, hh, c) => out.push([x, y, ww, hh, c]);
+    const box = (x, y, ww, hh) => { R(x - 1, y - 1, ww + 2, hh + 2, 'o'); };
+    switch (p.kind) {
+      case 'table':
+        box(0, 0, w, 3); box(1, 3, 2, h - 3); box(w - 3, 3, 2, h - 3);
+        R(0, 0, w, 3, 1); R(0, 0, w, 1, 2); R(1, 3, 2, h - 3, 0); R(w - 3, 3, 2, h - 3, 0); R(3, 3, w - 6, 1, 0);
+        if (p.cloth) { R(-1, 1, w + 2, 5, 'o'); R(0, 1, w, 4, p.cloth); R(0, 1, w, 1, 'bone'); }
+        break;
+      case 'chair': {
+        const bx = p.back < 0 ? 0 : w - 2, fx = p.back < 0 ? w - 2 : 0, sy = h - 10;
+        box(bx, 0, 2, sy); box(0, sy, w, 3); box(0, sy + 3, 2, 7); box(w - 2, sy + 3, 2, 7);
+        R(bx, 0, 2, sy, 1); R(bx, 0, 2, 1, 2); R(bx === 0 ? 1 : w - 2, 2, 1, sy - 3, 0);
+        R(0, sy, w, 3, 1); R(0, sy, w, 1, 2); R(0, sy + 3, 2, 7, 0); R(w - 2, sy + 3, 2, 7, 0); R(fx, sy + 1, 2, 1, 2);
+        if (p.cloth) { R(-1, 1, w + 2, h - 3, 'o'); R(0, 2, w, h - 5, p.cloth); R(0, 2, w, 1, 'bone'); R(p.back < 0 ? 0 : w - 3, 3, 3, sy - 2, 'boneLo'); }
+        break;
+      }
+      case 'stool':
+        box(0, 0, w, 3); box(1, 3, 2, h - 3); box(w - 3, 3, 2, h - 3);
+        R(0, 0, w, 3, 1); R(0, 0, w, 1, 2); R(1, 3, 2, h - 3, 0); R(w - 3, 3, 2, h - 3, 0); R(3, h - 4, w - 6, 1, 0);
+        break;
+      case 'bin':
+        box(0, 0, w, h); R(0, 0, w, h, 1); R(0, 0, w, 1, 2); R(0, 1, w, 1, 0);
+        for (let x = 2; x < w - 1; x += 2) R(x, 3, 1, h - 4, 0);
+        R(2, -2, 3, 2, 'boneLo'); // a screwed-up page on top
+        break;
+      case 'lamp':
+        box(0, 0, w, 5); box(3, 5, 1, h - 7); box(1, h - 2, w - 2, 2);
+        R(0, 0, w, 5, 1); R(1, 0, w - 2, 1, 2); R(3, 5, 1, h - 7, 0); R(1, h - 2, w - 2, 2, 0); R(1, h - 2, w - 2, 1, 1);
+        R(2, 5, 3, 1, p.lit ? 'lit' : 'ash2');
+        break;
+      case 'box':
+        box(0, 0, w, h); R(0, 0, w, h, 1); R(0, 0, w, 1, 2); R(Math.floor(w / 2) - 1, 0, 2, h, 0); R(1, h - 3, 3, 1, 0);
+        // landed hard and burst open: the flaps up, what was inside showing
+        if (p.open) { R(-3, -3, 4, 3, 'o'); R(w - 1, -3, 4, 3, 'o'); R(-2, -2, 3, 2, 2); R(w - 1, -2, 3, 2, 2); R(1, 0, w - 2, 1, 'ash0'); R(2, -1, w - 4, 1, p.inside || 'boneLo'); }
+        break;
+      case 'trunk':
+        box(0, 0, w, h); R(0, 0, w, h, 1); R(0, 0, w, 1, 2); R(0, 4, w, 1, 0);
+        R(0, 0, 2, h, 'goldLo'); R(w - 2, 0, 2, h, 'goldLo'); R(Math.floor(w / 2) - 1, 3, 2, 3, 'gold');
+        break;
+      case 'bench':
+        box(0, 0, w, 3); box(2, 3, 2, h - 3); box(w - 4, 3, 2, h - 3);
+        R(0, 0, w, 3, 1); R(0, 0, w, 1, 2); for (let x = 4; x < w; x += 5) R(x, 1, 1, 2, 0);
+        R(2, 3, 2, h - 3, 0); R(w - 4, 3, 2, h - 3, 0); R(4, h - 3, w - 8, 1, 0);
+        break;
+      default: // crate
+        box(0, 0, w, h); R(0, 0, w, h, 1); R(0, 0, w, 1, 2);
+        R(0, 1, w, 2, 0); R(0, h - 3, w, 2, 0); R(0, 0, 2, h, 0); R(w - 2, 0, 2, h, 0);
+        for (let i = 0; i < Math.min(w, h) - 6; i++) { const n = Math.min(w, h) - 6; R(Math.round(3 + i * (w - 6) / n), Math.round(3 + i * (h - 6) / n), 1, 1, 0); }
+    }
+    return out;
+  },
+  // lying down: a picture of its own, drawn for lying toward the right (mirrored for the left)
+  downArt(p) {
+    const w = p.w, h = p.h, out = [], R = (x, y, ww, hh, c) => out.push([x, y, ww, hh, c]), box = (x, y, ww, hh) => R(x - 1, y - 1, ww + 2, hh + 2, 'o');
+    if (p.kind === 'chair') {
+      // on its back: the back flat on the floor, the seat standing up, the legs sticking out
+      box(8, h - 2, 10, 2); box(5, 0, 3, h); box(0, 1, 5, 2); box(0, h - 4, 5, 2);
+      R(8, h - 2, 10, 2, 1); R(8, h - 2, 10, 1, 2); R(5, 0, 3, h, 1); R(7, 0, 1, h, 2); R(0, 1, 5, 2, 0); R(0, h - 4, 5, 2, 0);
+    } else if (p.kind === 'stool') {
+      box(w - 3, 0, 3, h); box(0, 1, w - 3, 2); box(0, h - 3, w - 3, 2);
+      R(w - 3, 0, 3, h, 1); R(w - 1, 0, 1, h, 2); R(0, 1, w - 3, 2, 0); R(0, h - 3, w - 3, 2, 0); R(3, 3, 1, h - 5, 0);
+    } else if (p.kind === 'bin') {
+      box(0, 0, w, h); R(0, 0, w, h, 1); R(0, 0, w, 1, 2); for (let x = 2; x < w - 2; x += 2) R(x, 2, 1, h - 3, 0); R(w - 2, 1, 2, h - 2, 'ash0');
+    } else if (p.kind === 'lamp') {
+      // the pole along the floor, the shade at the far end, its bulb dark
+      box(0, h - 2, 3, 2); box(2, h - 2, w - 7, 1); box(w - 5, 0, 5, h);
+      R(0, h - 2, 3, 2, 0); R(2, h - 2, w - 7, 1, 0); R(w - 5, 0, 5, h, 1); R(w - 5, 0, 1, h, 2); R(w - 6, 1, 1, 2, 'ash2');
+    }
+    return out;
+  },
+  drawPiece(g, p) {
+    const P = this.scene.P, tones = TONES[p.tone] || TONES.wood;
+    const col = c => c === 'o' ? C('ash0') : typeof c === 'number' ? C(tones[c]) : C(c);
+    const jig = p.wob > 0 && Math.floor(p.wob * 30) % 2 ? 1 : 0, X = p.x + jig, Y = p.y;
+    void P;
+    if (p.pose === 'down' && !p.tip) {
+      const art = this.downArt(p), m = p.dir < 0;
+      art.forEach(([x, y, w, h, c]) => { g.fillStyle(col(c), 1); g.fillRect(m ? X + p.w - x - w : X + x, Y + y, w, h); });
+      return;
+    }
+    const art = this.uprightArt(p);
+    if (!p.frame) { art.forEach(([x, y, w, h, c]) => { g.fillStyle(col(c), 1); g.fillRect(X + x, Y + y, w, h); }); return; }
+    // a lean: each row slides toward the fall and the whole thing sinks (frame 1 a little, frame
+    // 2 most of the way), pivoting on the foot it falls over
+    const d = p.tip ? p.tip.dir : p.dir, H = p.uh, floor = p.y + p.h;
+    const sh = p.frame === 1 ? 0.45 : 1.0, sq = p.frame === 1 ? 0.9 : 0.55;
+    const ox = p.x + jig + (d > 0 ? 0 : 0), w0 = p.uw;
+    art.forEach(([x, y, w, h, c]) => {
+      g.fillStyle(col(c), 1);
+      for (let r = y; r < y + h; r++) {
+        const up = H - r, ny = Math.round(floor - up * sq), nx = Math.round(up * sh * d);
+        g.fillRect(ox + Math.round((p.w - w0) / 2) + x + nx, ny, w, Math.max(1, Math.ceil(sq)));
+      }
+    });
+  },
+  drawItem(g, it) {
+    const x = Math.round(it.x), y = Math.round(it.y) - (it.wob > 0 && Math.floor(it.wob * 25) % 2 ? 1 : 0), w = it.w, h = it.h;
+    const f = (xx, yy, ww, hh, c) => { g.fillStyle(C(c), 1); g.fillRect(xx, yy, ww, hh); };
+    if (it.broken) { it.shards.forEach(([dx, t]) => f(x + Math.floor(w / 2) + dx, y + h - 1, 1, 1, t === 'b' ? it.shardTone || 'bone' : 'ash4')); return; }
+    if (it.kind !== 'paper') f(x - 1, y - 1, w + 2, h + 1, 'ash0');
+    switch (it.kind) {
+      case 'cup': f(x, y, w, h, 'bone'); f(x, y + h - 1, w, 1, 'boneLo'); break;
+      case 'mug': f(x, y, w - 1, h, it.tone || 'ash5'); f(x + w - 1, y + 1, 1, 2, it.tone || 'ash5'); f(x, y, w - 1, 1, 'boneLo'); break;
+      case 'jar': f(x, y + 1, w, h - 1, 'ash2'); f(x, y, w, 1, it.tone || 'goldLo'); f(x + 1, y + 2, 1, 2, 'ash4'); f(x + 1, y + h - 2, 2, 1, it.fill || 'ash4'); break;
+      case 'vase': f(x, y + 2, w, h - 2, it.tone || 'gold'); f(x + 1, y, w - 2, 2, it.tone || 'gold'); f(x, y + 2, 1, h - 3, 'goldHi'); f(x + 1, y + h - 1, w - 2, 1, 'goldLo'); break;
+      case 'bottle': f(x, y + 2, w, h - 2, it.tone || 'ash4'); f(x, y, 1, 2, it.tone || 'ash4'); f(x, y + 3, 1, 1, 'boneLo'); break;
+      case 'bulb': f(x, y, w, h - 1, it.lit ? 'lit' : 'boneLo'); f(x + 1, y + h - 1, 1, 1, 'ash4'); break;
+      case 'book': f(x, y, w, h, it.tone || 'bronzeHi'); f(x, y, 1, h, 'ash5'); break;
+      case 'can': f(x, y, w, h, 'ash4'); f(x, y, w, 1, 'ash5'); f(x, y + 2, w, 1, it.tone || 'red'); break;
+      case 'candle': f(x, y + 4, w, 3, 'gold'); f(x + 1, y + 1, 1, 3, 'bone'); f(x + 1, y, 1, 1, it.lit ? 'lit' : 'ash4'); break;
+      case 'tin': f(x, y, w, h, it.tone || 'ash4'); f(x, y, w, 1, 'ash5'); break;
+      case 'brush': f(x, y, 3, h, 'bronzeHi'); f(x + 3, y, w - 3, h, 'ash0'); f(x + 3, y, w - 3, 1, 'ash4'); break;
+      case 'paper': f(x, y, w, h, it.tone || 'boneLo'); break;
+      default: f(x, y, w, h, 'ash4');
+    }
+  }
+};
+Object.assign(Props.prototype, Furniture);

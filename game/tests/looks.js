@@ -2,7 +2,9 @@
 // line shows as narration in the caption strip. Then her own bodies: a body from an earlier
 // take reads its take and what killed her. Then the city: people talk with E, say something when
 // she walks into them, put her down when she lands on a head; benches, planters and the fountain
-// are solid and she can stand on them. A frame of each kind goes to tests/out.
+// are solid and she can stand on them. The grounds' furniture (Nov 18): she pushes the garden
+// bench, and crouched under the terrace table the drone overhead cannot see her. A frame of each
+// kind goes to tests/out.
 const { chromium } = require('playwright');
 const BASE = process.env.UA_BASE || 'http://localhost:8766';
 const OUT = __dirname + '/out/';
@@ -96,6 +98,25 @@ const norm = s => String(s).replace(/\s+/g, ' ').trim();
     for (let i = 0; i < 3; i++) { await p.keyboard.press('KeyE'); await p.waitForTimeout(150); lines.push(await ccText(p)); await p.keyboard.press('KeyE'); await p.waitForTimeout(150); }
     ok('E steps through the body: ' + lines.map(l => '"' + l + '"').join(' '), /^Take 1\./.test(lines[0]) && /light found her/.test(lines[1]) && /Same jacket/.test(lines[2]));
     await p.screenshot({ path: OUT + 'looks-body.png' });
+    await p.close();
+  }
+
+  // ---- the grounds' furniture: push the bench; hide under the terrace table from the drone
+  {
+    const p = await open('grounds');
+    const wait = async sec => { const t0 = await p.evaluate(() => window.__game.scene.clock); await p.waitForFunction(t => window.__game.scene.clock >= t, t0 + sec, { timeout: 30000, polling: 30 }); };
+    const b0 = await p.evaluate(() => window.__game.scene.dyn.pieces.find(q => q.id === 'garden bench').x);
+    await p.evaluate(() => { const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'garden bench'), k = s.kid; k.x = q.x + q.w + 1; k.y = 400 - 14; k.vx = 0; k.vy = 0; k.face = -1; });
+    await p.keyboard.down('ArrowLeft'); await wait(0.8); await p.keyboard.up('ArrowLeft');
+    const b1 = await p.evaluate(() => window.__game.scene.dyn.pieces.find(q => q.id === 'garden bench').x);
+    ok('she pushes the garden bench (' + b0 + ' to ' + b1 + ')', b1 < b0);
+    // crouched under the table, with the drone parked right over it: no lock, no strike
+    await p.evaluate(() => { window.__noDeath = false; const s = window.__game.scene, q = s.dyn.pieces.find(q => q.id === 'terrace table'), k = s.kid, D = s.drones[0]; k.x = q.x + 6; k.y = 272 - 9; k.h = 9; k.crouch = true; k.vx = 0; k.vy = 0; D.x0 = D.x1 = D.x = q.x + 10; D.speed = 0; });
+    await p.keyboard.down('ArrowDown'); await wait(1.5);
+    const hid = await p.evaluate(() => { const s = window.__game.scene; return { dead: s.dead, lock: s.drones[0].lock, crouch: s.kid.crouch }; });
+    await p.screenshot({ path: OUT + 'looks-grounds-table.png' });
+    await p.keyboard.up('ArrowDown');
+    ok('crouched under the terrace table, the drone over it cannot see her ' + JSON.stringify(hid), !hid.dead && hid.lock === 0 && hid.crouch);
     await p.close();
   }
 
