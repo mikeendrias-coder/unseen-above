@@ -99,7 +99,7 @@ function drawCaption(t) {
   const x0 = Math.min(...r.boxes.map(b => b.x)), x1 = Math.max(...r.boxes.map(b => b.x + b.w));
   S.capRect = { x0, y0: r.top, x1, y1: bottom };
   // the line is out and a press moves it on: a small blinking arrow after the last line
-  if (d ? d.more : c.line.arrow()) { const b = r.boxes[n - 1]; ctx.fillStyle = PAPER; ctx.fillRect(b.x + b.w + 2, bottom - 6, 3, 1); ctx.fillRect(b.x + b.w + 3, bottom - 5, 1, 1); }
+  if (d ? d.more : c.line.arrow()) { const b = r.boxes[n - 1], ax = b.x + b.w + 2, ay = bottom - 7; ctx.fillStyle = PAPER; ctx.fillRect(ax, ay, 5, 1); ctx.fillRect(ax + 1, ay + 1, 3, 1); ctx.fillRect(ax + 2, ay + 2, 1, 1); }
 }
 
 // ------------------------------------------------------------------ stamps, key caps, paper
