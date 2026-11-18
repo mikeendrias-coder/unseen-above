@@ -22,8 +22,12 @@ import { fx } from '../core/fx.js';
 
 const T = TILE, C = k => hexNum(ASH[k]), SKIP_SAFE = 2;
 const rgb = c => { const n = hexNum(c); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-const ROBOT_BEFORE = ['Welcome home. Please wipe your feet.', 'You are not on the guest list. Nobody is.', 'I have cleaned this floor 41,207 times.', 'Please do not touch the drawer.', 'I did not say anything about a drawer.', 'Mind the cameras. They are very shy.'];
-const ROBOT_AFTER = ['Those suit you.', 'The last one wore them too.', 'Please return them. Nobody does.', 'I will tidy up after you. I always do.'];
+// The cleaning robot: cheerful, polite, no idea (the same model as the one on the Moon).
+const ROBOT_BEFORE = ['Welcome home! Please wipe your feet.', "You're not on the guest list. Nobody ever is.", "I've cleaned this floor 41,207 times.", "Please don't touch the drawer.", "What drawer? I didn't say drawer.", "Careful of the cameras. They're shy."];
+const ROBOT_AFTER = ['Oh, those look good on you.', 'The last girl wore them too.', 'Please put them back after. Nobody does.', "Don't worry. I'll clean up after you. I always do."];
+const ROBOT_TIDY = 'I tidied up for the next take.';
+const ROBOT_SAW = 'I saw that.';
+const ROBOT_CHAIR = 'Hey! I just put that chair back.';
 
 export class Gallery extends SideEpisode {
   constructor() { super('gallery'); }
@@ -68,6 +72,15 @@ export class Gallery extends SideEpisode {
     this.dyn = new Props(this, { depth: 3.6 });
     this.swings = LEVEL.swings.map((s, i) => this.dyn.swing(Object.assign({ id: 'chandelier ' + (i + 1), draw: (g, p) => this.drawSwing(g, p) }, s)));
     this.boards = LEVEL.boards.map(b => this.dyn.crumble({ id: 'boards', x: b.x, y: b.y, w: b.w, h: 6, delay: 0.38, back: 0, draw: (g, p) => this.drawBoards(g, p) }));
+    // the furniture: pushed, knocked over, climbed (core/props.js). Knock the hall chair over
+    // and the robot, if it is near, complains (once a visit).
+    this.furniture = LEVEL.furniture.map(f => {
+      const p = this.dyn.piece(Object.assign({}, f));
+      (f.loose || []).forEach(l => this.dyn.item(Object.assign({}, l, { x: p.x + l.dx, y: p.y })));
+      return p;
+    });
+    const chair = this.furniture.find(p => p.id === 'hall chair');
+    if (chair) chair.onTip = (p, pose) => { if (pose === 'down' && !this.chairSaid && Math.abs(this.robot.x - p.x) < 260) { this.chairSaid = true; this.time.delayedCall(400, () => this.robotSay(ROBOT_CHAIR)); } };
     this.cams = LEVEL.cameras.map(c => Object.assign({}, c, { lock: 0, cone: null, angle: 0 }));
     this.laser = { awake: false, t: 0, phase: '', n: -2, st: null, fired: false };
     // the laser's order is new every take, and its rhythm a little different: no learning it by heart
@@ -92,7 +105,7 @@ export class Gallery extends SideEpisode {
     this.events.once('shutdown', () => Object.values(this.beds).forEach(b => b.stop(0.4)));
     this.takeNote({ fromCut }, 2, 'The Gallery');
     // on a later take the robot has tidied her old bodies into a row; it says so, once
-    if (this.tidied && !state.heard('ep2:tidy')) this.time.delayedCall(1600, () => this.robotSay('Tidy for the next take.', 'ep2:tidy'));
+    if (this.tidied && !state.heard('ep2:tidy')) this.time.delayedCall(1600, () => this.robotSay(ROBOT_TIDY, 'ep2:tidy'));
     window.__game = { scene: this, state };
   }
 
@@ -195,7 +208,7 @@ export class Gallery extends SideEpisode {
       const src = { lines: NOTICE.gallery.drawer2, key: 'look:ep2:drawer2' };
       this.time.delayedCall(350, () => { if (state.clue('drawer')) overlay.note('CLUE NOTED (' + state.clueCount() + ')', 1600); this.bubbles.look('item', src, () => ({ x: LEVEL.cabinet.drawer.x + 8, y: GROUND - 16 })); });
     }
-    const R = this.robot; if (Math.abs(R.x - this.kid.x) < 200 && !state.heard('ep2:sawthat')) this.time.delayedCall(500, () => this.robotSay('I saw that.', 'ep2:sawthat'));
+    const R = this.robot; if (Math.abs(R.x - this.kid.x) < 200 && !state.heard('ep2:sawthat')) this.time.delayedCall(500, () => this.robotSay(ROBOT_SAW, 'ep2:sawthat'));
   }
   updateDrawer(dt) {
     const D = this.drawer;
@@ -509,16 +522,17 @@ export class Gallery extends SideEpisode {
     if (this.hudT < 1.2 && Math.floor(this.hudT * 8) % 2 === 0) pixText(g, 'VIEW', m + 3, m + 3, col, 1, a);
   }
 
+  // the hint line: what a friend standing next to you would say
   hint() {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
-    if (this.atDoor()) return overlay.hint('W at the door.');
-    if (x > 73) return overlay.hint('Low beam: jump it. Two beams: crouch. Door at the end.');
-    if (!this.glasses && x < 20) return overlay.hint('A and D move. Space jumps. J uses things and talks.');
-    if (!this.glasses) return overlay.hint('Something here is watching you. You cannot see it yet.');
-    if (x < 20) return overlay.hint('L puts the glasses on and off. They show what sees you.');
-    if (x < 37 && k.y > MEZZ + 8) return overlay.hint('A camera sweeps the stair. Wait under the desk.');
-    if (x < 54) return overlay.hint('Jump to a chandelier. Space lets go.');
-    return overlay.hint('The boards give way. The camera keeps looking up.');
+    if (this.atDoor()) return overlay.hint('Press W to go through.');
+    if (x > 73) return overlay.hint('Jump the low beam. Crouch under the two high ones.');
+    if (!this.glasses && x < 20) return overlay.hint('A and D to walk, Space to jump. J to use things or talk.');
+    if (!this.glasses) return overlay.hint("Something in here is watching you. You just can't see it.");
+    if (x < 20) return overlay.hint('Press L to put the glasses on or off. They show what sees you.');
+    if (x < 37 && k.y > MEZZ + 8) return overlay.hint('A camera sweeps the stairs. Wait under the desk till it passes.');
+    if (x < 54) return overlay.hint('Jump onto a chandelier. Press Space to let go.');
+    return overlay.hint('The boards give way under you. That camera keeps looking up.');
   }
 }

@@ -32,6 +32,16 @@ export const LEVEL = {
   props: [{ id: 'car', x: 92, y: GROUND - 9, w: 34, h: 9 }, { id: 'car roof', x: 98, y: GROUND - 15, w: 20, h: 6 },
     ...[40, 54].map(t => ({ id: 'urn', x: t * T + 3, y: ROWS.terrace * T - 12, w: 11, h: 12 }))],
   crate: { x: 57 * T, y: TERRACE - 22, w: 22, h: 22 },
+  // furniture with physics (core/props.js piece), y the floor under it: a garden bench in the
+  // open lawn before the hedge wall (heavy; room to push it either way, a step up), a terrace
+  // table between the fountain and the statue with a gap on each side wide enough to drop into
+  // and crouch under it (the drone looks straight down and the top stops its light), and a chair
+  // past the statue. A cup on the table.
+  furniture: [
+    { kind: 'bench', id: 'garden bench', x: 32 * T + 2, y: GROUND, tone: 'wood' },
+    { kind: 'table', id: 'terrace table', x: 49 * T + 12, y: TERRACE, w: 20, tone: 'bone', loose: [{ kind: 'cup', dx: 5 }] },
+    { kind: 'chair', id: 'terrace chair', x: 53 * T + 4, y: TERRACE, back: 1, tone: 'bone' }
+  ],
   cradle: { x: 72 * T, w: 32, top: BALCONY, bottom: LOGGIA, speed: 30, pause: 1.0, roof: 24 },
   slabs: [{ x: 79 * T, y: BALCONY, w: 32 }, { x: 85 * T, y: BALCONY, w: 32 }],
   fountain: { x0: 41 * T, x1: 49 * T, bowl: 14 },

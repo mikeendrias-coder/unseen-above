@@ -81,6 +81,12 @@ export class Grounds extends SideEpisode {
     const CR = LEVEL.cradle;
     this.cradle = this.dyn.mover({ id: 'cradle', x: CR.x, y: CR.bottom, w: CR.w, h: 6, path: [{ x: CR.x, y: CR.bottom }, { x: CR.x, y: CR.top }], speed: CR.speed, pause: CR.pause, wait: CR.pause, roof: CR.roof, cable: 4 });
     this.slabs = LEVEL.slabs.map(s => this.dyn.crumble({ id: 'foam slab', x: s.x, y: s.y, w: s.w, h: 8, delay: 0.32, back: 2.5 }));
+    // the garden furniture: pushed, knocked over, climbed, and it blocks light (core/props.js)
+    this.furniture = LEVEL.furniture.map(f => {
+      const p = this.dyn.piece(Object.assign({}, f));
+      (f.loose || []).forEach(l => this.dyn.item(Object.assign({}, l, { x: p.x + l.dx, y: p.y })));
+      return p;
+    });
     this.addThings();
     this.scan = null;
 
@@ -357,17 +363,18 @@ export class Grounds extends SideEpisode {
     this.drawThings();
   }
 
+  // the hint line: what a friend standing next to you would say
   hint() {
     if (this.leaving || this.done) return;
     const k = this.kid, x = k.x / T;
-    if (this.atDoor()) return overlay.hint('W at the door.');
-    if (this.scan) return overlay.hint(x > 90 ? 'The door is just ahead.' : 'Run. If the scan reaches you, the strike comes.');
-    if (x < 15) return overlay.hint('A and D move. Space jumps. J looks at things.');
-    if (x < 34) return overlay.hint('Hide in the hedges’ shadow. Space twice jumps higher.');
-    if (x < 38) return overlay.hint('Jump from wall to wall to climb.');
-    if (x < 56) return overlay.hint('The drone looks straight down. Wait under the bowl.');
-    if (x < 64 && k.y > 200) return overlay.hint('Push the crate. Stay in its shadow. Then climb it.');
-    if (x < 74) return overlay.hint('Ride the cradle. Its roof hides you from the drone.');
-    return overlay.hint('Foam slabs drop when you stand on them.');
+    if (this.atDoor()) return overlay.hint('Press W to go in.');
+    if (this.scan) return overlay.hint(x > 90 ? 'The door is right there. Keep going!' : 'Run! If the scan catches you, the strike comes.');
+    if (x < 15) return overlay.hint('A and D to walk, Space to jump. J to look at things.');
+    if (x < 34) return overlay.hint('Stay in the hedges’ shadow. Tap Space twice to jump higher.');
+    if (x < 38) return overlay.hint('Jump back and forth between the walls to climb up.');
+    if (x < 56) return overlay.hint('The drone only looks straight down. Get under the bowl, or crouch under the table.');
+    if (x < 64 && k.y > 200) return overlay.hint('Push the crate and stay in its shadow. Then climb it.');
+    if (x < 74) return overlay.hint('Ride the cradle up. Its roof hides you from the drone.');
+    return overlay.hint('The foam slabs drop a second after you land. Keep moving.');
   }
 }
