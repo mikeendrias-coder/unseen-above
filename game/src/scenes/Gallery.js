@@ -248,6 +248,8 @@ export class Gallery extends SideEpisode {
         // the wreck is solid where it is drawn (28 x 7), so she can stand on it or bump into it
         const wreck = { id: 'fallen chandelier', x: X.x - 14, y: M - 7, w: 28, h: 7 };
         this.props.push(wreck);
+        // gold the wreck lands on sits on top of it now, where she can still reach it
+        this.gold.list.forEach((m, i) => { if (!this.gold.taken.has(i) && m.x >= wreck.x && m.x < wreck.x + wreck.w && m.y > wreck.y) m.y = wreck.y; });
         const hit = k.x + k.w > X.x - X.footprint && k.x < X.x + X.footprint && k.y + k.h > M - 30 && k.y < M;
         if (hit && !this.dead) {
           this.hurt(2, 'chandelier'); // the house: HP (hurt() decides what story mode and tests do)

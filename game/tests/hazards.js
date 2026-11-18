@@ -49,6 +49,21 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   await fresh();
   await stands('grounds: the urn at tile 40', 40 * 16 + 4, 17 * 16 - 12);
   await stands('grounds: the urn at tile 54', 54 * 16 + 4, 17 * 16 - 12);
+  // the urns are solid, so they cast a shadow: crouched hard against the urn at tile 54, the
+  // terrace lamp aimed at her does not see her; standing there, it does
+  const urnCover = async crouch => {
+    await fresh();
+    const before = await p.evaluate(() => window.__game.state.episode(window.__game.scene.epId).bodies.length);
+    await p.evaluate(crouch => { const s = window.__game.scene, L = s.lights[1], k = s.kid, c = s.ctl; window.__noDeath = false; s.safeT = 0; k.hp = 3; k.inv = 0;
+      k.x = 54 * 16 + 3 - 8; k.vx = k.vy = 0; if (crouch) { window.__down0 = window.__down0 || c.down; c.down = () => true; k.crouch = true; k.h = 9; } k.y = 17 * 16 - k.h; k.peakY = k.y; s.cameras.main.centerOn(k.x, k.y);
+      const a = Math.atan2(k.y + k.h / 2 - L.y, k.x + 4 - L.x) * 180 / Math.PI; L.a0 = L.a1 = a; }, crouch);
+    const died = await until(n => window.__game.state.episode(window.__game.scene.epId).bodies.length > n, before, 2500).then(() => true, () => false);
+    await p.evaluate(() => { const s = window.__game.scene; if (window.__down0) { s.ctl.down = window.__down0; window.__down0 = null; } });
+    await until(() => !window.__game.scene.dead && window.__game.scene.clock > 0.3, null, 15000).catch(() => {});
+    return died;
+  };
+  ok('grounds: crouched behind the urn, the terrace lamp does not see her', !(await urnCover(true)));
+  ok('grounds: standing behind the urn, the terrace lamp does', await urnCover(false));
 
   // ---------------------------------------------------------------- episode 2, the gallery
   await open('gallery');
@@ -71,7 +86,19 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   const moved = await p.evaluate(async () => { const s = window.__game.scene, k = s.kid, x0 = k.x, c = s.ctl, r0 = c.right, l0 = c.left; const dir = k.x < 69 * 16 + 8 ? -1 : 1; if (dir > 0) c.right = () => true; else c.left = () => true; await new Promise(r => setTimeout(r, 500)); c.right = r0; c.left = l0; return Math.abs(k.x - x0); });
   ok('gallery: after the wreck she walks away (' + Math.round(moved) + ' px)', moved > 8);
   await stands('gallery: the fallen chandelier', 69 * 16 + 4, 13 * 16 - 7);
-  await stands('gallery: the dust sheets', 40 * 16, 21 * 16 - 6);
+  // the gold under the drop sits on top of the wreck once it lands, where she can still reach it
+  // (she sets it off from the near edge, short of the gold)
+  await open('gallery');
+  await p.evaluate(() => { const s = window.__game.scene, k = s.kid; window.__noDeath = true; s.cams.forEach(c => { c.range = 0; }); k.x = 69 * 16 + 8 - 16; k.y = 13 * 16 - 14; k.vx = k.vy = 0; });
+  await until(() => window.__game.scene.drop.phase === 'down', null, 8000);
+  await p.waitForTimeout(300);
+  const gw = await p.evaluate(() => { const s = window.__game.scene, r = s.props.find(q => q.id === 'fallen chandelier'), i = s.gold.list.findIndex(m => m.x >= r.x && m.x < r.x + r.w); return i < 0 ? null : { y: s.gold.list[i].y, top: r.y, taken: s.gold.taken.has(i) }; });
+  ok('gallery: the gold under the chandelier ends on top of the wreck (y ' + (gw && gw.y) + ', top ' + (gw && gw.top) + ')', gw && !gw.taken && gw.y === gw.top);
+  await stands('gallery: standing on the wreck picks it up', 69 * 16 + 4, 13 * 16 - 7);
+  ok('gallery: the wreck gold is taken', await p.evaluate(() => { const s = window.__game.scene, r = s.props.find(q => q.id === 'fallen chandelier'), i = s.gold.list.findIndex(m => m.x >= r.x && m.x < r.x + r.w); return s.gold.taken.has(i); }));
+  // the dust sheets are soft cloth at the back: she walks the whole atrium floor with no ledge
+  const sheets = await p.evaluate(async () => { const s = window.__game.scene, k = s.kid, c = s.ctl, l0 = c.left; window.__noDeath = true; k.x = 47 * 16; k.y = 21 * 16 - 14; k.vx = k.vy = 0; k.peakY = k.y; await new Promise(r => setTimeout(r, 200)); c.left = () => true; await new Promise(r => setTimeout(r, 2600)); c.left = l0; return { x: Math.round(k.x), ground: k.onGround, feet: Math.round(k.y + k.h) }; });
+  ok('gallery: walking left across the dust sheets, no ledge stops her (x ' + sheets.x + ', feet ' + sheets.feet + ')', sheets.x < 37 * 16 && sheets.feet === 21 * 16);
 
   // ---------------------------------------------------------------- episode 3, the fall
   await open('fall');
@@ -98,14 +125,38 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
   });
   if (slab.skip) ok('bedroom: slab not reachable in this build', false);
   else ok('bedroom: the slab costs HP (hp ' + slab.hp + '), not a life, and throws her clear (x ' + slab.x + ')', slab.hp < 3 && !slab.dead && !slab.inside);
+  // the real run: the floor going behind her (bringDown), the slab lands on her standing under it;
+  // it costs HP and throws her forward, out the far side, away from the collapse
+  await open('bedroom');
+  const run = await p.evaluate(async () => {
+    const s = window.__game.scene, k = s.kid; window.__noDeath = false;
+    s.cams.forEach(c => { c.range = 0; c.caught = false; });
+    s.bringDown(); const L = { x: 1128, w: 34 }, S = s.run.slab;
+    k.hp = 3; k.inv = 0; k.x = L.x + 12; k.y = 160 - 14; k.vx = k.vy = 0; k.peakY = k.y; S.state = 'fall'; S.t = 0;
+    for (let i = 0; i < 60 && S.state !== 'down'; i++) await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 150));
+    const r = s.slabProp, inside = k.x < r.x + r.w && k.x + k.w > r.x && k.y < r.y + r.h && k.y + k.h > r.y;
+    return { hp: k.hp, dead: s.dead, inside, x: Math.round(k.x), state: S.state, live: !!s.collapse && !s.collapse.done, past: k.x >= r.x + r.w, cx: Math.round(s.collapse.x) };
+  });
+  ok('bedroom run, collapse live: the slab costs HP (hp ' + run.hp + ') and throws her forward (x ' + run.x + ', floor going at ' + run.cx + ', slab ' + run.state + ')', run.live && run.hp < 3 && !run.dead && !run.inside && run.past);
 
   // ---------------------------------------------------------------- side rooms: the furniture holds her up
-  for (const [room, spots] of [['staff', [[90, 128]]], ['keeper', [[210, 120], [240, 120]]], ['workshop', [[120, 118], [200, 128]]], ['wardrobe', [[200, 134]]]]) {
+  for (const [room, spots] of [['staff', []], ['keeper', [[210, 120], [240, 120]]], ['workshop', [[120, 118], [200, 128]]], ['wardrobe', [[200, 134]]]]) {
     await p.evaluate(id => { const b = window.__unseen.game.scene.getScene('bedroom'); b.scene.launch('room', { id, from: 'bedroom', take: 1 }); b.scene.sleep(); }, room);
     await until(id => window.__unseen.game.scene.isActive('room') && window.__game.scene.sys.settings.key === 'room' && window.__game.scene.roomId === id && window.__game.scene.clock > 0.3, room);
     const start = await p.evaluate(() => { const s = window.__game.scene, k = s.kid; return !s.boxHits(k.x, k.y, k.w, k.h); });
     ok(room + ': she starts clear of the furniture', start);
     for (const [x, y] of spots) await stands(room + ': furniture at ' + x, x, y);
+    // walking in from the door with D alone, then J: the room's one thing to do works from the
+    // floor (the shed's TV from its crate's near side; the staff room's bedroll, no climb)
+    if (room === 'keeper' || room === 'staff') {
+      await p.evaluate(() => { const s = window.__game.scene, k = s.kid; window.__noDeath = true; k.x = 30; k.y = 160 - 14; k.vx = k.vy = 0; k.peakY = k.y; });
+      await p.keyboard.down('KeyD'); await p.waitForTimeout(room === 'keeper' ? 3500 : 4500); await p.keyboard.up('KeyD'); await p.waitForTimeout(200);
+      const n0 = await p.evaluate(() => window.__game.scene.act.n);
+      await p.keyboard.press('KeyJ'); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => { const s = window.__game.scene; return { x: Math.round(s.kid.x), n: s.act.n }; });
+      ok(room + ': walking in with D and pressing J does the room\'s thing (x ' + r.x + ', uses ' + n0 + ' to ' + r.n + ')', r.n === n0 + 1);
+    }
     await p.evaluate(() => window.__game.scene.leave());
     await until(() => !window.__unseen.game.scene.isActive('room'), null, 8000);
     await p.waitForTimeout(300);

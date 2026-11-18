@@ -16,7 +16,7 @@ const BASE = process.env.UA_BASE || 'http://localhost:8766';
     await until(() => window.__game.scene.bubbles.list.size > 0, null, 4000);
     await p.screenshot({ path: 'tests/out/' + shot + '.png' });
     ok(label + ': a thing to look at says something', true);
-    await p.evaluate(() => { const s = window.__game.scene, d = s.things.find(t => t.door); s.kid.x = d.x0 + 4; }); await p.waitForTimeout(200); await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW'); // the door back is on either side
+    await p.evaluate(() => { const s = window.__game.scene, d = s.things.find(t => t.door); s.kid.x = d.x0 + 4; }); await p.waitForTimeout(200); await p.keyboard.down('KeyW'); await p.waitForTimeout(150); await p.keyboard.up('KeyW'); // the door back is on either side; doors open with W only
   };
   await p.addInitScript(() => { window.__noPanels = true; try { localStorage.removeItem('unseen-above-v1'); } catch (e) {} });
   await p.goto(BASE + '/local.html#eastwing'); await p.click('#start');

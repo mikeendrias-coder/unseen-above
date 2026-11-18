@@ -334,6 +334,9 @@ export class Bedroom extends SideEpisode {
   }
 
   // ------------------------------------------------------------------ the floor going
+  // A deliberate call (Nov 18 audit): what hits her in the run (the slab) costs HP; falling
+  // through the floor, the collapse's or a gap's, is a fall into the dark under the house and
+  // ends the take (die 'the fall'), like any pit. There is nothing to stand on to come back to.
   updateCollapse(dt) {
     const C = this.collapse; if (!C || C.done) return;
     C.t += dt;
@@ -379,7 +382,10 @@ export class Bedroom extends SideEpisode {
         // takes lives); she is thrown back out from under it, hurt or not, never left inside it
         if (!this.dead && k.x < r.x + r.w && k.x + k.w > r.x && k.y < r.y + r.h && k.y + k.h > r.y) {
           this.hurt(2, 'the ceiling');
-          if (!this.dead) pushClear(this, r, k.x + k.w / 2 < r.x + r.w / 2 ? -1 : 1);
+          // while the floor is still going behind her, it throws her forward (out the far side,
+          // away from the collapse), never back toward the gap
+          const live = this.collapse && !this.collapse.done;
+          if (!this.dead) pushClear(this, r, live ? 1 : k.x + k.w / 2 < r.x + r.w / 2 ? -1 : 1);
         }
       }
     }
@@ -421,7 +427,7 @@ export class Bedroom extends SideEpisode {
       if (this.dyingT > 5.6) {
         this.mode = 'after';
         const V = LEVEL.voidDoor, B = LEVEL.brother;
-        this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'W', door: true, use: () => this.openVoid() }; // a door: W, like every door
+        this.voidThing = { x0: V.x - 4, x1: V.x + V.w + 4, y0: V.y, y1: GROUND, label: 'W', door: true, use: () => this.openVoid() }; // a door: W, never J
         this.broThing = { x0: B.x - 14, x1: B.x + 20, y0: 130, y1: GROUND, px: B.x + 14, py: GROUND - 24, label: 'J', use: () => this.holdOn() };
         this.things = [this.voidThing, this.broThing];
       }

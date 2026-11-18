@@ -40,7 +40,9 @@ function paintStaff(P) {
   // a wall of monitors over a console desk
   const shots = [screenGrounds, screenHall, (q, PP, x, y, w, h) => screenStatic(q, PP, x, y, w, h, 3), screenCorridor, screenThisRoom, screenNoSignal];
   shots.forEach((f, i) => { const x = 48 + (i % 3) * 34, y = 38 + Math.floor(i / 3) * 27; frame(p, P, x - 2, y - 2, 32, 24); f(p, P, x, y, 28, 20); p.mark('rec', x + 25, y + 2); });
-  p.rect(40, 128, 116, 4, P.wood); p.rect(40, 128, 116, 1, P.woodHi); p.rect(44, 132, 108, 28, P.wood); p.rect(48, 136, 100, 2, P.wallLine);
+  // the console desk stands against the back wall under the monitors: she walks in front of it,
+  // so its body is the wall's dark tone (background), not a crate to climb
+  p.rect(40, 128, 116, 4, P.wood); p.rect(40, 128, 116, 1, P.woodHi); p.rect(44, 132, 108, 28, P.wallLo); p.rect(44, 132, 108, 1, P.crack); p.rect(48, 136, 100, 2, P.wood);
   for (let i = 0; i < 14; i++) p.px(52 + i * 7, 124 + (i % 2) * 2, i % 3 ? P.led : P.robotLed);
   p.rect(60, 120, 30, 8, P.device); p.rect(62, 121, 26, 5, P.glass);
   // a chair pushed back
@@ -183,8 +185,8 @@ const ROOMS = {
     ],
     // his bedroll (Option C): J unrolls it; inside, his route through the house, in his hand
     use: { x0: 280, x1: 312, y: 146, key: 'bedroll', text: ['His map of the house. It ends in the bedroom.'] },
-    // solid: the console desk under the monitors (she climbs over it); she comes in at the door
-    solids: [{ id: 'desk', x: 40, y: 128, w: 116, h: 4 }, { id: 'desk', x: 44, y: 132, w: 108, h: 28 }], spawnX: 22
+    // the console desk is against the back wall (drawn dark, she walks in front of it): no solids,
+    // so the quiet room has no climb between the door and the bedroll (spawnX still works per room)
   }
 };
 
@@ -209,12 +211,14 @@ export class Room extends SideEpisode {
     const dx = R.doorX || 18; this.doorX = dx;
     this.props = (R.solids || []).map(r => Object.assign({}, r)); // furniture she can stand on or bump into
     this.spawn(R.spawnX != null ? R.spawnX : dx < 160 ? 40 : dx - 22); this.kid.face = dx < 160 ? 1 : -1;
-    R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'J', noPrompt: false, use: () => this.describe(it) }); });
+    // the items are looks, so the room's one thing to do wins when both are in reach (the shed's TV
+    // sits on its crate inside the bench's span)
+    R.items.forEach(it => { it.n = 0; this.things.push({ x0: it.x0, x1: it.x1, y0: Math.min(it.y + 4, 130), y1: G, label: 'J', look: true, noPrompt: false, use: () => this.describe(it) }); });
     // one thing to do in each room, not only to look at
     this.act = { on: false, t: 0, n: 0 }; this.roomId = data.id || 'staff'; this.useSrc = null; // the scene object is reused from room to room
     if (R.use) this.things.push({ x0: R.use.x0, x1: R.use.x1, y0: Math.min(R.use.y + 4, 130), y1: G, py: R.use.y, label: 'J', use: () => this.doUse(R.use) });
     this.darkG = this.add.graphics().setDepth(1.5); // over the room, under her
-    this.things.push({ x0: dx, x1: dx + 16, y0: G - 30, y1: G, label: 'J', door: true, use: () => this.leave() });
+    this.things.push({ x0: dx, x1: dx + 16, y0: G - 30, y1: G, label: 'W', door: true, use: () => this.leave() }); // a door: W, never J
     this.hum = Sound.hum(0.02); Music.level(0.45, 0.5);
     this.events.once('shutdown', () => { this.hum.stop(0.2); overlay.hint(''); });
     this.cameras.main.fadeIn(300);
