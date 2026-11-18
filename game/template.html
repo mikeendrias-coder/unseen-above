@@ -107,6 +107,16 @@
   #about .row:last-child { border-bottom: 0; }
   #about dl { border-bottom: var(--u, 4px) solid var(--ground); }
   #stage:fullscreen #about, #stage:-webkit-full-screen #about { top: var(--fs-pad, 0px); }
+  /* The secret TV (core/tv.js): the old set over the picture, the trailer inside its screen. The
+     screen's place is in game pixels times --u, so it follows every size and full screen. */
+  #tvset { position: absolute; left: 0; top: 0; z-index: 3; width: calc(var(--u, 4px) * 320); height: calc(var(--u, 4px) * 180); pointer-events: auto; background: #000; outline: none; }
+  #tvset[hidden] { display: none; }
+  #tvset canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
+  #tvset .tv-pic { position: absolute; display: block; margin: 0; padding: 0; border: 0; background: #0e0f12; object-fit: contain; image-rendering: pixelated; outline: none; }
+  #tvset video::-webkit-media-controls, #tvset video::-webkit-media-controls-enclosure { display: none !important; }
+  #tvset .tv-over { z-index: 2; }
+  #tvset .tv-slip { position: absolute; z-index: 3; margin: 0; padding: 0; border: 0; background: transparent; color: transparent; font-size: 0; cursor: pointer; outline: none; }
+  #tvset .tv-slip[hidden] { display: none; }
   .tv-note { margin: 6px 0 0; font-size: 10px; color: var(--quiet); text-align: center; }
   .tv-note b { font-weight: normal; color: var(--ink); }
   .tv-note i { font-style: normal; }

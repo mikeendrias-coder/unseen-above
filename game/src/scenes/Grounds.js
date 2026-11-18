@@ -18,6 +18,7 @@ import { Props, Marks, Gold, hardCone } from '../core/props.js';
 import { goNext, prevChapter } from '../core/flow.js';
 import { NOTICE } from '../data/dialogue.js';
 import { addBook } from '../core/books.js';
+import { addTv } from '../core/tv.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { fx } from '../core/fx.js';
 
@@ -159,6 +160,8 @@ export class Grounds extends SideEpisode {
     this.things.forEach(t => { if (t.hearKey) t.src.key = t.hearKey; });
     // the book (Part I): by the tree, behind where she starts, out of reach until she turns back
     addBook(this, 1, { x: 6, y: G }, { reach: 5 });
+    // the secret TV beside it, at the foot of the dead tree: J turns it on and the trailer plays in it (core/tv.js)
+    addTv(this, { x: 24, y: G });
   }
 
   // footprints in the ash outside the wall, and the koi (drawn live)

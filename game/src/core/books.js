@@ -132,7 +132,7 @@ function markFound(n) {
 let up = null;
 export const bookUp = () => !!up;
 export function openBook(scene, n) {
-  if (up || cg.pageUp || window.__paused || window.__frozen) return false;
+  if (up || cg.pageUp || window.__paused || window.__frozen || window.__tvUp) return false;
   const part = PARTS[n]; if (!part) return false;
   const k = scene.kid;
   // in the air she lands first, as for the how-to notices

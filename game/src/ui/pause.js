@@ -48,7 +48,7 @@ export function initPause(game, hooks) {
     });
   }
   function freeze() {
-    if (frozen || open || cg.pageUp || !hooks.playing()) return;
+    if (frozen || open || cg.pageUp || window.__tvUp || !hooks.playing()) return;
     const running = game.scene.getScenes(true); if (!running.length) return;
     frozen = true; held = running.map(keyOf);
     held.forEach(key => game.scene.pause(key));
@@ -178,7 +178,7 @@ export function initPause(game, hooks) {
       return;
     }
     if (!open) {
-      if (ev.repeat || cg.pageUp) return; // a how-to page takes its own keys
+      if (ev.repeat || cg.pageUp || window.__tvUp) return; // a how-to page (or the TV, core/tv.js) takes its own keys
       if ((k === 'h' || k === 'H') && !ev.ctrlKey && !ev.metaKey && !ev.altKey) { ev.preventDefault(); ev.stopPropagation(); freeze(); return; }
       const top = game.scene.getScenes(true).pop();
       const esc = k === 'Escape' && !(top && ESC_SKIPS.includes(keyOf(top)));
@@ -217,9 +217,9 @@ export function initPause(game, hooks) {
   const auto = () => !window.__noPanels && !window.__noAutoPause && (!navigator.webdriver || window.__autoPause);
   const away = () => {
     if (!hooks.playing() || !auto()) return;
-    if (open || frozen || cg.pageUp) Sound.hold(true); else openMenu(true);
+    if (open || frozen || cg.pageUp || window.__tvUp) Sound.hold(true); else openMenu(true);
   };
-  const back = () => { if (Sound.held) Sound.hold(false); };
+  const back = () => { if (Sound.held && !window.__tvUp) Sound.hold(false); }; // the TV keeps the game's sound held
   window.addEventListener('blur', away);
   window.addEventListener('focus', back);
   document.addEventListener('visibilitychange', () => { if (document.hidden) away(); else back(); });

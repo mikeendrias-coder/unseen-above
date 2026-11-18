@@ -5,7 +5,7 @@ Talking points are yours: each stop has a blank line for them.
 
 ## Before class (30 minutes early)
 
-- [ ] Copy `game/dist/local.html` and `game/dist/phaser.min.js` into one folder on the desktop, and the same two files onto a USB stick. Double-click `local.html`: it runs with no network.
+- [ ] Copy `game/dist/local.html` and `game/dist/phaser.min.js` into one folder on the desktop, and the same two files onto a USB stick. Double-click `local.html`: it runs with no network. For the secret TV, also copy `game/dist/trailer.mp4` and `game/dist/trailer.html` into the same folder (without the mp4 the TV plays the in-engine trailer instead; it may need a click on Play inside the set when opened from a file).
 - [ ] Open it in Chrome on the presenting laptop. Use the local copy, not the web link, unless the network is good. (GitHub Pages can take 10 minutes to show a new build.)
 - [ ] On the title: **Presenter** on. That sets the mode to IMMUNE (hazards still play out, then she comes back at the last tape mark with nothing lost), turns flashing down, stops the shake, and sets the music to 2 of 5 and the effects to 4 of 5.
 - [ ] On the title: **New game**, twice (it asks). This clears your rehearsal: lines you heard, how-to slips, bodies. Without it some lines stay silent in class.
@@ -44,6 +44,8 @@ Playroom reply to ending: **Who picks the lights?** gives THE VEST. **Yes.** giv
 Endings and give-up mode: title screen, **Chapters**, right column. In presenter mode all five endings are open there.
 
 The paper's books: one in each episode (1, 3, 5, 6, 8), a small book on the floor with a glint, a step behind where she starts (walk left; in the east wing, at the landing's west wall). **J** on it opens that Part's EXHIBIT slip; **R** opens that Part of the paper in a new tab (the game pauses when its tab loses focus: **P** to go on), **J** closes. The ending screen counts BOOKS n/5. The paper itself: **Paper** on the title, **PAPER** on the ending screen, or **R** on How the game argues. The paper's excerpts come from paper.md when the game is built: run `npm run build` after editing it.
+
+The secret TV (ep 1, key **1**): beside the book, behind where she starts (walk left, past the dead tree). **J** on it (or a click) turns it on: the old set fills the picture and the trailer plays in its screen, with sound; the game waits and its music stops. **Space** pauses and goes on, **A** and **D** (or the two small knobs) go back or on 10 s, **J**, **Esc** or the power knob turn it off. It clicks off by itself at the end. **U** still does full screen with it up.
 
 The picture fills the window now. The small **keys** toggle at the right end of the hint line folds the key bar away for more picture (in full screen it starts folded).
 
