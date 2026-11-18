@@ -62,11 +62,11 @@ Michael Endrias · Introduction to Space Law · Professor Link · November 2026
 
 ## Part III. Contracts and requests control public access to imagery
 
-[Part III text goes here.]
+[Part III text goes here.][^s-rule]
 
 ## Part IV. Space law does not protect the people being watched
 
-[Part IV text goes here.]
+[Part IV text goes here.][^s-supra]
 
 ## Part V. Article VI should protect people
 
@@ -74,10 +74,16 @@ Michael Endrias · Introduction to Space Law · Professor Link · November 2026
 
 ## Conclusion
 
-[Conclusion text goes here.]
+[Conclusion text goes here.][^s-id]
 
 [^ost]: Treaty on Principles Governing the Activities of States in the Exploration and Use of Outer Space, Including the Moon and Other Celestial Bodies art. VI, *opened for signature* Jan. 27, 1967, 18 U.S.T. 2410, 610 U.N.T.S. 205. [Sample: check or replace.]
 
 [^principles]: G.A. Res. 41/65, Principles Relating to Remote Sensing of the Earth from Outer Space, princ. XII (Dec. 3, 1986). [Sample: check or replace.]
 
 [^kyl]: National Defense Authorization Act for Fiscal Year 1997, Pub. L. No. 104-201, § 1064, 110 Stat. 2422, 2653 (1996). [Sample: check or replace.]
+
+[^s-rule]: *See* Licensing of Private Remote Sensing Space Systems, 85 Fed. Reg. 30,790 (May 20, 2020) (codified at 15 C.F.R. pt. 960) (sorting licensed systems into tiers and setting the conditions each tier carries), https://www.ecfr.gov/current/title-15/subtitle-B/chapter-IX/subchapter-C/part-960. [Sample: check or replace.]
+
+[^s-supra]: *See* G.A. Res. 41/65, supra note [^principles], princ. IV. [Sample: check or replace.]
+
+[^s-id]: Id. art. IX. [Sample: check or replace.]

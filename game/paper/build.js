@@ -6,6 +6,12 @@
 // tldr, summary, intro, part-1 .. part-5, conclusion, and notes for the generated notes. A heading
 // can also set its own id with {#id} at the end. Footnotes use [^label] in the text and
 // "[^label]: text" lines; they are numbered in order of first use and get links both ways.
+// Inside a note, [^label] is a cross-reference: it prints that note's number as a link, so
+// "*supra* note [^ost]" stays right when notes move. Id., id., supra and infra are set in
+// italics in notes (as the Bluebook wants) unless they already are. A note that starts with
+// Id. is tagged with the note it points back to, for the margin and the pop-up.
+// The page puts each note beside its paragraph on wide screens and in a pop-up slip on
+// narrower ones (template.html does that part); the full list stays at #notes either way.
 const fs = require('fs');
 const path = require('path');
 const { Marked } = require('marked');
@@ -14,6 +20,7 @@ const HERE = __dirname;
 const SRC = path.join(HERE, 'paper.md');
 const TEMPLATE = path.join(HERE, 'template.html');
 const FONT = path.join(HERE, '..', 'fonts', 'ch07-caption.ttf');
+const PAPER_URL = 'https://mikeendrias-coder.github.io/unseen-above/paper/';
 const REQUIRED = ['tldr', 'summary', 'intro', 'part-1', 'part-2', 'part-3', 'part-4', 'part-5', 'conclusion'];
 // placeholder text: anything in square brackets that says one of these
 const TODO = /\[([^\[\]<>]*?(?:goes here|Michael writes|Sample)[^\[\]<>]*?)\]/g;
@@ -37,7 +44,7 @@ function classify(raw) {
   const known = [
     [/^tl;?\s*dr\b/, 'tldr', 'TL;DR'], [/^(executive\s+)?summary\b/, 'summary', 'SUMMARY'],
     [/^intro(duction)?\b/, 'intro', 'INTRO'], [/^conclusion\b/, 'conclusion', 'END'],
-    [/^(foot|end)?notes\b/, 'notes', 'NOTES']
+    [/^(foot|end)?notes\b/, 'notes', 'NOTES'], [/^cite\b|^how to cite\b/, 'cite', 'CITE']
   ];
   for (const [re, kid, tab] of known) if (re.test(t)) return { id: id || kid, tab, title: text, toc: text };
   return { id: id || slug(text), tab: '', title: text, toc: text };
@@ -115,9 +122,27 @@ function build(opts = {}) {
   const ownNotes = sections.find(s => s.id === 'notes');
 
   // the notes, numbered, each with a way back to every place it is used
+  const numOf = label => order.indexOf(label) + 1;
   const notesHtml = order.map((label, i) => {
     const n = i + 1, d = defs.get(label), count = uses.get(label);
-    let html = md.parse(d.lines.join('\n').trim()).trim();
+    let src = d.lines.join('\n').trim();
+    // cross-references to other notes: "supra note [^ost]" prints the number, linked
+    src = src.replace(/\[\^([^\]\s]+)\]/g, (all, other, at, whole) => {
+      if (!defs.has(other)) { warn.push(`note ${n} points to [^${other}], which is never written out`); return all; }
+      const k = numOf(other), before = whole.slice(Math.max(0, at - 24), at);
+      if (k === n) warn.push(`note ${n} points to itself`);
+      else if (k > n && /supra\W*notes?\s*$/i.test(before)) warn.push(`note ${n} says supra note ${k}, but note ${k} comes later (infra?)`);
+      else if (k < n && /infra\W*notes?\s*$/i.test(before)) warn.push(`note ${n} says infra note ${k}, but note ${k} comes earlier (supra?)`);
+      return `<a class="xref" href="#fn-${k}" data-note="${k}">${k}</a>`;
+    });
+    // Bluebook italics for the short forms, unless written in italics already
+    src = src.replace(/(^|[^*_\w/?=&#.<>-])([Ii]d\.)(?=[\s,;:)]|$)/g, '$1*$2*')
+             .replace(/(^|[^*_\w/?=&#.<>-])(supra|infra)(?![*_\w/-])/g, '$1*$2*');
+    // outside sources open in a new tab, so the reader keeps their place in the paper
+    let html = md.parse(src).trim().replace(/<a href="(https?:[^"]+)"/g, '<a href="$1" target="_blank" rel="noopener"');
+    // "Id." (after a signal, if any) at the start of a note points back to the note before it
+    const lead = strip(html).trim();
+    const idOf = n > 1 && /^(?:(?:see(?:,? e\.g\.,)?|see also|see generally|cf\.|but see|but cf\.|accord|compare|contra|e\.g\.,)\s+)?id\.(?=[\s,;:]|$)/i.test(lead) ? n - 1 : 0;
     const backs = [];
     for (let k = 1; k <= count; k++) {
       const ref = k === 1 ? `fnref-${n}` : `fnref-${n}-${k}`;
@@ -125,23 +150,36 @@ function build(opts = {}) {
     }
     const tail = backs.length ? ' ' + backs.join(' ') : '';
     html = /<\/p>$/.test(html) ? html.replace(/<\/p>$/, tail + '</p>') : html + tail;
-    return `<li id="fn-${n}"><span class="fnnum" aria-hidden="true">${String(n).padStart(2, '0')}</span><div class="fntext">${html}</div></li>`;
+    return `<li id="fn-${n}" data-n="${n}"${idOf ? ` data-id-of="${idOf}"` : ''}><span class="fnnum" aria-hidden="true">${String(n).padStart(2, '0')}</span><div class="fntext">${html}</div></li>`;
   }).join('\n');
 
   // placeholders: grey boxes, and the stamp stays DRAFT while any are left
   let todos = 0;
   const mark = html => html.replace(TODO, (all, inner) => { todos++; return `<mark class="todo">[${inner}]</mark>`; });
 
-  const sectionHtml = sections.filter(s => s !== ownNotes).map(s => {
+  // "Cite this paper": his own "## Cite this paper" section if he wrote one (first paragraph
+  // Bluebook, second plain), else made from the title, the byline and the page's address
+  const ownCite = sections.find(s => s.id === 'cite');
+  const cite = makeCite(title, byline, ownCite, md);
+
+  const sectionHtml = sections.filter(s => s !== ownNotes && s !== ownCite).map(s => {
     const tab = s.tab ? `<span class="tab" aria-hidden="true">${esc(s.tab)}</span>` : '';
     const cls = s.id === 'tldr' ? 'part tldr' : 'part';
     return `<section class="${cls}" aria-labelledby="${esc(s.id)}">\n<header class="sechead">${tab}<h2 id="${esc(s.id)}">${s.titleHtml}</h2></header>\n<div class="prose">${mark(s.html)}</div>\n</section>`;
   }).join('\n\n');
   const notesSection = order.length || ownNotes ? `<section class="part notes" aria-labelledby="notes">\n<header class="sechead"><span class="tab" aria-hidden="true">NOTES</span><h2 id="notes">${ownNotes ? ownNotes.titleHtml : 'Notes'}</h2></header>\n${ownNotes ? `<div class="prose">${mark(ownNotes.html)}</div>` : ''}<ol class="fnlist">\n${mark(notesHtml)}\n</ol>\n</section>` : '';
   if (!order.length && !ownNotes) warn.push('no notes yet, so there is no #notes section');
+  const citeSection = `<section class="part cite" aria-labelledby="cite">
+<header class="sechead"><span class="tab" aria-hidden="true">CITE</span><h2 id="cite">${ownCite ? ownCite.titleHtml : 'Cite this paper'}</h2></header>
+<div class="citeform">
+${cite.map(c => `<div class="citerow" data-format="${c.key}"><div class="citelabel px">${c.label}</div><p class="citetext" id="cite-${c.key}">${mark(c.html)}</p><button type="button" class="keycap copy" data-copy="cite-${c.key}" aria-describedby="cite-${c.key}">COPY</button></div>`).join('\n')}
+</div>
+<p class="copied" role="status" aria-live="polite"></p>
+</section>`;
 
-  const tocItems = sections.filter(s => s !== ownNotes).map(s => ({ id: s.id, tab: s.tab, text: s.tocText }));
+  const tocItems = sections.filter(s => s !== ownNotes && s !== ownCite).map(s => ({ id: s.id, tab: s.tab, text: s.tocText }));
   if (notesSection) tocItems.push({ id: 'notes', tab: 'NOTES', text: ownNotes ? ownNotes.tocText : 'Notes' });
+  tocItems.push({ id: 'cite', tab: 'CITE', text: ownCite ? ownCite.tocText : 'Cite this paper' });
   const toc = tocItems.map(t => `<li><a href="#${esc(t.id)}" data-for="${esc(t.id)}"><span class="ttab">${esc(t.tab || ' ')}</span><span class="ttext">${esc(t.text)}</span></a></li>`).join('\n');
 
   // the cover: title (the part before a colon in the caption face, the rest as a subtitle)
@@ -162,17 +200,39 @@ function build(opts = {}) {
     .replace('__BYLINE__', () => bylineHtml)
     .replace(/__STAMP__/g, () => stamp)
     .replace('__STAMP_CLASS__', () => todos ? 'stamp draft' : 'stamp filed')
-    .replace('__SECTIONS_N__', () => String(sections.length - (ownNotes ? 1 : 0)))
+    .replace('__SECTIONS_N__', () => String(sections.length - (ownNotes ? 1 : 0) - (ownCite ? 1 : 0)))
     .replace('__NOTES_N__', () => String(order.length))
     .replace('__MINUTES__', () => String(minutes))
     .replace('__TOC__', () => toc)
-    .replace('__BODY__', () => sectionHtml + '\n\n' + notesSection);
+    .replace('__BODY__', () => `<div class="body">\n${sectionHtml}\n</div>\n\n${notesSection}\n\n${citeSection}`);
 
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'paper.html'), page);
   for (const w of warn) console.log('paper: ' + w);
   console.log(`paper: ${path.relative(process.cwd(), path.join(out, 'paper.html'))}, ${sections.length} sections, ${order.length} notes, ${todos} placeholder${todos === 1 ? '' : 's'} left (${stamp})`);
   return { todos, warn };
+}
+
+// The two ways to cite the paper: [{ key, label, html }]
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const BB_MONTH = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'June', 'July', 'Aug.', 'Sept.', 'Oct.', 'Nov.', 'Dec.'];
+function makeCite(title, byline, own, md) {
+  const fmt = [{ key: 'bluebook', label: 'BLUEBOOK' }, { key: 'plain', label: 'PLAIN' }];
+  if (own) {
+    const paras = own.html.split(/<\/p>\s*/).map(x => x.replace(/^\s*<p>/, '').trim()).filter(Boolean);
+    return fmt.map((f, i) => ({ ...f, html: paras[i] || paras[0] || '' }));
+  }
+  const bits = String(byline).split(/\s*[·|]\s*|\n+/).map(x => x.trim()).filter(Boolean);
+  const author = strip(md.parseInline(bits[0] || 'Michael Endrias'));
+  const when = bits.find(b => new RegExp('(' + MONTHS.join('|') + ')\\s+\\d{4}').test(b)) || '';
+  const m = when.match(new RegExp('(' + MONTHS.join('|') + ')\\s+(\\d{4})'));
+  const course = bits.slice(1).find(b => b !== when && !/^prof(essor)?\b/i.test(b)) || '';
+  const t = md.parseInline(title);
+  const names = author.split(/\s+/), last = names.pop(), first = names.join(' ');
+  const url = `<a href="${PAPER_URL}">${PAPER_URL}</a>`;
+  const bb = `${esc(author)}, <i>${t}</i> (${m ? BB_MONTH[MONTHS.indexOf(m[1])] + ' ' + m[2] : 'n.d.'}) (unpublished manuscript), ${url}.`;
+  const plain = `${esc(first ? last + ', ' + first : last)}. \u201c${t}.\u201d ${course ? 'Paper, ' + esc(course) + ', ' : ''}${m ? m[1] + ' ' + m[2] : ''}. ${url}.`;
+  return [{ ...fmt[0], html: bb }, { ...fmt[1], html: plain.replace(/, \. /, '. ') }];
 }
 
 module.exports = build;
