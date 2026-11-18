@@ -12,7 +12,7 @@ import { Painter, hexNum, flat } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint, tapeTake } from './death.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
@@ -257,7 +257,7 @@ export class TopDownEpisode extends Phaser.Scene {
       this.girl.setVisible(false);
       if (!quiet) {
         this.fxBurst = { x: p.x, y: p.y, t: 0 };
-        fx.shake(this.cameras.main, 200, 0.012); fx.flash(this.cameras.main, 110, 70, 18, 18);
+        fx.flash(this.cameras.main, 110, 70, 18, 18); // the kick and the hit-stop: death.js
         Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
       }
       state.addBody(this.epId, tile.x * T + 8, tile.y * T + 13, src && src.id);
@@ -289,7 +289,7 @@ export class TopDownEpisode extends Phaser.Scene {
   }
   takeNote(data, num, title) {
     if (data && data.fromCut) this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600, 'lower'); overlay.bug('CH 07', 3600); });
-    else if (this.ep.take > 1) overlay.take(this.ep.take);
+    tapeTake(this); // TAKE n on the floor where she starts (no card)
     offerNote(this);
   }
 

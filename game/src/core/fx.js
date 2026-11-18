@@ -26,7 +26,18 @@ export const fx = {
     const color = red ? ASH.red : lum > 150 ? ASH.bone : lum > 70 ? ASH.ash5 : ASH.ash4;
     cg.flash(color, fx.reduced ? 60 : Math.min(90, ms || 90), fx.reduced ? 'q25' : 'checker');
   },
-  shake(cam, ms, k) { if (cam && fx.shakeOn) cam.shake(ms, fx.reduced ? k * 0.5 : k); },
+  // A shake of the house (a collapse, a chandelier), in whole game pixels: 1, 2 or at most 3 by
+  // the old Phaser intensity k (which used to mean up to 60 px). Her own hurts and the strike
+  // use kick (1 or 2 px), so the strike, with its flash and burst, stays the biggest thing.
+  shake(cam, ms, k) { if (!cam || !fx.shakeOn) return; fx.kick(cam, k >= 0.008 ? 3 : k >= 0.005 ? 2 : 1, Math.min(ms || 120, 300), true); },
+  // A kick of at most px game pixels (Nov 18 juice: 1 or 2 px, when she is hurt or struck).
+  // Phaser's shake offset is intensity x camera width x zoom, applied after the zoom, so it is
+  // in game pixels: the intensity for px of them is px / (width x zoom). Reduced: 1 px.
+  kick(cam, px, ms, house) {
+    if (!cam || !fx.shakeOn) return;
+    const n = fx.reduced ? 1 : Math.max(1, Math.min(house ? 3 : 2, px || 1)), z = cam.zoom || 1;
+    cam.shake(ms || 120, n / ((cam.width || 320) * z), true);
+  },
   // a flash a scene draws itself (a camera's flash lighting the room): false if it would be one
   // flash too many this second; scale its brightness by fx.level
   allowFlash: allow,

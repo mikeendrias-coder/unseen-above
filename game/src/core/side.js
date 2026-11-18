@@ -10,7 +10,9 @@ import { hexNum } from '../art/painter.js';
 import { SatelliteStrike } from '../art/strike.js';
 import { Bubbles } from './bubbles.js';
 import { reviewKeys, syncImmunity, offerNote } from './review.js';
-import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint } from './death.js';
+import { beginDeath, skipDeath, startTakes, showStatus, retryData, checkpointOf, setCheckpoint, tapeTake } from './death.js';
+import { juice } from './juice.js';
+import { results } from './results.js';
 import { itemPanel } from './panels.js';
 import { bodyLines } from '../data/dialogue.js';
 import { fx } from './fx.js';
@@ -183,15 +185,15 @@ export class SideEpisode extends Phaser.Scene {
     if (c.jumpPressed() && !this.atDoor()) k.buffer = K.buffer; else k.buffer = Math.max(0, k.buffer - dt);
     k.coyote = k.onGround ? K.coyote : Math.max(0, k.coyote - dt);
     if (k.onGround || k.wall) k.airJumps = 1;
-    if (k.buffer > 0 && k.coyote > 0 && !k.crouch) { k.vy = -K.jumpV; k.buffer = 0; k.coyote = 0; k.holdT = K.hold; k.onGround = false; Sound.tone(480, 0.07, 'square', 0.02, 720); }
+    if (k.buffer > 0 && k.coyote > 0 && !k.crouch) { k.vy = -K.jumpV; k.buffer = 0; k.coyote = 0; k.holdT = K.hold; k.onGround = false; Sound.tone(480, 0.07, 'square', 0.02, 720); juice.jump(this); }
     else if (k.buffer > 0 && k.wall && !this.noWallJump) {
       // off the wall: up and away, and pushing back into the wall is ignored for a moment
       k.vy = -K.wallVy; k.vx = -k.wall * K.wallVx; k.face = -k.wall; k.lockSide = k.wall; k.wallLock = K.wallLock;
       k.buffer = 0; k.holdT = K.hold * 0.6; k.peakY = k.y; Sound.tone(420, 0.06, 'square', 0.02, 760);
-      if (this.puffs) this.puffs.explode(3, k.wall > 0 ? k.x + k.w : k.x, k.y + k.h - 3);
+      juice.jump(this); juice.dust(this, k.wall > 0 ? k.x + k.w : k.x, k.y + k.h - 3, 3);
     } else if (k.buffer > 0 && k.airJumps > 0 && !k.crouch && !this.noDoubleJump) {
       k.vy = -K.jumpV * K.dj; k.airJumps--; k.buffer = 0; k.holdT = K.hold * 0.6; Sound.tone(620, 0.06, 'square', 0.018, 940);
-      if (this.puffs) this.puffs.explode(4, k.x + k.w / 2, k.y + k.h);
+      juice.jump(this); juice.dust(this, k.x + k.w / 2, k.y + k.h, 3);
     }
     if (k.holdT > 0) { k.holdT -= dt; if (!c.jumpHeld()) { if (k.vy < 0) k.vy *= 0.5; k.holdT = 0; } }
     const apex = Math.abs(k.vy) < 40 && c.jumpHeld();
@@ -217,9 +219,15 @@ export class SideEpisode extends Phaser.Scene {
     if (!k.onGround && k.vy >= 0 && this.boxHits(k.x, k.y + 0.5, k.w, k.h)) k.onGround = true;
     // a long fall hurts when she lands (Fall.js and other scripted drops turn this off)
     if (!k.onGround) k.peakY = Math.min(k.peakY, k.y);
-    else { if (wasAir && !this.noFallDamage) { const d = k.y - k.peakY; if (d >= K.fallDie) this.hurt(K.hp, 'fall'); else if (d >= K.fall2) this.hurt(2, 'fall'); else if (d >= K.fall1) this.hurt(1, 'fall'); } k.peakY = k.y; }
-    // a little dust where she lands
-    if (wasAir && k.onGround && fallV > 140 && this.puffs) this.puffs.explode(Math.min(9, 3 + Math.round(fallV / 60)), k.x + k.w / 2, k.y + k.h - 1);
+    else {
+      if (wasAir) {
+        const d = k.y - k.peakY, tier = d >= K.fall2 ? 2 : d >= K.fall1 ? 1 : 0;
+        if (!this.noFallDamage) { if (d >= K.fallDie) this.hurt(K.hp, 'fall'); else if (d >= K.fall2) this.hurt(2, 'fall'); else if (d >= K.fall1) this.hurt(1, 'fall'); }
+        // the landing itself (juice.js): a squash frame, square dust, a step, thud or crack
+        juice.land(this, this.noFallDamage ? Math.min(tier, 1) : tier, k.x + k.w / 2, k.y + k.h, fallV);
+      }
+      k.peakY = k.y;
+    }
     k.walkT = k.onGround && Math.abs(k.vx) > 8 ? k.walkT + dt : 0;
     if (this.atDoor() && (c.interact() || c.up())) this.enterDoor();
   }
@@ -261,10 +269,13 @@ export class SideEpisode extends Phaser.Scene {
   // The house hurts her (falls, debris, a robot, the creator's sword): HP, a blink, a moment safe.
   // What watches her (lights, lasers, cameras, the strike) still kills outright, through die().
   hurt(n, id) {
-    const k = this.kid; if (!k || this.dead || k.inv > 0 || state.immune || window.__noDeath) return;
+    const k = this.kid; if (!k || this.dead) return;
+    if (id === 'fall') results.fell(this); // for the report: falls count in story mode too
+    if (k.inv > 0 || state.immune || window.__noDeath) return;
     k.hp = Math.max(0, k.hp - n); k.inv = K.inv; showStatus(this, k.hp, K.hp);
     Sound.tone(220, 0.12, 'square', 0.04, 110); Sound.noise(0.12, 0.08, 1800);
-    fx.shake(this.cameras.main, 120, 0.006);
+    // a hit-stop and a kick (juice.js); the strike, if this kills her, adds its own
+    if (k.hp > 0) juice.hit(this, n > 1 ? 2 : 1, n > 1 ? 90 : 65);
     if (k.hp <= 0) this.die({ id, direct: true });
   }
 
@@ -281,7 +292,7 @@ export class SideEpisode extends Phaser.Scene {
       this.girl.setVisible(false);
       if (!quiet) {
         this.burst.explode(16, x, y);
-        fx.shake(this.cameras.main, 200, 0.012); fx.flash(this.cameras.main, 110, 70, 18, 18);
+        fx.flash(this.cameras.main, 110, 70, 18, 18); // the kick and the hit-stop: death.js
         Sound.tone(1400, 0.12, 'sawtooth', 0.04, 300); Sound.noise(0.4, 0.16);
       }
       state.addBody(this.epId, x, footY, src && src.id);
@@ -353,7 +364,7 @@ export class SideEpisode extends Phaser.Scene {
   }
   takeNote(data, num, title) {
     if (data && data.fromCut) { this.time.delayedCall(700, () => { overlay.card('EPISODE ' + num, title, 3600, 'lower'); overlay.bug('CH 07', 3600); }); }
-    else if (this.ep.take > 1) overlay.take(this.ep.take);
+    tapeTake(this); // TAKE n on the floor where she starts (no card)
     offerNote(this);
   }
 }
