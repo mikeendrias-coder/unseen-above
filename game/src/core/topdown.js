@@ -38,6 +38,50 @@ export function makeTopSprites(scene, P) {
   add('td_shadow', 5, 2, p => p.rect(0, 0, 5, 2, P.void));
 }
 
+// ------------------------------------------------------------------ hard pixel light (shared with ep4)
+// A dotted circle of single pixels (every `step` along the edge), drawn with plain rects so it
+// stays on the pixel grid at any zoom.
+export function pxCircle(g, cx, cy, r, color, step) {
+  cx = Math.round(cx); cy = Math.round(cy); r = Math.round(r); g.fillStyle(color, 1);
+  let x = r, y = 0, e = 1 - r, i = 0;
+  const put = (a, b) => g.fillRect(cx + a, cy + b, 1, 1);
+  while (x >= y) {
+    if (!step || i % step === 0) { put(x, y); put(-x, y); put(x, -y); put(-x, -y); put(y, x); put(-y, x); put(y, -x); put(-y, -x); }
+    i++; y++; if (e < 0) e += 2 * y + 1; else { x--; e += 2 * (y - x) + 1; }
+  }
+}
+// The dark layer: a canvas filled with black at `alpha`, then holes cut where light falls.
+export function darkFill(ctx, alpha) {
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.fillStyle = 'rgba(0,0,0,' + alpha + ')'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+const checkers = new WeakMap();
+// a 2 x 2 checker pattern for this canvas, lined up with the world (parity = (view x + view y) % 2)
+export function checker(ctx, parity) {
+  let pat = checkers.get(ctx);
+  if (!pat) { const t = document.createElement('canvas'); t.width = 2; t.height = 2; const x = t.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, 1, 1); x.fillRect(1, 1, 1, 1); pat = ctx.createPattern(t, 'repeat'); checkers.set(ctx, pat); }
+  if (pat.setTransform) pat.setTransform(new DOMMatrix([1, 0, 0, 1, ((parity % 2) + 2) % 2, 0]));
+  return pat;
+}
+// Cut lights out of the dark: each light { x, y, r, a } (canvas px) clears a solid disc of 60%
+// of its radius and a checker ring out to its full radius. Rows of rects, so edges are hard.
+export function hardHoles(ctx, lights, parity) {
+  const W = ctx.canvas.width, H = ctx.canvas.height, pat = checker(ctx, parity);
+  ctx.globalCompositeOperation = 'destination-out';
+  lights.forEach(l => {
+    const r = Math.round(l.r), ri = Math.round(l.r * 0.6), x = Math.round(l.x), y = Math.round(l.y);
+    if (x < -r || y < -r || x > W + r || y > H + r) return;
+    ctx.globalAlpha = l.a == null ? 1 : Math.min(1, l.a);
+    for (let dy = -r; dy <= r; dy++) {
+      const yy = y + dy; if (yy < 0 || yy >= H) continue;
+      const ho = Math.floor(Math.sqrt(r * r - dy * dy) + 0.35), hi = Math.abs(dy) <= ri ? Math.floor(Math.sqrt(ri * ri - dy * dy) + 0.35) : -1;
+      if (hi >= 0) { ctx.fillStyle = '#000'; ctx.fillRect(x - hi, yy, 2 * hi + 1, 1); ctx.fillStyle = pat; ctx.fillRect(x - ho, yy, ho - hi, 1); ctx.fillRect(x + hi + 1, yy, ho - hi, 1); }
+      else { ctx.fillStyle = pat; ctx.fillRect(x - ho, yy, 2 * ho + 1, 1); }
+    }
+  });
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+
 export class TopDownEpisode extends Phaser.Scene {
   // level: { W, H, solid(x, y), start: [tx, ty] }
   initTop(id, level) {
@@ -168,7 +212,7 @@ export class TopDownEpisode extends Phaser.Scene {
   drawFloorPebbles(g, dt) {
     this.floorPebbles.forEach(fp => { const x = fp.x * T + 8 + fp.dx, y = fp.y * T + 8 + fp.dy; g.fillStyle(hexNum(this.P.rubbleHi), 1); g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); g.fillStyle(hexNum(this.P.colHi), 1); g.fillRect(x, y, 1, 1); });
     this.scorches = (this.scorches || []).filter(s => (s.t += dt) < 6);
-    this.scorches.forEach(s => { const a = 1 - s.t / 6; g.fillStyle(0x000000, 0.5 * a); g.fillCircle(s.x, s.y, 3); g.fillStyle(hexNum(this.P.hazard), 0.5 * a * a); g.fillRect(s.x - 1, s.y - 1, 2, 2); });
+    this.scorches.forEach(s => { g.fillStyle(0x0e0f12, 1); g.fillRect(s.x - 2, s.y - 1, 5, 3); g.fillRect(s.x - 1, s.y - 2, 3, 5); if (s.t < 1.5) { g.fillStyle(hexNum(this.P.hazard), 1); g.fillRect(s.x, s.y, 1, 1); } });
   }
 
   // ------------------------------------------------------------------ cones and the lock
@@ -275,20 +319,13 @@ export class TopDownEpisode extends Phaser.Scene {
     this.cameras.main.centerOn(cx, cy);
     this.view = { x: cx - 160, y: cy - 90 };
   }
-  // lights: { x, y, r, soft } in world px; the girl always carries a small one
+  // lights: { x, y, r, a } in world px; the girl always carries a small one. Hard light (Nov 17
+  // art pass): a solid hole, then a ring of checker dither, nothing soft.
   drawDark(alpha) {
-    const ctx = this.darkCanvas.getContext('2d'), v = this.view, P = this.P;
-    ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, 322, 182);
-    const n = hexNum(flat(P.void)), rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`; ctx.fillRect(0, 0, 322, 182);
-    ctx.globalCompositeOperation = 'destination-out';
-    const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 58, soft: 0.55 }].concat(this.lights);
-    all.forEach(l => {
-      const x = l.x - v.x + 1, y = l.y - v.y + 1; if (x < -l.r || y < -l.r || x > 322 + l.r || y > 182 + l.r) return;
-      const g = ctx.createRadialGradient(x, y, l.r * (1 - (l.soft || 0.5)), x, y, l.r);
-      g.addColorStop(0, `rgba(0,0,0,${l.a || 1})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, l.r, 0, Math.PI * 2); ctx.fill();
-    });
+    const ctx = this.darkCanvas.getContext('2d'), v = this.view;
+    darkFill(ctx, alpha);
+    const c = this.kidPx(), all = this.dead ? this.lights : [{ x: c.x, y: c.y - 4, r: 52 }].concat(this.lights);
+    hardHoles(ctx, all.map(l => ({ x: l.x - v.x + 1, y: l.y - v.y + 1, r: l.r, a: l.a })), v.x + v.y);
     this.darkTex.refresh();
     this.darkImg.setPosition(v.x - 1, v.y - 1);
   }
@@ -299,7 +336,8 @@ export class TopDownEpisode extends Phaser.Scene {
   }
   drawNoise(g, dt) {
     this.noises.forEach(n => n.t += dt); this.noises = this.noises.filter(n => n.t < 0.7);
-    this.noises.forEach(n => { const u = n.t / 0.7; g.lineStyle(1, 0xebe6d8, 0.55 * (1 - u)); g.strokeCircle(n.x * T + 8, n.y * T + 8, 4 + u * n.r * T); });
+    // a noise is a dotted ring that steps outward and pops off: pixels, no fade
+    this.noises.forEach(n => { const u = n.t / 0.7; pxCircle(g, n.x * T + 8, n.y * T + 8, Math.round((4 + u * n.r * T) / 4) * 4, u < 0.5 ? 0xebe6d8 : 0xb8b2a3, 3); });
   }
   // the satellite slides in at the top of the view while anything locks on
   drawSatellite(g, glowG) {

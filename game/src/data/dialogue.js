@@ -153,7 +153,11 @@ export const NOTICE = {
   eastwing: {
     body: ['An old body in a jacket like hers.', 'Nobody ever took it away.'],
     books: ['The books are painted on a board.'],
-    desk: ['A desk. On it, a map of this wing.', 'Her way through is drawn on it in red.']
+    desk: ['A desk. On it, a map of this wing.', 'Her way through is drawn on it in red.'],
+    calendar: ['A wall calendar.', 'Every day on it is the 7th.'],
+    radio: ['A transistor radio, tuned to nothing.', 'Near the sensors it plays the satellite notes.'],
+    hatch: ['The dumbwaiter comes out here.'],
+    dumbwaiter: ['A dumbwaiter. It runs inside the walls.', 'A pebble would rattle all the way to the study.']
   },
   bedroom: {
     piano: ['A grand piano with the lid down.', 'Nobody here has ever played it.'],
@@ -188,7 +192,7 @@ export const BODY_SEEN = {
     [/camera/, 'A camera saw her.'],
     [/chandelier/, 'The chandelier.'],
     [/fall/, 'She fell.'],
-    [/ceiling/, 'The ceiling came down.'],
+    [/ceiling|debris/, 'The ceiling came down.'],
     [/creator/, 'One cut.'],
     [/sensor/, 'A sensor caught her moving.'],
     [/robot/, 'The robot heard her.']

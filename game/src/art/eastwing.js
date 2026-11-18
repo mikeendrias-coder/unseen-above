@@ -6,6 +6,7 @@ import { Painter, rng } from './painter.js';
 export const T = 16, W = 45, H = 30;
 // '#' wall  '.' floor  ',' debris (noisy)  'o' hole  'P' pillar  'K' bookshelf  'T' desk
 // 'R' rubble  'm' marble  'r' rug  'D' the exit door  'W' a side door (optional)  'b' an old body  'p' loose pebbles
+// 'H' the dumbwaiter hatch  'X' where the dumbwaiter comes out  'C' the wall calendar  'Q' the radio
 export function buildMap() {
   const m = Array.from({ length: H }, () => new Array(W).fill('#'));
   const fill = (x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) m[y][x] = c; };
@@ -36,6 +37,10 @@ export function buildMap() {
   put([[38, 11]], 'b');
   m[1][37] = 'D';
   m[18][4] = 'W'; // a workshop off the landing, optional
+  m[18][9] = 'C';  // a wall calendar: every day is the 7th
+  m[23][13] = 'Q'; // a transistor radio on the floor, by the sensors
+  m[13][23] = 'H'; // the dumbwaiter hatch at the top of the corridor...
+  m[3][14] = 'X';  // ...and where it opens, at the far end of the study
   return m;
 }
 
@@ -44,16 +49,19 @@ export const LEVEL = {
   exit: [37, 1],
   moon: [{ x: 6 * T + 8, y: 24 * T + 8, r: 46 }, { x: 25 * T, y: 16 * T, r: 20 }],
   // motion sensors sit in the walls: they pulse, and anything moving in range trips them
-  sensors: [{ x: 17, y: 20, r: 3.3, period: 1.7, window: 0.45, phase: 0 }, { x: 27, y: 15, r: 3.3, period: 1.5, window: 0.4, phase: 0.6 }],
+  sensors: [{ x: 17, y: 20, r: 3.3, period: 1.7, window: 0.45, phase: 0 }, { x: 22, y: 24, r: 3.0, period: 1.6, window: 0.4, phase: 0.35 }, { x: 27, y: 15, r: 3.3, period: 1.5, window: 0.4, phase: 0.6 }],
+  // the dumbwaiter: a pebble dropped in at the hatch clatters out in the study, by the far wall
+  dumbwaiter: { hatch: [23, 13], stand: [24, 13], out: [15, 3] },
   // a camera on the study's north wall, sweeping
   camera: { x: 19.5, y: 1.9, base: 90, sweep: 48, period: 5.5, half: 18, range: 8.5 },
   // the patrol robot's loop around the shelves; it goes to look at noises
-  robot: { path: [[16, 6], [16, 10], [26, 10], [26, 5], [22, 5]], speed: 2.6, hear: 7, half: 34, range: 4.2 },
+  robot: { path: [[16, 6], [16, 10], [26, 10], [26, 5], [22, 5]], speed: 2.9, hear: 8, half: 34, range: 4.2 },
   // the chandelier: eyes that turn, chains on three pillars
   chandelier: { x: 37.5, y: 7.5, range: 6.5, half: 13, speeds: [36, 48, 62, 76], eyes: [2, 3, 4, 5], chains: [[33, 4], [41, 4], [41, 10]] }
 };
 
-const SOLID = new Set(['#', 'o', 'P', 'K', 'T', 'R', 'D', 'W']), OPAQUE = new Set(['#', 'P', 'K', 'D', 'W']);
+const WALLS = new Set(['#', 'D', 'W', 'H', 'X', 'C']);
+const SOLID = new Set(['#', 'o', 'P', 'K', 'T', 'R', 'D', 'W', 'H', 'X', 'C', 'Q']), OPAQUE = new Set(['#', 'P', 'K', 'D', 'W', 'H', 'X', 'C']);
 export const isSolid = c => SOLID.has(c);
 export const isOpaque = c => OPAQUE.has(c);
 
@@ -80,10 +88,19 @@ export function paintMap(P, m) {
   const p = new Painter(W * T, H * T), r = rng(31);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const c = m[y][x], px = x * T, py = y * T, below = y + 1 < H ? m[y + 1][x] : '#';
-    if (c === '#' || c === 'D' || c === 'W') {
-      p.rect(px, py, T, T, P.void); p.rect(px, py, T, T, P.wallLo);
-      if (below !== '#' && below !== 'D' && below !== 'W') { p.rect(px, py + 8, T, 8, P.wall); p.rect(px, py + 8, T, 1, P.goldLo); for (let i = 2; i < 16; i += 5) p.rect(px + i, py + 10, 1, 5, P.wallLine); }
+    if (WALLS.has(c)) {
+      p.rect(px, py, T, T, P.wallLo);
+      if (!WALLS.has(below)) { p.rect(px, py + 8, T, 8, P.wall); p.rect(px, py + 8, T, 1, P.goldLo); for (let i = 2; i < 16; i += 5) p.rect(px + i, py + 10, 1, 5, P.wallLine); p.rect(px, py + 15, T, 1, P.crack); }
       else if (r() < 0.3) p.px(px + r() * 16, py + r() * 16, P.wallLine);
+      if (c === 'C') {
+        // a calendar: a page of seven-by-five boxes, every one with the same two marks
+        p.rect(px + 3, py + 4, 10, 11, P.crack); p.rect(px + 4, py + 5, 8, 9, P.colHi); p.rect(px + 4, py + 5, 8, 2, P.colLo);
+        for (let j = 0; j < 3; j++) for (let i = 0; i < 4; i++) p.px(px + 4 + i * 2, py + 8 + j * 2, P.device);
+      }
+      if (c === 'H' || c === 'X') {
+        // a small hatch with a brass pull; the one in the study hangs open
+        p.rect(px + 3, py + 8, 10, 7, P.crack); p.rect(px + 4, py + 9, 8, 5, c === 'X' ? P.void : P.wood); if (c === 'H') { p.rect(px + 4, py + 9, 8, 1, P.woodHi); p.rect(px + 7, py + 12, 2, 1, P.gold); }
+      }
       continue;
     }
     if (c === 'm' || (c === 'P' || c === 'o') && x > 30) marble(p, P, px, py, r); else parquet(p, P, px, py, r);
@@ -95,10 +112,16 @@ export function paintMap(P, m) {
     if (c === 'R') { p.ellipse(px + 8, py + 10, 7, 5, P.rubble); for (let i = 0; i < 6; i++) p.rect(px + 2 + r() * 11, py + 4 + r() * 9, 3, 2, r() < 0.5 ? P.rubbleHi : P.crack); }
     if (c === 'K') { p.rect(px, py + 2, T, 12, P.wood); p.rect(px, py + 2, T, 1, P.woodHi); for (let i = 1; i < 15; i += 2) p.rect(px + i, py + 4, 1, 8, [P.fabric, P.glass, P.gold, P.fabricLo, P.col][(i + x) % 5]); p.rect(px, py + 13, T, 1, P.crack); }
     if (c === 'T') { p.rect(px, py + 3, T, 10, P.wood); p.rect(px, py + 3, T, 1, P.woodHi); p.rect(px + 3, py + 5, 6, 4, P.colHi); p.rect(px + 4, py + 6, 4, 1, P.device); }
-    if (c === 'P') { p.circle(px + 8, py + 9, 7, P.colLo); p.circle(px + 8, py + 8, 6, P.col); p.circle(px + 7, py + 7, 3, P.colHi); p.ellipse(px + 8, py + 15, 6, 1, P.void); }
+    if (c === 'P') { p.circle(px + 8, py + 9, 8, P.crack); p.circle(px + 8, py + 9, 7, P.colLo); p.circle(px + 8, py + 8, 6, P.col); p.circle(px + 7, py + 7, 3, P.colHi); }
+    if (c === 'Q') {
+      // a transistor radio, its aerial up: bone case, a grille, one red light
+      p.rect(px + 2, py + 6, 12, 8, P.crack); p.rect(px + 3, py + 7, 10, 6, P.colHi); p.rect(px + 3, py + 12, 10, 1, P.colLo);
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) p.px(px + 4 + i * 2, py + 8 + j * 2, P.device);
+      p.rect(px + 11, py + 8, 1, 2, P.goldLo); p.line(px + 12, py + 6, px + 15, py + 1, P.colLo); p.px(px + 12, py + 11, P.overlay);
+    }
   }
   // the workshop door off the landing: plain, a strip of light under it
-  p.rect(4 * T + 3, 18 * T + 6, 10, 10, P.wood); p.rect(4 * T + 3, 18 * T + 6, 10, 1, P.woodHi); p.px(4 * T + 11, 18 * T + 11, P.gold); p.glowRect(4 * T + 3, 18 * T + 15, 10, 1, P.lamp, 0.5);
+  p.rect(4 * T + 3, 18 * T + 6, 10, 10, P.wood); p.rect(4 * T + 3, 18 * T + 6, 10, 1, P.woodHi); p.px(4 * T + 11, 18 * T + 11, P.gold); p.rect(4 * T + 4, 18 * T + 15, 8, 1, P.lamp);
   // the door out of the ballroom
   const [ex, ey] = LEVEL.exit; p.rect(ex * T + 2, ey * T + 4, 12, 12, P.wood); p.rect(ex * T + 2, ey * T + 4, 12, 1, P.woodHi); p.rect(ex * T + 7, ey * T + 4, 1, 12, P.goldLo); p.px(ex * T + 10, ey * T + 11, P.gold);
   return p;
